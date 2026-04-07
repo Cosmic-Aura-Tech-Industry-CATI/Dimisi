@@ -23,8 +23,8 @@ export default function CTA() {
           
           <div className="flex-1 z-10">
             <h2 className="text-4xl md:text-5xl font-bold mb-6">Grow your revenue now</h2>
-            <p className="text-gray-400 text-lg mb-8 max-w-md">Join over 10,000 satisfied users building and growing their companies with Demisi today.</p>
-            <button className="glow-btn bg-white text-black font-semibold px-8 py-4 rounded-full flex items-center gap-2 group hover:scale-105 transition-transform">
+            <p className="text-muted text-lg mb-8 max-w-md">Join over 10,000 satisfied users building and growing their companies with Demisi today.</p>
+            <button className="glow-btn btn-primary font-semibold px-8 py-4 rounded-full flex items-center gap-2 group shadow-xl">
               Start your free trial
               <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
             </button>

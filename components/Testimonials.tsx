@@ -18,8 +18,8 @@ export default function Testimonials() {
     <section className="py-24 relative bg-grid overflow-hidden">
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="text-center mb-16">
-           <p className="text-blue-400 text-sm font-semibold mb-2">Trusted by the best</p>
-           <h2 className="text-3xl md:text-4xl font-bold">Over 600+ Happy Customers</h2>
+          <p className="text-blue-400 text-sm font-semibold mb-2">Trusted by the best</p>
+          <h2 className="text-3xl md:text-4xl font-bold">Over 600+ Happy Customers</h2>
         </div>
       </div>
 
@@ -42,7 +42,7 @@ export default function Testimonials() {
             </div>
           ))}
         </div>
-        
+
         {/* Gradients to fade edges */}
         <div className="absolute top-0 bottom-0 left-0 w-32 bg-gradient-to-r from-black to-transparent pointer-events-none" />
         <div className="absolute top-0 bottom-0 right-0 w-32 bg-gradient-to-l from-black to-transparent pointer-events-none" />

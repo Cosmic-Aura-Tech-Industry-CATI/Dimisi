@@ -18,7 +18,7 @@ export default function Hero() {
   const opacityDashboard = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
 
   return (
-    <section ref={ref} className="relative min-h-screen pt-32 pb-20 overflow-hidden flex flex-col items-center perspective-1000">
+    <section ref={ref} className="relative min-h-screen pt-40 pb-20 overflow-hidden flex flex-col items-center perspective-1000">
       {/* Background Gradients */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[500px] bg-blue-600/20 rounded-full blur-[120px] -z-10" />
       <div className="absolute top-20 left-1/4 w-[600px] h-[400px] bg-purple-600/20 rounded-full blur-[100px] -z-10" />
@@ -50,12 +50,12 @@ export default function Hero() {
         </motion.div>
 
         {/* Subtitle */}
-        <motion.p
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
-          className="text-lg md:text-xl text-gray-400 mb-10 max-w-2xl"
-        >
+          <motion.p
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2, ease: [0.16, 1, 0.3, 1] }}
+            className="text-lg md:text-xl text-muted mb-10 max-w-2xl"
+          >
           All-in-one suite to build, manage, and scale your digital storefront. High-conversion checkout, advanced analytics, and zero configuration.
         </motion.p>
 
@@ -66,7 +66,7 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
           className="flex flex-col sm:flex-row items-center gap-4 mb-20"
         >
-          <Link href="/signup" className="glow-btn group px-8 py-3.5 rounded-full bg-white text-black font-semibold flex items-center gap-2 hover:scale-105 transition-transform shadow-xl shadow-white/10">
+          <Link href="/signup" className="glow-btn btn-primary group px-8 py-3.5 rounded-full font-semibold flex items-center gap-2 shadow-xl shadow-blue-500/10">
             Start for free
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>

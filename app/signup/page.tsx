@@ -17,7 +17,7 @@ export default function Signup() {
   };
 
   return (
-    <div className="min-h-screen bg-black flex flex-col justify-center relative overflow-hidden py-12">
+    <div className="min-h-screen bg-background flex flex-col justify-center relative overflow-hidden py-12">
       {/* Background Grid */}
       <div className="absolute inset-0 bg-grid z-0 opacity-40"></div>
 
@@ -26,7 +26,7 @@ export default function Signup() {
       <div className="absolute -bottom-1/4 -left-1/4 w-[800px] h-[800px] bg-blue-500/10 rounded-full blur-[150px] z-0 pointer-events-none"></div>
 
       <div className="z-10 absolute top-8 left-8">
-        <Link href="/" className="flex items-center gap-2 text-gray-400 hover:text-white transition-colors duration-300">
+        <Link href="/" className="flex items-center gap-2 text-muted hover:text-foreground transition-colors duration-300">
           <ArrowLeft className="w-4 h-4" />
           <span className="text-sm font-medium">Back to Home</span>
         </Link>
@@ -49,8 +49,8 @@ export default function Signup() {
           </div>
 
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold text-white mb-2">Create an account</h1>
-            <p className="text-gray-400 text-sm">Start your 14-day free trial. No credit card required.</p>
+            <h1 className="text-2xl font-bold text-foreground mb-2">Create an account</h1>
+            <p className="text-muted text-sm">Start your 14-day free trial. No credit card required.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -64,7 +64,7 @@ export default function Signup() {
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
-                  className="block w-full pl-10 pr-3 py-2.5 border border-white/10 rounded-xl bg-white/5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all sm:text-sm"
+                  className="block w-full pl-10 pr-3 py-2.5 border border-border rounded-xl bg-background/5 text-foreground placeholder-muted focus:outline-none focus:ring-2 focus:ring-purple-500/50 focus:border-transparent transition-all sm:text-sm"
                   placeholder="John Doe"
                   required
                 />

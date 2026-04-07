@@ -1,21 +1,42 @@
 @import "tailwindcss";
 
 @theme inline {
-  --color-background: #000000;
-  --color-foreground: #ededed;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
   --font-sans: var(--font-inter);
-  
+  --heading: var(--font-inter);
+  --body: var(--font-inter);
+
   --animate-marquee: marquee 25s linear infinite;
-  
+
   @keyframes marquee {
-    0% { transform: translateX(0%); }
-    100% { transform: translateX(-100%); }
+    0% {
+      transform: translateX(0%);
+    }
+
+    100% {
+      transform: translateX(-100%);
+    }
   }
 }
 
-:root {
+:root,
+[data-theme='dark'] {
   --background: #000000;
   --foreground: #ededed;
+  --muted: #888888;
+  --border: rgba(255, 255, 255, 0.1);
+  --glass-bg: rgba(255, 255, 255, 0.03);
+  --grid-color: rgba(255, 255, 255, 0.02);
+}
+
+[data-theme='light'] {
+  --background: #ffffff;
+  --foreground: #171717;
+  --muted: #666666;
+  --border: rgba(0, 0, 0, 0.1);
+  --glass-bg: rgba(0, 0, 0, 0.03);
+  --grid-color: rgba(0, 0, 0, 0.02);
 }
 
 body {
@@ -23,21 +44,37 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   overflow-x: hidden;
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 /* Utilities for visual excellence */
 .glass {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--glass-bg);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border);
 }
 
 .text-gradient {
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
-  background-image: linear-gradient(to right, #fff, #888);
+  background-image: linear-gradient(to right, var(--foreground), var(--muted));
+}
+
+.btn-primary {
+  background: var(--foreground);
+  color: var(--background);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.btn-primary:hover {
+  opacity: 0.9;
+  transform: translateY(-2px);
+}
+
+.text-muted {
+  color: var(--muted);
 }
 
 .text-gradient-primary {
@@ -50,10 +87,14 @@ body {
 .glow-btn {
   position: relative;
 }
+
 .glow-btn::before {
   content: '';
   position: absolute;
-  top: -2px; left: -2px; right: -2px; bottom: -2px;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
   background: linear-gradient(45deg, #4facfe, #00f2fe, #f093fb, #f5576c);
   z-index: -1;
   border-radius: inherit;
@@ -61,6 +102,7 @@ body {
   opacity: 0;
   transition: opacity 0.3s ease;
 }
+
 .glow-btn:hover::before {
   opacity: 1;
 }
@@ -68,8 +110,8 @@ body {
 /* Grid background */
 .bg-grid {
   background-size: 40px 40px;
-  background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
-    linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+  background-image: linear-gradient(to right, var(--grid-color) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid-color) 1px, transparent 1px);
   mask-image: linear-gradient(to bottom, transparent, black, transparent);
   -webkit-mask-image: linear-gradient(to bottom, transparent, black, transparent);
 }

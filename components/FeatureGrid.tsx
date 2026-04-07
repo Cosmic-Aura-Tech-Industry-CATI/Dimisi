@@ -16,7 +16,7 @@ export default function FeatureGrid() {
   return (
     <section className="py-24 bg-black/50 border-y border-white/5 relative" id="usecases">
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[300px] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
-      
+
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">...and more features</h2>
