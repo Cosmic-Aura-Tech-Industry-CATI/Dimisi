@@ -14,13 +14,16 @@ const features = [
 
 export default function FeatureGrid() {
   return (
-    <section className="py-24 bg-black/50 border-y border-white/5 relative" id="usecases">
+    <section
+      className="py-24 border-y border-[var(--border)] relative bg-[radial-gradient(ellipse_at_top,rgba(59,130,246,0.12),transparent_45%)]"
+      id="usecases"
+    >
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-1/2 h-[300px] bg-blue-500/10 blur-[120px] rounded-full pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">...and more features</h2>
-          <p className="text-gray-400">Everything you need to build, scale, and manage your online business.</p>
+          <p className="text-muted">Everything you need to build, scale, and manage your online business.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -31,15 +34,15 @@ export default function FeatureGrid() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.5, delay: idx * 0.1 }}
-              className="glass p-8 rounded-2xl hover:bg-white/[0.05] transition-colors group cursor-pointer"
+              className="glass p-8 rounded-2xl transition-all duration-300 group cursor-pointer hover:-translate-y-1"
             >
-              <div className="w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center text-gray-300 group-hover:text-white group-hover:scale-110 transition-all mb-6 relative overflow-hidden">
+              <div className="w-12 h-12 rounded-xl bg-[var(--glass-bg)] border border-[var(--border)] flex items-center justify-center text-[var(--muted)] group-hover:text-[var(--foreground)] group-hover:scale-110 transition-all mb-6 relative overflow-hidden">
                 {/* Micro animation for icon */}
                 <div className="absolute inset-0 bg-gradient-to-tr from-blue-500/20 to-purple-500/20 opacity-0 group-hover:opacity-100 transition-opacity" />
                 <span className="relative z-10">{item.icon}</span>
               </div>
-              <h3 className="text-xl font-semibold mb-3 text-white">{item.title}</h3>
-              <p className="text-gray-400 text-sm leading-relaxed">{item.desc}</p>
+              <h3 className="text-xl font-semibold mb-3 text-[var(--foreground)]">{item.title}</h3>
+              <p className="text-muted text-sm leading-relaxed">{item.desc}</p>
             </motion.div>
           ))}
         </div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
@@ -93,7 +93,7 @@ const Footer = () => {
   }: { 
     id: string, 
     title: string, 
-    children: React.ReactNode, 
+    children: ReactNode, 
     isNested?: boolean, 
     isAlwaysToggle?: boolean 
   }) => {
@@ -231,36 +231,6 @@ const Footer = () => {
               <Link href="/careers">Meet our people</Link>
               <Link href="/careers">Job Opportunities</Link>
             </div>
-
-            <div className="global-presence mt-12">
-              <h3 className="category-label mb-4">Global Presence</h3>
-              
-              <Accordion id="global-americas" title="Americas" isNested isAlwaysToggle>
-                <div className="link-stack nested-stack">
-                  <Link href="#">United States</Link>
-                  <Link href="#">Canada</Link>
-                  <Link href="#">Brazil</Link>
-                </div>
-              </Accordion>
-
-              <Accordion id="global-emea" title="EMEA" isNested isAlwaysToggle>
-                <div className="link-stack nested-stack">
-                  <Link href="#">United Kingdom</Link>
-                  <Link href="#">Germany</Link>
-                  <Link href="#">France</Link>
-                </div>
-              </Accordion>
-
-              <Accordion id="global-apac" title="APAC" isNested isAlwaysToggle>
-                <div className="link-stack nested-stack">
-                  <Link href="#">Singapore</Link>
-                  <Link href="#">Australia</Link>
-                  <Link href="#">Japan</Link>
-                </div>
-              </Accordion>
-              
-              <Link href="#" className="main-link mt-4">India</Link>
-            </div>
           </Accordion>
 
         </div>
@@ -270,10 +240,10 @@ const Footer = () => {
         <div className="footer-v2-bottom">
           <div className="bottom-left">
             <div className="social-links">
-              <a href="#" className="social-icon" aria-label="Instagram"><FaInstagram /></a>
-              <a href="#" className="social-icon" aria-label="X"><FaXTwitter /></a>
-              <a href="#" className="social-icon" aria-label="Facebook"><FaFacebookF /></a>
-              <a href="#" className="social-icon" aria-label="YouTube"><FaYoutube /></a>
+              <a href="#" className="social-icon instagram" aria-label="Instagram"><FaInstagram /></a>
+              <a href="#" className="social-icon x" aria-label="X"><FaXTwitter /></a>
+              <a href="#" className="social-icon facebook" aria-label="Facebook"><FaFacebookF /></a>
+              <a href="#" className="social-icon youtube" aria-label="YouTube"><FaYoutube /></a>
             </div>
             {mounted && (
               <button
@@ -299,9 +269,12 @@ const Footer = () => {
           </div>
           <p className="copyright-text">© 2026 DIMISI TECHNOLOGY PRIVATE LIMITED</p>
           <div className="legal-links">
+            <Link href="/contact">Contact</Link>
             <Link href="/privacy">Privacy Policy</Link>
             <Link href="/terms">Terms of Use</Link>
             <Link href="/cookies">Cookies Policy</Link>
+            <Link href="/sitemap">Sitemap</Link>
+            <Link href="/about">About</Link>
           </div>
         </div>
       </div>
