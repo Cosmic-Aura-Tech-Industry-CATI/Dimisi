@@ -24,19 +24,19 @@ export default function Testimonials() {
       </div>
 
       <div className="relative flex overflow-x-hidden w-full group">
-        <div className="flex w-max animate-marquee space-x-6 px-6 pb-8 group-hover:[animation-play-state:paused]">
+        <div className="flex w-max animate-marquee space-x-6 px-6 pb-12 group-hover:[animation-play-state:paused]">
           {scrollItems.map((t, i) => (
             <div
               key={i}
-              className="glass p-6 rounded-2xl border border-white/5 w-[350px] flex-shrink-0 hover:border-white/20 transition-colors bg-white/[0.02]"
+              className="glass p-7 rounded-[2rem] border border-[var(--glass-border)] w-[380px] flex-shrink-0 hover:scale-[1.03] hover:shadow-2xl transition-all duration-500 bg-[var(--glass-bg)] group/card"
             >
-              <div className="flex text-yellow-500 mb-4 text-lg">★★★★★</div>
-              <p className="text-gray-300 text-sm leading-relaxed mb-6 whitespace-normal">&quot;{t.text}&quot;</p>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 shadow-md shadow-blue-500/20" />
+              <div className="flex text-yellow-500 mb-5 text-lg">★★★★★</div>
+              <p className="text-muted text-[0.95rem] leading-relaxed mb-8 whitespace-normal font-medium">&quot;{t.text}&quot;</p>
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-tr from-blue-600 to-purple-600 shadow-lg shadow-blue-500/20" />
                 <div>
-                  <h4 className="text-sm font-semibold text-white">{t.name}</h4>
-                  <p className="text-xs text-gray-500">{t.role}</p>
+                  <h4 className="text-[0.95rem] font-bold text-[var(--foreground)]">{t.name}</h4>
+                  <p className="text-xs text-muted font-semibold">{t.role}</p>
                 </div>
               </div>
             </div>
@@ -44,9 +44,10 @@ export default function Testimonials() {
         </div>
 
         {/* Gradients to fade edges */}
-        <div className="absolute top-0 bottom-0 left-0 w-32 bg-gradient-to-r from-black to-transparent pointer-events-none" />
-        <div className="absolute top-0 bottom-0 right-0 w-32 bg-gradient-to-l from-black to-transparent pointer-events-none" />
+        <div className="absolute top-0 bottom-0 left-0 w-32 bg-gradient-to-r from-[var(--background)] to-transparent pointer-events-none z-20" />
+        <div className="absolute top-0 bottom-0 right-0 w-32 bg-gradient-to-l from-[var(--background)] to-transparent pointer-events-none z-20" />
       </div>
+
     </section>
   );
 }

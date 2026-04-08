@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
 import { ChevronDown, Moon, Sun, MessageSquare, X, Menu } from "lucide-react";
 import "./Navbar.css";
 
@@ -15,9 +15,16 @@ export default function Navbar() {
   const [theme, setTheme] = useState("light");
   const pathname = usePathname();
 
+  const { scrollYProgress } = useScroll();
+  const scaleX = useSpring(scrollYProgress, {
+    stiffness: 100,
+    damping: 30,
+    restDelta: 0.001
+  });
+
   useEffect(() => {
     setMounted(true);
-    const savedTheme = localStorage.getItem("theme") || "light";
+    const savedTheme = (localStorage.getItem("theme") as "light" | "dark") || "light";
     setTheme(savedTheme);
 
     const checkSize = () => {
@@ -82,7 +89,7 @@ export default function Navbar() {
                 <Link href="/services/cloud-services">Cloud Services</Link>
                 <Link href="/services/it-consulting">IT Consulting</Link>
                 <Link href="/services/it-support-maintenance">IT Support & Maintenance</Link>
-                <Link href="/services/digital-marketing">Digital Marketing & IT Enabled Services</Link>
+                <Link href="/services/digital-marketing">Digital Marketing & ITES</Link>
                 <Link href="/services/startup-mentorship">Startup Mentorship</Link>
               </NavGroup>
 
@@ -140,7 +147,17 @@ export default function Navbar() {
               onClick={toggleTheme}
               aria-label="Toggle theme"
             >
-              {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
+              <AnimatePresence mode="wait" initial={false}>
+                <motion.div
+                  key={theme}
+                  initial={{ rotate: -180, opacity: 0 }}
+                  animate={{ rotate: 0, opacity: 1 }}
+                  exit={{ rotate: 180, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                >
+                  {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
+                </motion.div>
+              </AnimatePresence>
             </button>
 
             {isDesktop ? (
@@ -158,6 +175,9 @@ export default function Navbar() {
               </button>
             )}
           </div>
+          
+          {/* Unique Progress Bar */}
+          <motion.div className="scroll-progress-bar" style={{ scaleX }} />
         </div>
 
         {/* Mobile Flyout Menu */}
