@@ -23,19 +23,30 @@ const Footer = () => {
   const [openSubSections, setOpenSubSections] = useState<Record<string, boolean>>({});
   const [theme, setTheme] = useState("light");
   const [mounted, setMounted] = useState(false);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     setMounted(true);
     const savedTheme = (localStorage.getItem("theme") as "light" | "dark") || "light";
     setTheme(savedTheme);
 
+    const handleScroll = () => {
+      setShowScrollTop(window.scrollY > 400);
+    };
+
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 1024);
     };
     checkMobile();
     window.addEventListener("resize", checkMobile);
-    return () => window.removeEventListener("resize", checkMobile);
+    window.addEventListener("scroll", handleScroll);
+    
+    return () => {
+      window.removeEventListener("resize", checkMobile);
+      window.removeEventListener("scroll", handleScroll);
+    };
   }, []);
+
 
   useEffect(() => {
     if (!mounted) return;
@@ -135,13 +146,23 @@ const Footer = () => {
   return (
     <footer className="footer-v2">
       {/* Scroll to Top Button */}
-      <button 
-        className="scroll-top-btn" 
-        onClick={scrollToTop}
-        aria-label="Scroll to top"
-      >
-        <ArrowUp size={20} strokeWidth={2.5} />
-      </button>
+      <AnimatePresence>
+        {showScrollTop && (
+          <motion.button 
+            initial={{ opacity: 0, scale: 0.5, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.5, y: 20 }}
+            whileHover={{ y: -5 }}
+            whileTap={{ scale: 0.9 }}
+            className="scroll-top-btn" 
+            onClick={scrollToTop}
+            aria-label="Scroll to top"
+          >
+            <ArrowUp size={20} strokeWidth={2.5} />
+          </motion.button>
+        )}
+      </AnimatePresence>
+
 
       <div className="footer-v2-container">
         <div className="footer-v2-grid">
