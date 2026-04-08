@@ -1,104 +1,293 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  ArrowUp, 
+  ChevronDown, 
+  Moon,
+  Sun
+} from "lucide-react";
+import { 
+  FaInstagram, 
+  FaXTwitter, 
+  FaFacebookF, 
+  FaYoutube 
+} from "react-icons/fa6";
 import "./Footer.css";
 
 const Footer = () => {
+  const [isMobile, setIsMobile] = useState(false);
+  const [openMainSection, setOpenMainSection] = useState<string | null>(null);
+  const [openSubSections, setOpenSubSections] = useState<Record<string, boolean>>({});
+  const [theme, setTheme] = useState("light");
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+    const savedTheme = (localStorage.getItem("theme") as "light" | "dark") || "light";
+    setTheme(savedTheme);
+
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    checkMobile();
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    document.documentElement.setAttribute("data-theme", theme);
+    localStorage.setItem("theme", theme);
+    if (theme === "dark") {
+      document.documentElement.classList.add("dark");
+    } else {
+      document.documentElement.classList.remove("dark");
+    }
+  }, [theme, mounted]);
+
+  const toggleTheme = () => {
+    setTheme((current) => (current === "light" ? "dark" : "light"));
+  };
+
+  const toggleMainSection = (id: string) => {
+    if (!isMobile) return;
+    setOpenMainSection(openMainSection === id ? null : id);
+  };
+
+  const toggleSubSection = (id: string) => {
+    setOpenSubSections(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  const scrollToTop = () => {
+    if ((window as any).lenis) {
+      (window as any).lenis.scrollTo(0, { duration: 1.5 });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
+
+
+  const Accordion = ({ 
+    id, 
+    title, 
+    children, 
+    isNested = false, 
+    isAlwaysToggle = false 
+  }: { 
+    id: string, 
+    title: string, 
+    children: React.ReactNode, 
+    isNested?: boolean, 
+    isAlwaysToggle?: boolean 
+  }) => {
+    const isOpen = isAlwaysToggle 
+      ? !!openSubSections[id] 
+      : (!isMobile || openMainSection === id);
+    
+    const showChevron = isAlwaysToggle || isMobile;
+
+    return (
+      <div className={`${isNested ? 'footer-v2-sub-col' : 'footer-v2-col'} ${isOpen ? 'is-open' : ''}`}>
+        <button 
+          className="footer-v2-header" 
+          onClick={() => isAlwaysToggle ? toggleSubSection(id) : toggleMainSection(id)}
+          disabled={!showChevron}
+          aria-expanded={isOpen}
+          style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', padding: 0 }}
+        >
+          <h3 className={isNested ? "nested-title" : "footer-v2-title"}>{title}</h3>
+          {showChevron && (
+            <motion.div
+              animate={{ rotate: isOpen ? 180 : 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              <ChevronDown size={isNested ? 14 : 18} className="mobile-chevron" />
+            </motion.div>
+          )}
+        </button>
+        
+        <AnimatePresence initial={false}>
+          {isOpen && (
+            <motion.div
+              key="content"
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.3, ease: "easeInOut" }}
+              className="footer-v2-content-wrapper"
+            >
+              <div className="footer-v2-content">
+                {children}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+    );
+  };
+
   return (
-    <footer className="footer">
-      <div className="footer-grid">
+    <footer className="footer-v2">
+      {/* Scroll to Top Button */}
+      <button 
+        className="scroll-top-btn" 
+        onClick={scrollToTop}
+        aria-label="Scroll to top"
+      >
+        <ArrowUp size={20} strokeWidth={2.5} />
+      </button>
 
-        {/* Services */}
-        <section className="footer-col">
-          <h3>Our Offerings</h3>
-          <p className="footer-subheading">Services</p>
+      <div className="footer-v2-container">
+        <div className="footer-v2-grid">
+          
+          {/* Section 1: Our Offerings */}
+          <Accordion id="offerings" title="Our Offerings">
+            <div className="category-group">
+              <span className="category-label">Services</span>
+              <ul className="nested-list">
+                <li><Link href="/services/web-development">Web Development</Link></li>
+                <li><Link href="/services/mobile-app-development">Mobile App Development</Link></li>
+                <li><Link href="/services/ai-automation">AI & Automation</Link></li>
+                <li><Link href="/services/ui-ux-design">UI/UX Design</Link></li>
+                <li><Link href="/services/software-development">Software Development</Link></li>
+                <li><Link href="/services/cloud-services">Cloud Services</Link></li>
+                <li><Link href="/services/it-consulting">IT Consulting</Link></li>
+                <li><Link href="/services/it-support-maintenance">IT Support & Maintenance</Link></li>
+                <li><Link href="/services/digital-marketing">Digital Marketing & ITES</Link></li>
+                <li><Link href="/services/startup-mentorship">Startup Mentorship</Link></li>
+              </ul>
+            </div>
+          </Accordion>
 
-          <Link href="/services">Services Overview</Link>
-          <Link href="/services/web-development">Web Development</Link>
-          <Link href="/services/mobile-app-development">Mobile App Development</Link>
-          <Link href="/services/ai-automation">AI & Automation</Link>
-          <Link href="/services/ui-ux-design">UI/UX Design</Link>
-          <Link href="/services/software-development">Software Development</Link>
-          <Link href="/services/cloud-services">Cloud Services</Link>
-          <Link href="/services/it-consulting">IT Consulting</Link>
-          <Link href="/services/it-support-maintenance">IT Support & Maintenance</Link>
-          <Link href="/services/digital-marketing">Digital Marketing & IT Enabled Services</Link>
-          <Link href="/services/startup-mentorship">Startup Mentorship</Link>
-        </section>
+          {/* Section 2: Products */}
+          <Accordion id="products" title="Products">
+            <div className="category-group">
+              <span className="category-label">Platforms</span>
+              <ul className="nested-list">
+                <li><Link href="/products/kalesh">Kalesh</Link></li>
+                <li><Link href="/products/karyon">KaryON</Link></li>
+                <li><Link href="/products/stylon">Stylon</Link></li>
+                <li><Link href="/products/axiscon">Axis Conference Web</Link></li>
+              </ul>
+            </div>
+            <Link href="/contact" className="main-link">Contact Sales</Link>
+            <Link href="/about" className="main-link">Partner Program</Link>
+          </Accordion>
 
-        {/* Industries */}
-        <section className="footer-col">
-          <h3>Industries</h3>
-          <Link href="/industries/kalesh">Kalesh</Link>
-          <Link href="/industries/karyon">KaryON</Link>
-          <Link href="/industries/stylon">Stylon</Link>
-          <Link href="/industries/axiscon">Axis Conference Web</Link>
-        </section>
+          {/* Section 3: Ecosystem */}
+          <Accordion id="ecosystem" title="Ecosystem">
+            <div className="ecosystem-section">
+              <span className="section-label">Who We Are</span>
+              <div className="link-stack">
+                <Link href="/about">About Us</Link>
+                <Link href="/team-leadership">Team & Leadership</Link>
+                <Link href="/security">Security & Trust</Link>
+                <Link href="/privacy">Privacy Center</Link>
+                <Link href="/support">Support Hub</Link>
+              </div>
+            </div>
+            <div className="ecosystem-section mt-8">
+              <span className="section-label">Resources</span>
+              <div className="link-stack">
+                <Link href="/insights">Trends and Insights</Link>
+                <Link href="/newsletter">Newsletter</Link>
+                <Link href="/events">Events and Webinars</Link>
+                <Link href="/sitemap">Sitemap</Link>
+              </div>
+            </div>
+          </Accordion>
 
-        {/* Ecosystem */}
-        <section className="footer-col">
-          <h3>Ecosystem</h3>
-          <p className="footer-subheading">Who We Are</p>
-          <Link href="/about">About Us</Link>
-          <Link href="/team-leadership">Team & Leadership</Link>
-          <Link href="/careers">Careers</Link>
-          <Link href="/security">Security and Trust</Link>
-        </section>
+          {/* Section 4: Careers */}
+          <Accordion id="careers" title="Careers">
+            <div className="link-stack mb-6">
+              <Link href="/careers">Careers Overview</Link>
+              <Link href="/careers">Meet our people</Link>
+              <Link href="/careers">Job Opportunities</Link>
+            </div>
 
-        {/* Resources */}
-        <section className="footer-col">
-          <h3>Resources</h3>
-          <Link href="/insights">Trends and Insights</Link>
-          <Link href="/newsroom">Newsroom</Link>
-          <Link href="/events">Events and Webinars</Link>
-          <Link href="/support">Support</Link>
-          <Link href="/sitemap">Sitemap</Link>
-        </section>
+            <div className="global-presence mt-12">
+              <h3 className="category-label mb-4">Global Presence</h3>
+              
+              <Accordion id="global-americas" title="Americas" isNested isAlwaysToggle>
+                <div className="link-stack nested-stack">
+                  <Link href="#">United States</Link>
+                  <Link href="#">Canada</Link>
+                  <Link href="#">Brazil</Link>
+                </div>
+              </Accordion>
 
-        {/* Contact */}
-        <section className="footer-col">
-          <h3>Contact</h3>
-          <Link href="/contact">Contact Form</Link>
-          <a href="mailto:dimisi@gmail.com">dimisi@gmail.com</a>
-          <a href="tel:+918545099251">+91 85450 99251</a>
-          <Link href="/careers">Career Enquiries</Link>
-        </section>
+              <Accordion id="global-emea" title="EMEA" isNested isAlwaysToggle>
+                <div className="link-stack nested-stack">
+                  <Link href="#">United Kingdom</Link>
+                  <Link href="#">Germany</Link>
+                  <Link href="#">France</Link>
+                </div>
+              </Accordion>
 
-      </div>
+              <Accordion id="global-apac" title="APAC" isNested isAlwaysToggle>
+                <div className="link-stack nested-stack">
+                  <Link href="#">Singapore</Link>
+                  <Link href="#">Australia</Link>
+                  <Link href="#">Japan</Link>
+                </div>
+              </Accordion>
+              
+              <Link href="#" className="main-link mt-4">India</Link>
+            </div>
+          </Accordion>
 
-      <div className="footer-divider" role="presentation" />
-
-      {/* Middle Section */}
-      <div className="footer-mid">
-        <div className="logo-strip" aria-label="Partner logos">
-          <div className="logo-placeholder">Partner Logo</div>
-          <div className="logo-placeholder">Partner Logo</div>
-          <div className="logo-placeholder">Partner Logo</div>
         </div>
 
-        <div className="footer-socials" aria-label="Social links">
-          <a href="#" aria-label="LinkedIn">in</a>
-          <a href="#" aria-label="X">x</a>
-          <a href="#" aria-label="YouTube">yt</a>
-        </div>
-      </div>
+        <div className="footer-v2-divider" />
 
-      {/* Bottom Section */}
-      <div className="footer-bottom">
-        <p>Copyright (c) 2026 DIMISI TECHNOLOGY PRIVATE LIMITED</p>
-
-        <div className="footer-links">
-          <Link href="/contact">Contact</Link>
-          <Link href="/privacy">Privacy</Link>
-          <Link href="/terms">Terms</Link>
-          <Link href="/cookies">Cookies</Link>
-          <Link href="/sitemap">Sitemap</Link>
-          <Link href="/aboSut">About</Link>
+        <div className="footer-v2-bottom">
+          <div className="bottom-left">
+            <div className="social-links">
+              <a href="#" className="social-icon" aria-label="Instagram"><FaInstagram /></a>
+              <a href="#" className="social-icon" aria-label="X"><FaXTwitter /></a>
+              <a href="#" className="social-icon" aria-label="Facebook"><FaFacebookF /></a>
+              <a href="#" className="social-icon" aria-label="YouTube"><FaYoutube /></a>
+            </div>
+            {mounted && (
+              <button
+                type="button"
+                className="footer-theme-toggle"
+                onClick={toggleTheme}
+                aria-label="Toggle theme"
+              >
+                <AnimatePresence mode="wait" initial={false}>
+                  <motion.div
+                    key={theme}
+                    initial={{ y: -10, opacity: 0 }}
+                    animate={{ y: 0, opacity: 1 }}
+                    exit={{ y: 10, opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
+                  </motion.div>
+                </AnimatePresence>
+                <span>{theme === "light" ? "Dark Mode" : "Light Mode"}</span>
+              </button>
+            )}
+          </div>
+          <p className="copyright-text">© 2026 DIMISI TECHNOLOGY PRIVATE LIMITED</p>
+          <div className="legal-links">
+            <Link href="/privacy">Privacy Policy</Link>
+            <Link href="/terms">Terms of Use</Link>
+            <Link href="/cookies">Cookies Policy</Link>
+          </div>
         </div>
       </div>
     </footer>
   );
 };
 
-
 export default Footer;
+
+
