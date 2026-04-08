@@ -7,7 +7,7 @@ const Footer = () => {
   return (
     <footer className="footer">
       <div className="footer-grid">
-        
+
         {/* Services */}
         <section className="footer-col">
           <h3>Our Offerings</h3>
@@ -93,11 +93,12 @@ const Footer = () => {
           <Link href="/terms">Terms</Link>
           <Link href="/cookies">Cookies</Link>
           <Link href="/sitemap">Sitemap</Link>
-          <Link href="/about">About</Link>
+          <Link href="/aboSut">About</Link>
         </div>
       </div>
     </footer>
   );
 };
+
 
 export default Footer;
