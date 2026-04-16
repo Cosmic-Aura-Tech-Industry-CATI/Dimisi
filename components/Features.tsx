@@ -9,14 +9,14 @@ const features = [
     title: "Build a strong digital presence",
     description: "We design and develop modern websites and applications that help your business stand out and attract more customers online.",
     points: ["Responsive websites", "Custom web apps", "SEO-ready structure", "High performance"],
-    image: "/web-dev.png",
+    image: "/image 1.png",
     icon: <Globe className="w-6 h-6 text-blue-400" />
   },
   {
     title: "Automate and scale your operations",
     description: "Leverage AI and custom software solutions to streamline workflows, reduce manual effort, and improve efficiency.",
     points: ["AI automation", "Custom software", "Process optimization", "Cloud integration"],
-    image: "/automation.png",
+    image: "/Features-Image2.png",
     icon: <Cpu className="w-6 h-6 text-purple-400" />
   },
   {
@@ -28,7 +28,7 @@ const features = [
       "Lead Generation Systems",
       "Growth-Focused Marketing"
     ],
-    image: "/growth.png",
+    image: "/Features-Image3.png",
     icon: <TrendingUp className="w-6 h-6 text-pink-400" />
   }
 ];
