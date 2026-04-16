@@ -14,22 +14,24 @@ export default function AboutPage() {
         >
           <h1 className="text-5xl md:text-6xl font-bold mb-6">Who We Are</h1>
           <p className="text-xl text-muted max-w-3xl leading-relaxed">
-            DIMIISI is a forward-thinking technology partner dedicated to helping businesses navigate the complexities of digital evolution.
-            From startups to global enterprises, we provide the insights, products, and services that drive forward momentum.
+            DIMISI Technologies Pvt. Ltd. is a Kanpur-based, registered IT company focused on building scalable digital solutions for businesses, startups, and institutions. 
+            We specialize in web and mobile application development, AI-driven automation, custom software systems, cloud infrastructure, and digital marketing.
           </p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mt-20">
           <div className="glass p-10 rounded-3xl border border-border">
-            <h2 className="text-3xl font-bold mb-4">Our Vision</h2>
+            <h2 className="text-3xl font-bold mb-4">Our Approach</h2>
             <p className="text-muted leading-relaxed">
-              To empower every business with advanced AI and software engineering that feels intuitive and yields measurable results.
+              With a product-driven approach, we not only deliver client solutions but also develop our own platforms, 
+              demonstrating strong capabilities in building real-world, scalable systems.
             </p>
           </div>
           <div className="glass p-10 rounded-3xl border border-border">
-            <h2 className="text-3xl font-bold mb-4">Our Commitment</h2>
+            <h2 className="text-3xl font-bold mb-4">Our Mission</h2>
             <p className="text-muted leading-relaxed">
-              Excellence in code, transparency in strategy, and a relentless focus on creating high-conversion user experiences.
+              We help businesses transition into efficient, technology-enabled operations through structured development, 
+              modern architecture, and continuous support.
             </p>
           </div>
         </div>

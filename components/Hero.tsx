@@ -13,7 +13,7 @@ export default function Hero() {
     target: ref,
     offset: ["start start", "end start"],
   });
-  
+
   const yDashboard = useTransform(scrollYProgress, [0, 1], ["0%", "20%"]);
   const opacityDashboard = useTransform(scrollYProgress, [0, 0.8], [1, 0.5]);
 
@@ -45,10 +45,10 @@ export default function Hero() {
           className="max-w-4xl relative"
         >
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] mb-8">
-            Earn revenue by selling anything from the <br />
+            Building scalable digital systems for the <br />
             <span className="text-gradient relative inline-block">
-              internet on your app
-              <motion.div 
+              modern enterprise
+              <motion.div
                 className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full"
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
@@ -59,13 +59,13 @@ export default function Hero() {
         </motion.div>
 
         {/* Subtitle */}
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
-            className="text-lg md:text-xl text-muted mb-10 max-w-2xl font-medium"
-          >
-          All-in-one suite to build, manage, and scale your digital storefront. High-conversion checkout, advanced analytics, and zero configuration.
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, delay: 0.3, ease: [0.16, 1, 0.3, 1] }}
+          className="text-lg md:text-xl text-muted mb-10 max-w-2xl font-medium"
+        >
+          DIMISI Technologies Pvt. Ltd. delivers world-class web, mobile, and AI solutions helping businesses transition into efficient, technology-enabled operations.
         </motion.p>
 
         {/* Action Buttons */}
