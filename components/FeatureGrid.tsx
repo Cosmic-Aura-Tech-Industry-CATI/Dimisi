@@ -9,7 +9,9 @@ const features = [
   { icon: <Globe />, title: "Global CDN", desc: "Serve your assets quickly anywhere in the world with our edge network." },
   { icon: <Zap />, title: "Lightning Fast", desc: "Optimized architecture ensures your app loads instantly, improving conversion rates." },
   { icon: <Settings />, title: "API Access", desc: "Build custom integrations using our fully documented REST and GraphQL APIs." },
-  { icon: <ShieldCheck />, title: "Bank-grade Security", desc: "Your data is encrypted at rest and in transit. SOC2 Type II compliance standard." },
+  {
+    icon: <ShieldCheck />, title: "Built with Security at the Core", desc: "From infrastructure to application level, we implement robust security practices to safeguard your data, systems, and users.",
+  },
 ];
 
 export default function FeatureGrid() {
