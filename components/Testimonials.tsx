@@ -4,12 +4,27 @@ import { motion } from "framer-motion";
 import Image from "next/image";
 
 const testimonials = [
-  { name: "Sarah Jenkins", role: "CEO at TechFlow", text: "Demisi completely transformed our sales pipeline. The analytics are incredibly detailed, and the interface is an absolute joy to use." },
-  { name: "Marcus Doe", role: "Founder of CreativeCo", text: "We switched from our previous provider and haven't looked back. The speed and reliability are unmatched." },
-  { name: "Elena Rivers", role: "Marketing Director", text: "The cohort analysis feature alone saved us hours of manual spreadsheet work. Highly recommended for any serious SaaS." },
-  { name: "David Chen", role: "Indie Hacker", text: "I integrated Demisi in under an hour. It just works. Beautiful design, great UX." }
+  {
+    name: "Rohit Sharma",
+    role: "Owner, Local Retail Business",
+    text: "DIMISI helped us take our business online with a professional website and digital strategy. We’ve seen a clear increase in customer inquiries and sales."
+  },
+  {
+    name: "Anjali Verma",
+    role: "Founder, Service Startup",
+    text: "Their team understood our requirements perfectly and delivered a complete solution—from design to deployment. The process was smooth and highly professional."
+  },
+  {
+    name: "Vikram Singh",
+    role: "Director, Manufacturing Firm",
+    text: "We wanted to automate parts of our operations, and DIMISI built a system that saved us time and reduced manual work significantly."
+  },
+  {
+    name: "Neha Gupta",
+    role: "Marketing Consultant",
+    text: "The website and digital strategy they created helped us attract better clients and improve our online presence. Highly recommended."
+  }
 ];
-
 export default function Testimonials() {
   // Duplicating the testimonials to ensure seamless looping
   const scrollItems = [...testimonials, ...testimonials, ...testimonials];
@@ -19,7 +34,7 @@ export default function Testimonials() {
       <div className="max-w-7xl mx-auto px-6 relative z-10">
         <div className="text-center mb-16">
           <p className="text-blue-400 text-sm font-semibold mb-2">Trusted by the best</p>
-          <h2 className="text-3xl md:text-4xl font-bold">Over 600+ Happy Customers</h2>
+          <h2 className="text-3xl md:text-4xl font-bold">Over Happy Customers</h2>
         </div>
       </div>
 
