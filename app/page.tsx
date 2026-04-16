@@ -2,7 +2,6 @@ import Hero from "@/components/Hero";
 import Brands from "@/components/Brands";
 import Features from "@/components/Features";
 import FeatureGrid from "@/components/FeatureGrid";
-import Integrations from "@/components/Integrations";
 import Testimonials from "@/components/Testimonials";
 import CTA from "@/components/CTA";
 
@@ -13,7 +12,6 @@ export default function Home() {
       <Brands />
       <Features />
       <FeatureGrid />
-      <Integrations />
       <Testimonials />
       <CTA />
     </main>
