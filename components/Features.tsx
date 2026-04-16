@@ -2,29 +2,34 @@
 
 import { motion } from "framer-motion";
 import Image from "next/image";
-import { BarChart3, Users, Zap } from "lucide-react";
+import { Globe, Cpu, TrendingUp } from "lucide-react";
 
 const features = [
   {
-    title: "Get proper user & sales statistics",
-    description: "Convert more users into active subscribers. Understand your audience with advanced cohort analysis and tracking.",
-    points: ["View analytics", "Track MRR", "Export data", "Custom APIs"],
-    image: "/analytics.png",
-    icon: <BarChart3 className="w-6 h-6 text-blue-400" />
+    title: "Build a strong digital presence",
+    description: "We design and develop modern websites and applications that help your business stand out and attract more customers online.",
+    points: ["Responsive websites", "Custom web apps", "SEO-ready structure", "High performance"],
+    image: "/web-dev.png",
+    icon: <Globe className="w-6 h-6 text-blue-400" />
   },
   {
-    title: "Bring visitors from different sources",
-    description: "Integrate seamlessly with social media platforms, ad networks, and organic SEO tools to maximize reach.",
-    points: ["Source tracking", "UTM builder", "Social connections", "ROI calculator"],
-    image: "/dashboard.png",
-    icon: <Zap className="w-6 h-6 text-purple-400" />
+    title: "Automate and scale your operations",
+    description: "Leverage AI and custom software solutions to streamline workflows, reduce manual effort, and improve efficiency.",
+    points: ["AI automation", "Custom software", "Process optimization", "Cloud integration"],
+    image: "/automation.png",
+    icon: <Cpu className="w-6 h-6 text-purple-400" />
   },
   {
-    title: "Acquire and retain more customers",
-    description: "Launch targeted retention campaigns, gather feedback, and create personalized experiences that users love.",
-    points: ["Retention modeling", "Automated emails", "A/B testing", "Heatmaps"],
-    image: "/user.png",
-    icon: <Users className="w-6 h-6 text-pink-400" />
+    title: "Scale Your Business with Data-Driven Growth",
+    description: "We help you attract the right audience, optimize conversions, and build scalable systems that drive consistent revenue growth.",
+    points: [
+      "SEO & Online Visibility",
+      "Performance Tracking ",
+      "Lead Generation Systems",
+      "Growth-Focused Marketing"
+    ],
+    image: "/growth.png",
+    icon: <TrendingUp className="w-6 h-6 text-pink-400" />
   }
 ];
 
@@ -35,9 +40,9 @@ export default function Features() {
         <div className="flex flex-col gap-32">
           {features.map((feature, idx) => (
             <div key={idx} className={`flex flex-col lg:flex-row items-center gap-16 ${idx % 2 === 1 ? 'lg:flex-row-reverse' : ''}`}>
-              
+
               {/* Text Content */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, x: idx % 2 === 1 ? 50 : -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true, margin: "-100px" }}
@@ -68,7 +73,7 @@ export default function Features() {
               </motion.div>
 
               {/* Image Content */}
-              <motion.div 
+              <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 whileInView={{ opacity: 1, scale: 1 }}
                 viewport={{ once: true, margin: "-100px" }}
