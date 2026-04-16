@@ -267,7 +267,7 @@ const Footer = () => {
               </button>
             )}
           </div>
-          <p className="copyright-text">© 2026 DIMISI TECHNOLOGY PRIVATE LIMITED</p>
+          <p className="copyright-text">© 2026 DIMISI Technologies Pvt. Ltd.</p>
           <div className="legal-links">
             <Link href="/contact">Contact</Link>
             <Link href="/privacy">Privacy Policy</Link>
