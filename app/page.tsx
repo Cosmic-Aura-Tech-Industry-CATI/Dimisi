@@ -3,7 +3,7 @@ import Brands from "@/components/Brands";
 import Features from "@/components/Features";
 import FeatureGrid from "@/components/FeatureGrid";
 import Testimonials from "@/components/Testimonials";
-import CTA from "@/components/CTA";
+import Contact from "@/components/form";
 
 export default function Home() {
   return (
@@ -13,7 +13,7 @@ export default function Home() {
       <Features />
       <FeatureGrid />
       <Testimonials />
-      <CTA />
+      <Contact />
     </main>
   );
 }

@@ -95,7 +95,7 @@ export default function Hero() {
         >
           <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[var(--background)] to-transparent z-10 pointer-events-none opacity-40" />
           <Image
-            src="/dashboard.png"
+            src="/image 1.png"
             alt="Demisi Dashboard"
             width={1200}
             height={800}

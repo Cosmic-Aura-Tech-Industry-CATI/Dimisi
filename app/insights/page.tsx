@@ -5,10 +5,10 @@ import { ArrowRight, BookOpen, Calendar, Clock } from "lucide-react";
 
 export default function InsightsPage() {
   const posts = [
-    { title: "The Future of AI Automation in 2026", date: "Apr 2, 2026", category: "Technology", read: "5 min", image: "/analytics.png" },
-    { title: "Scaling Cloud Infrastructure for SaaS", date: "Mar 28, 2026", category: "Engineering", read: "12 min", image: "/dashboard.png" },
-    { title: "Designing for High-Conversion Checkouts", date: "Mar 20, 2026", category: "Design", read: "8 min", image: "/user.png" },
-    { title: "Building a Culture of Digital Innovation", date: "Mar 15, 2026", category: "Ecosystem", read: "10 min", image: "/analytics.png" },
+    { title: "The Future of AI Automation in 2026", date: "Apr 2, 2026", category: "Technology", read: "5 min", image: "/Features-Image2.png" },
+    { title: "Scaling Cloud Infrastructure for SaaS", date: "Mar 28, 2026", category: "Engineering", read: "12 min", image: "/image 1.png" },
+    { title: "Designing for High-Conversion Checkouts", date: "Mar 20, 2026", category: "Design", read: "8 min", image: "/Features-Image3.png" },
+    { title: "Building a Culture of Digital Innovation", date: "Mar 15, 2026", category: "Ecosystem", read: "10 min", image: "/Features-Image2.png" },
   ];
 
   return (
