@@ -75,7 +75,7 @@ export default function Hero() {
           transition={{ duration: 0.6, delay: 0.4, ease: [0.16, 1, 0.3, 1] }}
           className="flex flex-col sm:flex-row items-center gap-4 mb-20"
         >
-          <Link href="/signup" className="btn-primary group px-10 py-4 rounded-full font-bold flex items-center gap-2">
+          <Link href="#contact" className="btn-primary group px-10 py-4 rounded-full font-bold flex items-center gap-2">
             Start for free
             <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
           </Link>
