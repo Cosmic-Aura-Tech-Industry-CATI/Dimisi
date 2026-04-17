@@ -33,7 +33,7 @@ export default function Hero() {
           className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-[var(--border)] glass mb-8 cursor-pointer hover:border-blue-500/30 transition-all group"
         >
           <span className="text-xs font-bold bg-blue-600 text-white px-2 py-0.5 rounded-full group-hover:scale-105 transition-transform">New</span>
-          <span className="text-sm font-medium text-muted">Introducing Demisi Analytics 2.0</span>
+          <span className="text-sm font-medium text-muted">Introducing Demisi Technologies Private Limited</span>
           <ArrowRight className="w-3 h-3 text-muted group-hover:translate-x-1 transition-transform" />
         </motion.div>
 
@@ -45,9 +45,9 @@ export default function Hero() {
           className="max-w-4xl relative"
         >
           <h1 className="text-5xl md:text-7xl font-bold tracking-tight leading-[1.1] mb-8">
-            Building scalable digital systems for the <br />
+            Building Scalable Digital Systems For The <br />
             <span className="text-gradient relative inline-block">
-              modern enterprise
+              Modern Enterprises
               <motion.div
                 className="absolute -bottom-2 left-0 w-full h-1 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full"
                 initial={{ scaleX: 0 }}
