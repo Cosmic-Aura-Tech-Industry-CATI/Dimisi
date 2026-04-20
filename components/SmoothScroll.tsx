@@ -2,12 +2,15 @@
 
 import { useEffect } from "react";
 import Lenis from "lenis";
+import { usePathname } from "next/navigation";
 
 export default function SmoothScroll({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+
   useEffect(() => {
     // Initialize Lenis
     const lenis = new Lenis({
-      duration: 1.5,
+      duration: 1.2,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: 'vertical',
       gestureOrientation: 'vertical',
@@ -26,11 +29,14 @@ export default function SmoothScroll({ children }: { children: React.ReactNode }
 
     requestAnimationFrame(raf);
 
+    // Reset scroll on route change
+    lenis.scrollTo(0, { immediate: true });
+
     return () => {
       lenis.destroy();
       delete (window as any).lenis;
     };
-  }, []);
+  }, [pathname]);
 
   return <>{children}</>;
 }
