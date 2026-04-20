@@ -90,6 +90,7 @@ export default function Hero() {
           initial={{ opacity: 0, y: 100, rotateX: 10, scale: 0.9 }}
           whileInView={{ opacity: 1, y: 0, rotateX: 0, scale: 1 }}
           viewport={{ once: true }}
+          style={{ y: yDashboard, opacity: opacityDashboard }}
           transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
           className="relative w-full max-w-5xl rounded-2xl md:rounded-[2.5rem] border border-[var(--glass-border)] glass p-1.5 md:p-3 shadow-2xl overflow-hidden"
         >

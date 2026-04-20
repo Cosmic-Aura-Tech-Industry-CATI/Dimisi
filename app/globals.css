@@ -78,6 +78,7 @@ html {
 html, body {
   height: auto;
   min-height: 100%;
+  position: relative;
 }
 
 body {
@@ -106,7 +107,7 @@ body::before {
   opacity: 0.02;
   pointer-events: none;
   z-index: 9999;
-  background-image: url("https://grainy-gradients.vercel.app/noise.svg");
+  background-image: url("/noise.svg");
   filter: contrast(150%) brightness(100%);
 }
 

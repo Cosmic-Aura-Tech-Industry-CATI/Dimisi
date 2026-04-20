@@ -74,9 +74,9 @@ export default function Navbar() {
           {/* Desktop Navigation */}
           {isDesktop && (
             <nav className="topnav" aria-label="Main navigation">
-              <NavGroup 
-                label="Our Offerings" 
-                href="/services" 
+              <NavGroup
+                label="Our Offerings"
+                href="/services"
                 active={pathname.startsWith("/services")}
                 isOpen={expandedGroup === "offerings"}
                 onToggle={() => toggleGroup("offerings")}
@@ -93,9 +93,9 @@ export default function Navbar() {
                 <Link href="/services/startup-mentorship">Startup Mentorship</Link>
               </NavGroup>
 
-              <NavGroup 
-                label="Products" 
-                href="/products" 
+              <NavGroup
+                label="Products"
+                href="/products"
                 active={pathname.startsWith("/products")}
                 isOpen={expandedGroup === "products"}
                 onToggle={() => toggleGroup("products")}
@@ -106,9 +106,9 @@ export default function Navbar() {
                 <Link href="/products/axiscon">Axis Conference Web</Link>
               </NavGroup>
 
-              <NavGroup 
-                label="Insights" 
-                href="/insights" 
+              <NavGroup
+                label="Insights"
+                href="/insights"
                 active={pathname.startsWith("/insights") || pathname === "/newsletter" || pathname === "/events" || pathname === "/sitemap"}
                 isOpen={expandedGroup === "insights"}
                 onToggle={() => toggleGroup("insights")}
@@ -116,12 +116,11 @@ export default function Navbar() {
                 <Link href="/insights">Insights Home</Link>
                 <Link href="/newsletter">Newsletter</Link>
                 <Link href="/events">Events</Link>
-                <Link href="/sitemap">Sitemap</Link>
               </NavGroup>
 
-              <NavGroup 
-                label="Who We Are" 
-                href="/about" 
+              <NavGroup
+                label="Who We Are"
+                href="/about"
                 active={pathname.startsWith("/about") || pathname === "/team-leadership" || pathname === "/security" || pathname === "/support" || pathname === "/privacy"}
                 isOpen={expandedGroup === "about"}
                 onToggle={() => toggleGroup("about")}
@@ -161,9 +160,9 @@ export default function Navbar() {
             </button>
 
             {isDesktop ? (
-               <Link href="/contact" className="contact-btn">
-                  Contact Us
-               </Link>
+              <Link href="/contact" className="contact-btn">
+                Contact Us
+              </Link>
             ) : (
               <button
                 type="button"
@@ -175,7 +174,7 @@ export default function Navbar() {
               </button>
             )}
           </div>
-          
+
           {/* Unique Progress Bar */}
           <motion.div className="scroll-progress-bar" style={{ scaleX }} />
         </div>
@@ -191,8 +190,8 @@ export default function Navbar() {
               className="mobile-nav glass"
             >
               <div className="mobile-nav-content">
-                <MobileNavGroup 
-                  label="Our Offerings" 
+                <MobileNavGroup
+                  label="Our Offerings"
                   isOpen={expandedGroup === "offerings"}
                   onToggle={() => toggleGroup("offerings")}
                 >
@@ -208,8 +207,8 @@ export default function Navbar() {
                   <Link href="/services/startup-mentorship">Startup Mentorship</Link>
                 </MobileNavGroup>
 
-                <MobileNavGroup 
-                  label="Products" 
+                <MobileNavGroup
+                  label="Products"
                   isOpen={expandedGroup === "products"}
                   onToggle={() => toggleGroup("products")}
                 >
@@ -219,8 +218,8 @@ export default function Navbar() {
                   <Link href="/products/axiscon">Axis Conference Web</Link>
                 </MobileNavGroup>
 
-                <MobileNavGroup 
-                  label="Insights" 
+                <MobileNavGroup
+                  label="Insights"
                   isOpen={expandedGroup === "insights"}
                   onToggle={() => toggleGroup("insights")}
                 >
@@ -230,8 +229,8 @@ export default function Navbar() {
                   <Link href="/sitemap">Sitemap</Link>
                 </MobileNavGroup>
 
-                <MobileNavGroup 
-                  label="Who We Are" 
+                <MobileNavGroup
+                  label="Who We Are"
                   isOpen={expandedGroup === "about"}
                   onToggle={() => toggleGroup("about")}
                 >

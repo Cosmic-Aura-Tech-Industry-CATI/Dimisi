@@ -164,7 +164,7 @@ function HeroBanner({ profile }: { profile: ServiceProfile }) {
   return (
     <section className="glass border border-border rounded-2xl sm:rounded-3xl overflow-hidden">
       <div className="relative h-[250px] sm:h-[320px] lg:h-[390px]">
-        <Image src={profile.heroImage} alt={`${profile.title} banner`} fill className="object-cover" priority />
+        <Image src={profile.heroImage} alt={`${profile.title} banner`} fill sizes="100vw" className="object-cover" priority />
         <div className="absolute inset-0 bg-black/45" />
         <div className="absolute inset-0 p-6 sm:p-10 lg:p-12 flex flex-col justify-end">
           <p className={`inline-flex w-fit items-center gap-2 rounded-full px-4 py-1.5 text-xs sm:text-sm font-semibold tracking-wide mb-4 ${accent.badge}`}>

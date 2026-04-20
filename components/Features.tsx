@@ -85,6 +85,7 @@ export default function Features() {
                   src={feature.image}
                   alt={feature.title}
                   fill
+                  sizes="(max-width: 768px) 100vw, 50vw"
                   className="object-cover rounded-2xl transition-transform duration-1000 group-hover:scale-110"
                 />
               </motion.div>

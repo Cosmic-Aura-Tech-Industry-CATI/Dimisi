@@ -3,17 +3,17 @@
 import { useState, useEffect, type ReactNode } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { 
-  ArrowUp, 
-  ChevronDown, 
+import {
+  ArrowUp,
+  ChevronDown,
   Moon,
   Sun
 } from "lucide-react";
-import { 
-  FaInstagram, 
-  FaXTwitter, 
-  FaFacebookF, 
-  FaYoutube 
+import {
+  FaInstagram,
+  FaXTwitter,
+  FaFacebookF,
+  FaYoutube
 } from "react-icons/fa6";
 import "./Footer.css";
 
@@ -40,7 +40,7 @@ const Footer = () => {
     checkMobile();
     window.addEventListener("resize", checkMobile);
     window.addEventListener("scroll", handleScroll);
-    
+
     return () => {
       window.removeEventListener("resize", checkMobile);
       window.removeEventListener("scroll", handleScroll);
@@ -84,29 +84,29 @@ const Footer = () => {
   };
 
 
-  const Accordion = ({ 
-    id, 
-    title, 
-    children, 
-    isNested = false, 
-    isAlwaysToggle = false 
-  }: { 
-    id: string, 
-    title: string, 
-    children: ReactNode, 
-    isNested?: boolean, 
-    isAlwaysToggle?: boolean 
+  const Accordion = ({
+    id,
+    title,
+    children,
+    isNested = false,
+    isAlwaysToggle = false
+  }: {
+    id: string,
+    title: string,
+    children: ReactNode,
+    isNested?: boolean,
+    isAlwaysToggle?: boolean
   }) => {
-    const isOpen = isAlwaysToggle 
-      ? !!openSubSections[id] 
+    const isOpen = isAlwaysToggle
+      ? !!openSubSections[id]
       : (!isMobile || openMainSection === id);
-    
+
     const showChevron = isAlwaysToggle || isMobile;
 
     return (
       <div className={`${isNested ? 'footer-v2-sub-col' : 'footer-v2-col'} ${isOpen ? 'is-open' : ''}`}>
-        <button 
-          className="footer-v2-header" 
+        <button
+          className="footer-v2-header"
           onClick={() => isAlwaysToggle ? toggleSubSection(id) : toggleMainSection(id)}
           disabled={!showChevron}
           aria-expanded={isOpen}
@@ -122,7 +122,7 @@ const Footer = () => {
             </motion.div>
           )}
         </button>
-        
+
         <AnimatePresence initial={false}>
           {isOpen && (
             <motion.div
@@ -148,13 +148,13 @@ const Footer = () => {
       {/* Scroll to Top Button */}
       <AnimatePresence>
         {showScrollTop && (
-          <motion.button 
+          <motion.button
             initial={{ opacity: 0, scale: 0.5, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.5, y: 20 }}
             whileHover={{ y: -5 }}
             whileTap={{ scale: 0.9 }}
-            className="scroll-top-btn" 
+            className="scroll-top-btn"
             onClick={scrollToTop}
             aria-label="Scroll to top"
           >
@@ -166,7 +166,7 @@ const Footer = () => {
 
       <div className="footer-v2-container">
         <div className="footer-v2-grid">
-          
+
           {/* Section 1: Our Offerings */}
           <Accordion id="offerings" title="Our Offerings">
             <div className="category-group">
@@ -219,7 +219,6 @@ const Footer = () => {
                 <Link href="/insights">Trends and Insights</Link>
                 <Link href="/newsletter">Newsletter</Link>
                 <Link href="/events">Events and Webinars</Link>
-                <Link href="/sitemap">Sitemap</Link>
               </div>
             </div>
           </Accordion>
