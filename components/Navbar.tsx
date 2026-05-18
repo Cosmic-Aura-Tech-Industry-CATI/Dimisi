@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
 import { ChevronDown, Moon, Sun, MessageSquare, X, Menu } from "lucide-react";
 import "./Navbar.css";
+import Image from "next/image";
 
 export default function Navbar() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -19,12 +20,13 @@ export default function Navbar() {
   const scaleX = useSpring(scrollYProgress, {
     stiffness: 100,
     damping: 30,
-    restDelta: 0.001
+    restDelta: 0.001,
   });
 
   useEffect(() => {
     setMounted(true);
-    const savedTheme = (localStorage.getItem("theme") as "light" | "dark") || "light";
+    const savedTheme =
+      (localStorage.getItem("theme") as "light" | "dark") || "light";
     setTheme(savedTheme);
 
     const checkSize = () => {
@@ -67,8 +69,19 @@ export default function Navbar() {
         <div className="navbar-shell glass">
           {/* Brand */}
           <Link href="/" className="brand hcl-brand" aria-label="DIMISI home">
-            <span className="brand-wordmark">DIMISI</span>
-            <span className="brand-tagline">Technology for Forward Momentum</span>
+            <div className="brand">
+              <Image
+                src="/dimisi-logo.webp"
+                alt="DIMISI Logo"
+                width={140}
+                height={40}
+                priority
+                className="brand-img"
+              />
+            </div>
+            <span className="brand-tagline">
+              Technology for Forward Momentum
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -82,15 +95,25 @@ export default function Navbar() {
                 onToggle={() => toggleGroup("offerings")}
               >
                 <Link href="/services/web-development">Web Development</Link>
-                <Link href="/services/mobile-app-development">Mobile App Development</Link>
+                <Link href="/services/mobile-app-development">
+                  Mobile App Development
+                </Link>
                 <Link href="/services/ai-automation">AI & Automation</Link>
                 <Link href="/services/ui-ux-design">UI/UX Design</Link>
-                <Link href="/services/software-development">Software Development</Link>
+                <Link href="/services/software-development">
+                  Software Development
+                </Link>
                 <Link href="/services/cloud-services">Cloud Services</Link>
                 <Link href="/services/it-consulting">IT Consulting</Link>
-                <Link href="/services/it-support-maintenance">IT Support & Maintenance</Link>
-                <Link href="/services/digital-marketing">Digital Marketing & ITES</Link>
-                <Link href="/services/startup-mentorship">Startup Mentorship</Link>
+                <Link href="/services/it-support-maintenance">
+                  IT Support & Maintenance
+                </Link>
+                <Link href="/services/digital-marketing">
+                  Digital Marketing & ITES
+                </Link>
+                <Link href="/services/startup-mentorship">
+                  Startup Mentorship
+                </Link>
               </NavGroup>
 
               <NavGroup
@@ -109,7 +132,12 @@ export default function Navbar() {
               <NavGroup
                 label="Insights"
                 href="/insights"
-                active={pathname.startsWith("/insights") || pathname === "/newsletter" || pathname === "/events" || pathname === "/sitemap"}
+                active={
+                  pathname.startsWith("/insights") ||
+                  pathname === "/newsletter" ||
+                  pathname === "/events" ||
+                  pathname === "/sitemap"
+                }
                 isOpen={expandedGroup === "insights"}
                 onToggle={() => toggleGroup("insights")}
               >
@@ -121,7 +149,13 @@ export default function Navbar() {
               <NavGroup
                 label="Who We Are"
                 href="/about"
-                active={pathname.startsWith("/about") || pathname === "/team-leadership" || pathname === "/security" || pathname === "/support" || pathname === "/privacy"}
+                active={
+                  pathname.startsWith("/about") ||
+                  pathname === "/team-leadership" ||
+                  pathname === "/security" ||
+                  pathname === "/support" ||
+                  pathname === "/privacy"
+                }
                 isOpen={expandedGroup === "about"}
                 onToggle={() => toggleGroup("about")}
               >
@@ -132,7 +166,10 @@ export default function Navbar() {
                 <Link href="/privacy">Privacy</Link>
               </NavGroup>
 
-              <Link href="/careers" className={`nav-link ${pathname === "/careers" ? "active" : ""}`}>
+              <Link
+                href="/careers"
+                className={`nav-link ${pathname === "/careers" ? "active" : ""}`}
+              >
                 Careers
               </Link>
             </nav>
@@ -196,15 +233,25 @@ export default function Navbar() {
                   onToggle={() => toggleGroup("offerings")}
                 >
                   <Link href="/services/web-development">Web Development</Link>
-                  <Link href="/services/mobile-app-development">Mobile App Development</Link>
+                  <Link href="/services/mobile-app-development">
+                    Mobile App Development
+                  </Link>
                   <Link href="/services/ai-automation">AI & Automation</Link>
                   <Link href="/services/ui-ux-design">UI/UX Design</Link>
-                  <Link href="/services/software-development">Software Development</Link>
+                  <Link href="/services/software-development">
+                    Software Development
+                  </Link>
                   <Link href="/services/cloud-services">Cloud Services</Link>
                   <Link href="/services/it-consulting">IT Consulting</Link>
-                  <Link href="/services/it-support-maintenance">IT Support & Maintenance</Link>
-                  <Link href="/services/digital-marketing">Digital Marketing</Link>
-                  <Link href="/services/startup-mentorship">Startup Mentorship</Link>
+                  <Link href="/services/it-support-maintenance">
+                    IT Support & Maintenance
+                  </Link>
+                  <Link href="/services/digital-marketing">
+                    Digital Marketing
+                  </Link>
+                  <Link href="/services/startup-mentorship">
+                    Startup Mentorship
+                  </Link>
                 </MobileNavGroup>
 
                 <MobileNavGroup
@@ -241,7 +288,9 @@ export default function Navbar() {
                   <Link href="/privacy">Privacy</Link>
                 </MobileNavGroup>
 
-                <Link href="/careers" className="mobile-link">Careers</Link>
+                <Link href="/careers" className="mobile-link">
+                  Careers
+                </Link>
                 <Link href="/contact" className="mobile-contact-btn">
                   Contact Us <MessageSquare size={18} />
                 </Link>
@@ -261,9 +310,7 @@ function NavGroup({ label, href, active, isOpen, onToggle, children }: any) {
         {label} <ChevronDown size={14} className="chevron" />
       </Link>
       <div className="dropdown glass">
-        <div className="dropdown-grid">
-          {children}
-        </div>
+        <div className="dropdown-grid">{children}</div>
       </div>
     </div>
   );
@@ -275,9 +322,7 @@ function MobileNavGroup({ label, isOpen, onToggle, children }: any) {
       <button className="mobile-group-btn" onClick={onToggle}>
         {label} <ChevronDown size={18} className="chevron" />
       </button>
-      <div className="mobile-group-content">
-        {children}
-      </div>
+      <div className="mobile-group-content">{children}</div>
     </div>
   );
 }
