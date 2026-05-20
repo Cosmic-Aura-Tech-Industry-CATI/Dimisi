@@ -77,6 +77,7 @@ export default function Navbar() {
                 height={40}
                 priority
                 className="brand-img"
+                style={{ width: "auto", height: "auto" }}
               />
             </div>
             <span className="brand-tagline">
