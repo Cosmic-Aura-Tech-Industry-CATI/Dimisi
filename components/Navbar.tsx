@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { motion, AnimatePresence, useScroll, useSpring } from "framer-motion";
-import { ChevronDown, Moon, Sun, MessageSquare, X, Menu } from "lucide-react";
+import { ChevronDown, MessageSquare, X, Menu } from "lucide-react";
 import "./Navbar.css";
 import Image from "next/image";
 
@@ -13,7 +13,6 @@ export default function Navbar() {
   const [expandedGroup, setExpandedGroup] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isDesktop, setIsDesktop] = useState(true);
-  const [theme, setTheme] = useState("light");
   const pathname = usePathname();
 
   const { scrollYProgress } = useScroll();
@@ -25,9 +24,8 @@ export default function Navbar() {
 
   useEffect(() => {
     setMounted(true);
-    const savedTheme =
-      (localStorage.getItem("theme") as "light" | "dark") || "light";
-    setTheme(savedTheme);
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.documentElement.classList.add("dark");
 
     const checkSize = () => {
       setIsDesktop(window.innerWidth > 1050);
@@ -36,17 +34,6 @@ export default function Navbar() {
     window.addEventListener("resize", checkSize);
     return () => window.removeEventListener("resize", checkSize);
   }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [theme, mounted]);
 
   useEffect(() => {
     setMobileMenuOpen(false);
@@ -59,9 +46,7 @@ export default function Navbar() {
     setExpandedGroup((current) => (current === groupName ? null : groupName));
   };
 
-  const toggleTheme = () => {
-    setTheme((current) => (current === "light" ? "dark" : "light"));
-  };
+
 
   return (
     <header className="site-header">
@@ -178,24 +163,6 @@ export default function Navbar() {
 
           {/* Desktop/Mobile Toggles */}
           <div className="nav-actions">
-            <button
-              type="button"
-              className="icon-btn theme-toggle"
-              onClick={toggleTheme}
-              aria-label="Toggle theme"
-            >
-              <AnimatePresence mode="wait" initial={false}>
-                <motion.div
-                  key={theme}
-                  initial={{ rotate: -180, opacity: 0 }}
-                  animate={{ rotate: 0, opacity: 1 }}
-                  exit={{ rotate: 180, opacity: 0 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  {theme === "light" ? <Moon size={20} /> : <Sun size={20} />}
-                </motion.div>
-              </AnimatePresence>
-            </button>
 
             {isDesktop ? (
               <Link href="/contact" className="contact-btn">

@@ -5,9 +5,7 @@ import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowUp,
-  ChevronDown,
-  Moon,
-  Sun
+  ChevronDown
 } from "lucide-react";
 import {
   FaInstagram,
@@ -21,14 +19,14 @@ const Footer = () => {
   const [isMobile, setIsMobile] = useState(false);
   const [openMainSection, setOpenMainSection] = useState<string | null>(null);
   const [openSubSections, setOpenSubSections] = useState<Record<string, boolean>>({});
-  const [theme, setTheme] = useState("light");
+
   const [mounted, setMounted] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     setMounted(true);
-    const savedTheme = (localStorage.getItem("theme") as "light" | "dark") || "light";
-    setTheme(savedTheme);
+    document.documentElement.setAttribute("data-theme", "dark");
+    document.documentElement.classList.add("dark");
 
     const handleScroll = () => {
       setShowScrollTop(window.scrollY > 400);
@@ -48,20 +46,6 @@ const Footer = () => {
   }, []);
 
 
-  useEffect(() => {
-    if (!mounted) return;
-    document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("theme", theme);
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  }, [theme, mounted]);
-
-  const toggleTheme = () => {
-    setTheme((current) => (current === "light" ? "dark" : "light"));
-  };
 
   const toggleMainSection = (id: string) => {
     if (!isMobile) return;
@@ -244,27 +228,7 @@ const Footer = () => {
               <a href="#" className="social-icon facebook" aria-label="Facebook"><FaFacebookF /></a>
               <a href="#" className="social-icon youtube" aria-label="YouTube"><FaYoutube /></a>
             </div>
-            {mounted && (
-              <button
-                type="button"
-                className="footer-theme-toggle"
-                onClick={toggleTheme}
-                aria-label="Toggle theme"
-              >
-                <AnimatePresence mode="wait" initial={false}>
-                  <motion.div
-                    key={theme}
-                    initial={{ y: -10, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 10, opacity: 0 }}
-                    transition={{ duration: 0.2 }}
-                  >
-                    {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
-                  </motion.div>
-                </AnimatePresence>
-                <span>{theme === "light" ? "Dark Mode" : "Light Mode"}</span>
-              </button>
-            )}
+
           </div>
           <p className="copyright-text">© 2026 DIMISI Technologies Pvt. Ltd.</p>
           <div className="legal-links">

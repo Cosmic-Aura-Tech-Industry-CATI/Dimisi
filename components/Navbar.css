@@ -22,11 +22,11 @@
   justify-content: space-between;
   padding: 0.75rem 1.5rem;
   border-radius: 20px;
-  background: var(--glass-bg);
+  background: rgba(13, 22, 32, 0.75);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--border);
-  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
+  border: 1px solid rgba(65, 85, 104, 0.4);
+  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   min-height: 70px;
   overflow: visible;
@@ -44,11 +44,7 @@
 }
 
 
-:root[data-theme='dark'] .navbar-shell {
-  background: rgba(13, 22, 32, 0.75);
-  border-color: rgba(65, 85, 104, 0.4);
-  box-shadow: 0 10px 50px rgba(0, 0, 0, 0.5);
-}
+
 
 /* Brand */
 .hcl-brand {
@@ -61,7 +57,7 @@
 
 .brand-wordmark {
   font-family: var(--heading);
-  color: #1f63cb;
+  color: #8bc0ff;
   font-size: clamp(1.4rem, 2vw, 1.8rem);
   line-height: 1;
   font-weight: 900;
@@ -69,8 +65,8 @@
 }
 
 .brand-tagline {
-  color: #1f63cb;
-  border-left: 1px solid rgba(31, 99, 203, 0.3);
+  color: #8bc0ff;
+  border-left: 1px solid rgba(139, 192, 255, 0.3);
   padding-left: 0.75rem;
   font-size: 0.7rem;
   line-height: 1.25;
@@ -79,10 +75,7 @@
   opacity: 0.8;
 }
 
-:root[data-theme='dark'] .brand-wordmark,
-:root[data-theme='dark'] .brand-tagline {
-  color: #8bc0ff;
-}
+
 
 /* Desktop Nav */
 .topnav {
@@ -95,7 +88,7 @@
   padding: 0.5rem 1rem;
   font-size: 0.95rem;
   font-weight: 600;
-  color: #1d2c3d;
+  color: #ecf4fb;
   text-decoration: none;
   border-radius: 12px;
   transition: all 0.2s ease;
@@ -132,9 +125,9 @@
   min-width: 280px;
   padding: 0.75rem;
   border-radius: 18px;
-  background: #ffffff;
-  border: 1px solid rgba(216, 225, 234, 0.8);
-  box-shadow: 0 20px 50px rgba(16, 34, 51, 0.12);
+  background: #1a2531;
+  border: 1px solid rgba(65, 85, 104, 0.5);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
   opacity: 0;
   visibility: hidden;
   transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
@@ -158,7 +151,7 @@
   text-decoration: none;
   font-size: 0.9rem;
   font-weight: 500;
-  color: #1b4162;
+  color: #eef6fd;
   transition: all 0.2s ease;
 }
 
@@ -168,19 +161,7 @@
   padding-left: 1.1rem;
 }
 
-:root[data-theme='dark'] .dropdown {
-  background: #1a2531;
-  border-color: rgba(65, 85, 104, 0.5);
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
-}
 
-:root[data-theme='dark'] .dropdown a {
-  color: #eef6fd;
-}
-
-:root[data-theme='dark'] .nav-link {
-  color: #ecf4fb;
-}
 
 /* Actions */
 .nav-actions {
@@ -193,9 +174,9 @@
   width: 44px;
   height: 44px;
   border-radius: 14px;
-  border: 1px solid rgba(216, 225, 234, 0.7);
-  background: #fff;
-  color: #1d2c3d;
+  border: 1px solid rgba(65, 85, 104, 0.6);
+  background: #243445;
+  color: #f1f7fc;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -206,7 +187,7 @@
 .icon-btn:hover {
   border-color: #1f63cb;
   color: #1f63cb;
-  background: rgba(31, 99, 203, 0.05);
+  background: rgba(31, 99, 203, 0.1);
   transform: scale(1.05);
 }
 
@@ -228,11 +209,7 @@
   box-shadow: 0 8px 25px rgba(31, 99, 203, 0.35);
 }
 
-:root[data-theme='dark'] .icon-btn {
-  background: #243445;
-  border-color: rgba(65, 85, 104, 0.6);
-  color: #f1f7fc;
-}
+
 
 /* Mobile Flyout */
 .mobile-nav {
@@ -242,18 +219,12 @@
   right: 1.5rem;
   padding: 1.5rem;
   border-radius: 24px;
-  background: rgba(255, 255, 255, 0.9);
-  border: 1px solid rgba(216, 225, 234, 0.6);
-  box-shadow: 0 40px 80px rgba(16, 34, 51, 0.2);
+  background: rgba(13, 22, 32, 0.9);
+  border: 1px solid rgba(65, 85, 104, 0.5);
+  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
   max-height: 80vh;
   overflow-y: auto;
   pointer-events: auto;
-}
-
-:root[data-theme='dark'] .mobile-nav {
-  background: rgba(13, 22, 32, 0.9);
-  border-color: rgba(65, 85, 104, 0.5);
-  box-shadow: 0 40px 100px rgba(0, 0, 0, 0.6);
 }
 
 .mobile-nav-content {
@@ -277,13 +248,9 @@
   border: 0;
   font: inherit;
   font-weight: 700;
-  color: #1d2c3d;
+  color: #ecf4fb;
   font-size: 1.15rem;
   cursor: pointer;
-}
-
-:root[data-theme='dark'] .mobile-group-btn {
-  color: #ecf4fb;
 }
 
 .mobile-group-content {
@@ -309,7 +276,7 @@
 .mobile-link {
   font-size: 1.15rem;
   font-weight: 700;
-  color: #1d2c3d;
+  color: #ecf4fb;
   text-decoration: none;
   padding: 0.75rem 0;
 }
