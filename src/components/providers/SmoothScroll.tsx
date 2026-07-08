@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect } from "react";
 import Lenis from "lenis";
 
@@ -19,6 +21,8 @@ export function SmoothScroll() {
       touchMultiplier: 1.6,
     });
 
+    document.documentElement.classList.add("lenis");
+
     let rafId = 0;
     function raf(time: number) {
       lenis.raf(time);
@@ -29,6 +33,7 @@ export function SmoothScroll() {
     return () => {
       cancelAnimationFrame(rafId);
       lenis.destroy();
+      document.documentElement.classList.remove("lenis");
     };
   }, []);
 

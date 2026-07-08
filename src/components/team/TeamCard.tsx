@@ -1,3 +1,5 @@
+"use client";
+
 import { Linkedin, User } from "lucide-react";
 import { TiltCard } from "@/components/ui/TiltCard";
 import { Reveal } from "@/components/ui/Reveal";

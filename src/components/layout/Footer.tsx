@@ -1,90 +1,39 @@
-import { Link } from "@tanstack/react-router";
-import { Facebook, Instagram, Send, Youtube } from "lucide-react";
-
-type Col = { title: string; links: { label: string; to: string }[] };
-
-const COLUMNS: Col[] = [
+// Footer.tsx — Global site footer component displaying brand tagline, grouped resource columns, and copyright notice.
+const COLUMNS = [
   {
     title: "Company",
-    links: [
-      { label: "About Us", to: "/about" },
-      { label: "Careers", to: "/careers" },
-      { label: "Contact", to: "/contact" },
-    ],
+    links: ["About Us", "Careers", "Contact"],
   },
   {
     title: "Services",
-    links: [
-      { label: "Offerings", to: "/services" },
-      { label: "Solutions", to: "/services" },
-      { label: "Consulting", to: "/services" },
-    ],
+    links: ["Offerings", "Solutions", "Consulting"],
   },
   {
     title: "Products",
-    links: [
-      { label: "Kalesh", to: "/products" },
-      { label: "CarryOn", to: "/products" },
-      { label: "Sylon", to: "/products" },
-      { label: "Axis Conference Web", to: "/products" },
-    ],
+    links: ["Kalesh", "CarryOn", "Sylon", "Axis Conference Web"],
   },
   {
     title: "Resources",
-    links: [
-      { label: "Blogs", to: "/blog" },
-      { label: "Case Studies", to: "/case-studies" },
-      { label: "Documentation", to: "/blog" },
-    ],
+    links: ["Blogs", "Case Studies", "Documentation"],
   },
-  {
-    title: "Legal",
-    links: [
-      { label: "Privacy Policy", to: "/contact" },
-      { label: "Cookie Policy", to: "/contact" },
-      { label: "Terms of Use", to: "/contact" },
-      { label: "Sitemap", to: "/contact" },
-    ],
-  },
-];
-
-const SOCIALS = [
-  { label: "Instagram", icon: Instagram, href: "https://instagram.com" },
-  { label: "Facebook", icon: Facebook, href: "https://facebook.com" },
-  { label: "Telegram", icon: Send, href: "https://telegram.org" },
-  { label: "YouTube", icon: Youtube, href: "https://youtube.com" },
 ];
 
 export function Footer() {
   return (
-    <footer className="border-t border-foreground/10 bg-[#050505]">
-      <div className="mx-auto max-w-7xl px-4 py-16 md:px-6">
-        <div className="grid grid-cols-2 gap-10 md:grid-cols-3 lg:grid-cols-6">
+    <footer className="border-t border-foreground/10">
+      <div className="mx-auto max-w-7xl px-4 py-12 md:px-6">
+        <div className="grid grid-cols-2 gap-10 md:grid-cols-3 lg:grid-cols-5">
           <div className="col-span-2 max-w-xs md:col-span-3 lg:col-span-1">
-            <div className="flex items-center gap-2">
-              <span className="text-lg font-semibold tracking-tight text-foreground">Dimisi</span>
-              <span className="text-[10px] font-medium tracking-[0.2em] text-foreground/40">
-                TECHNOLOGIES
-              </span>
+            <div className="flex items-center gap-2.5">
+              <svg className="h-6 w-6" viewBox="0 0 24 24" fill="white" aria-hidden>
+                <path d="M12 2 22 12 12 22 2 12 Z" />
+              </svg>
+              <span className="font-display text-lg text-foreground">Dimisi</span>
             </div>
             <p className="mt-4 text-sm leading-relaxed text-foreground/50">
-              Building digital products, intelligent solutions, and future-ready technology
-              experiences.
+              Building digital products, intelligent solutions, and future-ready
+              technology experiences.
             </p>
-            <div className="mt-6 flex items-center gap-3">
-              {SOCIALS.map((s) => (
-                <a
-                  key={s.label}
-                  href={s.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  aria-label={s.label}
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-foreground/10 text-foreground/60 transition-all hover:border-foreground/30 hover:text-foreground"
-                >
-                  <s.icon className="h-4 w-4" />
-                </a>
-              ))}
-            </div>
           </div>
 
           {COLUMNS.map((column) => (
@@ -94,13 +43,10 @@ export function Footer() {
               </h3>
               <ul className="mt-5 space-y-3">
                 {column.links.map((link) => (
-                  <li key={link.label}>
-                    <Link
-                      to={link.to}
-                      className="text-sm text-foreground/50 transition-colors hover:text-foreground"
-                    >
-                      {link.label}
-                    </Link>
+                  <li key={link}>
+                    <button suppressHydrationWarning className="text-sm text-foreground/50 transition-colors hover:text-foreground">
+                      {link}
+                    </button>
                   </li>
                 ))}
               </ul>

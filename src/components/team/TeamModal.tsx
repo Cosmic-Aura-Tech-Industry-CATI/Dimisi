@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useRef } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Linkedin, User, X } from "lucide-react";

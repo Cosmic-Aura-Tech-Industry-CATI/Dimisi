@@ -1,7 +1,9 @@
-import { Link, type LinkProps } from "@tanstack/react-router";
+"use client";
+
+import Link, { type LinkProps } from "next/link";
 import { motion } from "motion/react";
 import { ArrowRight } from "lucide-react";
-import type { ReactNode } from "react";
+import type { ReactNode, ComponentPropsWithoutRef } from "react";
 
 type Variant = "primary" | "secondary";
 
@@ -23,7 +25,7 @@ type PillButtonProps = {
   variant?: Variant;
   withArrow?: boolean;
   className?: string;
-} & LinkProps;
+} & LinkProps & Omit<ComponentPropsWithoutRef<"a">, "href">;
 
 export function PillButton({
   children,

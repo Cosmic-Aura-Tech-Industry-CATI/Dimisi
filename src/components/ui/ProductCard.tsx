@@ -1,4 +1,6 @@
-import { Link } from "@tanstack/react-router";
+"use client";
+
+import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import type { Product } from "@/lib/site-data";
 import { TiltCard } from "./TiltCard";
@@ -8,8 +10,7 @@ export function ProductCard({ product }: { product: Product }) {
   return (
     <TiltCard className="h-full">
       <Link
-        to="/products/$slug"
-        params={{ slug: product.slug }}
+        href={`/products/${product.slug}`}
         className="flex h-full flex-col rounded-2xl border border-foreground/10 bg-foreground/[0.01] p-6 transition-colors duration-300 hover:border-foreground/30 hover:bg-foreground/[0.03]"
       >
         <div className="flex items-start justify-between">
