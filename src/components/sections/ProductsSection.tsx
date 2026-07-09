@@ -1,4 +1,4 @@
-// ProductsSection.tsx — Homepage section displaying in-house products (Kalesh, CarryOn, Sylon, Axis) in dynamic grid cards.
+// ProductsSection.tsx
 import { motion } from "motion/react";
 
 import { products } from "@/lib/site-data";
@@ -10,6 +10,9 @@ import {
 } from "./section-kit";
 
 export function ProductsSection() {
+  // Filter for Kalesh only
+  const displayedProducts = products.filter((p) => p.name === "Kalesh");
+
   return (
     <ParallaxSection id="products" className="py-14 md:py-20">
       {(style) => (
@@ -28,14 +31,15 @@ export function ProductsSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.8 }}
-            className="mt-14 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-2"
+            // Changed grid-cols to 1 to ensure it centers nicely for a single card
+            className="mt-14 flex justify-center" 
           >
-            {products.map((product) => {
+            {displayedProducts.map((product) => {
               const Icon = product.icon;
               return (
                 <TiltCard
                   key={product.slug}
-                  className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-8 transition-colors hover:border-foreground/30"
+                  className="w-full max-w-lg rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-8 transition-colors hover:border-foreground/30"
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl border border-foreground/10 bg-foreground/[0.03]">
