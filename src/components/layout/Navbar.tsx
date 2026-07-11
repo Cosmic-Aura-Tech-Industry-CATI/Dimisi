@@ -154,9 +154,17 @@ export function Navbar() {
         initial={{ y: -24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className={`pointer-events-auto w-full max-w-6xl rounded-[20px] transition-[background,box-shadow,backdrop-filter] duration-500 ease-out ${
+        className={`pointer-events-auto w-full max-w-6xl rounded-[20px] border border-transparent transition-[background,box-shadow,backdrop-filter] duration-500 ease-out ${
           scrolled ? "nav-glass-scrolled" : "nav-glass"
         }`}
+        style={{
+          backgroundImage:
+            "linear-gradient(var(--nav-bg, #0a0a0a), var(--nav-bg, #0a0a0a)), linear-gradient(120deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.08) 30%, rgba(255,255,255,0.05) 55%, rgba(255,255,255,0.55) 80%, rgba(255,255,255,0.9) 100%)",
+          backgroundOrigin: "border-box",
+          backgroundClip: "padding-box, border-box",
+          boxShadow:
+            "0 0 0 1px rgba(255,255,255,0.04), 0 1px 0 0 rgba(255,255,255,0.5) inset, 0 8px 30px rgba(0,0,0,0.45)",
+        }}
       >
         <div className="w-full flex items-center justify-between px-4 py-3 md:px-6 md:py-3.5">
           {/* Left: logo */}
