@@ -319,6 +319,7 @@ export type ProductDetail = {
   audience: string;
   roadmap: { phase: string; title: string; description: string }[];
   cta: string;
+  actionUrl?: string;
   demoUrl?: string;
 };
 
