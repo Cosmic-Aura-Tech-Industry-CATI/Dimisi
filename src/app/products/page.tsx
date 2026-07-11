@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import ProductsPageClient from "./ProductsPageClient";
 
 export const metadata: Metadata = {
-  title: "Products — Dimisi Technologies",
-  description: "Explore Dimisi Technologies' in-house products: Kalesh, CarryOn, Sylon, and Axis Conference Web.",
-  openGraph: { title: "Products — Dimisi Technologies", description: "Digital products built in-house by Dimisi Technologies." },
+  title: "Kalesh — Dimisi Technologies",
+  description: "Kalesh is Dimisi Technologies' in-house social platform for community connection and real-time discussion.",
+  openGraph: { title: "Kalesh — Dimisi Technologies", description: "Kalesh is Dimisi Technologies' in-house social platform for community connection and real-time discussion." },
 };
 
 export default function ProductsPage() {

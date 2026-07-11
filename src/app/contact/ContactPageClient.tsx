@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState, type FormEvent } from "react";
 import { motion } from "motion/react";
 import { PageHero } from "@/components/ui/PageHero";
@@ -19,9 +20,9 @@ const faqs = [
 ];
 
 const contactInfo = [
-  { icon: Mail, label: "Email", value: "hello@dimisi.tech" },
-  { icon: Phone, label: "Phone", value: "+1 (555) 010-2026" },
-  { icon: MapPin, label: "Location", value: "Remote-first · Worldwide" },
+  { icon: Mail, label: "Email", value: "dimisitechnologiespvtltd@gmail.com" },
+  { icon: Phone, label: "Phone", value: "+91 85450 99251" },
+  { icon: MapPin, label: "Location", value: "Kanpur, Uttar Pradesh, India" },
 ];
 
 export default function ContactPageClient() {
@@ -68,15 +69,32 @@ export default function ContactPageClient() {
               )}
             </div>
           </Reveal>
-          <div className="flex flex-col gap-5">
-            {contactInfo.map((info, i) => (
-              <Reveal key={info.label} delay={i * 0.08}>
-                <div className="flex items-start gap-4 rounded-2xl border border-foreground/10 p-6 transition-all duration-300 hover:border-foreground/30 hover:bg-foreground/[0.02]">
-                  <info.icon className="mt-0.5 h-5 w-5 text-foreground/60" />
-                  <div><p className="text-xs uppercase tracking-wider text-foreground/40">{info.label}</p><p className="mt-1 text-sm text-foreground">{info.value}</p></div>
-                </div>
-              </Reveal>
-            ))}
+          <div className="relative flex min-h-[40rem] flex-col overflow-hidden rounded-3xl border border-foreground/10 bg-foreground/[0.02]">
+            <div className="relative h-72">
+              <Image
+                src="/Bhootdev get in touch.svg"
+                alt="Bhoot Dev get in touch art"
+                fill
+                sizes="(max-width: 1024px) 100vw, 420px"
+                className="object-contain object-center opacity-50"
+              />
+            </div>
+
+            <div className="mt-auto p-6 md:p-8">
+              <div className="space-y-5">
+                {contactInfo.map((info, i) => (
+                  <Reveal key={info.label} delay={i * 0.08}>
+                    <div className="flex items-start gap-4 rounded-2xl border border-foreground/10 bg-[#00000080] p-6 transition-all duration-300 hover:border-foreground/30 hover:bg-foreground/[0.08]">
+                      <info.icon className="mt-0.5 h-5 w-5 text-foreground/60" />
+                      <div>
+                        <p className="text-xs uppercase tracking-wider text-foreground/40">{info.label}</p>
+                        <p className="mt-1 text-sm text-foreground">{info.value}</p>
+                      </div>
+                    </div>
+                  </Reveal>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </section>

@@ -24,13 +24,13 @@ export const metadata: Metadata = {
     site: "@Dimisi",
   },
   icons: {
-    icon: "/favicon.ico",
+    icon: "/just%20logo.svg",
   },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en" className="dark">
+    <html lang="en" className="dark" suppressHydrationWarning>
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link

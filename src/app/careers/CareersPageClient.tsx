@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { PageHero } from "@/components/ui/PageHero";
+import Image from "next/image";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Reveal } from "@/components/ui/Reveal";
 import { PillButton } from "@/components/ui/PillButton";
@@ -10,12 +10,30 @@ import { CTABand } from "@/components/ui/CTABand";
 import { StepFlow } from "@/components/ui/StepFlow";
 import { GraduationCap, HeartPulse, Home, Laptop, Plane, Plus, Trophy } from "lucide-react";
 
+/*
 const openings = [
   { title: "Senior Software Engineer", type: "Full-time · Remote", team: "Engineering", description: "Architect and ship scalable web and backend systems, mentor engineers, and drive technical decisions across client and product work." },
   { title: "UI/UX Designer", type: "Full-time · Hybrid", team: "Design", description: "Own end-to-end product design — research, wireframes, prototypes, and design systems that make complex products feel effortless." },
   { title: "AI Automation Specialist", type: "Full-time · Remote", team: "AI", description: "Build LLM-powered assistants and automation pipelines, integrating practical AI into products and internal workflows." },
   { title: "Digital Marketing Manager", type: "Full-time · Remote", team: "Marketing", description: "Lead SEO, content, and performance campaigns, turning data into growth for Dimisi and our clients." },
   { title: "Customer Success Lead", type: "Full-time · Hybrid", team: "Customer Success", description: "Be the trusted partner for our clients — onboarding, support, and long-term relationships that drive retention and impact." },
+];
+*/
+
+// Show only the two requested internship openings for now
+const openings = [
+  {
+    title: "Content Writer Intern",
+    type: "Internship · Part-time",
+    team: "Marketing",
+    description: "Support content creation, blog writing, and social copy — a great role for aspiring writers who want hands-on experience.",
+  },
+  {
+    title: "Graphic Designer Intern",
+    type: "Internship · Part-time",
+    team: "Design",
+    description: "Assist the design team with visuals, assets, and brand work — ideal for emerging designers building a portfolio.",
+  },
 ];
 
 const process = ["Application", "Intro Call", "Technical / Portfolio", "Team Interview", "Offer"];
@@ -34,9 +52,66 @@ export default function CareersPageClient() {
 
   return (
     <>
-      <PageHero label="Careers" title="Build the Future With Us" subtitle="Join a curious, innovation-focused team where your work ships and your ideas matter.">
-        <PillButton href="/contact" variant="primary">Apply Now</PillButton>
-      </PageHero>
+      <section className="relative overflow-hidden px-4 pt-32 pb-14 md:px-8 md:pt-36 md:pb-16">
+        {/* Soft top glow */}
+        <div className="glow-radial pointer-events-none absolute inset-x-0 top-0 h-[420px]" aria-hidden />
+        {/* Dot grid */}
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{
+            backgroundImage: "radial-gradient(#ffffff 1px, transparent 1px)",
+            backgroundSize: "26px 26px",
+            opacity: 0.04,
+          }}
+          aria-hidden
+        />
+
+        <div className="relative z-10 mx-auto max-w-7xl">
+          <div className="grid items-center gap-8 md:grid-cols-2">
+            <div className="flex justify-center md:justify-start">
+              <Image src="/Caareer Bhootdev.svg" alt="Bhootdev Careers" width={520} height={520} className="object-contain" />
+            </div>
+
+            <div className="text-center md:text-left">
+              <motion.p
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6, ease: "easeOut" }}
+                className="mb-4 text-xs uppercase tracking-[0.2em] text-foreground/40"
+              >
+                Careers
+              </motion.p>
+
+              <motion.h1
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, ease: "easeOut", delay: 0.1 }}
+                className="font-light leading-[1.08] tracking-tight text-foreground [font-size:clamp(34px,6vw,60px)]"
+              >
+                Build the Future With Us
+              </motion.h1>
+
+              <motion.p
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut", delay: 0.25 }}
+                className="mx-auto mt-6 max-w-2xl text-base leading-relaxed text-foreground/50 sm:text-lg md:mx-0"
+              >
+                Join a curious, innovation-focused team where your work ships and your ideas matter.
+              </motion.p>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, ease: "easeOut", delay: 0.4 }}
+                className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row md:items-start"
+              >
+                <PillButton href="https://www.thekalesh.com/careers" target="_blank" rel="noreferrer" variant="primary">Apply Now</PillButton>
+              </motion.div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="bg-[#050505] px-4 py-24 md:px-8">
         <div className="mx-auto max-w-7xl">
@@ -59,7 +134,7 @@ export default function CareersPageClient() {
                         <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.3, ease: "easeInOut" }} className="overflow-hidden">
                           <div className="px-6 pb-6">
                             <p className="max-w-2xl text-sm leading-relaxed text-foreground/60">{role.description}</p>
-                            <div className="mt-6"><PillButton href="/contact" variant="primary">Apply Now</PillButton></div>
+                            <div className="mt-6"><PillButton href="https://www.thekalesh.com/careers" target="_blank" rel="noreferrer" variant="primary">Apply Now</PillButton></div>
                           </div>
                         </motion.div>
                       ) : null}
@@ -97,7 +172,7 @@ export default function CareersPageClient() {
       </section>
 
       <CTABand title="Ready to Join Us?" subtitle="Send us your details and tell us what you'd love to work on.">
-        <PillButton href="/contact" variant="primary">Apply Now</PillButton>
+        <PillButton href="https://www.thekalesh.com/careers" target="_blank" rel="noreferrer" variant="primary">Apply Now</PillButton>
       </CTABand>
     </>
   );

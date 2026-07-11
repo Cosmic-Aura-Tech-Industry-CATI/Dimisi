@@ -6,7 +6,7 @@ export function Highlights() {
   return (
     <CinematicSection className="bg-[#050505] px-4 py-16 md:px-8">
       <div className="mx-auto max-w-7xl">
-        <div className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/10 md:grid-cols-3 lg:grid-cols-5">
+        <div className="grid grid-cols-1 gap-px overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/10 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
           {highlights.map((stat, i) => (
             <Reveal key={stat.label} delay={i * 0.06}>
               <div className="group flex h-full flex-col items-center justify-center bg-[#050505] px-4 py-10 text-center transition-colors duration-300 hover:bg-foreground/[0.03]">

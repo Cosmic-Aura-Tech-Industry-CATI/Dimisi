@@ -132,36 +132,6 @@ export const products: Product[] = [
     status: "In Development",
     icon: Sparkles,
   },
-  {
-    slug: "carryon",
-    name: "CarryOn",
-    tagline: "Travel & logistics, simplified",
-    description:
-      "Smart travel and delivery companion connecting people who move with people who send.",
-    category: "Travel & Logistics",
-    status: "In Development",
-    icon: Rocket,
-  },
-  {
-    slug: "sylon",
-    name: "Sylon",
-    tagline: "Business operations suite",
-    description:
-      "An operations and workflow suite that helps small businesses run and scale effortlessly.",
-    category: "Business Software",
-    status: "Beta",
-    icon: Layers,
-  },
-  {
-    slug: "access-control-web",
-    name: "Axis Conference Web",
-    tagline: "Secure access management",
-    description:
-      "Web-based access control and identity management for secure, role-based permissions.",
-    category: "Security",
-    status: "Live",
-    icon: ShieldCheck,
-  },
 ];
 
 export type Industry = {
@@ -290,6 +260,7 @@ export type CaseStudy = {
   slug: string;
   title: string;
   category: string;
+  websiteUrl: string;
   overview: string;
   challenge: string;
   solution: string;
@@ -298,43 +269,60 @@ export type CaseStudy = {
 
 export const caseStudies: CaseStudy[] = [
   {
-    slug: "fintech-dashboard",
-    title: "Real-Time Fintech Dashboard",
-    category: "Finance · Web App",
+    slug: "rudra-tours-travels",
+    title: "Rudra Tours & Travels",
+    category: "Travel · Website",
+    websiteUrl: "https://toursbyrudra.com",
     overview:
-      "A unified analytics dashboard for a growing fintech startup to monitor transactions live.",
+      "A travel website for India tour packages, car rentals, wedding travel, and city-based trip planning from Kanpur.",
     challenge:
-      "Fragmented data sources and slow reporting made timely decisions nearly impossible.",
+      "Travel customers need a fast way to compare tours, vehicles, destinations, and contact options without getting lost in a large catalog.",
     solution:
-      "We built an event-driven pipeline with a real-time dashboard and role-based access.",
+      "We structured the site around clear service pages, destination guides, vehicle categories, and direct inquiry flows so visitors can plan trips quickly.",
     outcome:
-      "Reporting time dropped from hours to seconds, unlocking faster, data-driven decisions.",
+      "Visitors can move from inspiration to booking or inquiry with less friction, whether they need a package, a car, or wedding travel support.",
   },
   {
-    slug: "ai-support-automation",
-    title: "AI Customer Support Automation",
-    category: "SaaS · AI Automation",
+    slug: "kalesh",
+    title: "Kalesh",
+    category: "Social Platform · Website",
+    websiteUrl: "https://thekalesh.com",
     overview:
-      "An AI assistant that resolves common support tickets automatically for a SaaS platform.",
+      "An anonymous social platform built around real-time polls, private chats, and authentic opinion sharing.",
     challenge:
-      "A small support team was overwhelmed by repetitive, high-volume inbound queries.",
+      "The product needed a clear way to explain anonymity, community trust, and fast participation without overwhelming first-time visitors.",
     solution:
-      "We deployed an LLM-powered assistant with human handoff and knowledge-base grounding.",
+      "We presented the platform around anonymous profiles, instant polls, and direct community actions so the value is obvious on arrival.",
     outcome:
-      "Over 60% of tickets auto-resolved, freeing the team to focus on complex cases.",
+      "Visitors can quickly understand how to share honest opinions without profile pressure or identity exposure.",
   },
   {
-    slug: "retail-commerce-platform",
-    title: "Omnichannel Retail Platform",
-    category: "Retail · E-Commerce",
+    slug: "karyon",
+    title: "Karyon",
+    category: "Home Services · Web App",
+    websiteUrl: "https://karyon.app",
     overview:
-      "A scalable commerce platform unifying in-store and online sales for a retail brand.",
+      "A home-services platform for booking verified professionals across plumbing, electrical, cleaning, painting, moving, and more.",
     challenge:
-      "Disconnected inventory and checkout systems created stockouts and poor experiences.",
+      "Home service customers need a simple way to browse offerings, trust the providers, and book help without friction.",
     solution:
-      "We unified inventory, POS, and storefront into a single cloud-native platform.",
+      "We organized the experience around premium services, booking steps, and customer reassurance to make service selection straightforward.",
     outcome:
-      "Inventory accuracy improved dramatically and online revenue grew significantly.",
+      "Customers can move from browsing to booking quickly, with a clearer sense of service scope and reliability.",
+  },
+  {
+    slug: "axiscon",
+    title: "AxisCon",
+    category: "Conference · Website",
+    websiteUrl: "https://axiscon.netlify.app/",
+    overview:
+      "A conference website for ICCIST 2026 highlighting research themes, registration, schedules, and participation details.",
+    challenge:
+      "The event needed a site that could explain the conference scope, guide registrations, and present academic information cleanly.",
+    solution:
+      "We structured the pages around key research areas, important dates, schedules, and registration links for easy navigation.",
+    outcome:
+      "Attendees can understand the event quickly and move into registration or deeper conference details with less effort.",
   },
 ];
 
