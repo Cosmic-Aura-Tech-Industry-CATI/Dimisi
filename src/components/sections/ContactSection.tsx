@@ -92,12 +92,12 @@ export function ContactSection() {
 
     try {
       const serviceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID;
-      const templateId = process.env.NEXT_PUBLIC_EMAILJS_TEMPLATE_ID;
+      const templateId = process.env.NEXT_PUBLIC_CONTACT_TEMPLATE_ID;
       const publicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
 
       if (!serviceId || !templateId || !publicKey) {
         toast.error("Email service is not configured.", {
-          description: "Please set NEXT_PUBLIC_EMAILJS_SERVICE_ID, NEXT_PUBLIC_EMAILJS_TEMPLATE_ID, and NEXT_PUBLIC_EMAILJS_PUBLIC_KEY.",
+          description: "Please set NEXT_PUBLIC_EMAILJS_SERVICE_ID, NEXT_PUBLIC_CONTACT_TEMPLATE_ID, and NEXT_PUBLIC_EMAILJS_PUBLIC_KEY.",
         });
         setIsSubmitting(false);
         return;
