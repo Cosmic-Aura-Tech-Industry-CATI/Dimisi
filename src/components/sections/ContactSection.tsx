@@ -1,7 +1,8 @@
 // ContactSection.tsx — Homepage section featuring contact details cards alongside an interactive project inquiry contact form.
+import Image from "next/image";
 import { useState } from "react";
 import { motion } from "motion/react";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, Phone, User } from "lucide-react";
 
 import {
   ParallaxSection,
@@ -11,9 +12,10 @@ import {
 } from "./section-kit";
 
 const DETAILS = [
-  { icon: Mail, label: "Email", value: "hello@dimisi.tech" },
-  { icon: Phone, label: "Phone", value: "+1 (555) 012-3456" },
-  { icon: MapPin, label: "Studio", value: "Remote-first, worldwide" },
+  { icon: Mail, label: "Email", value: "dimisitechnologiespvtltd@gmail.com" },
+  { icon: Phone, label: "Phone", value: "+91 85450 99251" },
+  { icon: User, label: "Contact", value: "Bhoot Dev" },
+  { icon: MapPin, label: "Location", value: "Kanpur, Uttar Pradesh, India" },
 ];
 
 export function ContactSection() {
@@ -58,41 +60,53 @@ export function ContactSection() {
               })}
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setSubmitted(true);
-              }}
-              className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-8"
-            >
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <input
-                  required
-                  suppressHydrationWarning
-                  placeholder="Name"
-                  className="rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
-                />
-                <input
-                  required
-                  suppressHydrationWarning
-                  type="email"
-                  placeholder="Email"
-                  className="rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
+            <div className="relative overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.02]">
+              <div className="pointer-events-none absolute inset-0 opacity-20">
+                <Image
+                  src="/Bhootdev get in touch.svg"
+                  alt="Bhoot Dev contact art"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 420px"
+                  className="object-cover object-center"
                 />
               </div>
-              <textarea
-                required
-                suppressHydrationWarning
-                rows={4}
-                placeholder="Tell us about your project"
-                className="mt-4 w-full rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
-              />
-              <div className="mt-6">
-                <PrimaryButton type="submit">
-                  {submitted ? "Message Sent" : "Send Message"}
-                </PrimaryButton>
-              </div>
-            </form>
+
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setSubmitted(true);
+                }}
+                className="relative p-8"
+              >
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <input
+                    required
+                    suppressHydrationWarning
+                    placeholder="Name"
+                    className="rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
+                  />
+                  <input
+                    required
+                    suppressHydrationWarning
+                    type="email"
+                    placeholder="Email"
+                    className="rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
+                  />
+                </div>
+                <textarea
+                  required
+                  suppressHydrationWarning
+                  rows={4}
+                  placeholder="Tell us about your project"
+                  className="mt-4 w-full rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
+                />
+                <div className="mt-6">
+                  <PrimaryButton type="submit">
+                    {submitted ? "Message Sent" : "Send Message"}
+                  </PrimaryButton>
+                </div>
+              </form>
+            </div>
           </motion.div>
         </motion.div>
       )}

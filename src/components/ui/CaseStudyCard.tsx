@@ -1,5 +1,6 @@
 import type { CaseStudy } from "@/lib/site-data";
 import { TiltCard } from "./TiltCard";
+import { ArrowRight } from "lucide-react";
 
 const rows: { key: keyof CaseStudy; label: string }[] = [
   { key: "overview", label: "Overview" },
@@ -22,6 +23,15 @@ export function CaseStudyCard({ study }: { study: CaseStudy }) {
             </div>
           ))}
         </div>
+        <a
+          href={study.websiteUrl}
+          target="_blank"
+          rel="noreferrer"
+          className="mt-6 inline-flex items-center gap-2 self-start rounded-full border border-foreground/20 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+        >
+          Visit Website
+          <ArrowRight className="h-4 w-4" />
+        </a>
       </div>
     </TiltCard>
   );

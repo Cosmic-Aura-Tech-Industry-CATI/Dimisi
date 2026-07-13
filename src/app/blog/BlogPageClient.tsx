@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { PageHero } from "@/components/ui/PageHero";
@@ -67,14 +68,37 @@ export default function BlogPageClient() {
     <>
       <PageHero
         label="Blog"
-        title="Ideas, Insights & Updates"
+        title={
+          <span className="inline-flex flex-col items-center gap-10 text-left sm:flex-row sm:justify-center sm:text-left">
+            <span className="flex-shrink-0 w-full max-w-[320px] sm:w-auto">
+              <Image
+                src="/Bhootdev blog.svg"
+                alt="Bhootdev blog logo"
+                width={320}
+                height={320}
+                className="h-auto w-full"
+              />
+            </span>
+            <span className="max-w-2xl">
+              <span className="block text-[clamp(40px,6vw,72px)] font-light leading-tight tracking-tight text-foreground">
+                Ideas, Insights
+              </span>
+              <span className="block text-[clamp(34px,5vw,62px)] font-light leading-tight tracking-tight text-foreground">
+                & Updates
+              </span>
+            </span>
+          </span>
+        }
         subtitle="Thoughts on building software, shipping products, and the technology shaping tomorrow."
       />
 
       <section className="bg-[#050505] px-4 py-24 md:px-8">
         <div className="mx-auto max-w-7xl">
-          <SectionHeading label="Latest" title="From the Dimisi Team" />
+          {/*
+          <SectionHeading label="Latest" title="Blog section under development" subtitle="Please visit again after some time." />
+          */}
 
+          {/*
           <Reveal className="mt-10 flex flex-wrap gap-2">
             {categories.map((cat) => (
               <button
@@ -118,6 +142,22 @@ export default function BlogPageClient() {
               ))}
             </AnimatePresence>
           </motion.div>
+          */}
+
+          <div className="mt-20 flex flex-col items-center justify-center gap-10 text-center">
+            <p className="max-w-3xl text-2xl font-medium leading-relaxed text-foreground/70 sm:text-3xl">
+              Blog section under development. Please visit again after some time.
+            </p>
+            <div className="w-full max-w-3xl px-6 sm:px-0">
+              <Image
+                src="/under contruction.svg"
+                alt="Under construction"
+                width={900}
+                height={600}
+                className="w-full max-w-full"
+              />
+            </div>
+          </div>
 
           {filtered.length === 0 ? (
             <p className="mt-12 text-center text-sm text-foreground/40">

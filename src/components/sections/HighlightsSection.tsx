@@ -19,7 +19,7 @@ export function HighlightsSection() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.8 }}
-            className="mt-14 grid grid-cols-2 gap-5 md:grid-cols-3 lg:grid-cols-5"
+            className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5"
           >
             {highlights.map((stat) => (
               <TiltCard
