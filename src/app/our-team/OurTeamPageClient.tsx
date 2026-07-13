@@ -1,7 +1,7 @@
 "use client";
 
+import Image from "next/image";
 import { useState } from "react";
-import { PageHero } from "@/components/ui/PageHero";
 import { SectionHeading } from "@/components/ui/SectionHeading";
 import { Reveal } from "@/components/ui/Reveal";
 import { PillButton } from "@/components/ui/PillButton";
@@ -15,7 +15,33 @@ export default function OurTeamPageClient() {
 
   return (
     <>
-      <PageHero label="OUR PEOPLE" title="The Minds Behind Dimisi Technologies" subtitle="Behind every successful product is a team driven by curiosity, engineering excellence, and a shared vision to build technology that creates real-world impact." />
+      <section className="relative overflow-hidden px-4 pt-32 pb-16 md:px-8 md:pt-36 lg:px-12 lg:pt-40">
+        <div className="mx-auto grid max-w-7xl gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
+          <div className="relative h-[420px] overflow-hidden rounded-[2rem] border border-foreground/10 bg-[#0a0a0a] shadow-[inset_0_0_240px_rgba(255,255,255,0.06)] sm:h-[520px]">
+            <Image
+              src="/Bhootdev Our team.svg"
+              alt="Bhootdev Our team"
+              fill
+              sizes="(max-width: 1024px) 100vw, 560px"
+              className="object-cover object-center"
+            />
+          </div>
+
+          <div className="relative z-10 text-center lg:text-left">
+            <div className="mx-auto max-w-3xl lg:mx-0">
+              <div className="overflow-hidden rounded-[2rem] border border-white/10 bg-white/5 p-8 shadow-[0_40px_120px_rgba(0,0,0,0.4)] backdrop-blur-2xl ring-1 ring-white/10 sm:p-10">
+                <p className="mb-4 text-xs uppercase tracking-[0.24em] text-foreground/40">OUR PEOPLE</p>
+                <h1 className="font-light leading-[1.08] tracking-tight text-foreground [font-size:clamp(34px,6vw,60px)]">
+                  The Minds Behind Dimisi Technologies
+                </h1>
+                <p className="mt-6 text-base leading-relaxed text-foreground/50 sm:text-lg">
+                  Behind every successful product is a team driven by curiosity, engineering excellence, and a shared vision to build technology that creates real-world impact.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
 
       <section className="px-4 pb-8 md:px-8">
         <div className="mx-auto max-w-6xl">
