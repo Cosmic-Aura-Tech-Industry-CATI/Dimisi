@@ -319,6 +319,8 @@ export type ProductDetail = {
   audience: string;
   roadmap: { phase: string; title: string; description: string }[];
   cta: string;
+  actionUrl?: string;
+  demoUrl?: string;
 };
 
 export const productDetails: Record<string, ProductDetail> = {
@@ -349,6 +351,9 @@ export const productDetails: Record<string, ProductDetail> = {
       { phase: "Phase 3", title: "Mobile Apps", description: "Native iOS and Android experiences." },
     ],
     cta: "Join the Waitlist",
+    actionUrl:
+      "https://docs.google.com/forms/d/e/1FAIpQLSex19Al_MY76X7KeUgQfGjDMJWEWydLby5yneyD2qES4c5jZw/viewform?usp=publish-editor",
+    demoUrl: "https://thekalesh.com",
   },
   carryon: {
     intro: "Professional networking that connects people who move things forward.",

@@ -1,7 +1,10 @@
 // ContactSection.tsx — Homepage section featuring contact details cards alongside an interactive project inquiry contact form.
-import { useState } from "react";
+import Image from "next/image";
+import { useState, type FormEvent } from "react";
 import { motion } from "motion/react";
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Mail, MapPin, Phone, User } from "lucide-react";
+import emailjs from "@emailjs/browser";
+import { toast } from "sonner";
 
 import {
   ParallaxSection,
@@ -9,15 +12,122 @@ import {
   SectionHeading,
   TiltCard,
 } from "./section-kit";
+import { Toaster } from "@/components/ui/sonner";
 
 const DETAILS = [
-  { icon: Mail, label: "Email", value: "hello@dimisi.tech" },
-  { icon: Phone, label: "Phone", value: "+1 (555) 012-3456" },
-  { icon: MapPin, label: "Studio", value: "Remote-first, worldwide" },
+  { icon: Mail, label: "Email", value: "dimisitechnologiespvtltd@gmail.com" },
+  { icon: Phone, label: "Phone", value: "+91 85450 99251" },
+  { icon: User, label: "Contact", value: "Bhoot Dev" },
+  { icon: MapPin, label: "Location", value: "Kanpur, Uttar Pradesh, India" },
 ];
 
+interface ContactFormData {
+  name: string;
+  email: string;
+  message: string;
+}
+
+type ContactFormField = keyof ContactFormData;
+
+type ContactFormErrors = Partial<Record<ContactFormField, string>>;
+
+const initialFormData: ContactFormData = { name: "", email: "", message: "" };
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+function validateContactForm(values: ContactFormData): ContactFormErrors {
+  const errors: ContactFormErrors = {};
+  const name = values.name.trim();
+  const email = values.email.trim();
+  const message = values.message.trim();
+
+  if (!name) {
+    errors.name = "Name is required.";
+  } else if (name.length < 2) {
+    errors.name = "Name must be at least 2 characters.";
+  }
+
+  if (!email) {
+    errors.email = "Email is required.";
+  } else if (!emailRegex.test(email)) {
+    errors.email = "Please enter a valid email address.";
+  }
+
+  if (!message) {
+    errors.message = "Project description is required.";
+  } else if (message.length < 15) {
+    errors.message = "Project description must be at least 15 characters.";
+  }
+
+  return errors;
+}
+
 export function ContactSection() {
-  const [submitted, setSubmitted] = useState(false);
+  const [formData, setFormData] = useState<ContactFormData>(initialFormData);
+  const [errors, setErrors] = useState<ContactFormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleFieldChange = (field: ContactFormField, value: string) => {
+    setFormData((current) => ({ ...current, [field]: value }));
+    if (errors[field]) {
+      setErrors((current) => {
+        const next = { ...current };
+        delete next[field];
+        return next;
+      });
+    }
+  };
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (isSubmitting) return;
+
+    const validationErrors = validateContactForm(formData);
+    if (Object.keys(validationErrors).length > 0) {
+      setErrors(validationErrors);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const serviceId = process.env.NEXT_PUBLIC_EMAILJS_SERVICE_ID;
+      const templateId = process.env.NEXT_PUBLIC_CONTACT_TEMPLATE_ID;
+      const publicKey = process.env.NEXT_PUBLIC_EMAILJS_PUBLIC_KEY;
+
+      if (!serviceId || !templateId || !publicKey) {
+        toast.error("Email service is not configured.", {
+          description: "Please set NEXT_PUBLIC_EMAILJS_SERVICE_ID, NEXT_PUBLIC_CONTACT_TEMPLATE_ID, and NEXT_PUBLIC_EMAILJS_PUBLIC_KEY.",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
+      await emailjs.send(
+        serviceId,
+        templateId,
+        {
+          name: formData.name.trim(),
+          email: formData.email.trim(),
+          message: formData.message.trim(),
+          time: new Date().toLocaleString(),
+        },
+        publicKey
+      );
+
+      setFormData(initialFormData);
+      toast.success("Message Sent Successfully 🚀", {
+        description: "We'll contact you within one business day.",
+      });
+    } catch (error) {
+      console.error("EmailJS send failed", error);
+      toast.error("Something went wrong.", {
+        description: "Please try again later.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
     <ParallaxSection id="contact" className="py-14 md:py-20">
@@ -58,41 +168,92 @@ export function ContactSection() {
               })}
             </div>
 
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                setSubmitted(true);
-              }}
-              className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-8"
-            >
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <input
-                  required
-                  suppressHydrationWarning
-                  placeholder="Name"
-                  className="rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
-                />
-                <input
-                  required
-                  suppressHydrationWarning
-                  type="email"
-                  placeholder="Email"
-                  className="rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
+            <div className="relative overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.02]">
+              <div className="pointer-events-none absolute inset-0 opacity-20">
+                <Image
+                  src="/Bhootdev get in touch.svg"
+                  alt="Bhoot Dev contact art"
+                  fill
+                  sizes="(max-width: 1024px) 100vw, 420px"
+                  className="object-cover object-center"
                 />
               </div>
-              <textarea
-                required
-                suppressHydrationWarning
-                rows={4}
-                placeholder="Tell us about your project"
-                className="mt-4 w-full rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
-              />
-              <div className="mt-6">
-                <PrimaryButton type="submit">
-                  {submitted ? "Message Sent" : "Send Message"}
-                </PrimaryButton>
-              </div>
-            </form>
+
+              <form onSubmit={handleSubmit} className="relative p-8" noValidate>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <input
+                      name="name"
+                      type="text"
+                      autoComplete="name"
+                      aria-label="Name"
+                      aria-invalid={Boolean(errors.name)}
+                      aria-describedby={errors.name ? "contact-name-error" : undefined}
+                      value={formData.name}
+                      onChange={(event) => handleFieldChange("name", event.target.value)}
+                      placeholder="Name"
+                      className="rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
+                    />
+                    {errors.name ? (
+                      <p id="contact-name-error" className="mt-2 text-xs text-red-500">
+                        {errors.name}
+                      </p>
+                    ) : null}
+                  </div>
+
+                  <div>
+                    <input
+                      name="email"
+                      type="email"
+                      autoComplete="email"
+                      aria-label="Email"
+                      aria-invalid={Boolean(errors.email)}
+                      aria-describedby={errors.email ? "contact-email-error" : undefined}
+                      value={formData.email}
+                      onChange={(event) => handleFieldChange("email", event.target.value)}
+                      placeholder="Email"
+                      className="rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
+                    />
+                    {errors.email ? (
+                      <p id="contact-email-error" className="mt-2 text-xs text-red-500">
+                        {errors.email}
+                      </p>
+                    ) : null}
+                  </div>
+                </div>
+                <div>
+                  <textarea
+                    name="message"
+                    aria-label="Project Description"
+                    aria-invalid={Boolean(errors.message)}
+                    aria-describedby={errors.message ? "contact-message-error" : undefined}
+                    value={formData.message}
+                    onChange={(event) => handleFieldChange("message", event.target.value)}
+                    rows={4}
+                    placeholder="Tell us about your project"
+                    className="mt-4 w-full rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
+                  />
+                  {errors.message ? (
+                    <p id="contact-message-error" className="mt-2 text-xs text-red-500">
+                      {errors.message}
+                    </p>
+                  ) : null}
+                </div>
+                <div className="mt-6">
+                  <PrimaryButton type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <span className="inline-flex items-center gap-2">
+                        <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                        Sending...
+                      </span>
+                    ) : (
+                      "Send Message"
+                    )}
+                  </PrimaryButton>
+                </div>
+              </form>
+              <Toaster />
+            </div>
           </motion.div>
         </motion.div>
       )}

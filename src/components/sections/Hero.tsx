@@ -142,7 +142,7 @@ export function Hero() {
   return (
     <section
       ref={heroRef}
-      className="relative flex min-h-screen w-full flex-col items-center px-4 pt-28 pb-16 md:pt-32"
+      className="relative flex min-h-[100svh] w-full flex-col items-center overflow-x-clip px-4 pb-14 pt-24 sm:pt-28 md:pt-32"
     >
       {/* Cinematic cutout — head begins at the middle of the hero, the body
           flows down into the next section and softly blends into the black. */}
@@ -162,8 +162,8 @@ export function Hero() {
           width={585}
           height={876}
           priority
-          sizes="(max-width: 768px) 100vw, 585px"
-          className="h-[170vh] w-auto max-w-none select-none object-contain object-top sm:h-[185vh]"
+          sizes="(max-width: 640px) 92vw, (max-width: 768px) 80vw, 585px"
+          className="h-[132vh] w-auto max-w-none select-none object-contain object-top sm:h-[185vh]"
           draggable={false}
           style={{
             transformOrigin: "top center",
@@ -188,7 +188,7 @@ export function Hero() {
       {/* Centered editorial typography */}
       <motion.div
         style={{ y: textY, opacity: textOpacity }}
-        className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-4 text-center"
+        className="relative z-10 mx-auto flex max-w-4xl flex-col items-center px-4 text-center sm:px-6"
       >
         <motion.span
           initial={{ opacity: 0, y: 16 }}
@@ -204,7 +204,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1.1, delay: 0.55, ease: EASE }}
-          className="mt-5 font-display text-[clamp(2.4rem,6.2vw,5.5rem)] font-light leading-[0.96] tracking-[-0.045em] text-white sm:mt-6"
+          className="mt-5 font-display text-[clamp(2.2rem,7vw,5.5rem)] font-light leading-[0.96] tracking-[-0.045em] text-white sm:mt-6"
         >
           Engineering the
           <br />
@@ -218,7 +218,7 @@ export function Hero() {
           initial={{ opacity: 0, y: 24 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.78, ease: EASE }}
-          className="mt-4 max-w-[38ch] text-[0.82rem] leading-relaxed tracking-[-0.01em] text-[#9A9A9A] sm:mt-5 sm:text-[0.95rem]"
+          className="mt-4 max-w-[34ch] text-[0.82rem] leading-relaxed tracking-[-0.01em] text-[#9A9A9A] sm:mt-5 sm:max-w-[38ch] sm:text-[0.95rem]"
         >
           AI products, enterprise software and SaaS platforms — engineered with
           precision.

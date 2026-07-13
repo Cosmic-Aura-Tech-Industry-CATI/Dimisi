@@ -33,7 +33,7 @@ export function StepFlow({ steps }: { steps: string[] }) {
             animate={inView ? { opacity: 1, y: 0 } : {}}
             transition={{ duration: 0.5, delay: i * 0.1, ease: "easeOut" }}
             whileHover={{ y: -4 }}
-            className="flex w-[40%] flex-col items-center text-center sm:w-[28%] lg:w-auto lg:flex-1"
+            className="flex w-full flex-col items-center text-center sm:w-[calc(50%-1rem)] lg:w-auto lg:flex-1"
           >
             <span className="relative z-10 grid h-12 w-12 place-items-center rounded-full border border-foreground/20 bg-[#050505] text-sm font-medium text-foreground/70 transition-colors duration-300 hover:border-foreground/50 hover:text-foreground">
               {String(i + 1).padStart(2, "0")}

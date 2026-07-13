@@ -88,12 +88,12 @@ export function TeamModal({
               <X className="h-4 w-4" />
             </button>
 
-            <div className="relative flex h-56 items-center justify-center bg-foreground/[0.04] sm:h-full">
+            <div className="relative flex aspect-square items-center justify-center bg-foreground/[0.04] sm:h-full sm:aspect-auto">
               {member.photo ? (
                 <img
                   src={member.photo}
                   alt={member.name}
-                  className="h-full w-full object-cover object-top"
+                  className="h-full w-full object-cover object-center"
                 />
               ) : (
                 <User className="h-20 w-20 text-foreground/20" strokeWidth={1} />

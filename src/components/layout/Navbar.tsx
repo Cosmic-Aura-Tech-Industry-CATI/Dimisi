@@ -2,6 +2,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
@@ -17,14 +18,6 @@ const PRIMARY_LINKS: SimpleLink[] = [
   { label: "Our Team", to: "/our-team" },
   { label: "Careers", to: "/careers" },
 ];
-
-function DiamondMark() {
-  return (
-    <svg className="h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-      <path d="M12 2 22 12 12 22 2 12 Z" />
-    </svg>
-  );
-}
 
 const spring = { type: "spring", stiffness: 400, damping: 26 } as const;
 
@@ -132,7 +125,10 @@ export function Navbar() {
       }
     }
     function handleEscape(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpenDropdown(null);
+      if (e.key === "Escape") {
+        setOpenDropdown(null);
+        setMenuOpen(false);
+      }
     }
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("keydown", handleEscape);
@@ -142,43 +138,81 @@ export function Navbar() {
     };
   }, []);
 
+  useEffect(() => {
+    setMenuOpen(false);
+    setMobileAccordion(null);
+  }, [pathname]);
+
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 1024) {
+        setMenuOpen(false);
+        setMobileAccordion(null);
+      }
+    };
+
+    handleResize();
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
+
+  useEffect(() => {
+    document.body.style.overflow = menuOpen ? "hidden" : "";
+    document.body.style.touchAction = menuOpen ? "none" : "";
+
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.touchAction = "";
+    };
+  }, [menuOpen]);
+
   const offeringItems = services.map((s) => ({ label: s.title, slug: s.slug }));
   const productItems = products.map((p) => ({ label: p.name, slug: p.slug }));
 
   return (
     <div
       ref={navRef}
-      className="pointer-events-none fixed top-0 left-0 w-full z-50 flex justify-center px-3 pt-3 md:px-6 md:pt-5"
+      className="pointer-events-auto fixed left-0 top-0 z-50 flex w-full justify-center px-3 pt-2.5 sm:px-4 md:px-6 md:pt-5"
     >
       <motion.nav
         initial={{ y: -24, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-        className={`pointer-events-auto w-full max-w-6xl rounded-[20px] transition-[background,box-shadow,backdrop-filter] duration-500 ease-out ${
+        className={`pointer-events-auto w-full max-w-6xl rounded-[20px] border border-transparent transition-[background,box-shadow,backdrop-filter] duration-500 ease-out ${
           scrolled ? "nav-glass-scrolled" : "nav-glass"
         }`}
+        style={{
+          backgroundImage:
+            "linear-gradient(var(--nav-bg, #0a0a0a), var(--nav-bg, #0a0a0a)), linear-gradient(120deg, rgba(255,255,255,0.85) 0%, rgba(255,255,255,0.08) 30%, rgba(255,255,255,0.05) 55%, rgba(255,255,255,0.55) 80%, rgba(255,255,255,0.9) 100%)",
+          backgroundOrigin: "border-box",
+          backgroundClip: "padding-box, border-box",
+          boxShadow:
+            "0 0 0 1px rgba(255,255,255,0.04), 0 1px 0 0 rgba(255,255,255,0.5) inset, 0 8px 30px rgba(0,0,0,0.45)",
+        }}
       >
-        <div className="w-full flex items-center justify-between px-4 py-3 md:px-6 md:py-3.5">
-          {/* Left: logo */}
+        <div className="flex w-full items-center justify-between px-4 py-3 md:px-6 md:py-3.5">
           <Link
             href="/"
-            className="flex items-center gap-3 pr-2 text-foreground"
+            className="flex items-center gap-2.5 pr-2 text-foreground"
             aria-label="Dimisi home"
           >
             <motion.span
               whileHover={{ scale: 1.03 }}
               whileTap={{ scale: 0.96 }}
               transition={spring}
-              className="grid h-9 w-9 place-items-center rounded-xl border border-foreground/10 bg-foreground/5"
+              className="relative block h-8 w-[150px] overflow-hidden sm:h-9 sm:w-[180px]"
             >
-              <DiamondMark />
+              <Image
+                src="/Dimisi%20logo%20horizon.svg"
+                alt="Dimisi Technologies"
+                fill
+                priority
+                sizes="(max-width: 640px) 150px, 180px"
+                className="object-contain object-left"
+              />
             </motion.span>
-            <span className="font-display text-[1.05rem] font-light tracking-[0.14em] text-foreground">
-              DIMISI
-            </span>
           </Link>
 
-          {/* Center: nav links */}
           <div className="hidden items-center gap-6 lg:flex">
             <NavDropdown
               id="offerings"
@@ -199,8 +233,7 @@ export function Navbar() {
             ))}
           </div>
 
-          {/* Right: CTA + hamburger */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <motion.div
               whileHover={{ scale: 1.03, y: -1 }}
               whileTap={{ scale: 0.97 }}
@@ -217,7 +250,7 @@ export function Navbar() {
             </motion.div>
 
             <button
-              className="flex h-10 w-10 flex-col items-center justify-center rounded-xl border border-foreground/10 bg-foreground/5 lg:hidden"
+              className="flex h-11 w-11 flex-col items-center justify-center rounded-xl border border-foreground/10 bg-foreground/5 lg:hidden"
               aria-label={menuOpen ? "Close menu" : "Open menu"}
               aria-expanded={menuOpen}
               onClick={() => setMenuOpen((v) => !v)}
@@ -240,24 +273,45 @@ export function Navbar() {
             </button>
           </div>
         </div>
+      </motion.nav>
 
-        {/* Mobile drawer */}
-        <AnimatePresence>
-          {menuOpen && (
+      <AnimatePresence>
+        {menuOpen && (
+          <>
+            <motion.button
+              type="button"
+              aria-label="Close navigation menu"
+              className="pointer-events-auto fixed inset-0 z-40 bg-black/70 backdrop-blur-sm lg:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setMenuOpen(false)}
+            />
             <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
-              className="overflow-hidden border-t border-foreground/5 bg-[#0A0A0A] lg:hidden"
+              initial={{ opacity: 0, y: -16, scale: 0.98 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -16, scale: 0.98 }}
+              transition={{ duration: 0.24, ease: [0.22, 1, 0.36, 1] }}
+              className="pointer-events-auto fixed inset-x-3 top-[74px] z-50 mx-auto max-w-6xl rounded-[24px] border border-foreground/10 bg-[#090909]/95 shadow-2xl backdrop-blur-xl sm:inset-x-4 sm:top-[84px] lg:hidden"
             >
-              <div className="flex max-h-[80vh] flex-col gap-1 overflow-y-auto px-4 py-4">
-                {/* Offerings accordion */}
+              <div className="flex items-center justify-between border-b border-foreground/10 px-4 py-3 sm:px-5">
+                <span className="text-[0.72rem] font-semibold uppercase tracking-[0.3em] text-foreground/50">
+                  Navigate
+                </span>
                 <button
                   type="button"
-                  onClick={() =>
-                    setMobileAccordion(mobileAccordion === "offerings" ? null : "offerings")
-                  }
+                  className="rounded-full border border-foreground/10 px-3 py-1.5 text-sm text-foreground/70"
+                  onClick={() => setMenuOpen(false)}
+                  aria-label="Close navigation drawer"
+                >
+                  Close
+                </button>
+              </div>
+
+              <div className="max-h-[75vh] overflow-y-auto px-4 py-4 sm:px-5">
+                <button
+                  type="button"
+                  onClick={() => setMobileAccordion(mobileAccordion === "offerings" ? null : "offerings")}
                   aria-expanded={mobileAccordion === "offerings"}
                   className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-medium tracking-tight text-foreground/80 transition-colors hover:bg-foreground/5 hover:text-foreground"
                 >
@@ -291,14 +345,11 @@ export function Navbar() {
                   </div>
                 </motion.div>
 
-                {/* Products accordion */}
                 <button
                   type="button"
-                  onClick={() =>
-                    setMobileAccordion(mobileAccordion === "products" ? null : "products")
-                  }
+                  onClick={() => setMobileAccordion(mobileAccordion === "products" ? null : "products")}
                   aria-expanded={mobileAccordion === "products"}
-                  className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-medium tracking-tight text-foreground/80 transition-colors hover:bg-foreground/5 hover:text-foreground"
+                  className="mt-1 flex w-full items-center justify-between rounded-xl px-3 py-3 text-left text-sm font-medium tracking-tight text-foreground/80 transition-colors hover:bg-foreground/5 hover:text-foreground"
                 >
                   Products
                   <ChevronDown
@@ -330,7 +381,7 @@ export function Navbar() {
                   </div>
                 </motion.div>
 
-                <div className="mt-2 pt-2">
+                <div className="mt-3 border-t border-foreground/10 pt-3">
                   {PRIMARY_LINKS.map((link, i) => {
                     const isActive = pathname === link.to;
                     return (
@@ -357,15 +408,15 @@ export function Navbar() {
                 <Link
                   href="/contact"
                   onClick={() => setMenuOpen(false)}
-                  className="glow-warm mt-3 rounded-full bg-primary px-5 py-3 text-center text-sm font-semibold tracking-tight text-primary-foreground"
+                  className="glow-warm mt-4 block rounded-full bg-primary px-5 py-3 text-center text-sm font-semibold tracking-tight text-primary-foreground"
                 >
                   Get in Touch
                 </Link>
               </div>
             </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.nav>
+          </>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
