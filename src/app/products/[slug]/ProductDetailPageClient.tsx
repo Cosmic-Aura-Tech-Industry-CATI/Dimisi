@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { motion } from "motion/react";
 import { PageHero } from "@/components/ui/PageHero";
@@ -12,7 +13,37 @@ import type { Product } from "@/lib/site-data";
 import { products } from "@/lib/site-data";
 import type { ProductDetail } from "@/lib/detail-data";
 import { productDetails } from "@/lib/detail-data";
-import { ArrowLeft, Check, Monitor } from "lucide-react";
+import { ArrowLeft, Check, Monitor, ExternalLink } from "lucide-react";
+
+const kaleshHomepageHighlights = [
+  {
+    title: "Anonymous Profiles",
+    description:
+      "Users can speak honestly without putting their real identity at the center of the conversation.",
+  },
+  {
+    title: "Real-Time Polls",
+    description:
+      "Polls gather live opinions and update results instantly as people vote.",
+  },
+  {
+    title: "Private Chats",
+    description:
+      "People can connect and message privately while staying anonymous.",
+  },
+  {
+    title: "Open Community",
+    description:
+      "The platform is built around candid discussion, low pressure, and practical community interaction.",
+  },
+];
+
+const kaleshHomepageNotes = [
+  "No profile pressure",
+  "No judgment",
+  "Just honest opinions",
+  "Ask anything and get real responses",
+];
 
 export default function ProductDetailPageClient({ slug }: { slug: string }) {
   const product = products.find((p) => p.slug === slug) as Product;
@@ -21,10 +52,33 @@ export default function ProductDetailPageClient({ slug }: { slug: string }) {
 
   return (
     <>
-      <PageHero label={product.category} title={product.name} subtitle={detail.intro}>
-        <PillButton href="/contact" variant="primary">{detail.cta}</PillButton>
-        <PillButton href="/products" variant="secondary" withArrow={false}><ArrowLeft className="h-4 w-4" /> All Products</PillButton>
-      </PageHero>
+      <div className="relative overflow-hidden bg-[#050505]">
+        {slug === "kalesh" ? (
+          <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+            <Image
+              src="/Bhootdev kalesh.png"
+              alt="Kalesh hero background"
+              fill
+              sizes="100vw"
+              className="object-cover object-center opacity-30"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-[#050505]/65 via-[#050505]/10 to-[#050505]/95" />
+          </div>
+        ) : null}
+
+        <section className="relative z-10 min-h-screen px-4 pt-28 pb-20 md:px-8 lg:px-12">
+          <PageHero label={product.category} title={product.name} subtitle={detail.intro}>
+            <PillButton
+              href={detail.actionUrl ?? "/contact"}
+              variant="primary"
+              target={detail.actionUrl ? "_blank" : undefined}
+              rel={detail.actionUrl ? "noreferrer" : undefined}
+            >
+              {detail.cta}
+            </PillButton>
+          </PageHero>
+        </section>
+      </div>
 
       {/* Overview */}
       <section className="bg-[#050505] px-4 py-20 md:px-8">
@@ -39,6 +93,44 @@ export default function ProductDetailPageClient({ slug }: { slug: string }) {
           <Reveal delay={0.1}><p className="text-lg leading-relaxed text-foreground/60">{detail.overview}</p></Reveal>
         </div>
       </section>
+
+      {slug === "kalesh" ? (
+        <section className="bg-[#050505] px-4 py-20 md:px-8">
+          <div className="mx-auto max-w-7xl">
+            <SectionHeading
+              label="From the Live Site"
+              title="What Kalesh Is About"
+              subtitle="A paraphrased snapshot of thekalesh.com, so the product page explains the platform even before users open the embedded homepage."
+            />
+
+            <div className="mt-14 grid grid-cols-1 gap-5 md:grid-cols-2">
+              {kaleshHomepageHighlights.map((item) => (
+                <Reveal key={item.title}>
+                  <div className="h-full rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-6 transition-colors hover:border-foreground/25 hover:bg-foreground/[0.03]">
+                    <h3 className="font-display text-lg font-light text-foreground">
+                      {item.title}
+                    </h3>
+                    <p className="mt-2 text-sm leading-relaxed text-foreground/55">
+                      {item.description}
+                    </p>
+                  </div>
+                </Reveal>
+              ))}
+            </div>
+
+            <div className="mt-8 flex flex-wrap gap-2">
+              {kaleshHomepageNotes.map((note) => (
+                <span
+                  key={note}
+                  className="rounded-full border border-foreground/10 bg-foreground/[0.02] px-4 py-2 text-xs uppercase tracking-[0.18em] text-foreground/45"
+                >
+                  {note}
+                </span>
+              ))}
+            </div>
+          </div>
+        </section>
+      ) : null}
 
       {/* Problem + Solution */}
       <section className="bg-[#050505] px-4 py-20 md:px-8">
@@ -95,9 +187,54 @@ export default function ProductDetailPageClient({ slug }: { slug: string }) {
         <div className="mx-auto max-w-7xl">
           <SectionHeading align="center" label="Preview" title="A Look Inside" className="mb-12" />
           <Reveal>
-            <div className="mx-auto max-w-4xl overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.02]">
-              <div className="flex items-center gap-2 border-b border-foreground/10 px-4 py-3"><span className="h-3 w-3 rounded-full bg-foreground/15" /><span className="h-3 w-3 rounded-full bg-foreground/15" /><span className="h-3 w-3 rounded-full bg-foreground/15" /></div>
-              <div className="flex aspect-[16/9] items-center justify-center"><div className="flex flex-col items-center text-foreground/30"><Monitor className="h-10 w-10" /><p className="mt-3 text-xs uppercase tracking-widest">Demo coming soon</p></div></div>
+            <div className="mx-auto max-w-6xl overflow-hidden rounded-2xl border border-foreground/10 bg-[#050505] shadow-[0_20px_80px_-24px_rgba(0,0,0,0.8)]">
+              <div className="flex items-center justify-between gap-4 border-b border-foreground/10 px-4 py-3 text-xs text-foreground/40">
+                <div className="flex items-center gap-2">
+                  <span className="h-3 w-3 rounded-full bg-foreground/15" />
+                  <span className="h-3 w-3 rounded-full bg-foreground/15" />
+                  <span className="h-3 w-3 rounded-full bg-foreground/15" />
+                </div>
+                {detail.demoUrl ? (
+                  <a
+                    href={detail.demoUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-full border border-foreground/10 bg-foreground/[0.02] px-3 py-1.5 text-[10px] uppercase tracking-[0.18em] text-foreground/50 transition-colors hover:border-foreground/25 hover:text-foreground"
+                  >
+                    Open in new tab
+                    <ExternalLink className="h-3 w-3" />
+                  </a>
+                ) : null}
+              </div>
+              <div className="bg-[#050505] p-3 sm:p-4">
+                {detail.demoUrl ? (
+                  <div className="relative overflow-hidden rounded-xl border border-foreground/10 bg-black">
+                    <div className="flex items-center justify-between gap-3 border-b border-foreground/10 bg-black px-4 py-3 text-[11px] text-white/55">
+                      <div className="flex items-center gap-2">
+                        <span className="inline-flex h-2 w-2 rounded-full bg-white/20" />
+                        <span>{detail.demoUrl.replace(/^https?:\/\//, "")}</span>
+                      </div>
+                      <span className="hidden text-[10px] uppercase tracking-[0.18em] text-white/30 sm:inline">
+                        Live preview
+                      </span>
+                    </div>
+                    <iframe
+                      title="Kalesh homepage preview"
+                      src={detail.demoUrl}
+                      className="h-[72vh] min-h-[540px] w-full border-0 bg-white sm:h-[78vh]"
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex aspect-[16/9] items-center justify-center rounded-xl border border-dashed border-foreground/15 text-foreground/30">
+                    <div className="flex flex-col items-center text-center">
+                      <Monitor className="h-10 w-10" />
+                      <p className="mt-3 text-xs uppercase tracking-widest">Demo coming soon</p>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </Reveal>
         </div>

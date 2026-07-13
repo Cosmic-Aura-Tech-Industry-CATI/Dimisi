@@ -1,5 +1,6 @@
 // CaseStudiesSection.tsx — Homepage section showcasing grid cards of selected client case studies with outcome highlights.
 import { motion } from "motion/react";
+import { ArrowRight } from "lucide-react";
 
 import { caseStudies } from "@/lib/site-data";
 import {
@@ -44,6 +45,15 @@ export function CaseStudiesSection() {
                 <p className="mt-4 border-t border-foreground/10 pt-4 text-sm leading-relaxed text-foreground/60">
                   {study.outcome}
                 </p>
+                <a
+                  href={study.websiteUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-6 inline-flex items-center gap-2 self-start rounded-full border border-foreground/20 px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-primary hover:text-primary-foreground"
+                >
+                  Visit Website
+                  <ArrowRight className="h-4 w-4" />
+                </a>
               </TiltCard>
             ))}
           </motion.div>
