@@ -22,6 +22,7 @@ function ServiceCard({ service }: { service: (typeof services)[number] }) {
     useTransform(mouseY, [-0.5, 0.5], [10, -10]),
     { stiffness: 200, damping: 20, mass: 0.5 }
   );
+
   const rotateY = useSpring(
     useTransform(mouseX, [-0.5, 0.5], [-10, 10]),
     { stiffness: 200, damping: 20, mass: 0.5 }
@@ -34,9 +35,11 @@ function ServiceCard({ service }: { service: (typeof services)[number] }) {
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const card = cardRef.current;
     if (!card) return;
+
     const rect = card.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
+
     mouseX.set(x);
     mouseY.set(y);
   }
@@ -74,7 +77,10 @@ function ServiceCard({ service }: { service: (typeof services)[number] }) {
       />
 
       <div
-        style={{ transform: "translateZ(40px)", transformStyle: "preserve-3d" }}
+        style={{
+          transform: "translateZ(40px)",
+          transformStyle: "preserve-3d",
+        }}
         className="relative"
       >
         <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-foreground/10 bg-foreground/[0.03] transition-all duration-300 group-hover:scale-110 group-hover:border-foreground/30 group-hover:bg-foreground/[0.08]">
@@ -98,11 +104,23 @@ export function ServicesSection() {
     <ParallaxSection id="services" className="py-14 md:py-20">
       {(style) => (
         <motion.div style={style} className="mx-auto max-w-7xl px-4 md:px-6">
-          <SectionHeading
-            label="What We Do"
-            title="Services That Move You Forward"
-            subtitle="End-to-end capabilities across strategy, design, engineering, and growth."
-          />
+          <div className="max-w-2xl text-left">
+            <span className="text-base font-medium uppercase tracking-[0.3em] text-foreground/40 md:text-lg">
+              What We Do
+            </span>
+
+            <h2
+              style={{ fontFamily: '"Angsana New", "Angsana New Web", serif' }}
+              className="mt-4 text-4xl font-light leading-[1.15] text-foreground md:text-6xl"
+            >
+              Services That Move You Forward
+            </h2>
+
+            <p className="mt-4 text-base leading-relaxed text-foreground/50 md:text-lg">
+              End-to-end capabilities across strategy, design, engineering, and
+              growth.
+            </p>
+          </div>
 
           <motion.div
             initial={{ opacity: 0, y: 40 }}

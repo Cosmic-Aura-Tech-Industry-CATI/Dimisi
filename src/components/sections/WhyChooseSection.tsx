@@ -37,9 +37,11 @@ function WhyChooseCard({
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const card = cardRef.current;
     if (!card) return;
+
     const rect = card.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
+
     mouseX.set(x);
     mouseY.set(y);
   }
@@ -83,9 +85,11 @@ function WhyChooseCard({
         <span className="font-display text-2xl font-light text-foreground/30 transition-colors duration-300 group-hover:text-foreground/60">
           {String(index + 1).padStart(2, "0")}
         </span>
+
         <h3 className="mt-4 font-display text-lg font-light text-foreground/90 transition-colors duration-300 group-hover:text-foreground">
           {item.title}
         </h3>
+
         <p className="mt-2 text-sm leading-relaxed text-foreground/50 transition-colors duration-300 group-hover:text-foreground/80">
           {item.description}
         </p>
@@ -99,11 +103,22 @@ export function WhyChooseSection() {
     <ParallaxSection id="why" className="py-14 md:py-20">
       {(style) => (
         <motion.div style={style} className="mx-auto max-w-7xl px-4 md:px-6">
-          <SectionHeading
-            label="Why Dimisi"
-            title="Why Teams Choose Dimisi"
-            subtitle="We build like product owners — obsessed with outcomes, not just output."
-          />
+          <div className="max-w-2xl text-left">
+            <span className="text-base font-medium uppercase tracking-[0.3em] text-foreground/40 md:text-lg">
+              Why Dimisi
+            </span>
+
+            <h2
+              style={{ fontFamily: '"Angsana New", "Angsana New Web", serif' }}
+              className="mt-4 text-4xl font-light leading-[1.15] text-foreground md:text-6xl"
+            >
+              Why Teams Choose Dimisi
+            </h2>
+
+            <p className="mt-4 text-base leading-relaxed text-foreground/50 md:text-lg">
+              We build like product owners — obsessed with outcomes, not just output.
+            </p>
+          </div>
 
           <motion.div
             initial={{ opacity: 0, y: 40 }}

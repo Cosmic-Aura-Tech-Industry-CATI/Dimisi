@@ -21,6 +21,7 @@ function TechStackCard({ column }: { column: (typeof techStack)[number] }) {
     useTransform(mouseY, [-0.5, 0.5], [10, -10]),
     { stiffness: 200, damping: 20, mass: 0.5 }
   );
+
   const rotateY = useSpring(
     useTransform(mouseX, [-0.5, 0.5], [-10, 10]),
     { stiffness: 200, damping: 20, mass: 0.5 }
@@ -32,9 +33,11 @@ function TechStackCard({ column }: { column: (typeof techStack)[number] }) {
   function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
     const card = cardRef.current;
     if (!card) return;
+
     const rect = card.getBoundingClientRect();
     const x = (e.clientX - rect.left) / rect.width - 0.5;
     const y = (e.clientY - rect.top) / rect.height - 0.5;
+
     mouseX.set(x);
     mouseY.set(y);
   }
@@ -103,11 +106,23 @@ export function TechStackSection() {
     <ParallaxSection id="technology" className="py-14 md:py-20">
       {(style) => (
         <motion.div style={style} className="mx-auto max-w-7xl px-4 md:px-6">
-          <SectionHeading
-            label="Technology Ecosystem"
-            title="The Stack Behind Our Work"
-            subtitle="A modern, battle-tested toolset spanning frontend, backend, data, cloud, and AI."
-          />
+          <div className="max-w-2xl text-left">
+            <span className="text-base font-medium uppercase tracking-[0.3em] text-foreground/40 md:text-lg">
+              Technology Ecosystem
+            </span>
+
+            <h2
+              style={{ fontFamily: '"Angsana New", "Angsana New Web", serif' }}
+              className="mt-4 text-4xl font-light leading-[1.15] text-foreground md:text-6xl"
+            >
+              The Stack Behind Our Work
+            </h2>
+
+            <p className="mt-4 text-base leading-relaxed text-foreground/50 md:text-lg">
+              A modern, battle-tested toolset spanning frontend, backend, data,
+              cloud, and AI.
+            </p>
+          </div>
 
           <motion.div
             initial={{ opacity: 0, y: 40 }}
