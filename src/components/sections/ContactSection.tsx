@@ -1,6 +1,5 @@
 // ContactSection.tsx — Homepage section featuring contact details cards alongside an interactive project inquiry contact form.
 import Image from "next/image";
-
 import { useRef, useState, type FormEvent } from "react";
 import {
   motion,
@@ -12,19 +11,9 @@ import { Mail, MapPin, Phone, User } from "lucide-react";
 import emailjs from "@emailjs/browser";
 import { toast } from "sonner";
 
-import { ParallaxSection, PrimaryButton } from "./section-kit";
-
-import { useState, type FormEvent } from "react";
-import { motion } from "motion/react";
-import { Mail, MapPin, Phone, User } from "lucide-react";
-import emailjs from "@emailjs/browser";
-import { toast } from "sonner";
-
 import {
   ParallaxSection,
   PrimaryButton,
-  SectionHeading,
-  TiltCard,
 } from "./section-kit";
 
 import { Toaster } from "@/components/ui/sonner";
@@ -76,7 +65,6 @@ function validateContactForm(values: ContactFormData): ContactFormErrors {
 
   return errors;
 }
-
 
 // Same mouse-tracking tilt + glare interaction used by ServiceCard in ServicesSection.
 function TiltGlareCard({
@@ -324,10 +312,7 @@ export function ContactSection() {
               })}
             </div>
 
-
-            <GlareOnlyCard className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] transition-colors duration-300 hover:border-foreground/40 hover:bg-foreground/[0.05] hover:shadow-[0_0_40px_-12px_rgba(255,255,255,0.25)]">
-
-            <div className="relative overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.02]">
+            <GlareOnlyCard className="relative overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.02] transition-colors duration-300 hover:border-foreground/40 hover:bg-foreground/[0.05] hover:shadow-[0_0_40px_-12px_rgba(255,255,255,0.25)]">
               <div className="pointer-events-none absolute inset-0 opacity-20">
                 <Image
                   src="/Bhootdev get in touch.svg"
@@ -340,7 +325,7 @@ export function ContactSection() {
 
               <form onSubmit={handleSubmit} className="relative p-8" noValidate>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
+                  <div className="flex flex-col">
                     <input
                       name="name"
                       type="text"
@@ -351,7 +336,7 @@ export function ContactSection() {
                       value={formData.name}
                       onChange={(event) => handleFieldChange("name", event.target.value)}
                       placeholder="Name"
-                      className="rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
+                      className="w-full rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
                     />
                     {errors.name ? (
                       <p id="contact-name-error" className="mt-2 text-xs text-red-500">
@@ -360,7 +345,7 @@ export function ContactSection() {
                     ) : null}
                   </div>
 
-                  <div>
+                  <div className="flex flex-col">
                     <input
                       name="email"
                       type="email"
@@ -371,7 +356,7 @@ export function ContactSection() {
                       value={formData.email}
                       onChange={(event) => handleFieldChange("email", event.target.value)}
                       placeholder="Email"
-                      className="rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
+                      className="w-full rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
                     />
                     {errors.email ? (
                       <p id="contact-email-error" className="mt-2 text-xs text-red-500">
@@ -380,6 +365,7 @@ export function ContactSection() {
                     ) : null}
                   </div>
                 </div>
+
                 <div>
                   <textarea
                     name="message"
@@ -398,6 +384,7 @@ export function ContactSection() {
                     </p>
                   ) : null}
                 </div>
+
                 <div className="mt-6">
                   <PrimaryButton type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (
@@ -412,11 +399,7 @@ export function ContactSection() {
                 </div>
               </form>
               <Toaster />
-
             </GlareOnlyCard>
-
-            </div>
-
           </motion.div>
         </motion.div>
       )}
