@@ -1,5 +1,6 @@
 // ContactSection.tsx — Homepage section featuring contact details cards alongside an interactive project inquiry contact form.
 import Image from "next/image";
+
 import { useRef, useState, type FormEvent } from "react";
 import {
   motion,
@@ -12,6 +13,20 @@ import emailjs from "@emailjs/browser";
 import { toast } from "sonner";
 
 import { ParallaxSection, PrimaryButton } from "./section-kit";
+
+import { useState, type FormEvent } from "react";
+import { motion } from "motion/react";
+import { Mail, MapPin, Phone, User } from "lucide-react";
+import emailjs from "@emailjs/browser";
+import { toast } from "sonner";
+
+import {
+  ParallaxSection,
+  PrimaryButton,
+  SectionHeading,
+  TiltCard,
+} from "./section-kit";
+
 import { Toaster } from "@/components/ui/sonner";
 
 const DETAILS = [
@@ -61,6 +76,7 @@ function validateContactForm(values: ContactFormData): ContactFormErrors {
 
   return errors;
 }
+
 
 // Same mouse-tracking tilt + glare interaction used by ServiceCard in ServicesSection.
 function TiltGlareCard({
@@ -308,7 +324,10 @@ export function ContactSection() {
               })}
             </div>
 
+
             <GlareOnlyCard className="rounded-2xl border border-foreground/10 bg-foreground/[0.02] transition-colors duration-300 hover:border-foreground/40 hover:bg-foreground/[0.05] hover:shadow-[0_0_40px_-12px_rgba(255,255,255,0.25)]">
+
+            <div className="relative overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.02]">
               <div className="pointer-events-none absolute inset-0 opacity-20">
                 <Image
                   src="/Bhootdev get in touch.svg"
@@ -393,7 +412,11 @@ export function ContactSection() {
                 </div>
               </form>
               <Toaster />
+
             </GlareOnlyCard>
+
+            </div>
+
           </motion.div>
         </motion.div>
       )}
