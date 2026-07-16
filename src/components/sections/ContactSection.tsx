@@ -1,7 +1,12 @@
 // ContactSection.tsx — Homepage section featuring contact details cards alongside an interactive project inquiry contact form.
 import Image from "next/image";
-import { useState, type FormEvent } from "react";
-import { motion } from "motion/react";
+import { useRef, useState, type FormEvent } from "react";
+import {
+  motion,
+  useMotionValue,
+  useSpring,
+  useTransform,
+} from "motion/react";
 import { Mail, MapPin, Phone, User } from "lucide-react";
 import emailjs from "@emailjs/browser";
 import { toast } from "sonner";
@@ -9,9 +14,8 @@ import { toast } from "sonner";
 import {
   ParallaxSection,
   PrimaryButton,
-  SectionHeading,
-  TiltCard,
 } from "./section-kit";
+
 import { Toaster } from "@/components/ui/sonner";
 
 const DETAILS = [
@@ -60,6 +64,136 @@ function validateContactForm(values: ContactFormData): ContactFormErrors {
   }
 
   return errors;
+}
+
+// Same mouse-tracking tilt + glare interaction used by ServiceCard in ServicesSection.
+function TiltGlareCard({
+  className = "",
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const rotateX = useSpring(
+    useTransform(mouseY, [-0.5, 0.5], [10, -10]),
+    { stiffness: 200, damping: 20, mass: 0.5 }
+  );
+  const rotateY = useSpring(
+    useTransform(mouseX, [-0.5, 0.5], [-10, 10]),
+    { stiffness: 200, damping: 20, mass: 0.5 }
+  );
+
+  const glareX = useTransform(mouseX, [-0.5, 0.5], [0, 100]);
+  const glareY = useTransform(mouseY, [-0.5, 0.5], [0, 100]);
+
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    mouseX.set(x);
+    mouseY.set(y);
+  }
+
+  function handleMouseLeave() {
+    mouseX.set(0);
+    mouseY.set(0);
+  }
+
+  return (
+    <motion.div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        rotateX,
+        rotateY,
+        transformStyle: "preserve-3d",
+        transformPerspective: 800,
+      }}
+      whileHover={{ scale: 1.03 }}
+      transition={{ scale: { duration: 0.3 } }}
+      className={`group relative overflow-hidden ${className}`}
+    >
+      <motion.div
+        className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{
+          background: useTransform(
+            [glareX, glareY],
+            ([x, y]) =>
+              `radial-gradient(circle at ${x}% ${y}%, rgba(255,255,255,0.12), transparent 60%)`
+          ),
+        }}
+      />
+
+      <div
+        style={{ transform: "translateZ(30px)", transformStyle: "preserve-3d" }}
+        className="relative"
+      >
+        {children}
+      </div>
+    </motion.div>
+  );
+}
+
+// Highlight-only variant of TiltGlareCard — same moving glare + hover glow,
+// but no rotateX/rotateY tilt or scale movement.
+function GlareOnlyCard({
+  className = "",
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}) {
+  const cardRef = useRef<HTMLDivElement>(null);
+
+  const mouseX = useMotionValue(0);
+  const mouseY = useMotionValue(0);
+
+  const glareX = useTransform(mouseX, [-0.5, 0.5], [0, 100]);
+  const glareY = useTransform(mouseY, [-0.5, 0.5], [0, 100]);
+
+  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = (e.clientX - rect.left) / rect.width - 0.5;
+    const y = (e.clientY - rect.top) / rect.height - 0.5;
+    mouseX.set(x);
+    mouseY.set(y);
+  }
+
+  function handleMouseLeave() {
+    mouseX.set(0);
+    mouseY.set(0);
+  }
+
+  return (
+    <div
+      ref={cardRef}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      className={`group relative overflow-hidden ${className}`}
+    >
+      <motion.div
+        className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+        style={{
+          background: useTransform(
+            [glareX, glareY],
+            ([x, y]) =>
+              `radial-gradient(circle at ${x}% ${y}%, rgba(255,255,255,0.12), transparent 60%)`
+          ),
+        }}
+      />
+      {children}
+    </div>
+  );
 }
 
 export function ContactSection() {
@@ -133,11 +267,20 @@ export function ContactSection() {
     <ParallaxSection id="contact" className="py-14 md:py-20">
       {(style) => (
         <motion.div style={style} className="mx-auto max-w-7xl px-4 md:px-6">
-          <SectionHeading
-            label="Get in Touch"
-            title="Let's Build Something"
-            subtitle="Tell us about your project and we'll get back within one business day."
-          />
+          <div className="max-w-2xl text-left">
+            <span className="text-base font-medium uppercase tracking-[0.3em] text-foreground/40 md:text-lg">
+              Get in Touch
+            </span>
+            <h2
+              style={{ fontFamily: '"Angsana New", "Angsana New Web", serif' }}
+              className="mt-4 text-4xl font-light leading-[1.15] text-foreground md:text-6xl"
+            >
+              Let&apos;s Build Something
+            </h2>
+            <p className="mt-4 text-base leading-relaxed text-foreground/50 md:text-lg">
+              Tell us about your project and we&apos;ll get back within one business day.
+            </p>
+          </div>
 
           <motion.div
             initial={{ opacity: 0, y: 40 }}
@@ -145,14 +288,15 @@ export function ContactSection() {
             viewport={{ once: true, amount: 0.3 }}
             transition={{ duration: 0.8 }}
             className="mt-14 grid grid-cols-1 gap-6 lg:grid-cols-2"
+            style={{ perspective: 1000 }}
           >
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 lg:grid-cols-1">
               {DETAILS.map((d) => {
                 const Icon = d.icon;
                 return (
-                  <TiltCard
+                  <TiltGlareCard
                     key={d.label}
-                    className="flex items-center gap-4 rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-6 transition-colors hover:border-foreground/30"
+                    className="flex items-center gap-4 rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-6 transition-colors duration-300 hover:border-foreground/40 hover:bg-foreground/[0.05] hover:shadow-[0_0_40px_-12px_rgba(255,255,255,0.25)]"
                   >
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-foreground/10 bg-foreground/[0.03]">
                       <Icon className="h-5 w-5 text-foreground" />
@@ -163,12 +307,12 @@ export function ContactSection() {
                       </div>
                       <div className="mt-1 text-sm text-foreground/70">{d.value}</div>
                     </div>
-                  </TiltCard>
+                  </TiltGlareCard>
                 );
               })}
             </div>
 
-            <div className="relative overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.02]">
+            <GlareOnlyCard className="relative overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.02] transition-colors duration-300 hover:border-foreground/40 hover:bg-foreground/[0.05] hover:shadow-[0_0_40px_-12px_rgba(255,255,255,0.25)]">
               <div className="pointer-events-none absolute inset-0 opacity-20">
                 <Image
                   src="/Bhootdev get in touch.svg"
@@ -181,7 +325,7 @@ export function ContactSection() {
 
               <form onSubmit={handleSubmit} className="relative p-8" noValidate>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div>
+                  <div className="flex flex-col">
                     <input
                       name="name"
                       type="text"
@@ -192,7 +336,7 @@ export function ContactSection() {
                       value={formData.name}
                       onChange={(event) => handleFieldChange("name", event.target.value)}
                       placeholder="Name"
-                      className="rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
+                      className="w-full rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
                     />
                     {errors.name ? (
                       <p id="contact-name-error" className="mt-2 text-xs text-red-500">
@@ -201,7 +345,7 @@ export function ContactSection() {
                     ) : null}
                   </div>
 
-                  <div>
+                  <div className="flex flex-col">
                     <input
                       name="email"
                       type="email"
@@ -212,7 +356,7 @@ export function ContactSection() {
                       value={formData.email}
                       onChange={(event) => handleFieldChange("email", event.target.value)}
                       placeholder="Email"
-                      className="rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
+                      className="w-full rounded-lg border border-foreground/10 bg-transparent px-4 py-3 text-sm text-foreground placeholder:text-foreground/40 focus:border-foreground/40 focus:outline-none"
                     />
                     {errors.email ? (
                       <p id="contact-email-error" className="mt-2 text-xs text-red-500">
@@ -221,6 +365,7 @@ export function ContactSection() {
                     ) : null}
                   </div>
                 </div>
+
                 <div>
                   <textarea
                     name="message"
@@ -239,6 +384,7 @@ export function ContactSection() {
                     </p>
                   ) : null}
                 </div>
+
                 <div className="mt-6">
                   <PrimaryButton type="submit" disabled={isSubmitting}>
                     {isSubmitting ? (
@@ -253,7 +399,7 @@ export function ContactSection() {
                 </div>
               </form>
               <Toaster />
-            </div>
+            </GlareOnlyCard>
           </motion.div>
         </motion.div>
       )}
