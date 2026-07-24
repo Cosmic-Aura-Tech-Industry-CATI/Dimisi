@@ -12,7 +12,7 @@ import {
 } from "motion/react";
 
 import kaleshLogo from "../../assets/kalesh.png";
-import { OutlineButton, ParallaxSection, SectionHeading } from "./section-kit";
+import { OutlineButton, ParallaxSection } from "./section-kit";
 
 /**
  * Theme tokens - keep these in sync with the :root variables defined in
@@ -28,6 +28,8 @@ import { OutlineButton, ParallaxSection, SectionHeading } from "./section-kit";
  * --glow: rgba(255,255,255,.12);
  * --accent: #5EA8FF;
  */
+
+const ANGSANA = "'Angsana New', 'Times New Roman', serif";
 
 const KALESH = {
   name: "KALESH",
@@ -52,19 +54,23 @@ const PARTICLES = [
   { top: "52%", left: "4%", size: 2, duration: 6, delay: 1.4, accent: true },
 ];
 
-// Three layered phone mock-ups, back to front, matching the reference clip:
-// a receding 3D stack that floats and drifts with the cursor.
-const PHONE_LAYERS = [
-  { z: -60, y: -46, scale: 0.82, rotate: -6, blur: 1.5, opacity: 0.45, duration: 7.5 },
-  { z: -20, y: -22, scale: 0.91, rotate: -3, blur: 0.5, opacity: 0.72, duration: 6.5 },
-  { z: 30, y: 0, scale: 1, rotate: 0, blur: 0, opacity: 1, duration: 5.5 },
+// Reactions that float up through the glass panel, and toast-style
+// notifications that slide in from the edges — the "pop out of screen and
+// dissolve" language from the brief, built entirely from theme tokens so it
+// reads as part of the black/white system instead of a pasted-in image.
+const REACTIONS = [
+  { emoji: "\u2764\ufe0f", x: "18%", delay: 0, duration: 3.4 },
+  { emoji: "\ud83d\udd25", x: "68%", delay: 0.9, duration: 3.8 },
+  { emoji: "\u2728", x: "40%", delay: 1.8, duration: 3.2 },
+  { emoji: "\ud83d\udc4d", x: "80%", delay: 2.4, duration: 3.6 },
+  { emoji: "\ud83d\udcac", x: "10%", delay: 3.1, duration: 3.5 },
 ];
 
-// Sequence of "beats" from the reference video, looped: phones -> view
-// counter -> earnings/coins -> prize wheel -> back to phones.
-const SCENES = ["phones", "counter", "coins", "wheel"] as const;
-type Scene = (typeof SCENES)[number];
-const SCENE_DURATION = 3600;
+const TOASTS = [
+  { text: "New follower", side: "left" as const, top: "16%", delay: 0.2 },
+  { text: "42 people reacted", side: "right" as const, top: "68%", delay: 2.6 },
+  { text: "Trending in your circle", side: "left" as const, top: "78%", delay: 5.2 },
+];
 
 export function ProductsSection() {
   return (
@@ -77,20 +83,38 @@ export function ProductsSection() {
             className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_60%_50%_at_50%_20%,var(--glow),transparent_70%)] opacity-40"
           />
 
-          <SectionHeading
-            label="Our Products"
-            title="Explore Our Products"
-            subtitle="Digital products crafted in-house - from social platforms to secure enterprise tooling."
-          />
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.4 }}
+            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
+            className="text-left"
+          >
+            <h2
+              className="text-4xl font-normal tracking-tight text-[var(--text-primary)] md:text-6xl"
+              style={{ fontFamily: ANGSANA }}
+            >
+              Explore Our Products
+            </h2>
+            <p
+              className="mt-4 max-w-xl text-base text-[var(--text-body)] md:text-lg"
+              style={{ fontFamily: ANGSANA }}
+            >
+              Digital products crafted in-house - from social platforms to secure enterprise tooling.
+            </p>
+          </motion.div>
 
           <motion.div
             initial={{ opacity: 0, y: 12 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6, delay: 0.15 }}
-            className="mt-6 flex justify-center"
+            className="mt-6 flex justify-start"
           >
-            <span className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--glass)] px-4 py-1.5 text-[11px] uppercase tracking-widest text-[var(--text-secondary)] shadow-[0_0_20px_-6px_var(--glow)]">
+            <span
+              className="inline-flex items-center gap-2 rounded-full border border-[var(--border)] bg-[var(--glass)] px-4 py-1.5 text-[11px] uppercase tracking-widest text-[var(--text-secondary)] shadow-[0_0_20px_-6px_var(--glow)]"
+              style={{ fontFamily: ANGSANA }}
+            >
               <span className="relative flex h-1.5 w-1.5">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--accent)]/60" />
                 <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
@@ -113,8 +137,26 @@ function KaleshShowcase() {
 
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
-  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [7, -7]), { stiffness: 130, damping: 20 });
-  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-7, 7]), { stiffness: 130, damping: 20 });
+
+  // Same spring-smoothed tilt feel as ServiceCard / DimiMessageCard.
+  const rotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [8, -8]), {
+    stiffness: 200,
+    damping: 20,
+    mass: 0.5,
+  });
+  const rotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-8, 8]), {
+    stiffness: 200,
+    damping: 20,
+    mass: 0.5,
+  });
+
+  const glareX = useTransform(mouseX, [-0.5, 0.5], [0, 100]);
+  const glareY = useTransform(mouseY, [-0.5, 0.5], [0, 100]);
+  const glareBackground = useTransform(
+    [glareX, glareY],
+    ([x, y]) => `radial-gradient(circle at ${x}% ${y}%, rgba(255,255,255,0.16), transparent 60%)`
+  );
+
   const stackRotateY = useSpring(useTransform(mouseX, [-0.5, 0.5], [-10, 10]), { stiffness: 90, damping: 18 });
   const stackRotateX = useSpring(useTransform(mouseY, [-0.5, 0.5], [6, -6]), { stiffness: 90, damping: 18 });
   const logoGlowX = useSpring(useTransform(mouseX, [-0.5, 0.5], [-6, 6]), { stiffness: 150, damping: 22 });
@@ -148,14 +190,20 @@ function KaleshShowcase() {
         whileInView={{ opacity: 1, y: 0 }}
         viewport={{ once: true, amount: 0.3 }}
         transition={{ duration: 0.9, ease: [0.16, 1, 0.3, 1] }}
-        style={{ rotateX: rotateX, rotateY: rotateY, transformPerspective: 1200 }}
+        whileHover={{ scale: 1.02 }}
+        style={{ rotateX, rotateY, transformStyle: "preserve-3d", transformPerspective: 1200 }}
         className="group relative order-2 flex flex-col justify-center overflow-hidden rounded-[2rem] border border-[var(--border)] bg-gradient-to-b from-[var(--surface)] to-[var(--bg-secondary)] p-10 backdrop-blur-2xl transition-[border-color,box-shadow] duration-500 hover:border-[var(--border-hover)] hover:shadow-[0_0_90px_-16px_var(--glow)] md:order-1 md:min-h-[560px] md:p-12"
       >
+        {/* cursor-tracking glare, same treatment as ServiceCard / DimiMessageCard */}
+        <motion.div
+          className="pointer-events-none absolute inset-0 rounded-[2rem] opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+          style={{ background: glareBackground }}
+        />
         <div className="pointer-events-none absolute inset-0 rounded-[2rem] bg-gradient-to-br from-[var(--glass)] via-transparent to-transparent" />
         <div className="pointer-events-none absolute inset-x-8 top-0 h-px bg-gradient-to-r from-transparent via-[var(--accent)]/40 to-transparent" />
         <div className="pointer-events-none absolute -inset-px rounded-[2rem] border border-[var(--border)]/50" />
 
-        <div className="relative" style={{ transform: "translateZ(50px)" }}>
+        <div className="relative text-left" style={{ transform: "translateZ(50px)" }}>
           <motion.div
             style={{ x: logoGlowX, y: logoGlowY }}
             animate={{ y: [0, -8, 0] }}
@@ -172,17 +220,20 @@ function KaleshShowcase() {
             />
           </motion.div>
 
-          <p className="mt-7 text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--text-label)]">
+          <p className="mt-7 text-left text-[11px] font-semibold uppercase tracking-[0.22em] text-[var(--text-label)]">
             {KALESH.eyebrow}
           </p>
 
-          <h3 className="mt-3 font-display text-4xl font-light tracking-tight text-[var(--text-primary)] drop-shadow-[0_0_28px_var(--glow)] md:text-6xl">
+          <h3
+            className="mt-3 text-left text-4xl font-normal tracking-tight text-[var(--text-primary)] drop-shadow-[0_0_28px_var(--glow)] md:text-6xl"
+            style={{ fontFamily: "'Angsana New', 'Times New Roman', serif" }}
+          >
             {KALESH.name}
           </h3>
-          <p className="mt-3 text-base font-medium text-[var(--text-secondary)]">
+          <p className="mt-3 text-left text-base font-medium text-[var(--text-secondary)]">
             {KALESH.tagline}
           </p>
-          <p className="mt-6 max-w-md text-[15px] leading-relaxed text-[var(--text-body)]">
+          <p className="mt-6 max-w-md text-left text-[15px] leading-relaxed text-[var(--text-body)]">
             {KALESH.description}
           </p>
 
@@ -207,42 +258,130 @@ function KaleshShowcase() {
         transition={{ duration: 1, delay: 0.15, ease: [0.16, 1, 0.3, 1] }}
         className="relative order-1 flex h-[360px] items-center justify-center md:order-2 md:h-[560px]"
       >
-        <ProductReel rotateX={stackRotateX} rotateY={stackRotateY} />
+        <SocialPulseAnimation rotateX={stackRotateX} rotateY={stackRotateY} />
       </motion.div>
     </div>
   );
 }
 
 /**
- * Looping showcase reel: cycles through the same four beats as the
- * reference video (phone stack -> view counter -> coins -> prize wheel),
- * each with continuous internal motion, crossfading + sliding between
- * beats the same way the source clip cuts between shots.
+ * Reaction emoji that spawns near the base of the panel and floats upward,
+ * fading and dissolving out before it reaches the top — the "double-tap
+ * like" burst you see across social apps, rebuilt as ambient loop.
  */
-function ProductReel({
+function FloatingReaction({
+  emoji,
+  x,
+  delay,
+  duration,
+}: {
+  emoji: string;
+  x: string;
+  delay: number;
+  duration: number;
+}) {
+  return (
+    <motion.span
+      aria-hidden
+      className="absolute bottom-10 select-none text-4xl md:bottom-14 md:text-6xl"
+      style={{ left: x, filter: "drop-shadow(0 0 10px var(--glow))" }}
+      initial={{ opacity: 0, y: 0, scale: 0.4 }}
+      animate={{
+        opacity: [0, 1, 1, 0],
+        y: [0, -70, -150, -220],
+        scale: [0.4, 1, 0.9, 0.5],
+      }}
+      transition={{
+        duration,
+        repeat: Infinity,
+        repeatDelay: 1.6,
+        delay,
+        ease: "easeOut",
+      }}
+    >
+      {emoji}
+    </motion.span>
+  );
+}
+
+/**
+ * A notification toast that pops in from the left or right edge of the
+ * panel, holds briefly, then dissolves back out - built entirely from glass
+ * / border / accent tokens so it reads as native to the black-and-white
+ * theme instead of a pasted-in image.
+ */
+function NotificationToast({
+  text,
+  side,
+  top,
+  delay,
+}: {
+  text: string;
+  side: "left" | "right";
+  top: string;
+  delay: number;
+}) {
+  const restingX = 0;
+  const fromX = side === "left" ? -70 : 70;
+  const exitX = side === "left" ? -30 : 30;
+
+  return (
+    <motion.div
+      className="absolute flex items-center gap-2 whitespace-nowrap rounded-full border border-[var(--border)] bg-[var(--glass)] px-3 py-1.5 text-[10px] text-[var(--text-secondary)] backdrop-blur-md shadow-[0_10px_30px_-10px_rgba(0,0,0,0.6)] md:text-xs"
+      style={{ top, [side]: "6%" } as React.CSSProperties}
+      initial={{ opacity: 0, x: fromX, filter: "blur(6px)" }}
+      animate={{
+        opacity: [0, 1, 1, 0],
+        x: [fromX, restingX, restingX, exitX],
+        filter: ["blur(6px)", "blur(0px)", "blur(0px)", "blur(6px)"],
+      }}
+      transition={{
+        duration: 3.4,
+        repeat: Infinity,
+        repeatDelay: 2.6,
+        delay,
+        ease: [0.16, 1, 0.3, 1],
+      }}
+    >
+      <span className="relative flex h-1.5 w-1.5 shrink-0">
+        <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--accent)]/60" />
+        <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+      </span>
+      {text}
+    </motion.div>
+  );
+}
+
+/**
+ * Replaces the old white phone-mockup panel. The panel itself is glass -
+ * bg-[var(--glass)], a hairline border, heavy blur - so it dissolves into
+ * the black backdrop instead of sitting on top of it. Everything inside is
+ * built from the same monochrome + accent tokens as the rest of the site:
+ * a pulsing outline heart at the centre, reactions rising and fading
+ * through the glass, and notification toasts popping in from the edges
+ * and dissolving back out. Ambient rings and particles are kept for
+ * continuity with the section's existing atmosphere.
+ */
+function SocialPulseAnimation({
   rotateX,
   rotateY,
 }: {
   rotateX: ReturnType<typeof useSpring>;
   rotateY: ReturnType<typeof useSpring>;
 }) {
-  const [index, setIndex] = useState(0);
+  const [pulse, setPulse] = useState(0);
 
   useEffect(() => {
-    const id = setInterval(() => {
-      setIndex((current) => (current + 1) % SCENES.length);
-    }, SCENE_DURATION);
+    const id = setInterval(() => setPulse((p) => p + 1), 2200);
     return () => clearInterval(id);
   }, []);
-
-  const scene: Scene = SCENES[index];
 
   return (
     <div
       className="relative flex h-full w-full items-center justify-center overflow-hidden"
       style={{ perspective: 1400 }}
     >
-      {/* Ambient rings, present behind every beat */}
+      {/* Ambient rotating rings, kept for continuity with site theme */}
       {RINGS.map((ring, i) => (
         <motion.div
           key={i}
@@ -259,28 +398,60 @@ function ProductReel({
         />
       ))}
 
-      <AnimatePresence mode="wait">
-        {scene === "phones" && (
-          <SceneWrap key="phones">
-            <PhoneStack rotateX={rotateX} rotateY={rotateY} />
-          </SceneWrap>
-        )}
-        {scene === "counter" && (
-          <SceneWrap key="counter">
-            <ViewCounterScene />
-          </SceneWrap>
-        )}
-        {scene === "coins" && (
-          <SceneWrap key="coins">
-            <CoinsScene />
-          </SceneWrap>
-        )}
-        {scene === "wheel" && (
-          <SceneWrap key="wheel">
-            <WheelScene />
-          </SceneWrap>
-        )}
-      </AnimatePresence>
+      {/* No panel/box - everything floats directly over the ambient rings */}
+      <motion.div
+        style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
+        animate={{ y: [0, -10, 0] }}
+        transition={{ duration: 6, repeat: Infinity, ease: "easeInOut" }}
+        className="relative h-[260px] w-[220px] md:h-[380px] md:w-[300px]"
+      >
+        {/* Reactions rising and dissolving in place of the old panel */}
+        {REACTIONS.map((r, i) => (
+          <FloatingReaction key={i} emoji={r.emoji} x={r.x} delay={r.delay} duration={r.duration} />
+        ))}
+
+        {/* Notification toasts popping in from the edges */}
+        {TOASTS.map((t, i) => (
+          <NotificationToast key={i} text={t.text} side={t.side} top={t.top} delay={t.delay} />
+        ))}
+
+        {/* Centre-piece: a pulsing outline heart, monochrome with an accent
+            beat, so the "signature" of the panel stays quiet and singular */}
+        <div className="absolute inset-0 flex items-center justify-center">
+          <AnimatePresence>
+            <motion.svg
+              key={pulse}
+              viewBox="0 0 48 48"
+              className="h-16 w-16 md:h-24 md:w-24"
+              initial={{ scale: 0.9, opacity: 0.7 }}
+              animate={{ scale: [0.9, 1.12, 1], opacity: [0.7, 1, 0.85] }}
+              transition={{ duration: 1.1, ease: [0.16, 1, 0.3, 1] }}
+            >
+              <path
+                d="M24 40 C10 30 4 22 4 14.5 C4 8.5 9 4 15 4 C19 4 22.3 6.2 24 9.4 C25.7 6.2 29 4 33 4 C39 4 44 8.5 44 14.5 C44 22 38 30 24 40 Z"
+                fill="none"
+                stroke="var(--text-primary)"
+                strokeWidth="2"
+                strokeLinejoin="round"
+              />
+              <path
+                d="M24 40 C10 30 4 22 4 14.5 C4 8.5 9 4 15 4 C19 4 22.3 6.2 24 9.4 C25.7 6.2 29 4 33 4 C39 4 44 8.5 44 14.5 C44 22 38 30 24 40 Z"
+                fill="var(--accent)"
+                opacity="0.12"
+              />
+            </motion.svg>
+          </AnimatePresence>
+        </div>
+
+        {/* Live engagement counter - top right, ticks up quietly */}
+        <div className="absolute right-2 top-4 flex items-center gap-1.5 text-[9px] uppercase tracking-widest text-[var(--text-muted)] md:right-4 md:text-[10px]">
+          <span className="relative flex h-1.5 w-1.5">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--accent)]/60" />
+            <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+          </span>
+          Live
+        </div>
+      </motion.div>
 
       {PARTICLES.map((particle, index) => (
         <motion.div
@@ -300,250 +471,6 @@ function ProductReel({
           transition={{ duration: particle.duration, repeat: Infinity, ease: "easeInOut", delay: particle.delay }}
         />
       ))}
-
-      {/* Progress dots so the loop reads as an intentional sequence */}
-      <div className="pointer-events-none absolute bottom-2 left-1/2 z-20 flex -translate-x-1/2 gap-1.5">
-        {SCENES.map((s, i) => (
-          <span
-            key={s}
-            className="h-1 rounded-full transition-all duration-500"
-            style={{
-              width: i === index ? 20 : 6,
-              backgroundColor: i === index ? "var(--accent)" : "var(--border-hover)",
-            }}
-          />
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function SceneWrap({ children }: { children: React.ReactNode }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 28, scale: 0.96 }}
-      animate={{ opacity: 1, y: 0, scale: 1 }}
-      exit={{ opacity: 0, y: -28, scale: 0.96 }}
-      transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-      className="absolute inset-0 flex items-center justify-center"
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-function PhoneStack({
-  rotateX,
-  rotateY,
-}: {
-  rotateX: ReturnType<typeof useSpring>;
-  rotateY: ReturnType<typeof useSpring>;
-}) {
-  return (
-    <motion.div
-      style={{ rotateX, rotateY, transformStyle: "preserve-3d" }}
-      className="relative h-[280px] w-[170px] md:h-[400px] md:w-[240px]"
-    >
-      {PHONE_LAYERS.map((layer, index) => (
-        <motion.div
-          key={index}
-          initial={{ y: layer.y + 40, opacity: 0 }}
-          animate={{ y: [layer.y, layer.y - 12, layer.y], opacity: layer.opacity }}
-          transition={{
-            y: { duration: layer.duration, repeat: Infinity, ease: "easeInOut", delay: index * 0.4 },
-            opacity: { duration: 0.6, delay: index * 0.12 },
-          }}
-          className="absolute inset-0"
-          style={{
-            transform: `translateZ(${layer.z}px) rotate(${layer.rotate}deg) scale(${layer.scale})`,
-            filter: layer.blur ? `blur(${layer.blur}px)` : undefined,
-            zIndex: index,
-          }}
-        >
-          <PhoneFrame />
-        </motion.div>
-      ))}
-    </motion.div>
-  );
-}
-
-function PhoneFrame() {
-  return (
-    <div className="relative h-full w-full overflow-hidden rounded-[1.6rem] border border-[var(--border)] bg-[var(--bg-secondary)]/80 shadow-[0_30px_70px_-20px_rgba(0,0,0,0.65)] backdrop-blur-md">
-      <div className="flex items-center justify-between px-4 pt-3 text-[9px] text-[var(--text-muted)]">
-        <span>9:41</span>
-        <div className="flex items-center gap-1">
-          <div className="h-1.5 w-3 rounded-sm bg-[var(--text-muted)]" />
-          <div className="h-1.5 w-1.5 rounded-full bg-[var(--text-muted)]" />
-        </div>
-      </div>
-
-      <div className="mt-3 flex items-center gap-2 px-4">
-        <Image src={kaleshLogo} alt="" width={20} height={20} className="h-5 w-5 rounded-full object-contain" />
-        <span className="text-[11px] font-semibold text-[var(--text-primary)] drop-shadow-[0_0_10px_var(--glow)]">
-          Kalesh
-        </span>
-      </div>
-
-      <div className="mx-3 mt-3 rounded-xl border border-[var(--border)] bg-[var(--surface)] p-2.5">
-        <div className="h-16 w-full rounded-lg bg-gradient-to-br from-[var(--accent)]/25 via-[var(--glass)] to-transparent md:h-24" />
-        <div className="mt-2 h-1.5 w-3/4 rounded-full bg-[var(--border-hover)]" />
-        <div className="mt-1.5 h-1.5 w-1/2 rounded-full bg-[var(--border)]" />
-        <div className="mt-3 flex items-center justify-between">
-          <div className="flex items-center gap-1 text-[10px] font-semibold text-[var(--text-primary)]">
-            <span style={{ color: "var(--accent)" }}>&#9829;</span>
-            12.4k
-          </div>
-          <div className="h-4 w-10 rounded-full bg-[var(--accent)]/20" />
-        </div>
-      </div>
-
-      <div className="mt-3 space-y-1.5 px-4">
-        <div className="h-1.5 w-full rounded-full bg-[var(--border)]" />
-        <div className="h-1.5 w-4/5 rounded-full bg-[var(--border)]" />
-      </div>
-
-      <div className="absolute inset-x-0 bottom-0 flex items-center justify-around border-t border-[var(--border)] bg-[var(--bg-primary)]/60 py-2.5">
-        <div className="h-2.5 w-2.5 rounded-sm bg-[var(--text-muted)]" />
-        <div className="h-2.5 w-2.5 rounded-full bg-[var(--accent)]" />
-        <div className="h-2.5 w-2.5 rounded-full bg-[var(--text-muted)]" />
-      </div>
-    </div>
-  );
-}
-
-/** Big glowing "X million+ Views" counter beat. */
-function ViewCounterScene() {
-  const [value, setValue] = useState(0);
-  const target = 5;
-
-  useEffect(() => {
-    setValue(0);
-    const id = setInterval(() => {
-      setValue((current) => {
-        if (current >= target) {
-          clearInterval(id);
-          return target;
-        }
-        return current + 1;
-      });
-    }, 140);
-    return () => clearInterval(id);
-  }, []);
-
-  return (
-    <div className="flex flex-col items-center justify-center text-center">
-      <motion.div
-        animate={{ opacity: [0.4, 0.8, 0.4], scale: [1, 1.06, 1] }}
-        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
-        className="pointer-events-none absolute h-56 w-56 rounded-full blur-[80px] md:h-72 md:w-72"
-        style={{ backgroundColor: "rgba(94,168,255,0.18)" }}
-      />
-      <span className="font-display text-6xl font-bold text-[var(--text-primary)] drop-shadow-[0_0_36px_rgba(94,168,255,0.45)] md:text-7xl">
-        {value}
-        <span className="align-top text-3xl md:text-4xl">million+</span>
-      </span>
-      <span className="mt-2 text-lg font-medium uppercase tracking-[0.3em] text-[var(--text-muted)]">
-        Views
-      </span>
-    </div>
-  );
-}
-
-/** Earnings ledger + rising coin stacks beat. */
-function CoinsScene() {
-  const coinColumns = [3, 5, 4, 6];
-
-  return (
-    <div className="flex items-end gap-6">
-      <motion.div
-        initial={{ rotate: -8, y: 20, opacity: 0 }}
-        animate={{ rotate: -6, y: 0, opacity: 1 }}
-        transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
-        className="relative h-40 w-28 rounded-xl border border-[var(--border)] bg-gradient-to-b from-[var(--surface-hover)] to-[var(--surface)] p-3 shadow-[0_20px_40px_-10px_rgba(0,0,0,0.5)] md:h-52 md:w-36"
-      >
-        <div className="space-y-2">
-          {[0, 1, 2, 3].map((row) => (
-            <div key={row} className="flex items-center gap-1.5">
-              <div className="h-2 w-2 rounded-full bg-[var(--accent)]/70" />
-              <div className="h-1.5 flex-1 rounded-full bg-[var(--border-hover)]" />
-            </div>
-          ))}
-        </div>
-      </motion.div>
-
-      <div className="flex items-end gap-2.5">
-        {coinColumns.map((count, colIndex) => (
-          <div key={colIndex} className="flex flex-col-reverse gap-0.5">
-            {Array.from({ length: count }).map((_, coinIndex) => {
-              const isTopCoin = coinIndex === count - 1;
-              return (
-                <motion.div
-                  key={coinIndex}
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1, y: [0, -3, 0] }}
-                  transition={{
-                    scale: { duration: 0.4, delay: colIndex * 0.12 + coinIndex * 0.05 },
-                    opacity: { duration: 0.4, delay: colIndex * 0.12 + coinIndex * 0.05 },
-                    y: { duration: 2.4, repeat: Infinity, ease: "easeInOut", delay: coinIndex * 0.15 },
-                  }}
-                  className="h-2.5 w-8 rounded-full border shadow-[0_2px_6px_rgba(0,0,0,0.4)] md:w-10"
-                  style={{
-                    borderColor: isTopCoin ? "rgba(94,168,255,0.6)" : "var(--border-hover)",
-                    background: isTopCoin
-                      ? "linear-gradient(to bottom, rgba(94,168,255,0.85), rgba(94,168,255,0.25))"
-                      : "linear-gradient(to bottom, var(--text-secondary), var(--border))",
-                  }}
-                />
-              );
-            })}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/** Spinning prize wheel under a glowing light, with a small crowd/bar row beneath. */
-function WheelScene() {
-  return (
-    <div className="relative flex flex-col items-center justify-center">
-      <motion.div
-        animate={{ opacity: [0.5, 1, 0.5] }}
-        transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}
-        className="relative mb-4 h-10 w-10 rounded-full"
-        style={{ backgroundColor: "var(--accent)", boxShadow: "0 0 40px 14px rgba(94,168,255,0.55)" }}
-      />
-
-      <motion.div
-        animate={{ rotate: 360 }}
-        transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
-        className="relative h-32 w-32 rounded-full border-4 md:h-40 md:w-40"
-        style={{
-          borderColor: "var(--border-hover)",
-          boxShadow: "0 0 50px -8px rgba(94,168,255,0.35)",
-          background:
-            "conic-gradient(rgba(94,168,255,0.35) 0deg 60deg, var(--glass) 60deg 120deg, rgba(94,168,255,0.35) 120deg 180deg, var(--glass) 180deg 240deg, rgba(94,168,255,0.35) 240deg 300deg, var(--glass) 300deg 360deg)",
-        }}
-      >
-        <div className="absolute inset-0 flex items-center justify-center text-[10px] font-semibold uppercase tracking-widest text-[var(--text-primary)]">
-          Kalesh
-        </div>
-        <div className="absolute inset-4 rounded-full border border-[var(--border)]" />
-      </motion.div>
-
-      <div className="mt-6 flex items-end gap-2 opacity-80">
-        {[0.7, 1, 0.85, 1.05, 0.75].map((h, i) => (
-          <motion.div
-            key={i}
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: i * 0.08 }}
-            className="w-6 rounded-t-full"
-            style={{ height: `${h * 44}px`, backgroundColor: "var(--border-hover)" }}
-          />
-        ))}
-      </div>
     </div>
   );
 }
