@@ -1,105 +1,119 @@
-// ServicesSection.tsx — Homepage section displaying services grid cards with Lucide icons and description snippets.
-import { useRef } from "react";
-import {
-  motion,
-  useMotionValue,
-  useSpring,
-  useTransform,
-} from "motion/react";
+// ServicesSection.tsx — Homepage section displaying services as a vertical,
+// numbered list. Each row expands to reveal its description when hovered or
+// focused, with a connecting spine line and a glowing accent marker on the
+// active number — mirrors the "index / expand" pattern from the reference.
+import { useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
 
 import { services } from "@/lib/site-data";
-import { OutlineButton, ParallaxSection, SectionHeading } from "./section-kit";
+import { OutlineButton, ParallaxSection } from "./section-kit";
 
-function ServiceCard({ service }: { service: (typeof services)[number] }) {
-  const Icon = service.icon;
-  const cardRef = useRef<HTMLDivElement>(null);
+const ACCENT = "#FFFFFF";
 
-  const mouseX = useMotionValue(0);
-  const mouseY = useMotionValue(0);
-
-  // Spring-smoothed rotation for a natural, slightly delayed tilt
-  const rotateX = useSpring(
-    useTransform(mouseY, [-0.5, 0.5], [10, -10]),
-    { stiffness: 200, damping: 20, mass: 0.5 }
-  );
-
-  const rotateY = useSpring(
-    useTransform(mouseX, [-0.5, 0.5], [-10, 10]),
-    { stiffness: 200, damping: 20, mass: 0.5 }
-  );
-
-  // Subtle glare/light position that follows the cursor
-  const glareX = useTransform(mouseX, [-0.5, 0.5], [0, 100]);
-  const glareY = useTransform(mouseY, [-0.5, 0.5], [0, 100]);
-
-  function handleMouseMove(e: React.MouseEvent<HTMLDivElement>) {
-    const card = cardRef.current;
-    if (!card) return;
-
-    const rect = card.getBoundingClientRect();
-    const x = (e.clientX - rect.left) / rect.width - 0.5;
-    const y = (e.clientY - rect.top) / rect.height - 0.5;
-
-    mouseX.set(x);
-    mouseY.set(y);
-  }
-
-  function handleMouseLeave() {
-    mouseX.set(0);
-    mouseY.set(0);
-  }
-
+function ServiceRow({
+  service,
+  index,
+  isActive,
+  onActivate,
+}: {
+  service: (typeof services)[number];
+  index: number;
+  isActive: boolean;
+  onActivate: (i: number | null) => void;
+}) {
   return (
-    <motion.div
-      ref={cardRef}
-      onMouseMove={handleMouseMove}
-      onMouseLeave={handleMouseLeave}
-      style={{
-        rotateX,
-        rotateY,
-        transformStyle: "preserve-3d",
-        transformPerspective: 800,
+    <div
+      role="button"
+      tabIndex={0}
+      onMouseEnter={() => onActivate(index)}
+      onFocus={() => onActivate(index)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") onActivate(index);
       }}
-      whileHover={{ scale: 1.03 }}
-      transition={{ scale: { duration: 0.3 } }}
-      className="group relative overflow-hidden rounded-2xl border border-foreground/10 bg-foreground/[0.02] p-6 transition-colors duration-300 hover:border-foreground/40 hover:bg-foreground/[0.05] hover:shadow-[0_0_40px_-12px_rgba(255,255,255,0.25)]"
+      className="group relative flex items-start gap-6 outline-none"
     >
-      {/* glare that tracks the cursor, adds to the 3D feel */}
-      <motion.div
-        className="pointer-events-none absolute inset-0 rounded-2xl opacity-0 transition-opacity duration-300 group-hover:opacity-100"
-        style={{
-          background: useTransform(
-            [glareX, glareY],
-            ([x, y]) =>
-              `radial-gradient(circle at ${x}% ${y}%, rgba(255,255,255,0.12), transparent 60%)`
-          ),
-        }}
-      />
+      {/* number + spine */}
+      <div className="relative flex flex-col items-center">
+        <motion.div
+          animate={{
+            borderColor: isActive ? ACCENT : "rgba(255,255,255,0.12)",
+            color: isActive ? ACCENT : "rgba(255,255,255,0.4)",
+            boxShadow: isActive
+              ? `0 0 0 4px ${ACCENT}1a, 0 0 24px -4px ${ACCENT}66`
+              : "0 0 0 0px transparent",
+          }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="z-10 flex h-11 w-11 shrink-0 items-center justify-center rounded-full border bg-background font-display text-sm"
+        >
+          {String(index + 1).padStart(2, "0")}
+        </motion.div>
 
-      <div
-        style={{
-          transform: "translateZ(40px)",
-          transformStyle: "preserve-3d",
-        }}
-        className="relative"
-      >
-        <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-foreground/10 bg-foreground/[0.03] transition-all duration-300 group-hover:scale-110 group-hover:border-foreground/30 group-hover:bg-foreground/[0.08]">
-          <Icon className="h-5 w-5 text-foreground/80 transition-colors duration-300 group-hover:text-foreground" />
-        </div>
-
-        <h3 className="mt-5 font-display text-lg font-light text-foreground/90 transition-colors duration-300 group-hover:text-foreground">
-          {service.title}
-        </h3>
-
-        <p className="mt-2 text-sm leading-relaxed text-foreground/50 transition-colors duration-300 group-hover:text-foreground/80">
-          {service.description}
-        </p>
+        {/* connecting line to the next row */}
+        {index < services.length - 1 && (
+          <div className="w-px flex-1 bg-foreground/10" />
+        )}
       </div>
-    </motion.div>
+
+      {/* content */}
+      <div className="min-w-0 flex-1 pb-10">
+        <motion.div
+          animate={{
+            backgroundColor: isActive
+              ? "rgba(255,255,255,0.04)"
+              : "rgba(255,255,255,0)",
+            borderColor: isActive
+              ? "rgba(255,255,255,0.08)"
+              : "rgba(255,255,255,0)",
+          }}
+          transition={{ duration: 0.35, ease: "easeOut" }}
+          className="-mt-1 rounded-2xl border px-5 py-4"
+        >
+          <div className="flex items-center gap-3">
+            {/* accent tick, mirrors the small dash in the reference */}
+            <motion.span
+              animate={{
+                width: isActive ? 24 : 0,
+                opacity: isActive ? 1 : 0,
+              }}
+              transition={{ duration: 0.3, ease: "easeOut" }}
+              className="h-px shrink-0"
+              style={{ backgroundColor: ACCENT }}
+            />
+
+            <h3
+              className={`font-display text-lg font-medium transition-colors duration-300 md:text-xl ${
+                isActive ? "text-foreground" : "text-foreground/60"
+              }`}
+            >
+              {service.title}
+            </h3>
+          </div>
+
+          <AnimatePresence initial={false}>
+            {isActive && (
+              <motion.div
+                key="description"
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: "auto", opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                transition={{ duration: 0.3, ease: "easeOut" }}
+                className="overflow-hidden"
+              >
+                <p className="mt-2 max-w-xl text-sm leading-relaxed text-foreground/50 md:text-base">
+                  {service.description}
+                </p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
+    </div>
   );
 }
 
 export function ServicesSection() {
+  const [activeIndex, setActiveIndex] = useState<number | null>(0);
+
   return (
     <ParallaxSection id="services" className="py-14 md:py-20">
       {(style) => (
@@ -122,20 +136,22 @@ export function ServicesSection() {
             </p>
           </div>
 
-          <motion.div
-            initial={{ opacity: 0, y: 40 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true, amount: 0.3 }}
-            transition={{ duration: 0.8 }}
-            className="mt-14 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3"
-            style={{ perspective: 1000 }}
+          <div
+            className="mt-14 max-w-4xl"
+            onMouseLeave={() => setActiveIndex(null)}
           >
-            {services.map((service) => (
-              <ServiceCard key={service.slug} service={service} />
+            {services.map((service, i) => (
+              <ServiceRow
+                key={service.slug}
+                service={service}
+                index={i}
+                isActive={activeIndex === i}
+                onActivate={setActiveIndex}
+              />
             ))}
-          </motion.div>
+          </div>
 
-          <div className="mt-14 flex justify-center">
+          <div className="mt-4 flex justify-start">
             <OutlineButton>View All Services</OutlineButton>
           </div>
         </motion.div>

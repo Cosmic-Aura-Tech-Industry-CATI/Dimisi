@@ -38,6 +38,7 @@ export function PageHero({ label, title, subtitle, children }: PageHeroProps) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, ease: "easeOut", delay: 0.1 }}
+          style={{ fontFamily: '"Angsana New", "Angsana New Web", serif' }}
           className="font-light leading-[1.08] tracking-tight text-foreground [font-size:clamp(34px,6vw,60px)]"
         >
           {title}
