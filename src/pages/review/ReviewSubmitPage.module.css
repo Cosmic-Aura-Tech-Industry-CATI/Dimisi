@@ -1,8 +1,9 @@
 .page {
   position: relative;
+  z-index: 2;
   min-height: 100vh;
   padding: clamp(7.5rem, 18vh, 10rem) clamp(1.2rem, 5vw, 3.5rem) 5rem;
-  background: var(--dm-void, #05040a);
+  background: transparent;
   color: var(--dm-warm, #fbf3e9);
   display: flex;
   justify-content: center;
