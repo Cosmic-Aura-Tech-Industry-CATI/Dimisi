@@ -4,16 +4,17 @@ import { ContactPage } from "@/pages/contact/ContactPage";
 export const Route = createFileRoute("/contact")({
   head: () => ({
     meta: [
-      { title: "Contact — DIMISI Technologies" },
+      { title: "Contact — Dimisi Technologies" },
       {
         name: "description",
         content:
-          "Tell DIMISI Technologies what you are building. Architecture, timeline and a number back — usually within forty-eight hours.",
+          "Get in touch with Dimisi Technologies. Start a project, request a consultation, or reach support.",
       },
-      { property: "og:title", content: "Contact — DIMISI Technologies" },
+      { property: "og:title", content: "Contact — Dimisi Technologies" },
       {
         property: "og:description",
-        content: "Start a project with DIMISI Technologies — reply within forty-eight hours.",
+        content:
+          "Get in touch with Dimisi Technologies. Start a project, request a consultation, or reach support.",
       },
     ],
   }),
