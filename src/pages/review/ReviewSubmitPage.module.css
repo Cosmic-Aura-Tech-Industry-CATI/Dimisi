@@ -119,6 +119,76 @@
   gap: 1.5rem;
 }
 
+/* Reviewer Type Selector */
+.typeSelectorSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.typeToggleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+@media (max-width: 580px) {
+  .typeToggleGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.typeToggleBtn {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1rem 1.15rem;
+  background: rgba(10, 8, 14, 0.65);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.25s ease;
+  color: var(--dm-warm, #fbf3e9);
+}
+
+.typeToggleBtn:hover {
+  border-color: rgba(255, 171, 46, 0.35);
+  background: rgba(255, 214, 170, 0.04);
+}
+
+.typeToggleActive {
+  background: linear-gradient(145deg, rgba(255, 122, 24, 0.15), rgba(19, 16, 25, 0.9)) !important;
+  border-color: var(--dm-amber, #ffab2e) !important;
+  box-shadow: 0 0 24px rgba(255, 140, 26, 0.2);
+}
+
+.typeToggleIcon {
+  color: var(--dm-amber, #ffab2e);
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.typeToggleText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.typeToggleText strong {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  letter-spacing: 0.04em;
+}
+
+.typeToggleText span {
+  font-size: 0.76rem;
+  color: var(--dm-dim, #a09587);
+  line-height: 1.4;
+}
+
 .row2 {
   display: grid;
   grid-template-columns: 1fr 1fr;

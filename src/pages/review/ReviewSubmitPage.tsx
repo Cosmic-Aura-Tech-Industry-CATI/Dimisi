@@ -1,15 +1,28 @@
 import { useEffect, useState, useTransition } from "react";
 import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { Star, Upload, CheckCircle2, Shield, RefreshCw, X, ArrowLeft, HeartHandshake } from "lucide-react";
+import {
+  Star,
+  Upload,
+  CheckCircle2,
+  Shield,
+  RefreshCw,
+  X,
+  Building2,
+  Code2,
+  HeartHandshake,
+  Sparkles,
+} from "lucide-react";
 import {
   DIMISI_SERVICES,
+  EMPLOYEE_ROLES,
   REVIEW_TEXT_MAX,
   REVIEW_TEXT_MIN,
   validateReview,
   PHOTO_MAX_BYTES,
   PHOTO_TYPES,
   type ReviewInput,
+  type ReviewType,
 } from "@/lib/reviews.shared";
 import {
   getReviewCampaign,
@@ -49,7 +62,9 @@ export function ReviewSubmitPage({
     customerName: "",
     customerEmail: "",
     customerPhone: "",
+    reviewerType: "client",
     serviceName: "",
+    roleOrTitle: "",
     rating: 5,
     reviewText: "",
     customerLocation: "",
@@ -169,7 +184,9 @@ export function ReviewSubmitPage({
             customerName: formData.customerName,
             ...(formData.customerEmail ? { customerEmail: formData.customerEmail } : {}),
             ...(formData.customerPhone ? { customerPhone: formData.customerPhone } : {}),
+            reviewerType: formData.reviewerType || "client",
             ...(formData.serviceName ? { serviceName: formData.serviceName } : {}),
+            ...(formData.roleOrTitle ? { roleOrTitle: formData.roleOrTitle } : {}),
             rating: formData.rating,
             reviewText: formData.reviewText,
             ...(formData.customerLocation ? { customerLocation: formData.customerLocation } : {}),
@@ -186,6 +203,8 @@ export function ReviewSubmitPage({
       }
     });
   };
+
+  const isEmployee = formData.reviewerType === "employee";
 
   return (
     <div className={styles.page}>
@@ -224,15 +243,53 @@ export function ReviewSubmitPage({
               <div className={styles.header}>
                 <div className={styles.kicker}>
                   <span className={styles.kickerDot} />
-                  <span>Customer Experience</span>
+                  <span>Client &amp; Staff Reflections</span>
                 </div>
-                <h1 className={styles.title}>Share Your Dimisi Experience</h1>
+                <h1 className={styles.title}>Share Your Experience</h1>
                 <p className={styles.subtitle}>
-                  We value your honest feedback. Your review helps us continuously innovate and deliver technology beyond limits.
+                  We value authentic feedback from both our global partners and our internal engineering &amp; design team.
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className={styles.form} noValidate>
+                {/* Reviewer Type Selector: Client vs Employee */}
+                <div className={styles.typeSelectorSection}>
+                  <label className={styles.label}>
+                    <span>Who are you reviewing as? <span className={styles.req}>*</span></span>
+                  </label>
+                  <div className={styles.typeToggleGrid}>
+                    <button
+                      type="button"
+                      className={[
+                        styles.typeToggleBtn,
+                        formData.reviewerType === "client" ? styles.typeToggleActive : "",
+                      ].join(" ")}
+                      onClick={() => setFormData((prev) => ({ ...prev, reviewerType: "client" }))}
+                    >
+                      <Building2 size={20} className={styles.typeToggleIcon} />
+                      <div className={styles.typeToggleText}>
+                        <strong>Client / Partner</strong>
+                        <span>I worked with DIMISI on a project or platform</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={[
+                        styles.typeToggleBtn,
+                        formData.reviewerType === "employee" ? styles.typeToggleActive : "",
+                      ].join(" ")}
+                      onClick={() => setFormData((prev) => ({ ...prev, reviewerType: "employee" }))}
+                    >
+                      <Code2 size={20} className={styles.typeToggleIcon} />
+                      <div className={styles.typeToggleText}>
+                        <strong>Employee / Staff</strong>
+                        <span>I am part of the engineering, design, or ops team</span>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
                 {/* 5-Star Rating Selector */}
                 <div className={styles.ratingSection} id="field-rating">
                   <label className={styles.ratingLabel}>
@@ -266,7 +323,7 @@ export function ReviewSubmitPage({
                   {errors["rating"] ? <span className={styles.errorText}>{errors["rating"]}</span> : null}
                 </div>
 
-                {/* Customer Name */}
+                {/* Name */}
                 <div className={styles.field}>
                   <label htmlFor="field-customerName" className={styles.label}>
                     <span>Your Full Name <span className={styles.req}>*</span></span>
@@ -275,7 +332,7 @@ export function ReviewSubmitPage({
                     id="field-customerName"
                     type="text"
                     className={[styles.input, errors["customerName"] ? styles.inputErr : ""].join(" ")}
-                    placeholder="e.g. Alexander Wright"
+                    placeholder={isEmployee ? "e.g. Harsh Mishra" : "e.g. Alexander Wright"}
                     value={formData.customerName}
                     onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
                     maxLength={80}
@@ -286,18 +343,57 @@ export function ReviewSubmitPage({
                   ) : null}
                 </div>
 
+                {/* Role / Title & Service Selection Row */}
+                <div className={styles.row2}>
+                  <div className={styles.field}>
+                    <label htmlFor="field-roleOrTitle" className={styles.label}>
+                      <span>{isEmployee ? "Your Role / Job Title" : "Your Role / Company"}</span>
+                      <span className={styles.opt}>Optional</span>
+                    </label>
+                    <input
+                      id="field-roleOrTitle"
+                      type="text"
+                      className={styles.input}
+                      placeholder={isEmployee ? "e.g. Full-Stack Engineer" : "e.g. CTO at Apex Group"}
+                      value={formData.roleOrTitle || ""}
+                      onChange={(e) => setFormData({ ...formData, roleOrTitle: e.target.value })}
+                    />
+                  </div>
+
+                  <div className={styles.field}>
+                    <label htmlFor="field-serviceName" className={styles.label}>
+                      <span>{isEmployee ? "Department / Specialization" : "Service Received"}</span>
+                    </label>
+                    <select
+                      id="field-serviceName"
+                      className={styles.select}
+                      value={formData.serviceName}
+                      onChange={(e) => setFormData({ ...formData, serviceName: e.target.value })}
+                    >
+                      <option value="">
+                        {isEmployee ? "Select your engineering discipline..." : "Select a service category..."}
+                      </option>
+                      {(isEmployee ? EMPLOYEE_ROLES : DIMISI_SERVICES).map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
                 {/* Email & Phone Row */}
                 <div className={styles.row2}>
                   <div className={styles.field}>
                     <label htmlFor="field-customerEmail" className={styles.label}>
                       <span>Email Address</span>
-                      <span className={styles.opt}>Private / Optional</span>
+                      <span className={styles.opt}>Private / Moderation only</span>
                     </label>
                     <input
                       id="field-customerEmail"
                       type="email"
                       className={[styles.input, errors["customerEmail"] ? styles.inputErr : ""].join(" ")}
-                      placeholder="alex@company.com"
+                      placeholder={isEmployee ? "yourname@dimisi.in" : "alex@company.com"}
                       value={formData.customerEmail}
                       onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
                     />
@@ -307,55 +403,15 @@ export function ReviewSubmitPage({
                   </div>
 
                   <div className={styles.field}>
-                    <label htmlFor="field-customerPhone" className={styles.label}>
-                      <span>Phone Number</span>
-                      <span className={styles.opt}>Private / Optional</span>
-                    </label>
-                    <input
-                      id="field-customerPhone"
-                      type="tel"
-                      className={[styles.input, errors["customerPhone"] ? styles.inputErr : ""].join(" ")}
-                      placeholder="+1 (555) 000-1234"
-                      value={formData.customerPhone}
-                      onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
-                    />
-                    {errors["customerPhone"] ? (
-                      <span className={styles.errorText}>{errors["customerPhone"]}</span>
-                    ) : null}
-                  </div>
-                </div>
-
-                {/* Service Received & Location */}
-                <div className={styles.row2}>
-                  <div className={styles.field}>
-                    <label htmlFor="field-serviceName" className={styles.label}>
-                      <span>Service / Project Received</span>
-                    </label>
-                    <select
-                      id="field-serviceName"
-                      className={styles.select}
-                      value={formData.serviceName}
-                      onChange={(e) => setFormData({ ...formData, serviceName: e.target.value })}
-                    >
-                      <option value="">Select a service category...</option>
-                      {DIMISI_SERVICES.map((s) => (
-                        <option key={s} value={s}>
-                          {s}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div className={styles.field}>
                     <label htmlFor="field-customerLocation" className={styles.label}>
-                      <span>Your Location</span>
+                      <span>Your Location / Hub</span>
                       <span className={styles.opt}>Optional</span>
                     </label>
                     <input
                       id="field-customerLocation"
                       type="text"
                       className={styles.input}
-                      placeholder="e.g. San Francisco, CA or London, UK"
+                      placeholder="e.g. Kanpur, Bengaluru, or Remote"
                       value={formData.customerLocation}
                       onChange={(e) => setFormData({ ...formData, customerLocation: e.target.value })}
                       maxLength={120}
@@ -374,7 +430,11 @@ export function ReviewSubmitPage({
                   <textarea
                     id="field-reviewText"
                     className={[styles.textarea, errors["reviewText"] ? styles.inputErr : ""].join(" ")}
-                    placeholder="Describe your project, team collaboration, technical quality, and the outcomes delivered by DIMISI..."
+                    placeholder={
+                      isEmployee
+                        ? "Describe your experience working at DIMISI Technologies — our technical standards, freedom to innovate, code quality, and culture..."
+                        : "Describe your project outcomes, architecture quality, timeline, and collaboration experience with DIMISI..."
+                    }
                     value={formData.reviewText}
                     onChange={(e) => setFormData({ ...formData, reviewText: e.target.value })}
                     maxLength={REVIEW_TEXT_MAX}
@@ -385,10 +445,10 @@ export function ReviewSubmitPage({
                   ) : null}
                 </div>
 
-                {/* Optional Customer Photo Upload */}
+                {/* Optional Photo Upload */}
                 <div className={styles.field}>
                   <label className={styles.label}>
-                    <span>Customer Photo</span>
+                    <span>Profile Photo</span>
                     <span className={styles.opt}>Optional (Max 3MB)</span>
                   </label>
                   <div className={styles.photoUploadBox}>
@@ -437,7 +497,7 @@ export function ReviewSubmitPage({
                     required
                   />
                   <label htmlFor="consent-check" className={styles.consentText}>
-                    I allow Dimisi to display my name, rating, review, and submitted photo on its website and marketing materials.{" "}
+                    I allow DIMISI Technologies to display my name, rating, role/feedback, and submitted photo on its website and digital channels.{" "}
                     <button
                       type="button"
                       className={styles.privacyLink}
@@ -528,7 +588,7 @@ export function ReviewSubmitPage({
             </div>
             <div className={styles.modalBody}>
               <p>
-                <strong>Data Collection & Purpose:</strong> DIMISI Technologies collects your submitted name, rating, service feedback, and optional photo to showcase genuine client experiences. Your email address and phone number are collected solely for verification and moderation communication; they are <strong>never</strong> displayed publicly.
+                <strong>Data Collection & Purpose:</strong> DIMISI Technologies collects your submitted name, rating, service or employee feedback, and optional photo to showcase authentic experiences. Your email address and phone number are collected solely for verification and moderation communication; they are <strong>never</strong> displayed publicly.
               </p>
               <p>
                 <strong>Moderation & Consent:</strong> Every review undergoes administrator moderation prior to publication. Content containing spam, offensive remarks, or confidential data is rejected.

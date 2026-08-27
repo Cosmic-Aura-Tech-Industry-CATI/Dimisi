@@ -11,12 +11,16 @@ import {
   X,
   Send,
   Loader2,
-  ThumbsUp,
+  Building2,
+  Code2,
+  Users,
+  Sparkles,
 } from "lucide-react";
 import {
   REPORT_REASONS,
   type PublicReview,
   type ReviewStats,
+  type ReviewType,
 } from "@/lib/reviews.shared";
 import { getPublicReviews, reportReview } from "@/lib/reviews.functions";
 import styles from "./ReviewsPage.module.css";
@@ -31,12 +35,17 @@ export function ReviewsPage() {
     total: 0,
     average: 5.0,
     distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+    clientTotal: 0,
+    clientAverage: 5.0,
+    employeeTotal: 0,
+    employeeAverage: 5.0,
   });
   const [services, setServices] = useState<string[]>([]);
   const [totalApproved, setTotalApproved] = useState(0);
   const [hasMore, setHasMore] = useState(false);
 
   // Filters & State
+  const [typeFilter, setTypeFilter] = useState<"all" | "client" | "employee">("all");
   const [page, setPage] = useState(0);
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [serviceFilter, setServiceFilter] = useState<string>("");
@@ -62,6 +71,7 @@ export function ReviewsPage() {
       data: {
         page,
         pageSize: 9,
+        type: typeFilter,
         rating: ratingFilter,
         service: serviceFilter,
         search: searchQuery,
@@ -88,7 +98,7 @@ export function ReviewsPage() {
     return () => {
       active = false;
     };
-  }, [page, ratingFilter, serviceFilter, searchQuery, sortOrder, loadReviews]);
+  }, [page, typeFilter, ratingFilter, serviceFilter, searchQuery, sortOrder, loadReviews]);
 
   const handleFilterChange = () => {
     setPage(0);
@@ -163,17 +173,67 @@ export function ReviewsPage() {
         <div className={styles.hero}>
           <div className={styles.badge}>
             <span className={styles.badgeDot} />
-            <span>Verified Client Feedback</span>
+            <span>Verified Client &amp; Staff Reflections</span>
           </div>
-          <h1 className={styles.heroTitle}>Client Outcomes & Endorsements</h1>
+          <h1 className={styles.heroTitle}>Client Outcomes &amp; Team Endorsements</h1>
           <p className={styles.heroSub}>
-            Discover how DIMISI Technologies powers mission-critical platforms, autonomous AI systems, and futuristic digital experiences for partners worldwide.
+            Discover verified feedback from our enterprise partners worldwide and firsthand reflections from the engineers, architects, and creators building DIMISI Technologies.
           </p>
           <div className={styles.heroActions}>
             <Link to="/review" className={styles.leaveReviewBtn}>
               <MessageSquarePlus size={18} />
               <span>Leave a Review</span>
             </Link>
+          </div>
+        </div>
+
+        {/* Category Tabs: All / Clients / Employees */}
+        <div className={styles.categoryTabsWrap}>
+          <div className={styles.categoryTabs} role="tablist" aria-label="Review Categories">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={typeFilter === "all"}
+              className={[styles.catTab, typeFilter === "all" ? styles.catTabActive : ""].join(" ")}
+              onClick={() => {
+                setTypeFilter("all");
+                handleFilterChange();
+              }}
+            >
+              <Users size={16} />
+              <span>All Reviews</span>
+              <span className={styles.catCount}>{stats.total}</span>
+            </button>
+
+            <button
+              type="button"
+              role="tab"
+              aria-selected={typeFilter === "client"}
+              className={[styles.catTab, typeFilter === "client" ? styles.catTabActive : ""].join(" ")}
+              onClick={() => {
+                setTypeFilter("client");
+                handleFilterChange();
+              }}
+            >
+              <Building2 size={16} />
+              <span>Client Reviews</span>
+              <span className={styles.catCount}>{stats.clientTotal ?? 0}</span>
+            </button>
+
+            <button
+              type="button"
+              role="tab"
+              aria-selected={typeFilter === "employee"}
+              className={[styles.catTab, typeFilter === "employee" ? styles.catTabActive : ""].join(" ")}
+              onClick={() => {
+                setTypeFilter("employee");
+                handleFilterChange();
+              }}
+            >
+              <Code2 size={16} />
+              <span>Employee &amp; Staff Reviews</span>
+              <span className={styles.catCount}>{stats.employeeTotal ?? 0}</span>
+            </button>
           </div>
         </div>
 
@@ -192,7 +252,19 @@ export function ReviewsPage() {
               ))}
             </div>
             <div className={styles.scoreTotal}>
-              Based on {totalApproved} verified {totalApproved === 1 ? "review" : "reviews"}
+              Based on {totalApproved} verified {totalApproved === 1 ? "endorsement" : "endorsements"}
+            </div>
+
+            <div className={styles.subStatsRow}>
+              <div className={styles.subStatItem}>
+                <span className={styles.subStatLabel}>Clients</span>
+                <span className={styles.subStatVal}>{stats.clientTotal ?? 0} ({stats.clientAverage?.toFixed(1) ?? "5.0"}★)</span>
+              </div>
+              <span className={styles.subStatSep}>·</span>
+              <div className={styles.subStatItem}>
+                <span className={styles.subStatLabel}>Team &amp; Staff</span>
+                <span className={styles.subStatVal}>{stats.employeeTotal ?? 0} ({stats.employeeAverage?.toFixed(1) ?? "5.0"}★)</span>
+              </div>
             </div>
           </div>
 
@@ -221,7 +293,7 @@ export function ReviewsPage() {
                       style={{
                         width: `${pct}%`,
                         background: isSelected
-                          ? "linear-gradient(90deg, #6366f1, #818cf8)"
+                          ? "linear-gradient(90deg, #ff8c1a, #ffa033)"
                           : undefined,
                       }}
                     />
@@ -234,70 +306,85 @@ export function ReviewsPage() {
         </div>
 
         {/* Featured Reviews Spotlight (if no filter applied) */}
-        {!ratingFilter && !serviceFilter && !searchQuery && featured.length > 0 ? (
+        {!ratingFilter && !serviceFilter && !searchQuery && typeFilter === "all" && featured.length > 0 ? (
           <div className={styles.featuredSection}>
             <div className={styles.sectionHeader}>
               <h2 className={styles.sectionTitle}>
-                <Flame size={20} color="#fbbf24" style={{ display: "inline", verticalAlign: "middle", marginRight: "6px" }} />
+                <Flame size={20} color="#ff8c1a" style={{ display: "inline", verticalAlign: "middle", marginRight: "6px" }} />
                 Featured Highlights
               </h2>
             </div>
             <div className={styles.featuredGrid}>
-              {featured.map((item) => (
-                <div key={`feat-${item.id}`} className={[styles.reviewCard, styles.featuredCard].join(" ")}>
-                  <div className={styles.cardTop}>
-                    <div className={styles.authorBox}>
-                      {item.photo_url ? (
-                        <img src={item.photo_url} alt={item.customer_name} className={styles.avatar} />
-                      ) : (
-                        <div className={styles.avatarInitials}>
-                          {item.customer_name.slice(0, 2).toUpperCase()}
+              {featured.map((item) => {
+                const isEmployee = item.reviewer_type === "employee";
+                return (
+                  <div key={`feat-${item.id}`} className={[styles.reviewCard, styles.featuredCard].join(" ")}>
+                    <div className={styles.cardTop}>
+                      <div className={styles.authorBox}>
+                        {item.photo_url ? (
+                          <img src={item.photo_url} alt={item.customer_name} className={styles.avatar} />
+                        ) : (
+                          <div className={[styles.avatarInitials, isEmployee ? styles.avatarEmployee : ""].join(" ")}>
+                            {item.customer_name.slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <div className={styles.authorMeta}>
+                          <div className={styles.authorName}>
+                            {item.customer_name}
+                            {isEmployee ? (
+                              <span className={styles.employeePill} title="DIMISI Team Member">
+                                <Code2 size={12} />
+                                <span>DIMISI Team</span>
+                              </span>
+                            ) : (
+                              <span className={styles.clientPill} title="Verified Client">
+                                <CheckCircle size={12} />
+                                <span>Verified Client</span>
+                              </span>
+                            )}
+                          </div>
+                          {item.role_or_title ? (
+                            <div className={styles.authorRole}>{item.role_or_title}</div>
+                          ) : item.customer_location ? (
+                            <div className={styles.authorLocation}>{item.customer_location}</div>
+                          ) : null}
                         </div>
-                      )}
-                      <div className={styles.authorMeta}>
-                        <div className={styles.authorName}>
-                          {item.customer_name}
-                          <span title="Verified Client" style={{ display: "inline-flex", alignItems: "center" }}>
-                            <CheckCircle size={14} className={styles.verifiedIcon} />
-                          </span>
-                        </div>
-                        {item.customer_location ? (
-                          <div className={styles.authorLocation}>{item.customer_location}</div>
-                        ) : null}
+                      </div>
+                      <div className={styles.stars}>
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star key={s} size={15} fill={s <= item.rating ? "currentColor" : "none"} />
+                        ))}
                       </div>
                     </div>
-                    <div className={styles.stars}>
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star key={s} size={15} fill={s <= item.rating ? "currentColor" : "none"} />
-                      ))}
+
+                    {item.service_name ? (
+                      <span className={[styles.serviceTag, isEmployee ? styles.serviceTagEmp : ""].join(" ")}>
+                        {item.service_name}
+                      </span>
+                    ) : null}
+
+                    <p className={styles.reviewText}>"{item.review_text}"</p>
+
+                    <div className={styles.cardFoot}>
+                      <span className={styles.reviewDate}>
+                        {new Date(item.published_at).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.reportBtn}
+                        onClick={() => setReportingReview(item)}
+                      >
+                        <Flag size={12} />
+                        <span>Report</span>
+                      </button>
                     </div>
                   </div>
-
-                  {item.service_name ? (
-                    <span className={styles.serviceTag}>{item.service_name}</span>
-                  ) : null}
-
-                  <p className={styles.reviewText}>"{item.review_text}"</p>
-
-                  <div className={styles.cardFoot}>
-                    <span className={styles.reviewDate}>
-                      {new Date(item.published_at).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.reportBtn}
-                      onClick={() => setReportingReview(item)}
-                    >
-                      <Flag size={12} />
-                      <span>Report</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ) : null}
@@ -309,7 +396,11 @@ export function ReviewsPage() {
               <Search size={16} className={styles.searchIcon} />
               <input
                 type="text"
-                placeholder="Search reviews by keyword or name..."
+                placeholder={
+                  typeFilter === "employee"
+                    ? "Search staff reviews by role, engineer name, or keyword..."
+                    : "Search reviews by keyword, role, or client name..."
+                }
                 className={styles.searchInput}
                 value={searchQuery}
                 onChange={(e) => {
@@ -343,7 +434,7 @@ export function ReviewsPage() {
                 handleFilterChange();
               }}
             >
-              <option value="">All Services</option>
+              <option value="">All Services &amp; Domains</option>
               {services.map((s) => (
                 <option key={s} value={s}>
                   {s}
@@ -371,11 +462,11 @@ export function ReviewsPage() {
         {/* Reviews Grid */}
         {reviews.length === 0 && !isLoading ? (
           <div className={styles.emptyState}>
-            <CheckCircle size={48} color="#6366f1" style={{ margin: "0 auto" }} />
+            <CheckCircle size={48} color="#ff8c1a" style={{ margin: "0 auto" }} />
             <h3 className={styles.emptyTitle}>No matching reviews found</h3>
             <p className={styles.emptyText}>
-              {searchQuery || ratingFilter || serviceFilter
-                ? "Try adjusting your filters or search keywords."
+              {searchQuery || ratingFilter || serviceFilter || typeFilter !== "all"
+                ? "Try adjusting your filters, category tabs, or search keywords."
                 : "Be the first to share your experience with DIMISI Technologies!"}
             </p>
             <Link to="/review" className={styles.leaveReviewBtn}>
@@ -386,62 +477,77 @@ export function ReviewsPage() {
         ) : (
           <>
             <div className={styles.reviewsGrid}>
-              {reviews.map((item) => (
-                <div key={item.id} className={styles.reviewCard}>
-                  <div className={styles.cardTop}>
-                    <div className={styles.authorBox}>
-                      {item.photo_url ? (
-                        <img src={item.photo_url} alt={item.customer_name} className={styles.avatar} />
-                      ) : (
-                        <div className={styles.avatarInitials}>
-                          {item.customer_name.slice(0, 2).toUpperCase()}
+              {reviews.map((item) => {
+                const isEmployee = item.reviewer_type === "employee";
+                return (
+                  <div key={item.id} className={[styles.reviewCard, isEmployee ? styles.employeeCardBorder : ""].join(" ")}>
+                    <div className={styles.cardTop}>
+                      <div className={styles.authorBox}>
+                        {item.photo_url ? (
+                          <img src={item.photo_url} alt={item.customer_name} className={styles.avatar} />
+                        ) : (
+                          <div className={[styles.avatarInitials, isEmployee ? styles.avatarEmployee : ""].join(" ")}>
+                            {item.customer_name.slice(0, 2).toUpperCase()}
+                          </div>
+                        )}
+                        <div className={styles.authorMeta}>
+                          <div className={styles.authorName}>
+                            <span>{item.customer_name}</span>
+                            {isEmployee ? (
+                              <span className={styles.employeePill} title="DIMISI Team Member">
+                                <Code2 size={11} />
+                                <span>DIMISI Team</span>
+                              </span>
+                            ) : (
+                              <span className={styles.clientPill} title="Verified Client">
+                                <CheckCircle size={11} />
+                                <span>Client</span>
+                              </span>
+                            )}
+                          </div>
+                          {item.role_or_title ? (
+                            <div className={styles.authorRole}>{item.role_or_title}</div>
+                          ) : item.customer_location ? (
+                            <div className={styles.authorLocation}>{item.customer_location}</div>
+                          ) : null}
                         </div>
-                      )}
-                      <div className={styles.authorMeta}>
-                        <div className={styles.authorName}>
-                          {item.customer_name}
-                          <span title="Verified Client" style={{ display: "inline-flex", alignItems: "center" }}>
-                            <CheckCircle size={14} className={styles.verifiedIcon} />
-                          </span>
-                        </div>
-                        {item.customer_location ? (
-                          <div className={styles.authorLocation}>{item.customer_location}</div>
-                        ) : null}
+                      </div>
+                      <div className={styles.stars}>
+                        {[1, 2, 3, 4, 5].map((s) => (
+                          <Star key={s} size={15} fill={s <= item.rating ? "currentColor" : "none"} />
+                        ))}
                       </div>
                     </div>
-                    <div className={styles.stars}>
-                      {[1, 2, 3, 4, 5].map((s) => (
-                        <Star key={s} size={15} fill={s <= item.rating ? "currentColor" : "none"} />
-                      ))}
+
+                    {item.service_name ? (
+                      <span className={[styles.serviceTag, isEmployee ? styles.serviceTagEmp : ""].join(" ")}>
+                        {item.service_name}
+                      </span>
+                    ) : null}
+
+                    <p className={styles.reviewText}>"{item.review_text}"</p>
+
+                    <div className={styles.cardFoot}>
+                      <span className={styles.reviewDate}>
+                        {new Date(item.published_at).toLocaleDateString("en-US", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })}
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.reportBtn}
+                        onClick={() => setReportingReview(item)}
+                        title="Report inappropriate content"
+                      >
+                        <Flag size={12} />
+                        <span>Report</span>
+                      </button>
                     </div>
                   </div>
-
-                  {item.service_name ? (
-                    <span className={styles.serviceTag}>{item.service_name}</span>
-                  ) : null}
-
-                  <p className={styles.reviewText}>"{item.review_text}"</p>
-
-                  <div className={styles.cardFoot}>
-                    <span className={styles.reviewDate}>
-                      {new Date(item.published_at).toLocaleDateString("en-US", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })}
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.reportBtn}
-                      onClick={() => setReportingReview(item)}
-                      title="Report inappropriate content"
-                    >
-                      <Flag size={12} />
-                      <span>Report</span>
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {hasMore ? (
@@ -449,10 +555,17 @@ export function ReviewsPage() {
                 <button
                   type="button"
                   className={styles.loadMoreBtn}
-                  onClick={() => setPage((p) => p + 1)}
                   disabled={isLoading}
+                  onClick={() => setPage((p) => p + 1)}
                 >
-                  {isLoading ? "Loading Reviews..." : "Load More Reviews"}
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={16} className={styles.spin} />
+                      <span>Loading...</span>
+                    </>
+                  ) : (
+                    <span>Load More Reviews</span>
+                  )}
                 </button>
               </div>
             ) : null}
@@ -460,39 +573,37 @@ export function ReviewsPage() {
         )}
       </div>
 
-      {/* Report Review Modal */}
+      {/* Report Inappropriate Review Modal */}
       {reportingReview ? (
-        <div className={styles.modalBackdrop} onClick={() => setReportingReview(null)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <h3 className={styles.modalTitle}>Report This Review</h3>
-              <button
-                type="button"
-                onClick={() => setReportingReview(null)}
-                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <p className={styles.modalSub}>
-              Flagging review by <strong>{reportingReview.customer_name}</strong> for moderation.
+        <div className={styles.modalOverlay} onClick={() => setReportingReview(null)}>
+          <div className={styles.modalCard} onClick={(e) => e.stopPropagation()}>
+            <button
+              type="button"
+              className={styles.modalClose}
+              onClick={() => setReportingReview(null)}
+            >
+              <X size={18} />
+            </button>
+
+            <h3 className={styles.modalTitle}>Report this Review</h3>
+            <p className={styles.modalDesc}>
+              Report review submitted by <strong>{reportingReview.customer_name}</strong> for moderation.
             </p>
 
             {reportSuccess ? (
-              <div style={{ padding: "1.5rem", textAlign: "center", color: "#10b981", background: "rgba(16, 185, 129, 0.1)", borderRadius: "10px" }}>
-                {reportSuccess}
+              <div className={styles.reportSuccessBox}>
+                <CheckCircle size={20} color="#22c55e" />
+                <span>{reportSuccess}</span>
               </div>
             ) : (
-              <form onSubmit={handleReportSubmit}>
-                <div className={styles.modalField}>
-                  <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#cbd5e1" }}>
-                    Reason for report <span style={{ color: "#f43f5e" }}>*</span>
-                  </label>
+              <form onSubmit={handleReportSubmit} className={styles.reportForm}>
+                <div className={styles.field}>
+                  <label htmlFor="repReason">Reason for Report</label>
                   <select
-                    className={styles.modalSelect}
+                    id="repReason"
                     value={reportReason}
                     onChange={(e) => setReportReason(e.target.value)}
-                    required
+                    className={styles.selectInput}
                   >
                     {REPORT_REASONS.map((r) => (
                       <option key={r} value={r}>
@@ -502,38 +613,39 @@ export function ReviewsPage() {
                   </select>
                 </div>
 
-                <div className={styles.modalField}>
-                  <label style={{ fontSize: "0.82rem", fontWeight: 600, color: "#cbd5e1" }}>
-                    Additional details (Optional)
-                  </label>
+                <div className={styles.field}>
+                  <label htmlFor="repMsg">Additional Details (Optional)</label>
                   <textarea
-                    className={styles.modalTextarea}
+                    id="repMsg"
                     rows={3}
-                    placeholder="Provide additional context for the moderation team..."
+                    placeholder="Provide details about why this review should be moderated..."
                     value={reportMessage}
                     onChange={(e) => setReportMessage(e.target.value)}
+                    className={styles.textAreaInput}
                   />
                 </div>
 
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "1rem" }}>
-                  <div className={styles.modalField} style={{ margin: 0 }}>
-                    <label style={{ fontSize: "0.78rem", color: "#94a3b8" }}>Your Name (Optional)</label>
+                <div className={styles.row2}>
+                  <div className={styles.field}>
+                    <label htmlFor="repName">Your Name (Optional)</label>
                     <input
+                      id="repName"
                       type="text"
-                      className={styles.modalInput}
-                      placeholder="Your name"
+                      placeholder="Jane Doe"
                       value={reporterName}
                       onChange={(e) => setReporterName(e.target.value)}
+                      className={styles.textInput}
                     />
                   </div>
-                  <div className={styles.modalField} style={{ margin: 0 }}>
-                    <label style={{ fontSize: "0.78rem", color: "#94a3b8" }}>Your Email (Optional)</label>
+                  <div className={styles.field}>
+                    <label htmlFor="repEmail">Your Email (Optional)</label>
                     <input
+                      id="repEmail"
                       type="email"
-                      className={styles.modalInput}
-                      placeholder="your@email.com"
+                      placeholder="jane@company.com"
                       value={reporterEmail}
                       onChange={(e) => setReporterEmail(e.target.value)}
+                      className={styles.textInput}
                     />
                   </div>
                 </div>
@@ -541,22 +653,25 @@ export function ReviewsPage() {
                 <div className={styles.modalActions}>
                   <button
                     type="button"
-                    className={styles.btnCancel}
+                    className={styles.cancelBtn}
                     onClick={() => setReportingReview(null)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className={styles.btnReportSubmit}
+                    className={styles.submitReportBtn}
                     disabled={isReporting}
                   >
                     {isReporting ? (
-                      <Loader2 size={16} className="animate-spin" />
+                      <>
+                        <Loader2 size={16} className={styles.spin} />
+                        <span>Submitting...</span>
+                      </>
                     ) : (
                       <>
-                        <Send size={14} style={{ display: "inline", verticalAlign: "middle", marginRight: "4px" }} />
-                        Submit Report
+                        <Send size={15} />
+                        <span>Submit Report</span>
                       </>
                     )}
                   </button>

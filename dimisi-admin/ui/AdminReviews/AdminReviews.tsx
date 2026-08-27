@@ -19,11 +19,17 @@ import {
   MapPin,
   Clock,
   ShieldAlert,
+  Building2,
+  Code2,
+  Users,
+  Briefcase,
 } from "lucide-react";
 import {
   DIMISI_SERVICES,
+  EMPLOYEE_ROLES,
   type AdminReview,
   type ReviewStatus,
+  type ReviewType,
 } from "@/lib/reviews.shared";
 import {
   updateReviewStatus,
@@ -46,6 +52,7 @@ export function AdminReviews({
   const removeReview = useServerFn(deleteReview);
 
   const [statusTab, setStatusTab] = useState<"all" | ReviewStatus>("all");
+  const [reviewerTypeFilter, setReviewerTypeFilter] = useState<"all" | "client" | "employee">("all");
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [serviceFilter, setServiceFilter] = useState<string>("");
   const [search, setSearch] = useState<string>("");
@@ -59,6 +66,8 @@ export function AdminReviews({
   const [editingReview, setEditingReview] = useState<AdminReview | null>(null);
   const [editText, setEditText] = useState("");
   const [editName, setEditName] = useState("");
+  const [editType, setEditType] = useState<ReviewType>("client");
+  const [editRole, setEditRole] = useState("");
   const [editService, setEditService] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [editRating, setEditRating] = useState(5);
@@ -70,6 +79,7 @@ export function AdminReviews({
   // Filtered rows
   const filtered = reviews.filter((r) => {
     if (statusTab !== "all" && r.status !== statusTab) return false;
+    if (reviewerTypeFilter !== "all" && (r.reviewer_type || "client") !== reviewerTypeFilter) return false;
     if (ratingFilter > 0 && Math.round(r.rating) !== ratingFilter) return false;
     if (serviceFilter && r.service_name !== serviceFilter) return false;
     if (search) {
@@ -77,6 +87,7 @@ export function AdminReviews({
       const match =
         r.customer_name.toLowerCase().includes(q) ||
         r.review_text.toLowerCase().includes(q) ||
+        (r.role_or_title && r.role_or_title.toLowerCase().includes(q)) ||
         (r.customer_email && r.customer_email.toLowerCase().includes(q)) ||
         (r.customer_location && r.customer_location.toLowerCase().includes(q));
       if (!match) return false;
@@ -88,6 +99,8 @@ export function AdminReviews({
   const approvedCount = reviews.filter((r) => r.status === "approved").length;
   const rejectedCount = reviews.filter((r) => r.status === "rejected").length;
   const archivedCount = reviews.filter((r) => r.status === "archived").length;
+  const clientCount = reviews.filter((r) => (r.reviewer_type || "client") === "client").length;
+  const employeeCount = reviews.filter((r) => r.reviewer_type === "employee").length;
 
   const handleApprove = (rev: AdminReview) => {
     startTransition(async () => {
@@ -161,6 +174,8 @@ export function AdminReviews({
     setEditingReview(rev);
     setEditText(rev.review_text);
     setEditName(rev.customer_name);
+    setEditType((rev.reviewer_type as ReviewType) || "client");
+    setEditRole(rev.role_or_title || "");
     setEditService(rev.service_name || "");
     setEditLocation(rev.customer_location || "");
     setEditRating(rev.rating);
@@ -174,6 +189,8 @@ export function AdminReviews({
           data: {
             reviewId: editingReview.id,
             customerName: editName,
+            reviewerType: editType,
+            roleOrTitle: editRole,
             reviewText: editText,
             ...(editService ? { serviceName: editService } : {}),
             ...(editLocation ? { customerLocation: editLocation } : {}),
@@ -259,12 +276,23 @@ export function AdminReviews({
           <Search size={15} className={styles.searchIcon} />
           <input
             type="text"
-            placeholder="Search by customer, review content, email, location..."
+            placeholder="Search by customer, role, review content, location..."
             className={styles.searchInput}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+
+        {/* Reviewer Type Filter */}
+        <select
+          className={styles.filterSelect}
+          value={reviewerTypeFilter}
+          onChange={(e) => setReviewerTypeFilter(e.target.value as any)}
+        >
+          <option value="all">All Reviewer Types ({reviews.length})</option>
+          <option value="client">Clients &amp; Partners ({clientCount})</option>
+          <option value="employee">Employees &amp; Staff ({employeeCount})</option>
+        </select>
 
         <select
           className={styles.filterSelect}
@@ -284,7 +312,7 @@ export function AdminReviews({
           value={serviceFilter}
           onChange={(e) => setServiceFilter(e.target.value)}
         >
-          <option value="">All Services</option>
+          <option value="">All Services &amp; Disciplines</option>
           {DIMISI_SERVICES.map((s) => (
             <option key={s} value={s}>
               {s}
@@ -299,11 +327,11 @@ export function AdminReviews({
           <table className={styles.table}>
             <thead>
               <tr>
-                <th>Customer</th>
+                <th>Reviewer</th>
+                <th>Type</th>
                 <th>Rating</th>
-                <th>Service & Snippet</th>
+                <th>Service / Role &amp; Snippet</th>
                 <th>Status</th>
-                <th>Campaign</th>
                 <th>Submitted</th>
                 <th style={{ textAlign: "right" }}>Actions</th>
               </tr>
@@ -316,180 +344,207 @@ export function AdminReviews({
                   </td>
                 </tr>
               ) : (
-                filtered.map((rev) => (
-                  <tr key={rev.id}>
-                    <td>
-                      <div className={styles.customerCell}>
-                        {rev.customer_photo_url ? (
-                          <img src={rev.customer_photo_url} alt="" className={styles.avatar} />
-                        ) : (
-                          <div className={styles.avatarInitials}>
-                            {rev.customer_name.slice(0, 2).toUpperCase()}
+                filtered.map((rev) => {
+                  const isEmployee = rev.reviewer_type === "employee";
+                  return (
+                    <tr key={rev.id}>
+                      <td>
+                        <div className={styles.customerCell}>
+                          {rev.customer_photo_url ? (
+                            <img src={rev.customer_photo_url} alt="" className={styles.avatar} />
+                          ) : (
+                            <div
+                              className={[
+                                styles.avatarInitials,
+                                isEmployee ? styles.avatarEmployee : "",
+                              ].join(" ")}
+                            >
+                              {rev.customer_name.slice(0, 2).toUpperCase()}
+                            </div>
+                          )}
+                          <div>
+                            <div className={styles.customerName}>{rev.customer_name}</div>
+                            <div className={styles.customerEmail}>
+                              {rev.role_or_title
+                                ? rev.role_or_title
+                                : rev.customer_email || rev.customer_phone || "Direct review"}
+                            </div>
                           </div>
-                        )}
-                        <div>
-                          <div className={styles.customerName}>{rev.customer_name}</div>
-                          <div className={styles.customerEmail}>{rev.customer_email || rev.customer_phone || "No direct contact"}</div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td>
-                      <div className={styles.stars}>
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <Star key={s} size={13} fill={s <= rev.rating ? "currentColor" : "none"} />
-                        ))}
-                      </div>
-                    </td>
-
-                    <td>
-                      <div style={{ maxWidth: "260px" }}>
-                        {rev.service_name ? (
-                          <span style={{ fontSize: "0.72rem", color: "#818cf8", fontWeight: 600, display: "block" }}>
-                            {rev.service_name}
+                      <td>
+                        {isEmployee ? (
+                          <span className={styles.typeBadgeEmp} title="DIMISI Staff Member">
+                            <Code2 size={11} />
+                            <span>Staff</span>
                           </span>
-                        ) : null}
-                        <span style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
-                          {rev.review_text.length > 70 ? `${rev.review_text.slice(0, 70)}…` : rev.review_text}
-                        </span>
-                      </div>
-                    </td>
-
-                    <td>
-                      <span
-                        className={[
-                          styles.statusPill,
-                          rev.status === "pending"
-                            ? styles.pillPending
-                            : rev.status === "approved"
-                            ? styles.pillApproved
-                            : rev.status === "rejected"
-                            ? styles.pillRejected
-                            : styles.pillArchived,
-                        ].join(" ")}
-                      >
-                        {rev.status}
-                        {rev.is_featured ? (
-                          <span title="Featured on website" style={{ display: "inline-flex", alignItems: "center" }}>
-                            <Flame size={11} color="#fbbf24" />
-                          </span>
-                        ) : null}
-                      </span>
-                    </td>
-
-                    <td>
-                      <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
-                        {rev.campaign_name || "Direct Link"}
-                      </span>
-                    </td>
-
-                    <td>
-                      <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
-                        {new Date(rev.submitted_at).toLocaleDateString()}
-                      </span>
-                    </td>
-
-                    <td style={{ textAlign: "right" }}>
-                      <div className={styles.actionsCell} style={{ justifyContent: "flex-end" }}>
-                        {/* Quick View */}
-                        <button
-                          type="button"
-                          className={styles.actionBtn}
-                          onClick={() => setViewingReview(rev)}
-                          title="View Full Details"
-                        >
-                          <Eye size={13} />
-                        </button>
-
-                        {/* Status specific actions */}
-                        {rev.status === "pending" ? (
-                          <>
-                            <button
-                              type="button"
-                              className={[styles.actionBtn, styles.btnApprove].join(" ")}
-                              onClick={() => handleApprove(rev)}
-                              disabled={isPending}
-                              title="Approve Review"
-                            >
-                              <CheckCircle size={13} />
-                              <span>Approve</span>
-                            </button>
-                            <button
-                              type="button"
-                              className={[styles.actionBtn, styles.btnReject].join(" ")}
-                              onClick={() => setRejectingReview(rev)}
-                              disabled={isPending}
-                              title="Reject Review"
-                            >
-                              <XCircle size={13} />
-                            </button>
-                          </>
-                        ) : rev.status === "approved" ? (
-                          <>
-                            <button
-                              type="button"
-                              className={styles.actionBtn}
-                              onClick={() => handleToggleFeatured(rev)}
-                              style={{ color: rev.is_featured ? "#fbbf24" : "#94a3b8" }}
-                              title={rev.is_featured ? "Remove Featured" : "Mark as Featured"}
-                            >
-                              <Flame size={13} fill={rev.is_featured ? "currentColor" : "none"} />
-                            </button>
-                            <button
-                              type="button"
-                              className={styles.actionBtn}
-                              onClick={() => handleArchive(rev)}
-                              title="Archive / Hide"
-                            >
-                              <Archive size={13} />
-                            </button>
-                          </>
                         ) : (
+                          <span className={styles.typeBadgeClient} title="Verified Client">
+                            <Building2 size={11} />
+                            <span>Client</span>
+                          </span>
+                        )}
+                      </td>
+
+                      <td>
+                        <div className={styles.stars}>
+                          {[1, 2, 3, 4, 5].map((s) => (
+                            <Star key={s} size={13} fill={s <= rev.rating ? "currentColor" : "none"} />
+                          ))}
+                        </div>
+                      </td>
+
+                      <td>
+                        <div style={{ maxWidth: "260px" }}>
+                          {rev.service_name ? (
+                            <span
+                              style={{
+                                fontSize: "0.72rem",
+                                color: isEmployee ? "#a5b4fc" : "#ffab2e",
+                                fontWeight: 600,
+                                display: "block",
+                              }}
+                            >
+                              {rev.service_name}
+                            </span>
+                          ) : null}
+                          <span style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
+                            {rev.review_text.length > 70 ? `${rev.review_text.slice(0, 70)}…` : rev.review_text}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td>
+                        <span
+                          className={[
+                            styles.statusPill,
+                            rev.status === "pending"
+                              ? styles.pillPending
+                              : rev.status === "approved"
+                              ? styles.pillApproved
+                              : rev.status === "rejected"
+                              ? styles.pillRejected
+                              : styles.pillArchived,
+                          ].join(" ")}
+                        >
+                          {rev.status}
+                          {rev.is_featured ? (
+                            <span title="Featured on website" style={{ display: "inline-flex", alignItems: "center" }}>
+                              <Flame size={11} color="#ff8c1a" />
+                            </span>
+                          ) : null}
+                        </span>
+                      </td>
+
+                      <td>
+                        <span style={{ fontSize: "0.78rem", color: "#64748b" }}>
+                          {new Date(rev.submitted_at).toLocaleDateString()}
+                        </span>
+                      </td>
+
+                      <td style={{ textAlign: "right" }}>
+                        <div className={styles.actionsCell} style={{ justifyContent: "flex-end" }}>
+                          {/* Quick View */}
                           <button
                             type="button"
                             className={styles.actionBtn}
-                            onClick={() => handleRestore(rev)}
-                            title="Restore Review"
+                            onClick={() => setViewingReview(rev)}
+                            title="View Full Details"
                           >
-                            <RotateCcw size={13} />
-                            <span>Restore</span>
+                            <Eye size={13} />
                           </button>
-                        )}
 
-                        <button
-                          type="button"
-                          className={styles.actionBtn}
-                          onClick={() => handleEditOpen(rev)}
-                          title="Edit text/formatting"
-                        >
-                          <Edit3 size={13} />
-                        </button>
+                          {/* Status specific actions */}
+                          {rev.status === "pending" ? (
+                            <>
+                              <button
+                                type="button"
+                                className={[styles.actionBtn, styles.btnApprove].join(" ")}
+                                onClick={() => handleApprove(rev)}
+                                disabled={isPending}
+                                title="Approve Review"
+                              >
+                                <CheckCircle size={13} />
+                                <span>Approve</span>
+                              </button>
+                              <button
+                                type="button"
+                                className={[styles.actionBtn, styles.btnReject].join(" ")}
+                                onClick={() => setRejectingReview(rev)}
+                                disabled={isPending}
+                                title="Reject Review"
+                              >
+                                <XCircle size={13} />
+                              </button>
+                            </>
+                          ) : rev.status === "approved" ? (
+                            <>
+                              <button
+                                type="button"
+                                className={styles.actionBtn}
+                                onClick={() => handleToggleFeatured(rev)}
+                                style={{ color: rev.is_featured ? "#ffab2e" : "#94a3b8" }}
+                                title={rev.is_featured ? "Remove Featured" : "Mark as Featured"}
+                              >
+                                <Flame size={13} fill={rev.is_featured ? "currentColor" : "none"} />
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.actionBtn}
+                                onClick={() => handleArchive(rev)}
+                                title="Archive / Hide"
+                              >
+                                <Archive size={13} />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              className={styles.actionBtn}
+                              onClick={() => handleRestore(rev)}
+                              title="Restore to Approved"
+                            >
+                              <RotateCcw size={13} />
+                            </button>
+                          )}
 
-                        <button
-                          type="button"
-                          className={styles.actionBtn}
-                          onClick={() => setDeletingReview(rev)}
-                          style={{ color: "#f43f5e" }}
-                          title="Delete Permanently"
-                        >
-                          <Trash2 size={13} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                          {/* Edit Content */}
+                          <button
+                            type="button"
+                            className={styles.actionBtn}
+                            onClick={() => handleEditOpen(rev)}
+                            title="Edit Review Content"
+                          >
+                            <Edit3 size={13} />
+                          </button>
+
+                          {/* Delete */}
+                          <button
+                            type="button"
+                            className={[styles.actionBtn, styles.btnDelete].join(" ")}
+                            onClick={() => setDeletingReview(rev)}
+                            title="Delete Review"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Review Detail Modal */}
+      {/* View Full Review Modal */}
       {viewingReview ? (
         <div className={styles.modalBackdrop} onClick={() => setViewingReview(null)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Review Moderation Details</h3>
+              <h3 className={styles.modalTitle}>Review Details</h3>
               <button
                 type="button"
                 onClick={() => setViewingReview(null)}
@@ -502,8 +557,26 @@ export function AdminReviews({
             <div className={styles.detailSection}>
               <div className={styles.detailGrid}>
                 <div>
-                  <div className={styles.detailLabel}>Customer Name</div>
+                  <div className={styles.detailLabel}>Reviewer Name</div>
                   <div className={styles.detailVal}>{viewingReview.customer_name}</div>
+                </div>
+                <div>
+                  <div className={styles.detailLabel}>Reviewer Type</div>
+                  <div className={styles.detailVal}>
+                    {viewingReview.reviewer_type === "employee" ? (
+                      <span className={styles.typeBadgeEmp}>
+                        <Code2 size={12} /> DIMISI Staff Member
+                      </span>
+                    ) : (
+                      <span className={styles.typeBadgeClient}>
+                        <Building2 size={12} /> Client / Partner
+                      </span>
+                    )}
+                  </div>
+                </div>
+                <div>
+                  <div className={styles.detailLabel}>Role / Job Title</div>
+                  <div className={styles.detailVal}>{viewingReview.role_or_title || "Not specified"}</div>
                 </div>
                 <div>
                   <div className={styles.detailLabel}>Status</div>
@@ -515,7 +588,7 @@ export function AdminReviews({
                   <div className={styles.detailLabel}>Email Address</div>
                   <div className={styles.detailVal}>
                     {viewingReview.customer_email ? (
-                      <a href={`mailto:${viewingReview.customer_email}`} style={{ color: "#818cf8" }}>
+                      <a href={`mailto:${viewingReview.customer_email}`} style={{ color: "#ffab2e" }}>
                         <Mail size={12} style={{ display: "inline", marginRight: "4px" }} />
                         {viewingReview.customer_email}
                       </a>
@@ -525,20 +598,7 @@ export function AdminReviews({
                   </div>
                 </div>
                 <div>
-                  <div className={styles.detailLabel}>Phone Number</div>
-                  <div className={styles.detailVal}>
-                    {viewingReview.customer_phone ? (
-                      <a href={`tel:${viewingReview.customer_phone}`} style={{ color: "#818cf8" }}>
-                        <Phone size={12} style={{ display: "inline", marginRight: "4px" }} />
-                        {viewingReview.customer_phone}
-                      </a>
-                    ) : (
-                      "Not provided"
-                    )}
-                  </div>
-                </div>
-                <div>
-                  <div className={styles.detailLabel}>Location</div>
+                  <div className={styles.detailLabel}>Location / Hub</div>
                   <div className={styles.detailVal}>
                     <MapPin size={12} style={{ display: "inline", marginRight: "4px" }} />
                     {viewingReview.customer_location || "Not specified"}
@@ -557,16 +617,10 @@ export function AdminReviews({
                     {new Date(viewingReview.submitted_at).toLocaleString()}
                   </div>
                 </div>
-                <div>
-                  <div className={styles.detailLabel}>Consent Record</div>
-                  <div className={styles.detailVal} style={{ color: "#34d399" }}>
-                    ✓ Granted & Logged
-                  </div>
-                </div>
               </div>
             </div>
 
-            <div className={styles.detailLabel}>Customer Written Review</div>
+            <div className={styles.detailLabel}>Written Review Text</div>
             <div className={styles.reviewTextFull}>"{viewingReview.review_text}"</div>
 
             {viewingReview.moderation_reason ? (
@@ -585,7 +639,7 @@ export function AdminReviews({
                     disabled={isPending}
                   >
                     <CheckCircle size={14} />
-                    <span>Approve & Publish</span>
+                    <span>Approve &amp; Publish</span>
                   </button>
                   <button
                     type="button"
@@ -680,7 +734,7 @@ export function AdminReviews({
                   checked={notifyCustomerOnReject}
                   onChange={(e) => setNotifyCustomerOnReject(e.target.checked)}
                 />
-                <span>Send polite notification email to customer ({rejectingReview.customer_email})</span>
+                <span>Send polite notification email to reviewer ({rejectingReview.customer_email})</span>
               </label>
             ) : null}
 
@@ -710,7 +764,7 @@ export function AdminReviews({
         <div className={styles.modalBackdrop} onClick={() => setEditingReview(null)}>
           <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
             <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Edit Review (Formatting & Typo Fix)</h3>
+              <h3 className={styles.modalTitle}>Edit Review (Formatting &amp; Role Details)</h3>
               <button
                 type="button"
                 onClick={() => setEditingReview(null)}
@@ -720,17 +774,43 @@ export function AdminReviews({
               </button>
             </div>
             <p style={{ fontSize: "0.82rem", color: "#94a3b8", marginBottom: "1rem" }}>
-              Note: Changes are logged in the admin audit trail. Do not alter the customer's intended rating or sentiment.
+              Note: Changes are logged in the admin audit trail.
             </p>
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Customer Name</label>
+                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Reviewer Name</label>
                 <input
                   type="text"
                   className={styles.searchInput}
                   value={editName}
                   onChange={(e) => setEditName(e.target.value)}
+                  style={{ width: "100%", padding: "0.5rem" }}
+                />
+              </div>
+              <div>
+                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Reviewer Type</label>
+                <select
+                  className={styles.filterSelect}
+                  value={editType}
+                  onChange={(e) => setEditType(e.target.value as ReviewType)}
+                  style={{ width: "100%", padding: "0.5rem" }}
+                >
+                  <option value="client">Client / Business Partner</option>
+                  <option value="employee">Employee / Staff Member</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
+              <div>
+                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Role / Job Title</label>
+                <input
+                  type="text"
+                  className={styles.searchInput}
+                  placeholder="e.g. Full-Stack Engineer"
+                  value={editRole}
+                  onChange={(e) => setEditRole(e.target.value)}
                   style={{ width: "100%", padding: "0.5rem" }}
                 />
               </div>
@@ -753,7 +833,7 @@ export function AdminReviews({
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Service Name</label>
+                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Service / Department</label>
                 <input
                   type="text"
                   className={styles.searchInput}
@@ -763,7 +843,7 @@ export function AdminReviews({
                 />
               </div>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Location</label>
+                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Location / Hub</label>
                 <input
                   type="text"
                   className={styles.searchInput}

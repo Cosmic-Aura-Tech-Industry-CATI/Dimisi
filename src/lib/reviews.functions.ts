@@ -71,6 +71,7 @@ export const getPublicReviews = createServerFn({ method: "GET" })
       rating?: number;
       service?: string;
       search?: string;
+      type?: "all" | "client" | "employee";
       sort?: "newest" | "highest" | "lowest";
     }) => ({
       page: Math.max(0, Number(input?.page ?? 0)),
@@ -78,6 +79,7 @@ export const getPublicReviews = createServerFn({ method: "GET" })
       rating: input?.rating && input.rating >= 1 && input.rating <= 5 ? Number(input.rating) : 0,
       service: sanitizeText(input?.service, 100),
       search: sanitizeText(input?.search, 100).toLowerCase(),
+      type: input?.type === "client" || input?.type === "employee" ? input.type : "all",
       sort: input?.sort === "highest" || input?.sort === "lowest" ? input.sort : "newest",
     }),
   )
@@ -117,6 +119,9 @@ export const getPublicReviews = createServerFn({ method: "GET" })
 
     // Apply filtering
     let filtered = [...allApproved];
+    if (data.type && data.type !== "all") {
+      filtered = filtered.filter((r) => (r.reviewer_type || "client") === data.type);
+    }
     if (data.rating > 0) {
       filtered = filtered.filter((r) => Math.round(r.rating) === data.rating);
     }
@@ -128,6 +133,7 @@ export const getPublicReviews = createServerFn({ method: "GET" })
         (r) =>
           r.customer_name.toLowerCase().includes(data.search) ||
           r.review_text.toLowerCase().includes(data.search) ||
+          (r.role_or_title && r.role_or_title.toLowerCase().includes(data.search)) ||
           (r.customer_location && r.customer_location.toLowerCase().includes(data.search)),
       );
     }
@@ -231,7 +237,9 @@ export const submitReview = createServerFn({ method: "POST" })
       customerName: string;
       customerEmail?: string;
       customerPhone?: string;
+      reviewerType?: "client" | "employee";
       serviceName?: string;
+      roleOrTitle?: string;
       rating: number;
       reviewText: string;
       customerLocation?: string;
@@ -244,7 +252,9 @@ export const submitReview = createServerFn({ method: "POST" })
       customerName: sanitizeText(input.customerName, NAME_MAX),
       customerEmail: sanitizeText(input.customerEmail, 160).toLowerCase(),
       customerPhone: sanitizeText(input.customerPhone, 30),
+      reviewerType: input.reviewerType === "employee" ? ("employee" as const) : ("client" as const),
       serviceName: sanitizeText(input.serviceName, 120),
+      roleOrTitle: sanitizeText(input.roleOrTitle, 120),
       rating: Math.round(Number(input.rating) || 0),
       reviewText: sanitizeText(input.reviewText, REVIEW_TEXT_MAX),
       customerLocation: sanitizeText(input.customerLocation, 120),
@@ -322,6 +332,8 @@ export const submitReview = createServerFn({ method: "POST" })
       customer_email: data.customerEmail || null,
       customer_phone: data.customerPhone || null,
       service_name: data.serviceName || null,
+      reviewer_type: data.reviewerType,
+      role_or_title: data.roleOrTitle || null,
       rating: data.rating,
       review_text: data.reviewText,
       customer_photo_url: photoUrl,
@@ -639,6 +651,8 @@ export const updateReviewContent = createServerFn({ method: "POST" })
       reviewId: string;
       customerName: string;
       serviceName?: string;
+      reviewerType?: "client" | "employee";
+      roleOrTitle?: string;
       reviewText: string;
       customerLocation?: string;
       rating?: number;
@@ -646,6 +660,8 @@ export const updateReviewContent = createServerFn({ method: "POST" })
       reviewId: String(input.reviewId ?? ""),
       customerName: sanitizeText(input.customerName, NAME_MAX),
       serviceName: sanitizeText(input.serviceName, 120),
+      reviewerType: input.reviewerType === "employee" ? ("employee" as const) : ("client" as const),
+      roleOrTitle: sanitizeText(input.roleOrTitle, 120),
       reviewText: sanitizeText(input.reviewText, REVIEW_TEXT_MAX),
       customerLocation: sanitizeText(input.customerLocation, 120),
       rating: input.rating ? Math.min(5, Math.max(1, Math.round(Number(input.rating)))) : undefined,
@@ -662,6 +678,8 @@ export const updateReviewContent = createServerFn({ method: "POST" })
     const oldContent = {
       customer_name: review.customer_name,
       service_name: review.service_name,
+      reviewer_type: review.reviewer_type,
+      role_or_title: review.role_or_title,
       review_text: review.review_text,
       customer_location: review.customer_location,
       rating: review.rating,
@@ -669,6 +687,8 @@ export const updateReviewContent = createServerFn({ method: "POST" })
 
     review.customer_name = data.customerName;
     review.service_name = data.serviceName || null;
+    review.reviewer_type = data.reviewerType;
+    review.role_or_title = data.roleOrTitle || null;
     review.review_text = data.reviewText;
     review.customer_location = data.customerLocation || null;
     if (data.rating) review.rating = data.rating;
@@ -702,6 +722,8 @@ export const updateReviewContent = createServerFn({ method: "POST" })
       {
         customer_name: review.customer_name,
         service_name: review.service_name,
+        reviewer_type: review.reviewer_type,
+        role_or_title: review.role_or_title,
         review_text: review.review_text,
         customer_location: review.customer_location,
         rating: review.rating,

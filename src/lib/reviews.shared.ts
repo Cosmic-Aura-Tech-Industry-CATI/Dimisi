@@ -2,6 +2,7 @@
 
 export type ReviewStatus = "pending" | "approved" | "rejected" | "archived";
 export type ReportStatus = "open" | "resolved" | "dismissed";
+export type ReviewType = "client" | "employee";
 
 export const REVIEW_TEXT_MAX = 2000;
 export const REVIEW_TEXT_MIN = 5;
@@ -22,6 +23,21 @@ export const DIMISI_SERVICES = [
   "Other Services",
 ] as const;
 
+export const EMPLOYEE_ROLES = [
+  "Software Engineer",
+  "Full-Stack Developer",
+  "AI & ML Research Engineer",
+  "Frontend Architect",
+  "Backend & Cloud Engineer",
+  "Mobile App Developer",
+  "UI/UX & 3D Designer",
+  "DevOps & Security Engineer",
+  "Product Manager",
+  "Quality Assurance Engineer",
+  "Engineering Intern",
+  "Other Staff",
+] as const;
+
 export const REPORT_REASONS = [
   "Offensive language",
   "False or misleading content",
@@ -35,6 +51,8 @@ export type PublicReview = {
   id: string;
   customer_name: string;
   service_name: string | null;
+  reviewer_type?: ReviewType;
+  role_or_title?: string | null;
   rating: number;
   review_text: string;
   photo_url: string | null;
@@ -51,6 +69,8 @@ export type AdminReview = {
   customer_email: string | null;
   customer_phone: string | null;
   service_name: string | null;
+  reviewer_type?: ReviewType;
+  role_or_title?: string | null;
   rating: number;
   review_text: string;
   customer_photo_url: string | null;
@@ -121,6 +141,10 @@ export type ReviewStats = {
   total: number;
   average: number;
   distribution: Record<1 | 2 | 3 | 4 | 5, number>;
+  clientTotal?: number;
+  clientAverage?: number;
+  employeeTotal?: number;
+  employeeAverage?: number;
   pendingCount?: number;
   approvedCount?: number;
   rejectedCount?: number;
@@ -132,7 +156,9 @@ export type ReviewInput = {
   customerName: string;
   customerEmail?: string;
   customerPhone?: string;
+  reviewerType?: ReviewType;
   serviceName?: string;
+  roleOrTitle?: string;
   rating: number;
   reviewText: string;
   customerLocation?: string;
@@ -186,16 +212,38 @@ export function slugify(value: string): string {
     .slice(0, 60);
 }
 
-export function computeStats(rows: { rating: number }[]): ReviewStats {
+export function computeStats(rows: { rating: number; reviewer_type?: ReviewType }[]): ReviewStats {
   const distribution: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   let sum = 0;
+  let clientSum = 0;
+  let clientCount = 0;
+  let employeeSum = 0;
+  let employeeCount = 0;
+
   for (const r of rows) {
     const k = Math.min(5, Math.max(1, Math.round(r.rating))) as 1 | 2 | 3 | 4 | 5;
     distribution[k] = (distribution[k] || 0) + 1;
     sum += r.rating;
+
+    if (r.reviewer_type === "employee") {
+      employeeSum += r.rating;
+      employeeCount += 1;
+    } else {
+      clientSum += r.rating;
+      clientCount += 1;
+    }
   }
+
   const total = rows.length;
-  return { total, average: total ? Math.round((sum / total) * 10) / 10 : 0, distribution };
+  return {
+    total,
+    average: total ? Math.round((sum / total) * 10) / 10 : 5.0,
+    distribution,
+    clientTotal: clientCount,
+    clientAverage: clientCount ? Math.round((clientSum / clientCount) * 10) / 10 : 5.0,
+    employeeTotal: employeeCount,
+    employeeAverage: employeeCount ? Math.round((employeeSum / employeeCount) * 10) / 10 : 5.0,
+  };
 }
 
 export function calculateConversionRate(visits: number, submissions: number): number {
