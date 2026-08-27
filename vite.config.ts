@@ -14,6 +14,9 @@ export default defineConfig({
       "@": path.resolve(import.meta.dirname, "./src"),
     },
   },
+  ssr: {
+    noExternal: true,
+  },
   plugins: [
     tanstackStart({
       server: { entry: "server" },

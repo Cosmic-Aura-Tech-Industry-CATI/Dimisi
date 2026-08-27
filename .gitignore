@@ -32,3 +32,6 @@ dist-ssr
 *.sw?
 .env
 .lovable
+
+# Vercel build output
+.vercel/output
