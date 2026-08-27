@@ -15,9 +15,7 @@ export default defineConfig(({ command }) => ({
     },
   },
   ssr: {
-    // In dev mode ('serve'), allow Node.js to load CommonJS packages (like React) natively.
-    // In production build ('build'), bundle dependencies for the Vercel standalone function.
-    noExternal: command === "build" ? true : undefined,
+    ...(command === "build" ? { noExternal: true } : {}),
   },
   plugins: [
     tanstackStart({
