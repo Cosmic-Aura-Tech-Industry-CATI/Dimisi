@@ -17,7 +17,7 @@ export const lovable = {
         provider: provider === "microsoft" ? "azure" : provider,
         options: {
           redirectTo,
-          queryParams: opts?.extraParams,
+          ...(opts?.extraParams ? { queryParams: opts.extraParams } : {}),
         },
       });
 
