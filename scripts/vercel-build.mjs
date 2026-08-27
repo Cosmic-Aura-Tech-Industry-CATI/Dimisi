@@ -26,14 +26,8 @@ if (existsSync(join(root, "dist", "server"))) {
   cpSync(join(root, "dist", "server"), join(out, "functions", "[...all].func", "server"), { recursive: true });
 }
 
-// 4. Function handler code
+// 4. Clean function handler - Node 22 natively provides globalThis.WebSocket, so no external 'ws' package is needed
 const handlerCode = `
-import { WebSocket as WsWebSocket } from "ws";
-
-if (typeof globalThis.WebSocket === "undefined") {
-  globalThis.WebSocket = WsWebSocket;
-}
-
 let _handler;
 async function getHandler() {
   if (!_handler) {
@@ -119,4 +113,4 @@ writeFileSync(
   }, null, 2)
 );
 
-console.log("[vercel-build] .vercel/output ready for nodejs22.x with WebSocket polyfill!");
+console.log("[vercel-build] .vercel/output ready for nodejs22.x (clean native modules)!");
