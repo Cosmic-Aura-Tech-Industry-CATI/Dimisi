@@ -30,11 +30,5 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
-
-# Next.js build and cache
-.next/
-out/
-
-# TypeScript build info
-tsconfig.tsbuildinfo
-
+.env
+.lovable

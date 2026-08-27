@@ -1,0 +1,397 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  color: var(--dm-warm, #fbf3e9);
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.statusTabs {
+  display: flex;
+  background: rgba(10, 8, 14, 0.6);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+  border-radius: 14px;
+  padding: 0.3rem;
+  gap: 0.35rem;
+  overflow-x: auto;
+}
+
+.statusTab {
+  background: none;
+  border: none;
+  color: var(--dm-dim, #a09587);
+  padding: 0.5rem 0.95rem;
+  border-radius: 10px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: all 0.2s var(--dm-ease, ease);
+  white-space: nowrap;
+}
+
+.statusTab:hover:not(.statusTabActive) {
+  color: var(--dm-warm, #fbf3e9);
+  background: rgba(255, 214, 170, 0.04);
+}
+
+.statusTabActive {
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  color: #0a0810;
+  box-shadow: 0 4px 18px rgba(255, 122, 24, 0.35);
+}
+
+.tabBadge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+}
+
+.tabBadgeActive {
+  background: rgba(10, 8, 14, 0.25);
+  color: #0a0810;
+}
+
+.filtersRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  background: rgba(19, 16, 25, 0.6);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.08));
+  border-radius: 14px;
+  padding: 0.75rem 1rem;
+}
+
+.searchBox {
+  position: relative;
+  flex: 1;
+  min-width: 220px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--dm-dim, #a09587);
+}
+
+.searchInput {
+  width: 100%;
+  background: rgba(10, 8, 14, 0.7);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  color: var(--dm-warm, #fbf3e9);
+  padding: 0.55rem 0.85rem 0.55rem 2.4rem;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.searchInput:focus {
+  border-color: var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 16px rgba(255, 171, 46, 0.2);
+}
+
+.filterSelect {
+  background: rgba(10, 8, 14, 0.7);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  color: var(--dm-warm, #fbf3e9);
+  padding: 0.55rem 0.85rem;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.filterSelect:focus {
+  border-color: var(--dm-amber, #ffab2e);
+}
+
+/* Reviews Table / Cards */
+.tableCard {
+  background: rgba(19, 16, 25, 0.75);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+}
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  text-align: left;
+}
+
+.table th {
+  background: rgba(10, 8, 14, 0.5);
+  color: var(--dm-gold, #ffd79a);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.95rem 1.1rem;
+  border-bottom: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--dm-line, rgba(255, 214, 170, 0.05));
+  color: var(--dm-warm, #fbf3e9);
+  vertical-align: middle;
+}
+
+.table tr:hover td {
+  background: rgba(255, 214, 170, 0.03);
+}
+
+.customerCell {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--dm-amber, #ffab2e);
+}
+
+.avatarInitials {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  color: #0a0810;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.82rem;
+  font-weight: 700;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+}
+
+.customerName {
+  font-weight: 600;
+  color: var(--dm-warm, #fbf3e9);
+}
+
+.customerEmail {
+  font-size: 0.75rem;
+  color: var(--dm-dim, #a09587);
+}
+
+.stars {
+  display: flex;
+  gap: 0.15rem;
+  color: var(--dm-amber, #ffab2e);
+}
+
+.statusPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.pillPending {
+  background: rgba(255, 171, 46, 0.12);
+  color: var(--dm-amber, #ffab2e);
+  border: 1px solid rgba(255, 171, 46, 0.3);
+}
+
+.pillApproved {
+  background: rgba(52, 211, 153, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(52, 211, 153, 0.3);
+}
+
+.pillRejected {
+  background: rgba(255, 95, 46, 0.12);
+  color: #ff9a85;
+  border: 1px solid rgba(255, 95, 46, 0.3);
+}
+
+.pillArchived {
+  background: rgba(160, 149, 135, 0.12);
+  color: var(--dm-dim, #a09587);
+  border: 1px solid rgba(160, 149, 135, 0.25);
+}
+
+.actionsCell {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.actionBtn {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  color: var(--dm-warm, #fbf3e9);
+  padding: 0.4rem 0.7rem;
+  border-radius: 8px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  transition: all 0.2s var(--dm-ease, ease);
+}
+
+.actionBtn:hover {
+  background: rgba(255, 214, 170, 0.08);
+  border-color: rgba(255, 171, 46, 0.4);
+}
+
+.btnApprove {
+  background: rgba(52, 211, 153, 0.12);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+.btnApprove:hover {
+  background: rgba(52, 211, 153, 0.25);
+}
+
+.btnReject {
+  background: rgba(255, 95, 46, 0.12);
+  color: #ff9a85;
+  border-color: rgba(255, 95, 46, 0.35);
+}
+
+.btnReject:hover {
+  background: rgba(255, 95, 46, 0.25);
+}
+
+/* Modals */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 4, 10, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.modalContent {
+  background: var(--dm-charcoal, #131019);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.15));
+  border-radius: 20px;
+  padding: 2.25rem;
+  max-width: 620px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  color: var(--dm-warm, #fbf3e9);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.9);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.35rem;
+}
+
+.modalTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.4rem;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0;
+}
+
+.detailSection {
+  background: rgba(10, 8, 14, 0.6);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.08));
+  border-radius: 14px;
+  padding: 1.15rem;
+  margin-bottom: 1.15rem;
+}
+
+.detailGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.95rem;
+  font-size: 0.86rem;
+}
+
+.detailLabel {
+  color: var(--dm-dim, #a09587);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-bottom: 0.25rem;
+}
+
+.detailVal {
+  color: var(--dm-warm, #fbf3e9);
+  font-weight: 500;
+}
+
+.reviewTextFull {
+  background: rgba(10, 8, 14, 0.75);
+  border-left: 3px solid var(--dm-amber, #ffab2e);
+  padding: 1.15rem;
+  border-radius: 8px;
+  font-size: 0.93rem;
+  line-height: 1.65;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 1.15rem 0;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.85rem;
+  margin-top: 1.6rem;
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3.5rem 1rem;
+  color: var(--dm-dim, #a09587);
+}

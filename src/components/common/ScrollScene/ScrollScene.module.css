@@ -1,0 +1,15 @@
+.scene {
+  position: relative;
+  will-change: transform, opacity, filter;
+  transform-style: preserve-3d;
+  perspective: 1200px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .scene {
+    transform: none !important;
+    opacity: 1 !important;
+    filter: none !important;
+    transition: none !important;
+  }
+}

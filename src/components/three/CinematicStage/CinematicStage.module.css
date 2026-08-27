@@ -1,0 +1,59 @@
+.stage {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 106, 0, 0.52), transparent 66%),
+    radial-gradient(ellipse at 18% 78%, rgba(255, 159, 28, 0.36), transparent 70%),
+    radial-gradient(ellipse at 85% 30%, rgba(255, 200, 110, 0.24), transparent 64%),
+    var(--dm-void);
+}
+
+.stage canvas {
+  display: block;
+}
+
+.rays {
+  position: absolute;
+  inset: -20% -10%;
+  transform-origin: 50% 0%;
+  will-change: transform;
+  background: conic-gradient(
+    from 200deg at 50% -10%,
+    transparent 0deg,
+    rgba(255, 170, 60, 0.3) 12deg,
+    transparent 26deg,
+    rgba(255, 140, 20, 0.24) 42deg,
+    transparent 60deg
+  );
+  mix-blend-mode: screen;
+  animation: sweep 22s linear infinite;
+  pointer-events: none;
+}
+
+.fog {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 34vh;
+  background: linear-gradient(to top, rgba(3, 3, 4, 0.4), transparent);
+  pointer-events: none;
+}
+
+/* Readability scrim so page content always sits clearly above the backdrop. */
+.scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(4, 3, 6, 0), rgba(4, 3, 6, 0.14) 98%);
+  pointer-events: none;
+}
+
+@keyframes sweep {
+  from {
+    transform: rotate(0deg) scale(1.2);
+  }
+  to {
+    transform: rotate(360deg) scale(1.2);
+  }
+}

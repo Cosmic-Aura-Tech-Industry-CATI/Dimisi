@@ -1,0 +1,648 @@
+.page {
+  min-height: 100vh;
+  padding: 8rem 1.5rem 6rem;
+  background:
+    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(255, 95, 46, 0.12) 0%, transparent 70%),
+    radial-gradient(circle at 15% 25%, rgba(255, 171, 46, 0.05) 0%, transparent 45%),
+    var(--dm-void, #05040a);
+  color: var(--dm-warm, #fbf3e9);
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+}
+
+.container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.hero {
+  text-align: center;
+  max-width: 780px;
+  margin: 0 auto 3.5rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 1.1rem;
+  background: rgba(255, 171, 46, 0.1);
+  border: 1px solid rgba(255, 171, 46, 0.3);
+  border-radius: 999px;
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  color: var(--dm-amber, #ffab2e);
+  text-transform: uppercase;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 0 24px rgba(255, 171, 46, 0.15);
+}
+
+.badgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 10px var(--dm-amber, #ffab2e);
+}
+
+.heroTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0 0 1.2rem;
+  letter-spacing: -0.02em;
+}
+
+.heroSub {
+  font-size: 1.05rem;
+  color: var(--dm-dim, #a09587);
+  line-height: 1.7;
+  margin: 0 0 2.25rem;
+}
+
+.heroActions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.leaveReviewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.9rem 2rem;
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  color: #0a0810;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  text-decoration: none;
+  box-shadow: 0 10px 40px -10px rgba(255, 140, 20, 0.7);
+  transition: transform 0.3s var(--dm-ease, ease), box-shadow 0.3s var(--dm-ease, ease);
+}
+
+.leaveReviewBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 50px -8px rgba(255, 160, 30, 0.9);
+}
+
+/* Stats Scorecard */
+.statsCard {
+  background: rgba(19, 16, 25, 0.75);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  border-radius: 24px;
+  padding: 2.5rem;
+  margin-bottom: 3.5rem;
+  display: grid;
+  grid-template-columns: 290px 1fr;
+  gap: 3rem;
+  align-items: center;
+  box-shadow:
+    0 30px 80px -20px rgba(0, 0, 0, 0.8),
+    0 0 40px rgba(255, 122, 24, 0.05);
+  backdrop-filter: blur(24px) saturate(140%);
+}
+
+@media (max-width: 860px) {
+  .statsCard {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    padding: 1.75rem;
+  }
+}
+
+.scoreBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding-right: 2.5rem;
+  border-right: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+}
+
+@media (max-width: 860px) {
+  .scoreBox {
+    padding-right: 0;
+    padding-bottom: 2rem;
+    border-right: none;
+    border-bottom: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+  }
+}
+
+.averageScore {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 4.5rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--dm-warm, #fbf3e9);
+  margin-bottom: 0.4rem;
+  letter-spacing: -0.02em;
+}
+
+.scoreStars {
+  display: flex;
+  gap: 0.35rem;
+  color: var(--dm-amber, #ffab2e);
+  margin-bottom: 0.6rem;
+  filter: drop-shadow(0 0 8px rgba(255, 171, 46, 0.4));
+}
+
+.scoreTotal {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.85rem;
+  letter-spacing: 0.06em;
+  color: var(--dm-dim, #a09587);
+}
+
+.distributionBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.distRow {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  cursor: pointer;
+  background: none;
+  border: none;
+  color: inherit;
+  padding: 0.3rem 0.6rem;
+  border-radius: 10px;
+  transition: background 0.2s;
+  width: 100%;
+}
+
+.distRow:hover {
+  background: rgba(255, 214, 170, 0.05);
+}
+
+.distLabel {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--dm-gold, #ffd79a);
+  width: 52px;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.barTrack {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background: var(--dm-grad-flare, linear-gradient(90deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  border-radius: 999px;
+  transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 0 12px rgba(255, 122, 24, 0.4);
+}
+
+.distCount {
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.8rem;
+  color: var(--dm-dim, #a09587);
+  width: 40px;
+  text-align: right;
+}
+
+/* Featured Section */
+.featuredSection {
+  margin-bottom: 4rem;
+}
+
+.sectionHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 1.75rem;
+}
+
+.sectionTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.65rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.sectionTitleIcon {
+  color: var(--dm-amber, #ffab2e);
+}
+
+.featuredGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.75rem;
+}
+
+/* Filter Controls */
+.filterBar {
+  background: rgba(19, 16, 25, 0.7);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+  border-radius: 18px;
+  padding: 1.15rem 1.35rem;
+  margin-bottom: 2.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(16px);
+}
+
+.filterGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.searchBox {
+  position: relative;
+  min-width: 250px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.95rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--dm-dim, #a09587);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.65rem 0.95rem 0.65rem 2.5rem;
+  background: rgba(10, 8, 14, 0.7);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  border-radius: 12px;
+  color: var(--dm-warm, #fbf3e9);
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.searchInput:focus {
+  border-color: var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 20px rgba(255, 171, 46, 0.2);
+}
+
+.searchInput::placeholder {
+  color: rgba(160, 149, 135, 0.6);
+}
+
+.filterSelect {
+  background: rgba(10, 8, 14, 0.7);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  color: var(--dm-warm, #fbf3e9);
+  padding: 0.65rem 1rem;
+  border-radius: 12px;
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  font-size: 0.86rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+
+.filterSelect:focus {
+  border-color: var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 20px rgba(255, 171, 46, 0.2);
+}
+
+/* Reviews Grid */
+.reviewsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.75rem;
+  margin-bottom: 3.5rem;
+}
+
+@media (max-width: 480px) {
+  .reviewsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.reviewCard {
+  background: rgba(19, 16, 25, 0.65);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+  border-radius: 20px;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s var(--dm-ease, ease), border-color 0.3s, box-shadow 0.3s;
+  position: relative;
+  backdrop-filter: blur(16px);
+}
+
+.reviewCard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 171, 46, 0.4);
+  box-shadow:
+    0 20px 60px -15px rgba(0, 0, 0, 0.8),
+    0 0 35px rgba(255, 122, 24, 0.1);
+}
+
+.featuredCard {
+  background: linear-gradient(160deg, rgba(255, 122, 24, 0.1) 0%, rgba(19, 16, 25, 0.85) 100%);
+  border: 1px solid rgba(255, 171, 46, 0.35);
+  box-shadow: 0 0 30px rgba(255, 122, 24, 0.08);
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.1rem;
+}
+
+.authorBox {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.avatar {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 14px rgba(255, 171, 46, 0.3);
+}
+
+.avatarInitials {
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  color: #0a0810;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.95rem;
+  box-shadow: 0 0 14px rgba(255, 122, 24, 0.35);
+}
+
+.authorMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.authorName {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: var(--dm-warm, #fbf3e9);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.verifiedIcon {
+  color: var(--dm-amber, #ffab2e);
+}
+
+.authorLocation {
+  font-size: 0.78rem;
+  color: var(--dm-dim, #a09587);
+}
+
+.stars {
+  display: flex;
+  gap: 0.25rem;
+  color: var(--dm-amber, #ffab2e);
+}
+
+.serviceTag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  letter-spacing: 0.08em;
+  color: var(--dm-gold, #ffd79a);
+  background: rgba(255, 171, 46, 0.12);
+  border: 1px solid rgba(255, 171, 46, 0.25);
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  margin-bottom: 0.95rem;
+  width: fit-content;
+}
+
+.reviewText {
+  font-size: 0.93rem;
+  line-height: 1.65;
+  color: rgba(251, 243, 233, 0.85);
+  margin: 0 0 1.35rem;
+  flex: 1;
+}
+
+.cardFoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid var(--dm-line, rgba(255, 214, 170, 0.08));
+  padding-top: 0.95rem;
+  margin-top: auto;
+}
+
+.reviewDate {
+  font-size: 0.78rem;
+  color: var(--dm-dim, #a09587);
+}
+
+.reportBtn {
+  background: none;
+  border: none;
+  color: var(--dm-dim, #a09587);
+  font-size: 0.76rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+  transition: color 0.2s;
+}
+
+.reportBtn:hover {
+  color: var(--dm-flame, #ff5f2e);
+}
+
+/* Load More */
+.loadMoreWrap {
+  text-align: center;
+  margin-top: 2.5rem;
+}
+
+.loadMoreBtn {
+  padding: 0.85rem 2.2rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.18));
+  color: var(--dm-warm, #fbf3e9);
+  border-radius: 999px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.3s var(--dm-ease, ease);
+}
+
+.loadMoreBtn:hover {
+  border-color: rgba(255, 171, 46, 0.6);
+  color: var(--dm-gold, #ffd79a);
+  box-shadow: var(--dm-glow-amber, 0 0 42px rgba(255, 122, 24, 0.38));
+}
+
+/* Empty State */
+.emptyState {
+  text-align: center;
+  padding: 4.5rem 1.5rem;
+  background: rgba(19, 16, 25, 0.5);
+  border: 1px dashed var(--dm-line, rgba(255, 214, 170, 0.15));
+  border-radius: 24px;
+}
+
+.emptyTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.45rem;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0.85rem 0 0.5rem;
+}
+
+.emptyText {
+  color: var(--dm-dim, #a09587);
+  font-size: 0.94rem;
+  margin: 0 0 1.75rem;
+}
+
+/* Report Modal */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 4, 10, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.modalContent {
+  background: var(--dm-charcoal, #131019);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.18));
+  border-radius: 20px;
+  padding: 2.25rem;
+  max-width: 520px;
+  width: 100%;
+  color: var(--dm-warm, #fbf3e9);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.9);
+}
+
+.modalTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.4rem;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0 0 0.4rem;
+}
+
+.modalSub {
+  font-size: 0.88rem;
+  color: var(--dm-dim, #a09587);
+  margin: 0 0 1.35rem;
+}
+
+.modalField {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 1.1rem;
+}
+
+.modalInput,
+.modalSelect,
+.modalTextarea {
+  width: 100%;
+  background: rgba(10, 8, 14, 0.8);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.15));
+  color: var(--dm-warm, #fbf3e9);
+  padding: 0.75rem 0.95rem;
+  border-radius: 10px;
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.modalInput:focus,
+.modalSelect:focus,
+.modalTextarea:focus {
+  border-color: var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 20px rgba(255, 171, 46, 0.25);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.85rem;
+  margin-top: 1.6rem;
+}
+
+.btnCancel {
+  background: none;
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.18));
+  color: var(--dm-warm, #fbf3e9);
+  padding: 0.65rem 1.25rem;
+  border-radius: 999px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.btnCancel:hover {
+  border-color: var(--dm-dim, #a09587);
+}
+
+.btnReportSubmit {
+  background: var(--dm-flame, #ff5f2e);
+  color: #ffffff;
+  border: none;
+  padding: 0.65rem 1.4rem;
+  border-radius: 999px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(255, 95, 46, 0.4);
+}

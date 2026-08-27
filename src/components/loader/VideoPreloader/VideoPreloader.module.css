@@ -1,0 +1,83 @@
+.root {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  overflow: hidden;
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(ellipse at 50% 50%, rgba(255, 122, 24, 0.12), transparent 62%),
+    #050505;
+  will-change: opacity;
+  transition: opacity 700ms ease;
+}
+
+.fade {
+  opacity: 0;
+}
+
+.video {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  /* merge the film's black backdrop into the site theme (cheap compositing) */
+  mix-blend-mode: screen;
+  transform: translateZ(0);
+}
+
+.glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 60%, rgba(255, 122, 24, 0.14), transparent 55%);
+}
+
+.vignette {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 50% 50%, transparent 45%, rgba(0, 0, 0, 0.85) 100%);
+}
+
+.skip {
+  position: absolute;
+  right: max(4vw, 18px);
+  bottom: max(4vh, 18px);
+  z-index: 2;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 185, 104, 0.35);
+  background: rgba(10, 8, 6, 0.45);
+  backdrop-filter: blur(8px);
+  color: rgba(255, 205, 150, 0.9);
+  font-family: var(--dm-font-display);
+  font-size: clamp(9px, 1.7vw, 11px);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 200ms ease, color 200ms ease;
+}
+
+.skip:hover {
+  border-color: rgba(255, 185, 104, 0.8);
+  color: #ffd79a;
+}
+
+.sound {
+  position: absolute;
+  left: max(4vw, 18px);
+  bottom: max(4vh, 18px);
+  z-index: 2;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 185, 104, 0.45);
+  background: rgba(10, 8, 6, 0.5);
+  color: #ffd79a;
+  font-family: var(--dm-font-display);
+  font-size: clamp(9px, 1.7vw, 11px);
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
