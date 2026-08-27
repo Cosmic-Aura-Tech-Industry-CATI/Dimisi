@@ -2,9 +2,8 @@
 /**
  * vercel-build.mjs
  * Converts TanStack Start dist/ output into Vercel Build Output API format.
- * Vercel docs: https://vercel.com/docs/build-output-api/v3
  */
-import { cpSync, mkdirSync, writeFileSync, readFileSync } from "fs";
+import { cpSync, mkdirSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -21,64 +20,72 @@ cpSync(join(root, "dist", "client", "assets"), join(out, "static", "assets"), { 
 cpSync(join(root, "dist", "client", "favicon.png"), join(out, "static", "favicon.png"));
 cpSync(join(root, "dist", "client", "robots.txt"), join(out, "static", "robots.txt"));
 
-// 3. Copy the server bundle into the function directory
+// 3. Copy server bundle into the function directory
 cpSync(join(root, "dist", "server"), join(out, "functions", "index.func", "server"), { recursive: true });
 
-// 4. Create the Node.js function handler (bridges Web Fetch API ? Node.js req/res)
+// 4. ESM handler - server.js uses "export default", so we use dynamic import()
 writeFileSync(
   join(out, "functions", "index.func", "index.js"),
   `
-const path = require("path");
-const serverPath = path.join(__dirname, "server", "server.js");
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 let _handler;
 async function getHandler() {
   if (!_handler) {
-    const mod = require(serverPath);
+    const mod = await import(join(__dirname, "server", "server.js"));
     _handler = mod.default ?? mod;
   }
   return _handler;
 }
 
-module.exports = async (req, res) => {
-  const handler = await getHandler();
-  const protocol = req.headers["x-forwarded-proto"] || "https";
-  const host = req.headers["x-forwarded-host"] || req.headers["host"];
-  const url = new URL(req.url, protocol + "://" + host);
+export default async function handler(req, res) {
+  try {
+    const h = await getHandler();
 
-  const headers = new Headers();
-  for (const [k, v] of Object.entries(req.headers)) {
-    if (v) headers.set(k, Array.isArray(v) ? v.join(", ") : v);
+    const protocol = req.headers["x-forwarded-proto"] || "https";
+    const host = req.headers["x-forwarded-host"] || req.headers["host"] || "localhost";
+    const url = new URL(req.url, protocol + "://" + host);
+
+    const headers = new Headers();
+    for (const [k, v] of Object.entries(req.headers)) {
+      if (v) headers.set(k, Array.isArray(v) ? v.join(", ") : v);
+    }
+
+    let body = undefined;
+    if (req.method !== "GET" && req.method !== "HEAD") {
+      body = await new Promise((resolve) => {
+        const chunks = [];
+        req.on("data", (c) => chunks.push(c));
+        req.on("end", () => resolve(Buffer.concat(chunks)));
+      });
+    }
+
+    const request = new Request(url.toString(), {
+      method: req.method,
+      headers,
+      ...(body && body.length > 0 ? { body, duplex: "half" } : {}),
+    });
+
+    const response = await h.fetch(request, process.env, {});
+
+    res.statusCode = response.status;
+    response.headers.forEach((v, k) => res.setHeader(k, v));
+    const buf = Buffer.from(await response.arrayBuffer());
+    res.end(buf);
+  } catch (err) {
+    console.error("[SSR] Function crashed:", err);
+    res.statusCode = 500;
+    res.setHeader("content-type", "text/html; charset=utf-8");
+    res.end("<h1>500 - Server Error</h1><pre>" + String(err?.message ?? err) + "</pre>");
   }
-
-  const body =
-    req.method === "GET" || req.method === "HEAD"
-      ? undefined
-      : await new Promise((resolve) => {
-          const chunks = [];
-          req.on("data", (c) => chunks.push(c));
-          req.on("end", () => resolve(Buffer.concat(chunks)));
-        });
-
-  const request = new Request(url.toString(), {
-    method: req.method,
-    headers,
-    body,
-    duplex: "half",
-  });
-
-  const response = await handler.fetch(request, {}, {});
-
-  res.statusCode = response.status;
-  response.headers.forEach((v, k) => res.setHeader(k, v));
-
-  const buf = Buffer.from(await response.arrayBuffer());
-  res.end(buf);
-};
+}
 `.trim()
 );
 
-// 5. Vercel function config
+// 5. Vercel function config - ESM handler needs "type": "module" in package.json or .mjs
 writeFileSync(
   join(out, "functions", "index.func", ".vc-config.json"),
   JSON.stringify({
@@ -89,7 +96,13 @@ writeFileSync(
   }, null, 2)
 );
 
-// 6. Vercel routing config
+// 6. package.json inside the function dir to enable ESM
+writeFileSync(
+  join(out, "functions", "index.func", "package.json"),
+  JSON.stringify({ type: "module" }, null, 2)
+);
+
+// 7. Vercel routing config
 writeFileSync(
   join(out, "config.json"),
   JSON.stringify({
