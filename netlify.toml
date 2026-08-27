@@ -2,12 +2,6 @@
   command   = "npm run build"
   publish   = "dist"
 
-# Disable the auto-injected Next.js plugin — this is a Vite/TanStack Start app.
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
-  [plugins.inputs]
-    _disabled = true
-
 # SPA fallback: send all routes to index.html so client-side routing works.
 [[redirects]]
   from   = "/*"
