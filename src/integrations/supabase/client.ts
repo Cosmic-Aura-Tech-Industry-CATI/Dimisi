@@ -55,8 +55,11 @@ function createSupabaseClient() {
     },
     auth: {
       storage: typeof window !== 'undefined' ? localStorage : undefined,
-      persistSession: true,
-      autoRefreshToken: true,
+      persistSession: typeof window !== 'undefined',
+      autoRefreshToken: typeof window !== 'undefined',
+    },
+    realtime: {
+      transport: typeof window !== 'undefined' ? undefined : null,
     },
   });
 }

@@ -28,6 +28,12 @@ if (existsSync(join(root, "dist", "server"))) {
 
 // 4. Function handler code
 const handlerCode = `
+import { WebSocket as WsWebSocket } from "ws";
+
+if (typeof globalThis.WebSocket === "undefined") {
+  globalThis.WebSocket = WsWebSocket;
+}
+
 let _handler;
 async function getHandler() {
   if (!_handler) {
@@ -81,7 +87,7 @@ export default async function handler(req, res) {
 `.trim();
 
 const vcConfig = JSON.stringify({
-  runtime: "nodejs20.x",
+  runtime: "nodejs22.x",
   handler: "index.js",
   launcherType: "Nodejs",
   shouldAddHelpers: true,
@@ -100,7 +106,6 @@ writeFileSync(join(out, "functions", "[...all].func", ".vc-config.json"), vcConf
 writeFileSync(join(out, "functions", "[...all].func", "package.json"), pkgJson);
 
 // 5. Vercel routing configuration
-// Note: In Vercel Build Output API v3, function destinations are specified as "/index" or "/[...all]", NOT "/index.func"!
 writeFileSync(
   join(out, "config.json"),
   JSON.stringify({
@@ -114,4 +119,4 @@ writeFileSync(
   }, null, 2)
 );
 
-console.log("[vercel-build] .vercel/output ready with correct routing!");
+console.log("[vercel-build] .vercel/output ready for nodejs22.x with WebSocket polyfill!");
