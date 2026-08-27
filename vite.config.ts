@@ -12,6 +12,7 @@ export default defineConfig(({ command }) => ({
     tsconfigPaths: true,
     alias: {
       "@": path.resolve(import.meta.dirname, "./src"),
+      "@admin": path.resolve(import.meta.dirname, "./dimisi-admin"),
     },
   },
   ssr: {

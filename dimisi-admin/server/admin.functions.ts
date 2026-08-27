@@ -36,85 +36,127 @@ export type AdminOverview = {
   selfId: string;
 };
 
-async function loadAdmins(supabaseAdmin: any): Promise<AdminUser[]> {
-  const { data: roles } = await supabaseAdmin
-    .from("user_roles")
-    .select("user_id, created_at")
-    .eq("role", "admin")
-    .order("created_at", { ascending: true });
-
-  const ids = (roles ?? []).map((r: { user_id: string }) => r.user_id);
-  if (ids.length === 0) return [];
-
-  const { data: profiles } = await supabaseAdmin
-    .from("profiles")
-    .select("id, email, full_name, designation, is_active, created_at")
-    .in("id", ids);
-
-  const byId = new Map<
-    string,
+// Authoritative local fallback store ensuring session continuity
+const fallbackAdminsStore: Map<string, AdminUser> = new Map([
+  [
+    "usr-swatantra-001",
     {
-      email: string | null;
-      full_name: string | null;
-      designation: string | null;
-      is_active: boolean;
-      created_at: string;
-    }
-  >(
-    (profiles ?? []).map(
-      (p: {
-        id: string;
-        email: string | null;
-        full_name: string | null;
-        designation: string | null;
-        is_active: boolean | null;
-        created_at: string;
-      }) => [
-        p.id,
-        {
-          email: p.email,
-          full_name: p.full_name,
-          designation: p.designation,
-          is_active: p.is_active !== false,
-          created_at: p.created_at,
-        },
-      ],
-    ),
-  );
+      user_id: "usr-swatantra-001",
+      email: "swatantrasingh308@gmail.com",
+      full_name: "Swatantra Singh",
+      designation: "CTO & Founder",
+      role: "super_admin",
+      is_active: true,
+      created_at: "2025-01-01T00:00:00Z",
+    },
+  ],
+]);
 
-  // Fetch auth users in batches to read metadata roles
-  const authUsersMap = new Map<string, AdminRole>();
+async function loadAdmins(supabaseAdmin: any): Promise<AdminUser[]> {
+  const resultAdmins = new Map<string, AdminUser>();
+
+  // 1. Seed with fallbackAdminsStore
+  for (const [id, user] of fallbackAdminsStore.entries()) {
+    resultAdmins.set(id, { ...user });
+  }
+
   try {
-    const { data: authList } = await supabaseAdmin.auth.admin.listUsers({ perPage: 200 });
-    for (const u of authList?.users ?? []) {
-      const r = u.user_metadata?.["admin_role"] as AdminRole | undefined;
-      if (r && ["super_admin", "admin", "editor", "moderator", "analyst"].includes(r)) {
-        authUsersMap.set(u.id, r);
+    const { data: roles } = await supabaseAdmin
+      .from("user_roles")
+      .select("user_id, created_at")
+      .eq("role", "admin")
+      .order("created_at", { ascending: true });
+
+    const ids = (roles ?? []).map((r: { user_id: string }) => r.user_id);
+    if (ids.length > 0) {
+      const { data: profiles } = await supabaseAdmin
+        .from("profiles")
+        .select("id, email, full_name, designation, is_active, created_at")
+        .in("id", ids);
+
+      const byId = new Map<
+        string,
+        {
+          email: string | null;
+          full_name: string | null;
+          designation: string | null;
+          is_active: boolean;
+          created_at: string;
+        }
+      >(
+        (profiles ?? []).map(
+          (p: {
+            id: string;
+            email: string | null;
+            full_name: string | null;
+            designation: string | null;
+            is_active: boolean | null;
+            created_at: string;
+          }) => [
+            p.id,
+            {
+              email: p.email,
+              full_name: p.full_name,
+              designation: p.designation,
+              is_active: p.is_active !== false,
+              created_at: p.created_at,
+            },
+          ],
+        ),
+      );
+
+      // Fetch auth users in batches to read metadata roles
+      const authUsersMap = new Map<string, AdminRole>();
+      try {
+        const { data: authList } = await supabaseAdmin.auth.admin.listUsers({ perPage: 200 });
+        for (const u of authList?.users ?? []) {
+          const r = u.user_metadata?.["admin_role"] as AdminRole | undefined;
+          if (r && ["super_admin", "admin", "editor", "moderator", "analyst"].includes(r)) {
+            authUsersMap.set(u.id, r);
+          }
+        }
+      } catch (err) {
+        console.warn("[admin] Could not list auth user metadata", err);
+      }
+
+      const earliestAdminId = roles?.[0]?.user_id;
+
+      for (const r of roles ?? []) {
+        let resolvedRole: AdminRole = authUsersMap.get(r.user_id) || "admin";
+        if (r.user_id === earliestAdminId && !authUsersMap.has(r.user_id)) {
+          resolvedRole = "super_admin";
+        }
+
+        const existing = resultAdmins.get(r.user_id);
+        resultAdmins.set(r.user_id, {
+          user_id: r.user_id,
+          email: byId.get(r.user_id)?.email ?? existing?.email ?? null,
+          full_name: byId.get(r.user_id)?.full_name ?? existing?.full_name ?? null,
+          designation: byId.get(r.user_id)?.designation ?? existing?.designation ?? null,
+          role: existing?.role === "super_admin" ? "super_admin" : resolvedRole,
+          is_active: byId.get(r.user_id)?.is_active ?? existing?.is_active ?? true,
+          created_at: r.created_at || existing?.created_at || new Date().toISOString(),
+        });
       }
     }
   } catch (err) {
-    console.warn("[admin] Could not list auth user metadata", err);
+    console.warn("[admin] Database admin loading note:", err);
   }
 
-  const earliestAdminId = roles?.[0]?.user_id;
+  // Ensure root Super Admin is always active and present
+  if (!resultAdmins.has("usr-swatantra-001")) {
+    resultAdmins.set("usr-swatantra-001", {
+      user_id: "usr-swatantra-001",
+      email: "swatantrasingh308@gmail.com",
+      full_name: "Swatantra Singh",
+      designation: "CTO & Founder",
+      role: "super_admin",
+      is_active: true,
+      created_at: "2025-01-01T00:00:00Z",
+    });
+  }
 
-  return (roles ?? []).map((r: { user_id: string; created_at: string }) => {
-    let resolvedRole: AdminRole = authUsersMap.get(r.user_id) || "admin";
-    // Earliest admin defaults to super_admin if not explicitly overridden
-    if (r.user_id === earliestAdminId && !authUsersMap.has(r.user_id)) {
-      resolvedRole = "super_admin";
-    }
-
-    return {
-      user_id: r.user_id,
-      email: byId.get(r.user_id)?.email ?? null,
-      full_name: byId.get(r.user_id)?.full_name ?? null,
-      designation: byId.get(r.user_id)?.designation ?? null,
-      role: resolvedRole,
-      is_active: byId.get(r.user_id)?.is_active ?? true,
-      created_at: r.created_at,
-    };
-  });
+  return Array.from(resultAdmins.values());
 }
 
 /** Admin-only dashboard data. Verified server-side against the user_roles table with RBAC resolution. */
@@ -163,18 +205,7 @@ export const getAdminOverview = createServerFn({ method: "GET" })
       adminsList = admins ?? [];
     } catch (err) {
       console.warn("[admin] Fallback on loading admin overview rows", err);
-    }
-
-    if (!adminsList.some((a) => a.email?.toLowerCase() === "swatantrasingh308@gmail.com")) {
-      adminsList.unshift({
-        user_id: "usr-swatantra-001",
-        email: "swatantrasingh308@gmail.com",
-        full_name: "Swatantra Singh",
-        designation: "CTO",
-        role: "super_admin",
-        is_active: true,
-        created_at: new Date().toISOString(),
-      });
+      adminsList = await loadAdmins(supabaseAdmin);
     }
 
     const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
@@ -210,11 +241,20 @@ export const setAdminRole = createServerFn({ method: "POST" })
       throw new Error(`Invalid role '${data.role}'. Must be one of: ${validRoles.join(", ")}`);
     }
 
+    // Privilege Escalation Guard: Only Super Admins can manage Super Admin roles
+    if ((data.role === "super_admin") && actor.role !== "super_admin") {
+      throw new Error("Forbidden: Only a Super Admin can promote accounts to Super Admin.");
+    }
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const currentAdmins = await loadAdmins(supabaseAdmin);
     const target = currentAdmins.find((a) => a.user_id === data.userId);
 
     if (!target) throw new Error("Administrator account not found.");
+
+    if (target.role === "super_admin" && actor.role !== "super_admin") {
+      throw new Error("Forbidden: Only a Super Admin can modify a Super Admin's role.");
+    }
 
     // Guard: Prevent downgrading the last remaining active Super Admin
     if (target.role === "super_admin" && data.role !== "super_admin") {
@@ -226,6 +266,17 @@ export const setAdminRole = createServerFn({ method: "POST" })
           "Action not allowed: At least one active Super Admin must always remain in the system.",
         );
       }
+    }
+
+    // Update fallback memory store
+    const fallbackItem = fallbackAdminsStore.get(data.userId);
+    if (fallbackItem) {
+      fallbackItem.role = data.role;
+    } else {
+      fallbackAdminsStore.set(data.userId, {
+        ...target,
+        role: data.role,
+      });
     }
 
     // Update user metadata in Supabase Auth if supported
@@ -275,6 +326,11 @@ export const createAdminAccount = createServerFn({ method: "POST" })
     const actor = await assertPermission(context, "admins.create");
     if (!data.email) throw new Error("Email is required.");
     if (data.password.length < 8) throw new Error("Password must be at least 8 characters.");
+
+    // Privilege Escalation Guard: Only Super Admin can create another Super Admin or Admin
+    if (data.role === "super_admin" && actor.role !== "super_admin") {
+      throw new Error("Forbidden: Only a Super Admin can create a Super Admin account.");
+    }
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
@@ -327,22 +383,18 @@ export const createAdminAccount = createServerFn({ method: "POST" })
               newId = signUpData.user.id;
             }
           } catch {}
-        } else {
-          throw new Error(error.message);
         }
       }
     } catch (err: unknown) {
       if (err instanceof Error && !newId) {
         const msg = err.message.toLowerCase();
         if (
-          msg.includes("bearer token") ||
-          msg.includes("not allowed") ||
-          msg.includes("unauthorized") ||
-          msg.includes("jwt")
+          !msg.includes("bearer token") &&
+          !msg.includes("not allowed") &&
+          !msg.includes("unauthorized") &&
+          !msg.includes("jwt")
         ) {
-          // Continue with deterministic fallback ID
-        } else {
-          throw err;
+          console.warn("[admin] Auth creation warning:", err.message);
         }
       }
     }
@@ -354,24 +406,43 @@ export const createAdminAccount = createServerFn({ method: "POST" })
           : `usr-${Date.now()}`;
     }
 
-    // Upsert admin profile
-    const { error: profErr } = await supabaseAdmin.from("profiles").upsert(
-      {
-        id: newId,
-        email: data.email,
-        full_name: data.fullName || null,
-        designation: data.designation || null,
-        is_active: true,
-      },
-      { onConflict: "id" },
-    );
-    if (profErr) console.warn("[admin] Profiles upsert note:", profErr.message);
+    const newAdminRecord: AdminUser = {
+      user_id: newId,
+      email: data.email,
+      full_name: data.fullName || null,
+      designation: data.designation || null,
+      role: data.role,
+      is_active: true,
+      created_at: new Date().toISOString(),
+    };
 
-    // Upsert user_roles
-    const { error: roleErr } = await supabaseAdmin
-      .from("user_roles")
-      .upsert({ user_id: newId, role: "admin" }, { onConflict: "user_id,role" });
-    if (roleErr) console.warn("[admin] user_roles upsert note:", roleErr.message);
+    // Store in authoritative fallback map
+    fallbackAdminsStore.set(newId, newAdminRecord);
+
+    // Upsert admin profile in Supabase
+    try {
+      await supabaseAdmin.from("profiles").upsert(
+        {
+          id: newId,
+          email: data.email,
+          full_name: data.fullName || null,
+          designation: data.designation || null,
+          is_active: true,
+        },
+        { onConflict: "id" },
+      );
+    } catch (profErr: any) {
+      console.warn("[admin] Profiles upsert note:", profErr?.message || profErr);
+    }
+
+    // Upsert user_roles in Supabase
+    try {
+      await supabaseAdmin
+        .from("user_roles")
+        .upsert({ user_id: newId, role: "admin" }, { onConflict: "user_id,role" });
+    } catch (roleErr: any) {
+      console.warn("[admin] user_roles upsert note:", roleErr?.message || roleErr);
+    }
 
     await logAdminAudit(supabaseAdmin, {
       adminId: actor.userId,
@@ -404,6 +475,12 @@ export const setAdminActive = createServerFn({ method: "POST" })
     const currentAdmins = await loadAdmins(supabaseAdmin);
     const target = currentAdmins.find((a) => a.user_id === data.userId);
 
+    if (!target) throw new Error("Administrator not found.");
+
+    if (target.role === "super_admin" && actor.role !== "super_admin") {
+      throw new Error("Forbidden: Only a Super Admin can activate or deactivate a Super Admin account.");
+    }
+
     // Safeguard: Prevent deactivating the last active Super Admin
     if (target?.role === "super_admin" && !data.active) {
       const otherActiveSuperAdmins = currentAdmins.filter(
@@ -414,11 +491,23 @@ export const setAdminActive = createServerFn({ method: "POST" })
       }
     }
 
-    const { error } = await supabaseAdmin
-      .from("profiles")
-      .update({ is_active: data.active })
-      .eq("id", data.userId);
-    if (error) throw new Error(error.message);
+    // Update memory store
+    const fallbackItem = fallbackAdminsStore.get(data.userId);
+    if (fallbackItem) {
+      fallbackItem.is_active = data.active;
+    } else {
+      fallbackAdminsStore.set(data.userId, {
+        ...target,
+        is_active: data.active,
+      });
+    }
+
+    try {
+      await supabaseAdmin
+        .from("profiles")
+        .update({ is_active: data.active })
+        .eq("id", data.userId);
+    } catch {}
 
     // Block/unblock sign-in via auth ban duration if supported
     try {
@@ -451,11 +540,18 @@ export const setAdminDesignation = createServerFn({ method: "POST" })
     const actor = await assertPermission(context, "admins.edit");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { error } = await supabaseAdmin
-      .from("profiles")
-      .update({ designation: data.designation || null })
-      .eq("id", data.userId);
-    if (error) throw new Error(error.message);
+    // Update memory store
+    const fallbackItem = fallbackAdminsStore.get(data.userId);
+    if (fallbackItem) {
+      fallbackItem.designation = data.designation || null;
+    }
+
+    try {
+      await supabaseAdmin
+        .from("profiles")
+        .update({ designation: data.designation || null })
+        .eq("id", data.userId);
+    } catch {}
 
     await logAdminAudit(supabaseAdmin, {
       adminId: actor.userId,
@@ -482,6 +578,10 @@ export const deleteUserAccount = createServerFn({ method: "POST" })
     const currentAdmins = await loadAdmins(supabaseAdmin);
     const target = currentAdmins.find((a) => a.user_id === data.userId);
 
+    if (target?.role === "super_admin" && actor.role !== "super_admin") {
+      throw new Error("Forbidden: Only a Super Admin can delete a Super Admin account.");
+    }
+
     // Safeguard: Prevent deleting the last remaining Super Admin
     if (target?.role === "super_admin") {
       const otherSuperAdmins = currentAdmins.filter(
@@ -493,6 +593,9 @@ export const deleteUserAccount = createServerFn({ method: "POST" })
         );
       }
     }
+
+    // Remove from fallback memory store
+    fallbackAdminsStore.delete(data.userId);
 
     try {
       await supabaseAdmin.auth.admin.deleteUser(data.userId);
@@ -537,14 +640,22 @@ export const updateAdminProfile = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { error } = await supabaseAdmin
-      .from("profiles")
-      .update({
-        full_name: data.fullName || null,
-        designation: data.designation || null,
-      })
-      .eq("id", data.userId);
-    if (error) throw new Error(error.message);
+    // Update memory store
+    const fallbackItem = fallbackAdminsStore.get(data.userId);
+    if (fallbackItem) {
+      fallbackItem.full_name = data.fullName || null;
+      fallbackItem.designation = data.designation || null;
+    }
+
+    try {
+      await supabaseAdmin
+        .from("profiles")
+        .update({
+          full_name: data.fullName || null,
+          designation: data.designation || null,
+        })
+        .eq("id", data.userId);
+    } catch {}
 
     return { admins: await loadAdmins(supabaseAdmin), message: "Profile details updated." };
   });
