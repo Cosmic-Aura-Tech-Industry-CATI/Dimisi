@@ -240,6 +240,8 @@ export const submitReview = createServerFn({ method: "POST" })
       reviewerType?: "client" | "employee";
       serviceName?: string;
       roleOrTitle?: string;
+      employeeDepartment?: string;
+      employmentStatus?: "current" | "former";
       rating: number;
       reviewText: string;
       customerLocation?: string;
@@ -255,6 +257,8 @@ export const submitReview = createServerFn({ method: "POST" })
       reviewerType: input.reviewerType === "employee" ? ("employee" as const) : ("client" as const),
       serviceName: sanitizeText(input.serviceName, 120),
       roleOrTitle: sanitizeText(input.roleOrTitle, 120),
+      employeeDepartment: sanitizeText(input.employeeDepartment, 120),
+      employmentStatus: input.employmentStatus === "former" ? ("former" as const) : ("current" as const),
       rating: Math.round(Number(input.rating) || 0),
       reviewText: sanitizeText(input.reviewText, REVIEW_TEXT_MAX),
       customerLocation: sanitizeText(input.customerLocation, 120),
@@ -324,6 +328,9 @@ export const submitReview = createServerFn({ method: "POST" })
       photoUrl = data.photo.dataUrl; // stored securely
     }
 
+    // Server determines initial verification (e.g. employee with @dimisi.in email domain)
+    const isVerifiedDomain = data.reviewerType === "employee" && data.customerEmail && data.customerEmail.endsWith("@dimisi.in");
+
     const newReview: AdminReview = {
       id: crypto.randomUUID(),
       campaign_id: campaignId,
@@ -334,6 +341,9 @@ export const submitReview = createServerFn({ method: "POST" })
       service_name: data.serviceName || null,
       reviewer_type: data.reviewerType,
       role_or_title: data.roleOrTitle || null,
+      employee_department: data.employeeDepartment || null,
+      employment_status: data.reviewerType === "employee" ? data.employmentStatus : null,
+      is_verified: isVerifiedDomain ? true : false,
       rating: data.rating,
       review_text: data.reviewText,
       customer_photo_url: photoUrl,
@@ -388,7 +398,7 @@ export const submitReview = createServerFn({ method: "POST" })
     return {
       ok: true,
       message:
-        "Thank you for sharing your feedback. Your review has been submitted and will be published after approval.",
+        "Thank you for sharing your experience with DIMISI. Your review has been submitted and will be published after approval by our team.",
     };
   });
 
@@ -653,6 +663,9 @@ export const updateReviewContent = createServerFn({ method: "POST" })
       serviceName?: string;
       reviewerType?: "client" | "employee";
       roleOrTitle?: string;
+      employeeDepartment?: string;
+      employmentStatus?: "current" | "former";
+      isVerified?: boolean;
       reviewText: string;
       customerLocation?: string;
       rating?: number;
@@ -662,6 +675,9 @@ export const updateReviewContent = createServerFn({ method: "POST" })
       serviceName: sanitizeText(input.serviceName, 120),
       reviewerType: input.reviewerType === "employee" ? ("employee" as const) : ("client" as const),
       roleOrTitle: sanitizeText(input.roleOrTitle, 120),
+      employeeDepartment: sanitizeText(input.employeeDepartment, 120),
+      employmentStatus: input.employmentStatus === "former" ? ("former" as const) : ("current" as const),
+      isVerified: input.isVerified !== undefined ? Boolean(input.isVerified) : undefined,
       reviewText: sanitizeText(input.reviewText, REVIEW_TEXT_MAX),
       customerLocation: sanitizeText(input.customerLocation, 120),
       rating: input.rating ? Math.min(5, Math.max(1, Math.round(Number(input.rating)))) : undefined,
@@ -680,6 +696,9 @@ export const updateReviewContent = createServerFn({ method: "POST" })
       service_name: review.service_name,
       reviewer_type: review.reviewer_type,
       role_or_title: review.role_or_title,
+      employee_department: review.employee_department,
+      employment_status: review.employment_status,
+      is_verified: review.is_verified,
       review_text: review.review_text,
       customer_location: review.customer_location,
       rating: review.rating,
@@ -689,6 +708,9 @@ export const updateReviewContent = createServerFn({ method: "POST" })
     review.service_name = data.serviceName || null;
     review.reviewer_type = data.reviewerType;
     review.role_or_title = data.roleOrTitle || null;
+    if (data.employeeDepartment !== undefined) review.employee_department = data.employeeDepartment || null;
+    if (data.employmentStatus !== undefined) review.employment_status = data.reviewerType === "employee" ? data.employmentStatus : null;
+    if (data.isVerified !== undefined) review.is_verified = data.isVerified;
     review.review_text = data.reviewText;
     review.customer_location = data.customerLocation || null;
     if (data.rating) review.rating = data.rating;
@@ -724,6 +746,9 @@ export const updateReviewContent = createServerFn({ method: "POST" })
         service_name: review.service_name,
         reviewer_type: review.reviewer_type,
         role_or_title: review.role_or_title,
+        employee_department: review.employee_department,
+        employment_status: review.employment_status,
+        is_verified: review.is_verified,
         review_text: review.review_text,
         customer_location: review.customer_location,
         rating: review.rating,
@@ -732,6 +757,48 @@ export const updateReviewContent = createServerFn({ method: "POST" })
     );
 
     return { ok: true, message: "Review content successfully updated." };
+  });
+
+/** Admin: Toggle verified status (for verified client / verified employee). */
+export const toggleReviewVerified = createServerFn({ method: "POST" })
+  .validator((input: { reviewId: string; isVerified: boolean }) => ({
+    reviewId: String(input.reviewId ?? ""),
+    isVerified: Boolean(input.isVerified),
+  }))
+  .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
+    const { memoryStore, logAudit } = await import("./reviews.server");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const ip = null;
+
+    const review = memoryStore.reviews.find((r) => r.id === data.reviewId);
+    if (!review) throw new Error("Review not found.");
+
+    review.is_verified = data.isVerified;
+    review.updated_at = new Date().toISOString();
+
+    try {
+      if (supabaseAdmin) {
+        await supabaseAdmin
+          .from("reviews")
+          .update({ is_verified: data.isVerified, updated_at: review.updated_at })
+          .eq("id", data.reviewId);
+      }
+    } catch (err) {
+      console.warn("[reviews] Supabase toggle verified fallback", err);
+    }
+
+    await logAudit(
+      supabaseAdmin,
+      "admin",
+      `toggle_verified_${data.isVerified ? "true" : "false"}`,
+      "review",
+      data.reviewId,
+      { is_verified: !data.isVerified },
+      { is_verified: data.isVerified },
+      ip,
+    );
+
+    return { ok: true, message: `Review marked as ${data.isVerified ? "verified" : "unverified"}.` };
   });
 
 /** Admin: Toggle featured status. */

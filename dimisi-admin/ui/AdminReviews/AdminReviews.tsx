@@ -23,6 +23,8 @@ import {
   Code2,
   Users,
   Briefcase,
+  BadgeCheck,
+  ShieldCheck,
 } from "lucide-react";
 import {
   DIMISI_SERVICES,
@@ -35,6 +37,7 @@ import {
   updateReviewStatus,
   updateReviewContent,
   toggleReviewFeatured,
+  toggleReviewVerified,
   deleteReview,
 } from "@/lib/reviews.functions";
 import styles from "./AdminReviews.module.css";
@@ -49,10 +52,12 @@ export function AdminReviews({
   const changeStatus = useServerFn(updateReviewStatus);
   const editContent = useServerFn(updateReviewContent);
   const setFeatured = useServerFn(toggleReviewFeatured);
+  const setVerified = useServerFn(toggleReviewVerified);
   const removeReview = useServerFn(deleteReview);
 
   const [statusTab, setStatusTab] = useState<"all" | ReviewStatus>("all");
   const [reviewerTypeFilter, setReviewerTypeFilter] = useState<"all" | "client" | "employee">("all");
+  const [verificationFilter, setVerificationFilter] = useState<"all" | "verified" | "unverified">("all");
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [serviceFilter, setServiceFilter] = useState<string>("");
   const [search, setSearch] = useState<string>("");
@@ -68,6 +73,9 @@ export function AdminReviews({
   const [editName, setEditName] = useState("");
   const [editType, setEditType] = useState<ReviewType>("client");
   const [editRole, setEditRole] = useState("");
+  const [editDepartment, setEditDepartment] = useState("");
+  const [editEmploymentStatus, setEditEmploymentStatus] = useState<"current" | "former">("current");
+  const [editVerified, setEditVerified] = useState(false);
   const [editService, setEditService] = useState("");
   const [editLocation, setEditLocation] = useState("");
   const [editRating, setEditRating] = useState(5);
@@ -80,6 +88,8 @@ export function AdminReviews({
   const filtered = reviews.filter((r) => {
     if (statusTab !== "all" && r.status !== statusTab) return false;
     if (reviewerTypeFilter !== "all" && (r.reviewer_type || "client") !== reviewerTypeFilter) return false;
+    if (verificationFilter === "verified" && !r.is_verified) return false;
+    if (verificationFilter === "unverified" && r.is_verified) return false;
     if (ratingFilter > 0 && Math.round(r.rating) !== ratingFilter) return false;
     if (serviceFilter && r.service_name !== serviceFilter) return false;
     if (search) {
@@ -88,6 +98,7 @@ export function AdminReviews({
         r.customer_name.toLowerCase().includes(q) ||
         r.review_text.toLowerCase().includes(q) ||
         (r.role_or_title && r.role_or_title.toLowerCase().includes(q)) ||
+        (r.employee_department && r.employee_department.toLowerCase().includes(q)) ||
         (r.customer_email && r.customer_email.toLowerCase().includes(q)) ||
         (r.customer_location && r.customer_location.toLowerCase().includes(q));
       if (!match) return false;
@@ -101,6 +112,7 @@ export function AdminReviews({
   const archivedCount = reviews.filter((r) => r.status === "archived").length;
   const clientCount = reviews.filter((r) => (r.reviewer_type || "client") === "client").length;
   const employeeCount = reviews.filter((r) => r.reviewer_type === "employee").length;
+  const verifiedCount = reviews.filter((r) => r.is_verified).length;
 
   const handleApprove = (rev: AdminReview) => {
     startTransition(async () => {
@@ -170,12 +182,29 @@ export function AdminReviews({
     });
   };
 
+  const handleToggleVerified = (rev: AdminReview) => {
+    startTransition(async () => {
+      try {
+        await setVerified({ data: { reviewId: rev.id, isVerified: !rev.is_verified } });
+        onRefresh();
+        if (viewingReview?.id === rev.id) {
+          setViewingReview({ ...viewingReview, is_verified: !rev.is_verified });
+        }
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Error updating verification status.");
+      }
+    });
+  };
+
   const handleEditOpen = (rev: AdminReview) => {
     setEditingReview(rev);
     setEditText(rev.review_text);
     setEditName(rev.customer_name);
     setEditType((rev.reviewer_type as ReviewType) || "client");
     setEditRole(rev.role_or_title || "");
+    setEditDepartment(rev.employee_department || "");
+    setEditEmploymentStatus(rev.employment_status || "current");
+    setEditVerified(Boolean(rev.is_verified));
     setEditService(rev.service_name || "");
     setEditLocation(rev.customer_location || "");
     setEditRating(rev.rating);
@@ -191,6 +220,9 @@ export function AdminReviews({
             customerName: editName,
             reviewerType: editType,
             roleOrTitle: editRole,
+            employeeDepartment: editDepartment,
+            employmentStatus: editEmploymentStatus,
+            isVerified: editVerified,
             reviewText: editText,
             ...(editService ? { serviceName: editService } : {}),
             ...(editLocation ? { customerLocation: editLocation } : {}),
@@ -222,6 +254,36 @@ export function AdminReviews({
 
   return (
     <div className={styles.wrap}>
+      {/* Top Summary Stats Bar */}
+      <div className={styles.summaryBar}>
+        <div className={styles.summaryItem}>
+          <span className={styles.summaryLabel}>TOTAL REVIEWS</span>
+          <span className={styles.summaryVal}>{reviews.length}</span>
+        </div>
+        <div className={styles.summaryItem}>
+          <span className={styles.summaryLabel}>CLIENTS</span>
+          <span className={styles.summaryVal}>{clientCount}</span>
+        </div>
+        <div className={styles.summaryItem}>
+          <span className={styles.summaryLabel}>EMPLOYEES</span>
+          <span className={styles.summaryVal}>{employeeCount}</span>
+        </div>
+        <div className={styles.summaryItem}>
+          <span className={styles.summaryLabel}>VERIFIED</span>
+          <span className={styles.summaryVal}>{verifiedCount}</span>
+        </div>
+        <div className={styles.summaryItem}>
+          <span className={styles.summaryLabel}>PENDING</span>
+          <span className={[styles.summaryVal, pendingCount > 0 ? styles.summaryAlert : ""].join(" ")}>
+            {pendingCount}
+          </span>
+        </div>
+        <div className={styles.summaryItem}>
+          <span className={styles.summaryLabel}>APPROVED</span>
+          <span className={styles.summaryVal}>{approvedCount}</span>
+        </div>
+      </div>
+
       {/* Top Status Tabs */}
       <div className={styles.topBar}>
         <div className={styles.statusTabs}>
@@ -230,7 +292,7 @@ export function AdminReviews({
             className={[styles.statusTab, statusTab === "all" ? styles.statusTabActive : ""].join(" ")}
             onClick={() => setStatusTab("all")}
           >
-            <span>All Reviews</span>
+            <span>All Statuses</span>
             <span className={styles.tabBadge}>{reviews.length}</span>
           </button>
           <button
@@ -276,7 +338,7 @@ export function AdminReviews({
           <Search size={15} className={styles.searchIcon} />
           <input
             type="text"
-            placeholder="Search by customer, role, review content, location..."
+            placeholder="Search by reviewer, email, role, department, review text..."
             className={styles.searchInput}
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -292,6 +354,17 @@ export function AdminReviews({
           <option value="all">All Reviewer Types ({reviews.length})</option>
           <option value="client">Clients &amp; Partners ({clientCount})</option>
           <option value="employee">Employees &amp; Staff ({employeeCount})</option>
+        </select>
+
+        {/* Verification Status Filter */}
+        <select
+          className={styles.filterSelect}
+          value={verificationFilter}
+          onChange={(e) => setVerificationFilter(e.target.value as any)}
+        >
+          <option value="all">All Verification Statuses</option>
+          <option value="verified">Verified Only ({verifiedCount})</option>
+          <option value="unverified">Unverified Only ({reviews.length - verifiedCount})</option>
         </select>
 
         <select
@@ -329,8 +402,9 @@ export function AdminReviews({
               <tr>
                 <th>Reviewer</th>
                 <th>Type</th>
+                <th>Verification</th>
                 <th>Rating</th>
-                <th>Service / Role &amp; Snippet</th>
+                <th>Service / Department &amp; Snippet</th>
                 <th>Status</th>
                 <th>Submitted</th>
                 <th style={{ textAlign: "right" }}>Actions</th>
@@ -339,7 +413,7 @@ export function AdminReviews({
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className={styles.emptyState}>
+                  <td colSpan={8} className={styles.emptyState}>
                     No reviews found matching your filters.
                   </td>
                 </tr>
@@ -388,6 +462,22 @@ export function AdminReviews({
                       </td>
 
                       <td>
+                        <button
+                          type="button"
+                          className={[
+                            styles.verifyToggleBtn,
+                            rev.is_verified ? styles.verifiedBadge : styles.unverifiedBadge,
+                          ].join(" ")}
+                          onClick={() => handleToggleVerified(rev)}
+                          disabled={isPending}
+                          title={rev.is_verified ? "Click to revoke verification" : "Click to mark as verified"}
+                        >
+                          <BadgeCheck size={12} />
+                          <span>{rev.is_verified ? "Verified" : "Unverified"}</span>
+                        </button>
+                      </td>
+
+                      <td>
                         <div className={styles.stars}>
                           {[1, 2, 3, 4, 5].map((s) => (
                             <Star key={s} size={13} fill={s <= rev.rating ? "currentColor" : "none"} />
@@ -397,7 +487,7 @@ export function AdminReviews({
 
                       <td>
                         <div style={{ maxWidth: "260px" }}>
-                          {rev.service_name ? (
+                          {rev.service_name || rev.employee_department ? (
                             <span
                               style={{
                                 fontSize: "0.72rem",
@@ -406,7 +496,7 @@ export function AdminReviews({
                                 display: "block",
                               }}
                             >
-                              {rev.service_name}
+                              {rev.service_name || rev.employee_department}
                             </span>
                           ) : null}
                           <span style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
@@ -579,13 +669,23 @@ export function AdminReviews({
                   <div className={styles.detailVal}>{viewingReview.role_or_title || "Not specified"}</div>
                 </div>
                 <div>
-                  <div className={styles.detailLabel}>Status</div>
-                  <div className={styles.detailVal} style={{ textTransform: "capitalize" }}>
-                    {viewingReview.status} {viewingReview.is_featured ? "🔥 Featured" : ""}
+                  <div className={styles.detailLabel}>Verification Status</div>
+                  <div className={styles.detailVal}>
+                    <button
+                      type="button"
+                      className={[
+                        styles.verifyToggleBtn,
+                        viewingReview.is_verified ? styles.verifiedBadge : styles.unverifiedBadge,
+                      ].join(" ")}
+                      onClick={() => handleToggleVerified(viewingReview)}
+                    >
+                      <BadgeCheck size={13} />
+                      <span>{viewingReview.is_verified ? "Verified Identity" : "Unverified (Click to verify)"}</span>
+                    </button>
                   </div>
                 </div>
                 <div>
-                  <div className={styles.detailLabel}>Email Address</div>
+                  <div className={styles.detailLabel}>Email Address (Internal Only)</div>
                   <div className={styles.detailVal}>
                     {viewingReview.customer_email ? (
                       <a href={`mailto:${viewingReview.customer_email}`} style={{ color: "#ffab2e" }}>
@@ -598,10 +698,13 @@ export function AdminReviews({
                   </div>
                 </div>
                 <div>
-                  <div className={styles.detailLabel}>Location / Hub</div>
+                  <div className={styles.detailLabel}>Location / Department</div>
                   <div className={styles.detailVal}>
-                    <MapPin size={12} style={{ display: "inline", marginRight: "4px" }} />
-                    {viewingReview.customer_location || "Not specified"}
+                    {viewingReview.reviewer_type === "employee" ? (
+                      <span>{viewingReview.employee_department || "Kanpur Engineering Hub"} ({viewingReview.employment_status || "current"})</span>
+                    ) : (
+                      <span>{viewingReview.customer_location || "Not specified"}</span>
+                    )}
                   </div>
                 </div>
                 <div>
@@ -833,25 +936,55 @@ export function AdminReviews({
 
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Service / Department</label>
+                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                  {editType === "employee" ? "Department" : "Service Category"}
+                </label>
                 <input
                   type="text"
                   className={styles.searchInput}
-                  value={editService}
-                  onChange={(e) => setEditService(e.target.value)}
+                  value={editType === "employee" ? editDepartment : editService}
+                  onChange={(e) => {
+                    if (editType === "employee") setEditDepartment(e.target.value);
+                    else setEditService(e.target.value);
+                  }}
                   style={{ width: "100%", padding: "0.5rem" }}
                 />
               </div>
               <div>
-                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Location / Hub</label>
-                <input
-                  type="text"
-                  className={styles.searchInput}
-                  value={editLocation}
-                  onChange={(e) => setEditLocation(e.target.value)}
-                  style={{ width: "100%", padding: "0.5rem" }}
-                />
+                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
+                  {editType === "employee" ? "Employment Status" : "Location"}
+                </label>
+                {editType === "employee" ? (
+                  <select
+                    className={styles.filterSelect}
+                    value={editEmploymentStatus}
+                    onChange={(e) => setEditEmploymentStatus(e.target.value as any)}
+                    style={{ width: "100%", padding: "0.5rem" }}
+                  >
+                    <option value="current">Current Employee</option>
+                    <option value="former">Former Employee</option>
+                  </select>
+                ) : (
+                  <input
+                    type="text"
+                    className={styles.searchInput}
+                    value={editLocation}
+                    onChange={(e) => setEditLocation(e.target.value)}
+                    style={{ width: "100%", padding: "0.5rem" }}
+                  />
+                )}
               </div>
+            </div>
+
+            <div style={{ marginBottom: "0.85rem" }}>
+              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.84rem", color: "#cbd5e1", cursor: "pointer" }}>
+                <input
+                  type="checkbox"
+                  checked={editVerified}
+                  onChange={(e) => setEditVerified(e.target.checked)}
+                />
+                <span>Mark as Verified ({editType === "employee" ? "Verified Employee" : "Verified Client"})</span>
+              </label>
             </div>
 
             <div style={{ marginBottom: "1rem" }}>

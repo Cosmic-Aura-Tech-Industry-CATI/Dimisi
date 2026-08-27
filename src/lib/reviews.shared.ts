@@ -53,6 +53,9 @@ export type PublicReview = {
   service_name: string | null;
   reviewer_type?: ReviewType;
   role_or_title?: string | null;
+  employee_department?: string | null;
+  employment_status?: "current" | "former" | null;
+  is_verified?: boolean;
   rating: number;
   review_text: string;
   photo_url: string | null;
@@ -71,6 +74,9 @@ export type AdminReview = {
   service_name: string | null;
   reviewer_type?: ReviewType;
   role_or_title?: string | null;
+  employee_department?: string | null;
+  employment_status?: "current" | "former" | null;
+  is_verified?: boolean;
   rating: number;
   review_text: string;
   customer_photo_url: string | null;
@@ -88,6 +94,11 @@ export type AdminReview = {
   archived_at: string | null;
   updated_at: string;
 };
+
+/** Safely normalizes reviewer type, defaulting null/undefined to "client". */
+export function normalizeReviewerType(type?: unknown): ReviewType {
+  return type === "employee" ? "employee" : "client";
+}
 
 export type ReviewCampaign = {
   id: string;
@@ -159,6 +170,8 @@ export type ReviewInput = {
   reviewerType?: ReviewType;
   serviceName?: string;
   roleOrTitle?: string;
+  employeeDepartment?: string;
+  employmentStatus?: "current" | "former";
   rating: number;
   reviewText: string;
   customerLocation?: string;

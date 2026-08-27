@@ -201,6 +201,37 @@
   }
 }
 
+.statusToggleRow {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.statusChoiceBtn {
+  flex: 1;
+  padding: 0.75rem 0.5rem;
+  background: rgba(10, 8, 14, 0.65);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  color: var(--dm-dim, #a09587);
+  border-radius: 12px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.statusChoiceBtn:hover {
+  color: var(--dm-warm, #fbf3e9);
+  border-color: rgba(255, 171, 46, 0.3);
+}
+
+.statusChoiceActive {
+  background: rgba(99, 102, 241, 0.16) !important;
+  border-color: #818cf8 !important;
+  color: #c7d2fe !important;
+  font-weight: 700;
+}
+
 .field {
   display: flex;
   flex-direction: column;

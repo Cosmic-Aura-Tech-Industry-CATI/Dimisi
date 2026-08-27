@@ -12,6 +12,7 @@ import {
   Code2,
   HeartHandshake,
   Sparkles,
+  Lock,
 } from "lucide-react";
 import {
   DIMISI_SERVICES,
@@ -65,6 +66,8 @@ export function ReviewSubmitPage({
     reviewerType: "client",
     serviceName: "",
     roleOrTitle: "",
+    employeeDepartment: "Engineering & Core Systems",
+    employmentStatus: "current",
     rating: 5,
     reviewText: "",
     customerLocation: "",
@@ -165,6 +168,10 @@ export function ReviewSubmitPage({
       validationErrors["captcha"] = "Please answer the anti-spam question.";
     }
 
+    if (formData.reviewerType === "employee" && !formData.customerEmail?.trim()) {
+      validationErrors["customerEmail"] = "Work email is required for staff verification.";
+    }
+
     if (Object.keys(validationErrors).length > 0) {
       setErrors(validationErrors);
       const firstKey = Object.keys(validationErrors)[0];
@@ -187,6 +194,8 @@ export function ReviewSubmitPage({
             reviewerType: formData.reviewerType || "client",
             ...(formData.serviceName ? { serviceName: formData.serviceName } : {}),
             ...(formData.roleOrTitle ? { roleOrTitle: formData.roleOrTitle } : {}),
+            ...(formData.employeeDepartment ? { employeeDepartment: formData.employeeDepartment } : {}),
+            ...(formData.employmentStatus ? { employmentStatus: formData.employmentStatus } : {}),
             rating: formData.rating,
             reviewText: formData.reviewText,
             ...(formData.customerLocation ? { customerLocation: formData.customerLocation } : {}),
@@ -198,7 +207,7 @@ export function ReviewSubmitPage({
         });
         setSubmitted(true);
       } catch (err) {
-        setSubmitError(err instanceof Error ? err.message : "Could not submit your review. Please try again.");
+        setSubmitError(err instanceof Error ? err.message : "Unable to submit your review. Please try again.");
         refreshCaptcha();
       }
     });
@@ -227,7 +236,7 @@ export function ReviewSubmitPage({
               </div>
               <h2 className={styles.successTitle}>Review Submitted!</h2>
               <p className={styles.successMsg}>
-                Thank you for sharing your feedback. Your review has been submitted and will be published after approval by our team.
+                Thank you for sharing your experience with DIMISI. Your review has been submitted and is awaiting approval by our team.
               </p>
               <div className={styles.successActions}>
                 <Link to="/reviews" className={styles.btnSecondary}>
@@ -243,19 +252,19 @@ export function ReviewSubmitPage({
               <div className={styles.header}>
                 <div className={styles.kicker}>
                   <span className={styles.kickerDot} />
-                  <span>Client &amp; Staff Reflections</span>
+                  <span>SHARE YOUR EXPERIENCE</span>
                 </div>
-                <h1 className={styles.title}>Share Your Experience</h1>
+                <h1 className={styles.title}>Tell Us About Your Experience</h1>
                 <p className={styles.subtitle}>
-                  We value authentic feedback from both our global partners and our internal engineering &amp; design team.
+                  We value authentic feedback from our enterprise partners and the builders shaping DIMISI Technologies.
                 </p>
               </div>
 
               <form onSubmit={handleSubmit} className={styles.form} noValidate>
-                {/* Reviewer Type Selector: Client vs Employee */}
+                {/* 01 — WHO ARE YOU? Selector: Client vs Employee */}
                 <div className={styles.typeSelectorSection}>
                   <label className={styles.label}>
-                    <span>Who are you reviewing as? <span className={styles.req}>*</span></span>
+                    <span>WHO ARE YOU? <span className={styles.req}>*</span></span>
                   </label>
                   <div className={styles.typeToggleGrid}>
                     <button
@@ -268,8 +277,8 @@ export function ReviewSubmitPage({
                     >
                       <Building2 size={20} className={styles.typeToggleIcon} />
                       <div className={styles.typeToggleText}>
-                        <strong>Client / Partner</strong>
-                        <span>I worked with DIMISI on a project or platform</span>
+                        <strong>CLIENT</strong>
+                        <span>I worked with DIMISI as a client, enterprise partner, or buyer</span>
                       </div>
                     </button>
 
@@ -283,8 +292,8 @@ export function ReviewSubmitPage({
                     >
                       <Code2 size={20} className={styles.typeToggleIcon} />
                       <div className={styles.typeToggleText}>
-                        <strong>Employee / Staff</strong>
-                        <span>I am part of the engineering, design, or ops team</span>
+                        <strong>EMPLOYEE</strong>
+                        <span>I am part of the engineering, design, AI research, or operations team</span>
                       </div>
                     </button>
                   </div>
@@ -323,7 +332,7 @@ export function ReviewSubmitPage({
                   {errors["rating"] ? <span className={styles.errorText}>{errors["rating"]}</span> : null}
                 </div>
 
-                {/* Name */}
+                {/* Full Name */}
                 <div className={styles.field}>
                   <label htmlFor="field-customerName" className={styles.label}>
                     <span>Your Full Name <span className={styles.req}>*</span></span>
@@ -343,23 +352,45 @@ export function ReviewSubmitPage({
                   ) : null}
                 </div>
 
-                {/* Role / Title & Service Selection Row */}
+                {/* Email Field (Private & Non-Public) */}
                 <div className={styles.row2}>
                   <div className={styles.field}>
+                    <label htmlFor="field-customerEmail" className={styles.label}>
+                      <span>{isEmployee ? "Work Email" : "Email Address"} {isEmployee ? <span className={styles.req}>*</span> : null}</span>
+                      <span className={styles.opt}><Lock size={10} style={{ display: "inline", verticalAlign: "middle", marginRight: "3px" }} />Private / Never public</span>
+                    </label>
+                    <input
+                      id="field-customerEmail"
+                      type="email"
+                      className={[styles.input, errors["customerEmail"] ? styles.inputErr : ""].join(" ")}
+                      placeholder={isEmployee ? "yourname@dimisi.in" : "alex@company.com"}
+                      value={formData.customerEmail}
+                      onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
+                      required={isEmployee}
+                    />
+                    {errors["customerEmail"] ? (
+                      <span className={styles.errorText}>{errors["customerEmail"]}</span>
+                    ) : null}
+                  </div>
+
+                  <div className={styles.field}>
                     <label htmlFor="field-roleOrTitle" className={styles.label}>
-                      <span>{isEmployee ? "Your Role / Job Title" : "Your Role / Company"}</span>
+                      <span>{isEmployee ? "Designation / Role" : "Company / Designation"}</span>
                       <span className={styles.opt}>Optional</span>
                     </label>
                     <input
                       id="field-roleOrTitle"
                       type="text"
                       className={styles.input}
-                      placeholder={isEmployee ? "e.g. Full-Stack Engineer" : "e.g. CTO at Apex Group"}
+                      placeholder={isEmployee ? "e.g. Full-Stack Engineer" : "e.g. Apex Group · CTO"}
                       value={formData.roleOrTitle || ""}
                       onChange={(e) => setFormData({ ...formData, roleOrTitle: e.target.value })}
                     />
                   </div>
+                </div>
 
+                {/* Department / Service & Employment Status */}
+                <div className={styles.row2}>
                   <div className={styles.field}>
                     <label htmlFor="field-serviceName" className={styles.label}>
                       <span>{isEmployee ? "Department / Specialization" : "Service Received"}</span>
@@ -380,43 +411,52 @@ export function ReviewSubmitPage({
                       ))}
                     </select>
                   </div>
-                </div>
 
-                {/* Email & Phone Row */}
-                <div className={styles.row2}>
-                  <div className={styles.field}>
-                    <label htmlFor="field-customerEmail" className={styles.label}>
-                      <span>Email Address</span>
-                      <span className={styles.opt}>Private / Moderation only</span>
-                    </label>
-                    <input
-                      id="field-customerEmail"
-                      type="email"
-                      className={[styles.input, errors["customerEmail"] ? styles.inputErr : ""].join(" ")}
-                      placeholder={isEmployee ? "yourname@dimisi.in" : "alex@company.com"}
-                      value={formData.customerEmail}
-                      onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
-                    />
-                    {errors["customerEmail"] ? (
-                      <span className={styles.errorText}>{errors["customerEmail"]}</span>
-                    ) : null}
-                  </div>
-
-                  <div className={styles.field}>
-                    <label htmlFor="field-customerLocation" className={styles.label}>
-                      <span>Your Location / Hub</span>
-                      <span className={styles.opt}>Optional</span>
-                    </label>
-                    <input
-                      id="field-customerLocation"
-                      type="text"
-                      className={styles.input}
-                      placeholder="e.g. Kanpur, Bengaluru, or Remote"
-                      value={formData.customerLocation}
-                      onChange={(e) => setFormData({ ...formData, customerLocation: e.target.value })}
-                      maxLength={120}
-                    />
-                  </div>
+                  {isEmployee ? (
+                    <div className={styles.field}>
+                      <label className={styles.label}>
+                        <span>Employment Status</span>
+                      </label>
+                      <div className={styles.statusToggleRow}>
+                        <button
+                          type="button"
+                          className={[
+                            styles.statusChoiceBtn,
+                            formData.employmentStatus === "current" ? styles.statusChoiceActive : "",
+                          ].join(" ")}
+                          onClick={() => setFormData((prev) => ({ ...prev, employmentStatus: "current" }))}
+                        >
+                          Current Employee
+                        </button>
+                        <button
+                          type="button"
+                          className={[
+                            styles.statusChoiceBtn,
+                            formData.employmentStatus === "former" ? styles.statusChoiceActive : "",
+                          ].join(" ")}
+                          onClick={() => setFormData((prev) => ({ ...prev, employmentStatus: "former" }))}
+                        >
+                          Former Employee
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.field}>
+                      <label htmlFor="field-customerLocation" className={styles.label}>
+                        <span>Your Location</span>
+                        <span className={styles.opt}>Optional</span>
+                      </label>
+                      <input
+                        id="field-customerLocation"
+                        type="text"
+                        className={styles.input}
+                        placeholder="e.g. San Francisco, CA or London, UK"
+                        value={formData.customerLocation}
+                        onChange={(e) => setFormData({ ...formData, customerLocation: e.target.value })}
+                        maxLength={120}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 {/* Written Review */}
@@ -588,13 +628,13 @@ export function ReviewSubmitPage({
             </div>
             <div className={styles.modalBody}>
               <p>
-                <strong>Data Collection & Purpose:</strong> DIMISI Technologies collects your submitted name, rating, service or employee feedback, and optional photo to showcase authentic experiences. Your email address and phone number are collected solely for verification and moderation communication; they are <strong>never</strong> displayed publicly.
+                <strong>Data Collection &amp; Purpose:</strong> DIMISI Technologies collects your submitted name, rating, service or employee feedback, and optional photo to showcase authentic experiences. Your email address and phone number are collected solely for verification and moderation communication; they are <strong>never</strong> displayed publicly.
               </p>
               <p>
-                <strong>Moderation & Consent:</strong> Every review undergoes administrator moderation prior to publication. Content containing spam, offensive remarks, or confidential data is rejected.
+                <strong>Moderation &amp; Consent:</strong> Every review undergoes administrator moderation prior to publication. Content containing spam, offensive remarks, or confidential data is rejected.
               </p>
               <p>
-                <strong>Your Rights (GDPR & Data Protection):</strong> You have the right to request correction, anonymization, or deletion of your review at any time by emailing <code>hello@dimisi.in</code>.
+                <strong>Your Rights (GDPR &amp; Data Protection):</strong> You have the right to request correction, anonymization, or deletion of your review at any time by emailing <code>hello@dimisi.in</code>.
               </p>
             </div>
             <button

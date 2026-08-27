@@ -71,6 +71,9 @@ export function toPublicReview(
     service_name: string | null;
     reviewer_type?: ReviewType;
     role_or_title?: string | null;
+    employee_department?: string | null;
+    employment_status?: "current" | "former" | null;
+    is_verified?: boolean;
     rating: number;
     review_text: string;
     customer_photo_url: string | null;
@@ -88,6 +91,9 @@ export function toPublicReview(
     service_name: row.service_name,
     reviewer_type: (row.reviewer_type as ReviewType) || "client",
     role_or_title: row.role_or_title ?? null,
+    employee_department: row.employee_department ?? null,
+    employment_status: row.employment_status ?? null,
+    is_verified: row.is_verified === true,
     rating: row.rating,
     review_text: row.review_text,
     photo_url: row.customer_photo_url
@@ -233,6 +239,7 @@ class MemoryStore {
       service_name: "AI & Autonomous Agents",
       reviewer_type: "client",
       role_or_title: "CTO, Apex Group",
+      is_verified: true,
       rating: 5,
       review_text: "DIMISI engineered an autonomous multi-agent pipeline that transformed our enterprise workflow. Their precision, architectural depth, and speed exceeded every expectation.",
       customer_photo_url: null,
@@ -259,6 +266,7 @@ class MemoryStore {
       service_name: "Web Development & Platforms",
       reviewer_type: "client",
       role_or_title: "Head of Digital, Vortex Bio",
+      is_verified: true,
       rating: 5,
       review_text: "The 3D WebGL web platform built by DIMISI is breathtaking. Our inbound investor inquiries jumped 400% after launching the new digital experience.",
       customer_photo_url: null,
@@ -285,6 +293,9 @@ class MemoryStore {
       service_name: "Engineering & Core Systems",
       reviewer_type: "employee",
       role_or_title: "Full-Stack Engineer",
+      employee_department: "Engineering",
+      employment_status: "current",
+      is_verified: true,
       rating: 5,
       review_text: "Building scalable platforms and working on the Kalesh app at DIMISI has been an unmatched journey. The engineering culture prioritizes clean architecture, zero bloat, and sub-millisecond execution.",
       customer_photo_url: null,
@@ -311,6 +322,7 @@ class MemoryStore {
       service_name: "Mobile App Development",
       reviewer_type: "client",
       role_or_title: "VP Engineering, NovaPay",
+      is_verified: true,
       rating: 5,
       review_text: "Flawless mobile app architecture with sub-second biometric payments and instant sync. The team's craftsmanship is second to none.",
       customer_photo_url: null,
@@ -337,6 +349,9 @@ class MemoryStore {
       service_name: "AI & Autonomous Agents",
       reviewer_type: "employee",
       role_or_title: "AI & ML Research Engineer",
+      employee_department: "AI & Research",
+      employment_status: "current",
+      is_verified: true,
       rating: 5,
       review_text: "The autonomy we have to push bleeding-edge GenAI workflows, custom tool-calling agents, and real-time streaming pipelines is rare. DIMISI provides the ultimate playground for hardcore builders.",
       customer_photo_url: null,
@@ -363,6 +378,7 @@ class MemoryStore {
       service_name: "Cloud & DevOps Architecture",
       reviewer_type: "client",
       role_or_title: "Infrastructure Lead",
+      is_verified: false,
       rating: 4,
       review_text: "Robust Kubernetes and multi-region deployment. Migration was completely zero-downtime. Highly recommended team.",
       customer_photo_url: null,
@@ -389,6 +405,9 @@ class MemoryStore {
       service_name: "UI/UX Design & 3D Experiences",
       reviewer_type: "employee",
       role_or_title: "UI/UX & 3D Designer",
+      employee_department: "Design & Creative",
+      employment_status: "current",
+      is_verified: true,
       rating: 5,
       review_text: "We treat every micro-interaction and 3D shader like digital art. Designing for DIMISI feels cinematic and ambitious — every member of our team is dedicated to perfection.",
       customer_photo_url: null,
@@ -415,6 +434,7 @@ class MemoryStore {
       service_name: "UI/UX Design & 3D Experiences",
       reviewer_type: "client",
       role_or_title: "Product VP, NexusFin",
+      is_verified: true,
       rating: 5,
       review_text: "Dimisi designed an intuitive futuristic interface for our trading desk. The response from our institutional traders has been unanimously positive.",
       customer_photo_url: null,
