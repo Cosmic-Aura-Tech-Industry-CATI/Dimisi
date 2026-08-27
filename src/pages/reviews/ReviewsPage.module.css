@@ -1,16 +1,29 @@
 .page {
+  position: relative;
   min-height: 100vh;
-  padding: 8rem 1.5rem 6rem;
-  background:
-    radial-gradient(ellipse 70% 45% at 50% 0%, rgba(255, 95, 46, 0.12) 0%, transparent 70%),
-    radial-gradient(circle at 15% 25%, rgba(255, 171, 46, 0.05) 0%, transparent 45%),
-    var(--dm-void, #05040a);
+  padding: clamp(7.5rem, 18vh, 10.5rem) clamp(1.2rem, 5vw, 3.5rem) 6rem;
+  background: var(--dm-void, #05040a);
   color: var(--dm-warm, #fbf3e9);
   font-family: var(--dm-font-body, "Sora", sans-serif);
+  overflow-x: clip;
+}
+
+.ambientGlow {
+  position: absolute;
+  top: 5%;
+  left: 50%;
+  width: 80vw;
+  height: 65vh;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(255, 140, 26, 0.12) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .container {
-  max-width: 1200px;
+  position: relative;
+  z-index: 1;
+  max-width: 78rem;
   margin: 0 auto;
 }
 
@@ -30,9 +43,9 @@
   border: 1px solid rgba(255, 171, 46, 0.3);
   border-radius: 999px;
   font-family: var(--dm-font-display, "Chakra Petch", monospace);
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.24em;
+  letter-spacing: 0.26em;
   color: var(--dm-amber, #ffab2e);
   text-transform: uppercase;
   margin-bottom: 1.2rem;
@@ -75,7 +88,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  padding: 0.9rem 2rem;
+  padding: 0.9rem 2.1rem;
   background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
   color: #0a0810;
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
@@ -115,14 +128,14 @@
 }
 
 .statBox {
-  background: rgba(19, 16, 25, 0.75);
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
-  border-radius: 18px;
-  padding: 1.5rem 1.65rem;
+  background: rgba(14, 14, 17, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  padding: 1.6rem 1.75rem;
   display: flex;
   flex-direction: column;
-  backdrop-filter: blur(16px);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
   transition: border-color 0.25s, transform 0.25s;
 }
 
@@ -133,9 +146,9 @@
 
 .statBoxLabel {
   font-family: var(--dm-font-display, "Chakra Petch", monospace);
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   font-weight: 700;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.18em;
   color: var(--dm-dim, #a09587);
   text-transform: uppercase;
   margin-bottom: 0.5rem;
@@ -167,6 +180,7 @@
   gap: 0.25rem;
   color: var(--dm-amber, #ffab2e);
   margin-top: 0.4rem;
+  filter: drop-shadow(0 0 4px rgba(255, 171, 46, 0.35));
 }
 
 /* 03 — REVIEW TYPE SWITCHER (Segmented Control) */
@@ -178,13 +192,13 @@
 
 .segmentedControl {
   display: inline-flex;
-  background: rgba(14, 12, 18, 0.85);
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.14));
+  background: rgba(10, 8, 14, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   padding: 0.35rem;
   border-radius: 999px;
   gap: 0.35rem;
-  backdrop-filter: blur(16px);
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
   max-width: 100%;
   overflow-x: auto;
 }
@@ -235,17 +249,17 @@
 
 /* 04 — RATING FILTERS & SEARCH ROW */
 .filterBar {
-  background: rgba(19, 16, 25, 0.7);
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
-  border-radius: 18px;
-  padding: 1rem 1.25rem;
+  background: rgba(14, 14, 17, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  padding: 1rem 1.35rem;
   margin-bottom: 2.75rem;
   display: flex;
   flex-wrap: wrap;
   gap: 1rem;
   align-items: center;
   justify-content: space-between;
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
 }
 
 .ratingFilterRow {
@@ -263,8 +277,8 @@
   gap: 0.3rem;
   padding: 0.45rem 0.85rem;
   border-radius: 999px;
-  background: rgba(10, 8, 14, 0.6);
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  background: rgba(8, 8, 10, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--dm-dim, #a09587);
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
   font-size: 0.78rem;
@@ -315,8 +329,8 @@
 .searchInput {
   width: 100%;
   padding: 0.55rem 0.95rem 0.55rem 2.4rem;
-  background: rgba(10, 8, 14, 0.7);
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  background: rgba(8, 8, 10, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   color: var(--dm-warm, #fbf3e9);
   font-family: var(--dm-font-body, "Sora", sans-serif);
@@ -331,8 +345,8 @@
 }
 
 .filterSelect {
-  background: rgba(10, 8, 14, 0.7);
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  background: rgba(8, 8, 10, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--dm-warm, #fbf3e9);
   padding: 0.55rem 0.95rem;
   border-radius: 12px;
@@ -356,7 +370,7 @@
   font-family: var(--dm-font-display, "Chakra Petch", monospace);
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.24em;
   color: var(--dm-amber, #ffab2e);
   text-transform: uppercase;
   display: block;
@@ -416,38 +430,38 @@
 }
 
 .reviewCard {
-  background: rgba(19, 16, 25, 0.65);
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
-  border-radius: 20px;
-  padding: 1.75rem;
+  background: rgba(14, 14, 17, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.4rem;
+  padding: 1.85rem;
   display: flex;
   flex-direction: column;
   transition: transform 0.3s var(--dm-ease, ease), border-color 0.3s, box-shadow 0.3s;
   position: relative;
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
 }
 
 .reviewCard:hover {
   transform: translateY(-4px);
-  border-color: rgba(255, 171, 46, 0.4);
+  border-color: rgba(255, 171, 46, 0.35);
   box-shadow:
-    0 20px 60px -15px rgba(0, 0, 0, 0.8),
-    0 0 35px rgba(255, 122, 24, 0.1);
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    0 0 30px rgba(255, 122, 24, 0.12);
 }
 
 .featuredCard {
-  background: linear-gradient(160deg, rgba(255, 122, 24, 0.1) 0%, rgba(19, 16, 25, 0.85) 100%);
-  border: 1px solid rgba(255, 171, 46, 0.35);
-  box-shadow: 0 0 30px rgba(255, 122, 24, 0.08);
+  background: linear-gradient(160deg, rgba(255, 122, 24, 0.08) 0%, rgba(14, 14, 17, 0.85) 100%);
+  border: 1px solid rgba(255, 171, 46, 0.3);
+  box-shadow: 0 0 35px rgba(255, 122, 24, 0.08);
 }
 
 .employeeCardBorder {
-  border-color: rgba(99, 102, 241, 0.16);
+  border-color: rgba(255, 255, 255, 0.09);
 }
 
 .employeeCardBorder:hover {
-  border-color: rgba(129, 140, 248, 0.45);
-  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.8), 0 0 35px rgba(99, 102, 241, 0.12);
+  border-color: rgba(255, 171, 46, 0.35);
 }
 
 .cardTop {
@@ -488,9 +502,10 @@
 }
 
 .avatarEmployee {
-  background: linear-gradient(135deg, #6366f1 0%, #818cf8 50%, #c084fc 100%) !important;
-  color: #ffffff !important;
-  box-shadow: 0 0 16px rgba(99, 102, 241, 0.45) !important;
+  background: linear-gradient(135deg, rgba(255, 171, 46, 0.18) 0%, rgba(20, 17, 24, 0.95) 100%) !important;
+  border: 1.5px solid rgba(255, 214, 170, 0.35) !important;
+  color: #ffd79a !important;
+  box-shadow: 0 0 16px rgba(255, 171, 46, 0.2) !important;
 }
 
 .authorMeta {
@@ -509,7 +524,7 @@
 .authorName {
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
   font-weight: 700;
-  font-size: 0.96rem;
+  font-size: 0.98rem;
   color: var(--dm-warm, #fbf3e9);
 }
 
@@ -517,14 +532,14 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.15rem 0.5rem;
+  padding: 0.15rem 0.55rem;
   border-radius: 999px;
   background: rgba(255, 140, 26, 0.12);
   border: 1px solid rgba(255, 140, 26, 0.3);
   color: var(--dm-amber, #ff8c1a);
-  font-size: 0.64rem;
+  font-size: 0.65rem;
   font-family: var(--dm-font-display, "Chakra Petch", monospace);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 700;
 }
@@ -533,14 +548,14 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.15rem 0.5rem;
+  padding: 0.15rem 0.55rem;
   border-radius: 999px;
-  background: rgba(99, 102, 241, 0.16);
-  border: 1px solid rgba(129, 140, 248, 0.35);
-  color: #a5b4fc;
-  font-size: 0.64rem;
+  background: rgba(255, 214, 170, 0.08);
+  border: 1px solid rgba(255, 214, 170, 0.25);
+  color: #ffd79a;
+  font-size: 0.65rem;
   font-family: var(--dm-font-display, "Chakra Petch", monospace);
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 700;
 }
@@ -561,6 +576,7 @@
   display: flex;
   gap: 0.2rem;
   color: var(--dm-amber, #ffab2e);
+  filter: drop-shadow(0 0 4px rgba(255, 171, 46, 0.35));
 }
 
 .serviceTag {
@@ -569,9 +585,9 @@
   font-weight: 600;
   font-family: var(--dm-font-display, "Chakra Petch", monospace);
   letter-spacing: 0.08em;
-  color: var(--dm-gold, #ffd79a);
-  background: rgba(255, 171, 46, 0.12);
-  border: 1px solid rgba(255, 171, 46, 0.25);
+  color: var(--dm-amber, #ffab2e);
+  background: rgba(255, 171, 46, 0.1);
+  border: 1px solid rgba(255, 171, 46, 0.22);
   padding: 0.25rem 0.65rem;
   border-radius: 999px;
   margin-bottom: 0.95rem;
@@ -579,14 +595,14 @@
 }
 
 .serviceTagEmp {
-  background: rgba(99, 102, 241, 0.14) !important;
-  border-color: rgba(129, 140, 248, 0.3) !important;
-  color: #c7d2fe !important;
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  color: #ffd79a !important;
 }
 
 .reviewText {
-  font-size: 0.93rem;
-  line-height: 1.65;
+  font-size: 0.94rem;
+  line-height: 1.68;
   color: rgba(251, 243, 233, 0.85);
   margin: 0 0 1.35rem;
   flex: 1;
@@ -596,7 +612,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid var(--dm-line, rgba(255, 214, 170, 0.08));
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
   padding-top: 0.95rem;
   margin-top: auto;
 }
@@ -678,9 +694,9 @@
 .emptyState {
   text-align: center;
   padding: 4.5rem 2rem;
-  background: rgba(19, 16, 25, 0.5);
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
-  border-radius: 24px;
+  background: rgba(14, 14, 17, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.4rem;
   margin-bottom: 3.5rem;
 }
 
@@ -709,8 +725,8 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 2rem;
-  background: rgba(19, 16, 25, 0.8);
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.18));
+  background: rgba(14, 14, 17, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--dm-warm, #fbf3e9);
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
   font-size: 0.84rem;
@@ -724,7 +740,7 @@
 
 .loadMoreBtn:hover {
   border-color: var(--dm-amber, #ffab2e);
-  box-shadow: 0 0 24px rgba(255, 171, 46, 0.2);
+  box-shadow: 0 0 24px rgba(255, 171, 46, 0.25);
 }
 
 .spin {
@@ -742,14 +758,15 @@
 }
 
 .shareExpCard {
-  background: linear-gradient(145deg, rgba(255, 122, 24, 0.1) 0%, rgba(19, 16, 25, 0.85) 100%);
+  background: linear-gradient(145deg, rgba(255, 122, 24, 0.08) 0%, rgba(14, 14, 17, 0.85) 100%);
   border: 1px solid rgba(255, 171, 46, 0.25);
-  border-radius: 24px;
+  border-radius: 1.4rem;
   padding: 3rem 2.5rem;
   text-align: center;
   max-width: 900px;
   margin: 0 auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
 }
 
 .shareExpBadge {
@@ -757,9 +774,10 @@
   font-family: var(--dm-font-display, "Chakra Petch", monospace);
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.2em;
+  letter-spacing: 0.24em;
   color: var(--dm-amber, #ffab2e);
   margin-bottom: 0.75rem;
+  text-transform: uppercase;
 }
 
 .shareExpTitle {
@@ -813,9 +831,9 @@
   align-items: center;
   gap: 0.55rem;
   padding: 0.85rem 1.85rem;
-  background: rgba(99, 102, 241, 0.16);
-  border: 1px solid rgba(129, 140, 248, 0.4);
-  color: #c7d2fe;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 214, 170, 0.25);
+  color: #fbf3e9;
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
   font-size: 0.85rem;
   font-weight: 700;
@@ -827,18 +845,19 @@
 }
 
 .shareBtnEmployee:hover {
-  background: rgba(99, 102, 241, 0.28);
-  border-color: rgba(129, 140, 248, 0.7);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 171, 46, 0.4);
   transform: translateY(-2px);
 }
 
 /* 07 — CTA SECTION */
 .ctaSection {
-  background: radial-gradient(circle at 50% 50%, rgba(255, 95, 46, 0.15) 0%, rgba(10, 8, 14, 0.95) 75%);
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.14));
-  border-radius: 24px;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 95, 46, 0.12) 0%, rgba(14, 14, 17, 0.95) 75%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.4rem;
   padding: 3.5rem 2rem;
   text-align: center;
+  backdrop-filter: blur(20px);
 }
 
 .ctaContent {
@@ -889,7 +908,7 @@
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.8);
-  backdrop-filter: blur(12px);
+  backdrop-filter: blur(16px);
   z-index: 9999;
   display: flex;
   align-items: center;
@@ -898,9 +917,9 @@
 }
 
 .modalCard {
-  background: #131019;
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.18));
-  border-radius: 20px;
+  background: #100e16;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.4rem;
   padding: 2.25rem;
   max-width: 520px;
   width: 100%;
@@ -965,11 +984,11 @@
 
 .field label {
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: var(--dm-gold, #ffd79a);
+  color: #ffd79a;
 }
 
 .row2 {
@@ -988,8 +1007,8 @@
 .textInput,
 .textAreaInput {
   width: 100%;
-  background: rgba(10, 8, 14, 0.8);
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.15));
+  background: rgba(8, 8, 10, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--dm-warm, #fbf3e9);
   padding: 0.65rem 0.85rem;
   border-radius: 10px;
@@ -1015,7 +1034,7 @@
 
 .cancelBtn {
   background: none;
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.18));
+  border: 1px solid rgba(255, 255, 255, 0.15);
   color: var(--dm-warm, #fbf3e9);
   padding: 0.6rem 1.2rem;
   border-radius: 999px;

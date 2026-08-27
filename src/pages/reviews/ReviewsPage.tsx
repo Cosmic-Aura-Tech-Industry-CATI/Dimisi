@@ -164,6 +164,9 @@ export function ReviewsPage() {
 
   return (
     <div className={styles.page}>
+      {/* Background ambient lighting */}
+      <div className={styles.ambientGlow} aria-hidden="true" />
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
