@@ -1,8 +1,4 @@
 #!/usr/bin/env node
-/**
- * vercel-build.mjs
- * Converts TanStack Start dist/ output into Vercel Build Output API format.
- */
 import { cpSync, mkdirSync, writeFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -11,31 +7,23 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = join(__dirname, "..");
 const out = join(root, ".vercel", "output");
 
-// 1. Create output directories
 mkdirSync(join(out, "static", "assets"), { recursive: true });
 mkdirSync(join(out, "functions", "index.func"), { recursive: true });
 
-// 2. Copy static client assets
 cpSync(join(root, "dist", "client", "assets"), join(out, "static", "assets"), { recursive: true });
 cpSync(join(root, "dist", "client", "favicon.png"), join(out, "static", "favicon.png"));
 cpSync(join(root, "dist", "client", "robots.txt"), join(out, "static", "robots.txt"));
 
-// 3. Copy server bundle into the function directory
 cpSync(join(root, "dist", "server"), join(out, "functions", "index.func", "server"), { recursive: true });
 
-// 4. ESM handler - server.js uses "export default", so we use dynamic import()
+// ESM handler - use RELATIVE import (absolute paths can fail in serverless)
 writeFileSync(
   join(out, "functions", "index.func", "index.js"),
   `
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
-
-const __dirname = dirname(fileURLToPath(import.meta.url));
-
 let _handler;
 async function getHandler() {
   if (!_handler) {
-    const mod = await import(join(__dirname, "server", "server.js"));
+    const mod = await import("./server/server.js");
     _handler = mod.default ?? mod;
   }
   return _handler;
@@ -76,33 +64,27 @@ export default async function handler(req, res) {
     const buf = Buffer.from(await response.arrayBuffer());
     res.end(buf);
   } catch (err) {
-    console.error("[SSR] Function crashed:", err);
+    console.error("[SSR CRASH]", err?.stack ?? err);
     res.statusCode = 500;
     res.setHeader("content-type", "text/html; charset=utf-8");
-    res.end("<h1>500 - Server Error</h1><pre>" + String(err?.message ?? err) + "</pre>");
+    res.end(
+      "<html><body style='font-family:monospace;padding:2rem'>" +
+      "<h2>SSR Error (check Vercel logs)</h2>" +
+      "<pre>" + String(err?.stack ?? err).replace(/</g,"&lt;") + "</pre>" +
+      "</body></html>"
+    );
   }
 }
 `.trim()
 );
 
-// 5. Vercel function config - ESM handler needs "type": "module" in package.json or .mjs
 writeFileSync(
   join(out, "functions", "index.func", ".vc-config.json"),
-  JSON.stringify({
-    runtime: "nodejs20.x",
-    handler: "index.js",
-    launcherType: "Nodejs",
-    shouldAddHelpers: true,
-  }, null, 2)
+  JSON.stringify({ runtime: "nodejs20.x", handler: "index.js", launcherType: "Nodejs", shouldAddHelpers: true }, null, 2)
 );
 
-// 6. package.json inside the function dir to enable ESM
-writeFileSync(
-  join(out, "functions", "index.func", "package.json"),
-  JSON.stringify({ type: "module" }, null, 2)
-);
+writeFileSync(join(out, "functions", "index.func", "package.json"), JSON.stringify({ type: "module" }, null, 2));
 
-// 7. Vercel routing config
 writeFileSync(
   join(out, "config.json"),
   JSON.stringify({
@@ -117,4 +99,4 @@ writeFileSync(
   }, null, 2)
 );
 
-console.log("[vercel-build] .vercel/output generated successfully");
+console.log("[vercel-build] Done");
