@@ -7,3 +7,4 @@ export const MARK_URL: string = mark.url;
 export const WORDMARK_URL: string = wordmark.url;
 export const OWL_URL: string = owl.url;
 export const LOCKUP_URL: string = lockup.url;
+export const SILVER_LOGO_URL: string = "/dimisi-silver-logo.png";

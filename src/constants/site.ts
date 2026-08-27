@@ -7,8 +7,17 @@ export const COMPANY = {
   mission:
     "DIMISI TECHNOLOGIES PVT LTD is a product and services technology company — we build software, web and mobile platforms, cloud systems and automation for businesses worldwide, and we are building our own app, Kalesh.",
   email: "hello@dimisi.in",
-  phone: "+91 90000 12345",
-  address: "Sector 62, Noida, India · Remote-first worldwide",
+  phone: "085450 99251",
+  phoneRaw: "08545099251",
+  address: "MIG 3/131, Swarn Jayanti Vihar, Koyala Nagar, Kanpur, Uttar Pradesh 208011",
+  addressLines: [
+    "MIG 3/131,",
+    "Swarn Jayanti Vihar,",
+    "Koyala Nagar,",
+    "Kanpur,",
+    "Uttar Pradesh 208011",
+  ],
+  mapsUrl: "https://maps.google.com/?q=MIG+3/131,+Swarn+Jayanti+Vihar,+Koyala+Nagar,+Kanpur,+Uttar+Pradesh+208011",
 } as const;
 
 export const NAV_LINKS: NavLink[] = [
@@ -32,8 +41,8 @@ export const LEGAL_LINKS: NavLink[] = [
 ];
 
 export const SOCIALS = [
-  { label: "X", href: "https://x.com" },
-  { label: "LinkedIn", href: "https://linkedin.com" },
-  { label: "GitHub", href: "https://github.com" },
-  { label: "YouTube", href: "https://youtube.com" },
+  { label: "X", href: "https://x.com", ariaLabel: "DIMISI on X", id: "x" },
+  { label: "LinkedIn", href: "https://linkedin.com", ariaLabel: "DIMISI on LinkedIn", id: "linkedin" },
+  { label: "GitHub", href: "https://github.com", ariaLabel: "DIMISI on GitHub", id: "github" },
+  { label: "YouTube", href: "https://youtube.com", ariaLabel: "DIMISI on YouTube", id: "youtube" },
 ];
