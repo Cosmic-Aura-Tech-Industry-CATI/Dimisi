@@ -13,6 +13,7 @@ import { ServicesForward } from "@/components/home/ServicesForward/ServicesForwa
 import { CompanyHighlights } from "@/components/home/CompanyHighlights/CompanyHighlights";
 import { WhyChooseUs } from "@/components/home/WhyChooseUs/WhyChooseUs";
 import { SelectedCaseStudies } from "@/components/home/SelectedCaseStudies/SelectedCaseStudies";
+import { HomeEventsGallery } from "@/components/home/HomeEventsGallery/HomeEventsGallery";
 import { LiveReviewsMotion } from "@/components/home/LiveReviewsMotion/LiveReviewsMotion";
 import { useCountUp } from "@/hooks/useCountUp";
 import { COMPANY } from "@/constants/site";
@@ -141,6 +142,10 @@ export function Home() {
 
       <ScrollScene variant="lift">
         <SelectedCaseStudies />
+      </ScrollScene>
+
+      <ScrollScene variant="lift">
+        <HomeEventsGallery />
       </ScrollScene>
 
       <ScrollScene variant="right">
