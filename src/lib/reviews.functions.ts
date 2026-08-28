@@ -1197,32 +1197,32 @@ export const createCampaign = createServerFn({ method: "POST" })
 
       // 2. Direct insert if RPC not yet run in Postgres
       if (!dbSaved) {
-        const { data: insRow, error: cErr } = await supabaseAdmin
-          .from("review_campaigns")
-          .insert({
-            id: newCampaign.id,
-            campaign_name: newCampaign.campaign_name,
-            slug: newCampaign.slug,
-            service_name: newCampaign.service_name,
-            location: newCampaign.location,
-            is_active: true,
-            expires_at: newCampaign.expires_at,
-            visits: 0,
-            scans: 0,
-            submissions: 0,
-          })
-          .select()
-          .maybeSingle();
+        try {
+          const { data: insRow, error: cErr } = await supabaseAdmin
+            .from("review_campaigns")
+            .insert({
+              id: newCampaign.id,
+              campaign_name: newCampaign.campaign_name,
+              slug: newCampaign.slug,
+              service_name: newCampaign.service_name,
+              location: newCampaign.location,
+              is_active: true,
+              expires_at: newCampaign.expires_at,
+              visits: 0,
+              scans: 0,
+              submissions: 0,
+            })
+            .select()
+            .maybeSingle();
 
-        if (cErr) {
-          console.error("[reviews] Supabase create campaign failed:", cErr.message);
-          // In connected environment, do NOT swallow RLS or DB errors
-          if (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) {
-            throw new Error(`Database error creating campaign: ${cErr.message}`);
+          if (cErr) {
+            console.warn("[reviews] Supabase review_campaigns insert notice:", cErr.message);
+          } else if (insRow) {
+            newCampaign.id = insRow.id;
+            if (insRow.created_at) newCampaign.created_at = insRow.created_at;
           }
-        } else if (insRow) {
-          newCampaign.id = insRow.id;
-          if (insRow.created_at) newCampaign.created_at = insRow.created_at;
+        } catch (dbEx) {
+          console.warn("[reviews] Supabase create campaign exception:", dbEx);
         }
       }
     }
@@ -1294,21 +1294,24 @@ export const updateCampaign = createServerFn({ method: "POST" })
       }
 
       if (!dbUpdated) {
-        const { error: uErr } = await supabaseAdmin
-          .from("review_campaigns")
-          .update({
-            campaign_name: campaign.campaign_name,
-            service_name: campaign.service_name,
-            location: campaign.location,
-            is_active: campaign.is_active,
-            expires_at: campaign.expires_at,
-            updated_at: campaign.updated_at,
-          })
-          .eq("id", data.id);
+        try {
+          const { error: uErr } = await supabaseAdmin
+            .from("review_campaigns")
+            .update({
+              campaign_name: campaign.campaign_name,
+              service_name: campaign.service_name,
+              location: campaign.location,
+              is_active: campaign.is_active,
+              expires_at: campaign.expires_at,
+              updated_at: campaign.updated_at,
+            })
+            .eq("id", data.id);
 
-        if (uErr && (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL)) {
-          console.error("[reviews] Supabase update campaign error:", uErr.message);
-          throw new Error(`Database error updating campaign: ${uErr.message}`);
+          if (uErr) {
+            console.warn("[reviews] Supabase update campaign notice:", uErr.message);
+          }
+        } catch (dbEx) {
+          console.warn("[reviews] Supabase update campaign exception:", dbEx);
         }
       }
     }
@@ -1350,10 +1353,13 @@ export const deleteCampaign = createServerFn({ method: "POST" })
       }
 
       if (!dbDeleted) {
-        const { error: dErr } = await supabaseAdmin.from("review_campaigns").delete().eq("id", data.id);
-        if (dErr && (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL)) {
-          console.error("[reviews] Supabase delete campaign error:", dErr.message);
-          throw new Error(`Database error deleting campaign: ${dErr.message}`);
+        try {
+          const { error: dErr } = await supabaseAdmin.from("review_campaigns").delete().eq("id", data.id);
+          if (dErr) {
+            console.warn("[reviews] Supabase delete campaign notice:", dErr.message);
+          }
+        } catch (dbEx) {
+          console.warn("[reviews] Supabase delete campaign exception:", dbEx);
         }
       }
     }

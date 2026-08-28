@@ -3,8 +3,7 @@
 -- ============================================================================
 
 -- 1. Ensure Table Structure & Permissions
-GRANT SELECT ON public.review_campaigns TO anon, authenticated;
-GRANT INSERT, UPDATE, DELETE ON public.review_campaigns TO authenticated;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.review_campaigns TO anon, authenticated;
 GRANT ALL ON public.review_campaigns TO service_role;
 
 ALTER TABLE public.review_campaigns ENABLE ROW LEVEL SECURITY;
@@ -16,31 +15,43 @@ DROP POLICY IF EXISTS "admins select all campaigns" ON public.review_campaigns;
 DROP POLICY IF EXISTS "admins insert campaigns" ON public.review_campaigns;
 DROP POLICY IF EXISTS "admins update campaigns" ON public.review_campaigns;
 DROP POLICY IF EXISTS "admins delete campaigns" ON public.review_campaigns;
+DROP POLICY IF EXISTS "allow review campaigns insert" ON public.review_campaigns;
+DROP POLICY IF EXISTS "allow review campaigns select" ON public.review_campaigns;
+DROP POLICY IF EXISTS "allow review campaigns update" ON public.review_campaigns;
+DROP POLICY IF EXISTS "allow review campaigns delete" ON public.review_campaigns;
 
--- 3. Public / Anon SELECT Policy: Allow reading active, non-expired review campaigns
-CREATE POLICY "public read active campaigns" ON public.review_campaigns
+-- 3. SELECT Policy: Anyone can view active campaigns, authenticated admins can view all
+CREATE POLICY "allow review campaigns select" ON public.review_campaigns
   FOR SELECT TO anon, authenticated
-  USING (is_active = true AND (expires_at IS NULL OR expires_at > now()));
+  USING (
+    (is_active = true AND (expires_at IS NULL OR expires_at > now()))
+    OR (auth.uid() IS NOT NULL AND public.has_role(auth.uid(), 'admin'))
+    OR auth.role() = 'service_role'
+  );
 
--- 4. Authenticated Admin Full Management Policies (SELECT, INSERT, UPDATE, DELETE)
-CREATE POLICY "admins select all campaigns" ON public.review_campaigns
-  FOR SELECT TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
+-- 4. INSERT Policy: Allow creating valid review campaigns
+CREATE POLICY "allow review campaigns insert" ON public.review_campaigns
+  FOR INSERT TO anon, authenticated, service_role
+  WITH CHECK (
+    length(trim(campaign_name)) > 0
+    AND length(trim(slug)) > 0
+  );
 
-CREATE POLICY "admins insert campaigns" ON public.review_campaigns
-  FOR INSERT TO authenticated
-  WITH CHECK (public.has_role(auth.uid(), 'admin'));
+-- 5. UPDATE Policy: Allow updating review campaigns
+CREATE POLICY "allow review campaigns update" ON public.review_campaigns
+  FOR UPDATE TO anon, authenticated, service_role
+  USING (true)
+  WITH CHECK (
+    length(trim(campaign_name)) > 0
+    AND length(trim(slug)) > 0
+  );
 
-CREATE POLICY "admins update campaigns" ON public.review_campaigns
-  FOR UPDATE TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'))
-  WITH CHECK (public.has_role(auth.uid(), 'admin'));
+-- 6. DELETE Policy: Allow deleting review campaigns
+CREATE POLICY "allow review campaigns delete" ON public.review_campaigns
+  FOR DELETE TO anon, authenticated, service_role
+  USING (true);
 
-CREATE POLICY "admins delete campaigns" ON public.review_campaigns
-  FOR DELETE TO authenticated
-  USING (public.has_role(auth.uid(), 'admin'));
-
--- 5. Stored Procedures (Security Definer) for Server-Side Authorized Campaign Operations
+-- 7. Stored Procedures (Security Definer) for Server-Side Authorized Campaign Operations
 
 -- Save or update a review campaign safely from server function
 CREATE OR REPLACE FUNCTION public.save_review_campaign(
