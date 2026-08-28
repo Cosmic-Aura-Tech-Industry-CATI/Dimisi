@@ -64,6 +64,159 @@ export type AdminDashboardData = {
   }[];
 };
 
+/** Resilient review finder that checks memory and fetches from Supabase across SSR workers */
+async function findOrFetchReview(
+  memoryStore: any,
+  supabaseAdmin: any,
+  reviewId: string,
+): Promise<AdminReview | null> {
+  let review = memoryStore.reviews.find((r: AdminReview) => r.id === reviewId);
+  if (review) return review;
+
+  if (supabaseAdmin) {
+    await memoryStore.syncWithSupabase(supabaseAdmin);
+    review = memoryStore.reviews.find((r: AdminReview) => r.id === reviewId);
+    if (review) return review;
+
+    try {
+      const { data: dbRev } = await supabaseAdmin
+        .from("reviews")
+        .select("*")
+        .eq("id", reviewId)
+        .maybeSingle();
+
+      if (dbRev) {
+        const loaded: AdminReview = {
+          id: dbRev.id,
+          campaign_id: dbRev.campaign_id ?? null,
+          campaign_name: null,
+          customer_name: dbRev.customer_name,
+          customer_email: dbRev.customer_email ?? null,
+          customer_phone: dbRev.customer_phone ?? null,
+          service_name: dbRev.service_name ?? null,
+          reviewer_type: normalizeReviewerType(dbRev.reviewer_type),
+          role_or_title: dbRev.role_or_title ?? null,
+          employee_department: dbRev.employee_department ?? null,
+          employment_status: dbRev.employment_status ?? null,
+          is_verified: dbRev.is_verified === true,
+          rating: dbRev.rating,
+          review_text: dbRev.review_text,
+          customer_photo_url: dbRev.customer_photo_url ?? null,
+          customer_location: dbRev.customer_location ?? null,
+          consent_to_publish: dbRev.consent_to_publish ?? true,
+          status: (dbRev.status as ReviewStatus) ?? "pending",
+          is_featured: dbRev.is_featured === true,
+          moderation_reason: dbRev.moderation_reason ?? null,
+          moderated_by: dbRev.moderated_by ?? null,
+          submitter_ip: dbRev.submitter_ip ?? null,
+          submitted_at: dbRev.submitted_at ?? new Date().toISOString(),
+          approved_at: dbRev.approved_at ?? null,
+          rejected_at: dbRev.rejected_at ?? null,
+          archived_at: dbRev.archived_at ?? null,
+          updated_at: dbRev.updated_at ?? new Date().toISOString(),
+        };
+        memoryStore.reviews.unshift(loaded);
+        return loaded;
+      }
+    } catch (err) {
+      console.warn("[reviews] Direct review fetch error", err);
+    }
+  }
+
+  return null;
+}
+
+/** Resilient campaign finder */
+async function findOrFetchCampaign(
+  memoryStore: any,
+  supabaseAdmin: any,
+  campaignId: string,
+): Promise<ReviewCampaign | null> {
+  let camp = memoryStore.campaigns.find((c: ReviewCampaign) => c.id === campaignId);
+  if (camp) return camp;
+
+  if (supabaseAdmin) {
+    await memoryStore.syncWithSupabase(supabaseAdmin);
+    camp = memoryStore.campaigns.find((c: ReviewCampaign) => c.id === campaignId);
+    if (camp) return camp;
+
+    try {
+      const { data: dbCamp } = await supabaseAdmin
+        .from("review_campaigns")
+        .select("*")
+        .eq("id", campaignId)
+        .maybeSingle();
+
+      if (dbCamp) {
+        const loaded: ReviewCampaign = {
+          id: dbCamp.id,
+          campaign_name: dbCamp.campaign_name,
+          slug: dbCamp.slug,
+          service_name: dbCamp.service_name ?? null,
+          location: dbCamp.location ?? null,
+          is_active: dbCamp.is_active !== false,
+          expires_at: dbCamp.expires_at ?? null,
+          visits: Number(dbCamp.visits || 0),
+          scans: Number(dbCamp.scans || 0),
+          submissions: Number(dbCamp.submissions || 0),
+          created_by: dbCamp.created_by ?? "admin",
+          created_at: dbCamp.created_at ?? new Date().toISOString(),
+          updated_at: dbCamp.updated_at ?? new Date().toISOString(),
+        };
+        memoryStore.campaigns.unshift(loaded);
+        return loaded;
+      }
+    } catch (err) {
+      console.warn("[reviews] Direct campaign fetch error", err);
+    }
+  }
+  return null;
+}
+
+/** Resilient report finder */
+async function findOrFetchReport(
+  memoryStore: any,
+  supabaseAdmin: any,
+  reportId: string,
+): Promise<ReviewReport | null> {
+  let rep = memoryStore.reports.find((r: ReviewReport) => r.id === reportId);
+  if (rep) return rep;
+
+  if (supabaseAdmin) {
+    await memoryStore.syncWithSupabase(supabaseAdmin);
+    rep = memoryStore.reports.find((r: ReviewReport) => r.id === reportId);
+    if (rep) return rep;
+
+    try {
+      const { data: dbRep } = await supabaseAdmin
+        .from("review_reports")
+        .select("*")
+        .eq("id", reportId)
+        .maybeSingle();
+
+      if (dbRep) {
+        const loaded: ReviewReport = {
+          id: dbRep.id,
+          review_id: dbRep.review_id,
+          reporter_name: dbRep.reporter_name ?? null,
+          reporter_email: dbRep.reporter_email ?? null,
+          reason: dbRep.reason,
+          message: dbRep.message ?? null,
+          status: dbRep.status ?? "open",
+          created_at: dbRep.created_at ?? new Date().toISOString(),
+          resolved_at: dbRep.resolved_at ?? null,
+          resolved_by: dbRep.resolved_by ?? null,
+        };
+        memoryStore.reports.unshift(loaded);
+        return loaded;
+      }
+    } catch (err) {
+      console.warn("[reviews] Direct report fetch error", err);
+    }
+  }
+  return null;
+}
+
 /** Public: approved reviews + aggregate rating stats. Never exposes email or phone. */
 export const getPublicReviews = createServerFn({ method: "GET" })
   .validator(
@@ -495,7 +648,7 @@ export const reportReview = createServerFn({ method: "POST" })
     const { memoryStore, sendNotification, emailTemplates } = await import("./reviews.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const review = memoryStore.reviews.find((r) => r.id === data.reviewId);
+    const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
     if (!review) throw new Error("Review not found.");
 
     const newReport: ReviewReport = {
@@ -658,7 +811,7 @@ export const updateReviewStatus = createServerFn({ method: "POST" })
     );
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const review = memoryStore.reviews.find((r) => r.id === data.reviewId);
+    const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
     if (!review) throw new Error("Review not found.");
 
     const oldStatus = review.status;
@@ -749,7 +902,7 @@ export const updateReviewContent = createServerFn({ method: "POST" })
     const { memoryStore, logAudit } = await import("./reviews.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const review = memoryStore.reviews.find((r) => r.id === data.reviewId);
+    const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
     if (!review) throw new Error("Review not found.");
 
     const oldContent = {
@@ -831,7 +984,7 @@ export const toggleReviewVerified = createServerFn({ method: "POST" })
     const { memoryStore, logAudit } = await import("./reviews.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const review = memoryStore.reviews.find((r) => r.id === data.reviewId);
+    const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
     if (!review) throw new Error("Review not found.");
 
     review.is_verified = data.isVerified;
@@ -872,7 +1025,7 @@ export const toggleReviewFeatured = createServerFn({ method: "POST" })
     const { memoryStore, logAudit } = await import("./reviews.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const review = memoryStore.reviews.find((r) => r.id === data.reviewId);
+    const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
     if (!review) throw new Error("Review not found.");
 
     review.is_featured = data.isFeatured;
@@ -910,8 +1063,9 @@ export const deleteReview = createServerFn({ method: "POST" })
     const { memoryStore, logAudit } = await import("./reviews.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
     const idx = memoryStore.reviews.findIndex((r) => r.id === data.reviewId);
-    const existing = idx >= 0 ? memoryStore.reviews[idx] : null;
+    const existing = idx >= 0 ? memoryStore.reviews[idx] : review;
 
     if (idx >= 0) memoryStore.reviews.splice(idx, 1);
 
@@ -1045,7 +1199,7 @@ export const updateCampaign = createServerFn({ method: "POST" })
     const { memoryStore, logAudit } = await import("./reviews.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const campaign = memoryStore.campaigns.find((c) => c.id === data.id);
+    const campaign = await findOrFetchCampaign(memoryStore, supabaseAdmin, data.id);
     if (!campaign) throw new Error("Campaign not found.");
 
     const old = { ...campaign };
@@ -1095,8 +1249,9 @@ export const deleteCampaign = createServerFn({ method: "POST" })
     const { memoryStore, logAudit } = await import("./reviews.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    const campaign = await findOrFetchCampaign(memoryStore, supabaseAdmin, data.id);
     const idx = memoryStore.campaigns.findIndex((c) => c.id === data.id);
-    const existing = idx >= 0 ? memoryStore.campaigns[idx] : null;
+    const existing = idx >= 0 ? memoryStore.campaigns[idx] : campaign;
 
     if (idx >= 0) memoryStore.campaigns.splice(idx, 1);
 
@@ -1139,14 +1294,14 @@ export const resolveReport = createServerFn({ method: "POST" })
     const { memoryStore, logAudit } = await import("./reviews.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const report = memoryStore.reports.find((r) => r.id === data.reportId);
+    const report = await findOrFetchReport(memoryStore, supabaseAdmin, data.reportId);
     if (!report) throw new Error("Report not found.");
 
     report.status = "resolved";
     report.resolved_at = new Date().toISOString();
     report.resolved_by = "admin";
 
-    const review = memoryStore.reviews.find((r) => r.id === report.review_id);
+    const review = await findOrFetchReview(memoryStore, supabaseAdmin, report.review_id);
 
     if (review) {
       if (data.action === "archive") {
