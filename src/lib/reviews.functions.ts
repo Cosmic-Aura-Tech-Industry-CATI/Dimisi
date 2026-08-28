@@ -1,5 +1,16 @@
 import { createServerFn } from "@tanstack/react-start";
 import {
+  memoryStore,
+  signPhotos,
+  toPublicReview,
+  issueCaptcha,
+  verifyCaptcha,
+  sendNotification,
+  emailTemplates,
+  logAudit,
+} from "./reviews.server";
+import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import {
   computeStats,
   sanitizeText,
   validateReview,
@@ -66,20 +77,20 @@ export type AdminDashboardData = {
 
 /** Resilient review finder that checks memory and fetches from Supabase across SSR workers */
 async function findOrFetchReview(
-  memoryStore: any,
-  supabaseAdmin: any,
+  store: typeof memoryStore,
+  client: typeof supabaseAdmin,
   reviewId: string,
 ): Promise<AdminReview | null> {
-  let review = memoryStore.reviews.find((r: AdminReview) => r.id === reviewId);
+  let review = store.reviews.find((r: AdminReview) => r.id === reviewId);
   if (review) return review;
 
-  if (supabaseAdmin) {
-    await memoryStore.syncWithSupabase(supabaseAdmin);
-    review = memoryStore.reviews.find((r: AdminReview) => r.id === reviewId);
+  if (client) {
+    await store.syncWithSupabase(client);
+    review = store.reviews.find((r: AdminReview) => r.id === reviewId);
     if (review) return review;
 
     try {
-      const { data: dbRev } = await supabaseAdmin
+      const { data: dbRev } = await client
         .from("reviews")
         .select("*")
         .eq("id", reviewId)
@@ -115,7 +126,7 @@ async function findOrFetchReview(
           archived_at: dbRev.archived_at ?? null,
           updated_at: dbRev.updated_at ?? new Date().toISOString(),
         };
-        memoryStore.reviews.unshift(loaded);
+        store.reviews.unshift(loaded);
         return loaded;
       }
     } catch (err) {
@@ -128,20 +139,20 @@ async function findOrFetchReview(
 
 /** Resilient campaign finder */
 async function findOrFetchCampaign(
-  memoryStore: any,
-  supabaseAdmin: any,
+  store: typeof memoryStore,
+  client: typeof supabaseAdmin,
   campaignId: string,
 ): Promise<ReviewCampaign | null> {
-  let camp = memoryStore.campaigns.find((c: ReviewCampaign) => c.id === campaignId);
+  let camp = store.campaigns.find((c: ReviewCampaign) => c.id === campaignId);
   if (camp) return camp;
 
-  if (supabaseAdmin) {
-    await memoryStore.syncWithSupabase(supabaseAdmin);
-    camp = memoryStore.campaigns.find((c: ReviewCampaign) => c.id === campaignId);
+  if (client) {
+    await store.syncWithSupabase(client);
+    camp = store.campaigns.find((c: ReviewCampaign) => c.id === campaignId);
     if (camp) return camp;
 
     try {
-      const { data: dbCamp } = await supabaseAdmin
+      const { data: dbCamp } = await client
         .from("review_campaigns")
         .select("*")
         .eq("id", campaignId)
@@ -163,7 +174,7 @@ async function findOrFetchCampaign(
           created_at: dbCamp.created_at ?? new Date().toISOString(),
           updated_at: dbCamp.updated_at ?? new Date().toISOString(),
         };
-        memoryStore.campaigns.unshift(loaded);
+        store.campaigns.unshift(loaded);
         return loaded;
       }
     } catch (err) {
@@ -175,20 +186,20 @@ async function findOrFetchCampaign(
 
 /** Resilient report finder */
 async function findOrFetchReport(
-  memoryStore: any,
-  supabaseAdmin: any,
+  store: typeof memoryStore,
+  client: typeof supabaseAdmin,
   reportId: string,
 ): Promise<ReviewReport | null> {
-  let rep = memoryStore.reports.find((r: ReviewReport) => r.id === reportId);
+  let rep = store.reports.find((r: ReviewReport) => r.id === reportId);
   if (rep) return rep;
 
-  if (supabaseAdmin) {
-    await memoryStore.syncWithSupabase(supabaseAdmin);
-    rep = memoryStore.reports.find((r: ReviewReport) => r.id === reportId);
+  if (client) {
+    await store.syncWithSupabase(client);
+    rep = store.reports.find((r: ReviewReport) => r.id === reportId);
     if (rep) return rep;
 
     try {
-      const { data: dbRep } = await supabaseAdmin
+      const { data: dbRep } = await client
         .from("review_reports")
         .select("*")
         .eq("id", reportId)
@@ -207,7 +218,7 @@ async function findOrFetchReport(
           resolved_at: dbRep.resolved_at ?? null,
           resolved_by: dbRep.resolved_by ?? null,
         };
-        memoryStore.reports.unshift(loaded);
+        store.reports.unshift(loaded);
         return loaded;
       }
     } catch (err) {
@@ -239,9 +250,6 @@ export const getPublicReviews = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data }): Promise<PublicReviewsPayload> => {
-    const { memoryStore, signPhotos, toPublicReview } = await import("./reviews.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     // Sync Supabase records if available
     await memoryStore.syncWithSupabase(supabaseAdmin);
 
@@ -321,7 +329,6 @@ export const getPublicReviews = createServerFn({ method: "GET" })
 
 /** Public: fresh anti-spam challenge for the review form. */
 export const getReviewCaptcha = createServerFn({ method: "GET" }).handler(async () => {
-  const { issueCaptcha } = await import("./reviews.server");
   return issueCaptcha();
 });
 
@@ -332,9 +339,6 @@ export const getReviewCampaign = createServerFn({ method: "GET" })
     scan: Boolean(input.scan),
   }))
   .handler(async ({ data }) => {
-    const { memoryStore } = await import("./reviews.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     // Ensure database sync
     await memoryStore.syncWithSupabase(supabaseAdmin);
 
@@ -423,16 +427,10 @@ export const submitReview = createServerFn({ method: "POST" })
     const firstError = Object.values(errors)[0];
     if (firstError) throw new Error(firstError);
 
-    const { memoryStore, verifyCaptcha, sendNotification, emailTemplates } = await import(
-      "./reviews.server"
-    );
-
     // Verify arithmetic challenge (bypass if token is "fallback" during offline dev)
     if (data.captchaToken !== "fallback" && !verifyCaptcha(data.captchaToken, data.captchaAnswer)) {
       throw new Error("Anti-spam verification failed. Please solve the math challenge again.");
     }
-
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Sync database state before matching campaign
     await memoryStore.syncWithSupabase(supabaseAdmin);
@@ -645,8 +643,6 @@ export const reportReview = createServerFn({ method: "POST" })
     if (!(REPORT_REASONS as readonly string[]).includes(data.reason as any)) {
       throw new Error("Please choose a valid reason for reporting.");
     }
-    const { memoryStore, sendNotification, emailTemplates } = await import("./reviews.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
     if (!review) throw new Error("Review not found.");
@@ -706,9 +702,6 @@ export const reportReview = createServerFn({ method: "POST" })
 /** Admin: Load full reviews, campaigns, reports, settings, and analytics. */
 export const getAdminReviewsData = createServerFn({ method: "GET" }).handler(
   async (): Promise<AdminDashboardData> => {
-    const { memoryStore } = await import("./reviews.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     // Sync Supabase records if available
     await memoryStore.syncWithSupabase(supabaseAdmin);
 
@@ -806,11 +799,6 @@ export const updateReviewStatus = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const { memoryStore, logAudit, sendNotification, emailTemplates } = await import(
-      "./reviews.server"
-    );
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
     if (!review) throw new Error("Review not found.");
 
@@ -899,9 +887,6 @@ export const updateReviewContent = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const { memoryStore, logAudit } = await import("./reviews.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
     if (!review) throw new Error("Review not found.");
 
@@ -981,9 +966,6 @@ export const toggleReviewVerified = createServerFn({ method: "POST" })
     isVerified: Boolean(input.isVerified),
   }))
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const { memoryStore, logAudit } = await import("./reviews.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
     if (!review) throw new Error("Review not found.");
 
@@ -1022,9 +1004,6 @@ export const toggleReviewFeatured = createServerFn({ method: "POST" })
     isFeatured: Boolean(input.isFeatured),
   }))
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const { memoryStore, logAudit } = await import("./reviews.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
     if (!review) throw new Error("Review not found.");
 
@@ -1060,9 +1039,6 @@ export const toggleReviewFeatured = createServerFn({ method: "POST" })
 export const deleteReview = createServerFn({ method: "POST" })
   .validator((input: { reviewId: string }) => ({ reviewId: String(input.reviewId ?? "") }))
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const { memoryStore, logAudit } = await import("./reviews.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
     const idx = memoryStore.reviews.findIndex((r) => r.id === data.reviewId);
     const existing = idx >= 0 ? memoryStore.reviews[idx] : review;
@@ -1111,9 +1087,6 @@ export const createCampaign = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<{ ok: true; campaign: ReviewCampaign; message: string }> => {
     if (!data.campaignName) throw new Error("Campaign name is required.");
     if (!data.slug) throw new Error("Campaign slug is required.");
-
-    const { memoryStore, logAudit } = await import("./reviews.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     // Sync database before validating duplicate slug
     await memoryStore.syncWithSupabase(supabaseAdmin);
@@ -1196,9 +1169,6 @@ export const updateCampaign = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const { memoryStore, logAudit } = await import("./reviews.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     const campaign = await findOrFetchCampaign(memoryStore, supabaseAdmin, data.id);
     if (!campaign) throw new Error("Campaign not found.");
 
@@ -1246,9 +1216,6 @@ export const updateCampaign = createServerFn({ method: "POST" })
 export const deleteCampaign = createServerFn({ method: "POST" })
   .validator((input: { id: string }) => ({ id: String(input.id ?? "") }))
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const { memoryStore, logAudit } = await import("./reviews.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     const campaign = await findOrFetchCampaign(memoryStore, supabaseAdmin, data.id);
     const idx = memoryStore.campaigns.findIndex((c) => c.id === data.id);
     const existing = idx >= 0 ? memoryStore.campaigns[idx] : campaign;
@@ -1291,9 +1258,6 @@ export const resolveReport = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const { memoryStore, logAudit } = await import("./reviews.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     const report = await findOrFetchReport(memoryStore, supabaseAdmin, data.reportId);
     if (!report) throw new Error("Report not found.");
 
@@ -1375,9 +1339,6 @@ export const updateReviewSettings = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const { memoryStore, logAudit } = await import("./reviews.server");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
     memoryStore.settings = {
       id: true,
       notify_on_submit: data.notifyOnSubmit,

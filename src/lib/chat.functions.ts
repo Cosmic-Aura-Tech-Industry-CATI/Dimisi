@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { buildSystemPrompt, crawlSite } from "./dimisi-knowledge.server";
 
 const MessageSchema = z.object({
   role: z.enum(["user", "assistant"]),
@@ -19,8 +20,6 @@ export const askDimisi = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const key = process.env.LOVABLE_API_KEY;
     if (!key) throw new Error("AI is not configured right now.");
-
-    const { buildSystemPrompt, crawlSite } = await import("./dimisi-knowledge.server");
 
     // Auto-update: DIMISI walks the live site and reads the latest content.
     let live = "";

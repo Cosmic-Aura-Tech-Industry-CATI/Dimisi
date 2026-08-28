@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { eventsStore } from "./events.server";
 import {
   type CompanyEvent,
   type EventGalleryItem,
@@ -11,7 +12,6 @@ import {
 /** Public: Fetch all events and gallery items for the frontend Events & Gallery page. */
 export const getPublicEvents = createServerFn({ method: "GET" }).handler(
   async (): Promise<PublicEventsPayload> => {
-    const { eventsStore } = await import("./events.server");
     return eventsStore.getPublicPayload();
   },
 );
@@ -19,7 +19,6 @@ export const getPublicEvents = createServerFn({ method: "GET" }).handler(
 /** Admin: Fetch all events and gallery items for admin management. */
 export const getAdminEventsData = createServerFn({ method: "GET" }).handler(
   async (): Promise<{ events: CompanyEvent[]; gallery: EventGalleryItem[] }> => {
-    const { eventsStore } = await import("./events.server");
     return {
       events: eventsStore.events,
       gallery: eventsStore.gallery,
@@ -43,7 +42,6 @@ export const saveEventFn = createServerFn({ method: "POST" })
         return { success: false, error: check.error || "Invalid event input." };
       }
 
-      const { eventsStore } = await import("./events.server");
       const saved = eventsStore.saveEvent(data);
       return { success: true, event: saved };
     },
@@ -55,7 +53,6 @@ export const deleteEventFn = createServerFn({ method: "POST" })
   .handler(
     async ({ data }): Promise<{ success: boolean; error?: string | undefined }> => {
       if (!data.id) return { success: false, error: "Event ID is required." };
-      const { eventsStore } = await import("./events.server");
       const ok = eventsStore.deleteEvent(data.id);
       return { success: ok };
     },
@@ -75,7 +72,6 @@ export const saveGalleryItemFn = createServerFn({ method: "POST" })
       if (!data.title || !data.image_url) {
         return { success: false, error: "Title and Image URL are required." };
       }
-      const { eventsStore } = await import("./events.server");
       const saved = eventsStore.saveGalleryItem(data);
       return { success: true, item: saved };
     },
@@ -87,7 +83,6 @@ export const deleteGalleryItemFn = createServerFn({ method: "POST" })
   .handler(
     async ({ data }): Promise<{ success: boolean; error?: string | undefined }> => {
       if (!data.id) return { success: false, error: "Gallery Item ID is required." };
-      const { eventsStore } = await import("./events.server");
       const ok = eventsStore.deleteGalleryItem(data.id);
       return { success: ok };
     },

@@ -1,4 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
+import { servicesStore } from "./services.server";
 import {
   type CompanyService,
   type IndustrySector,
@@ -11,7 +12,6 @@ import {
 /** Public: Fetch all active services, industries, and metrics for the main Services hub. */
 export const getPublicServicesData = createServerFn({ method: "GET" }).handler(
   async (): Promise<PublicServicesPayload> => {
-    const { servicesStore } = await import("./services.server");
     return servicesStore.getPublicPayload();
   },
 );
@@ -21,14 +21,12 @@ export const getServiceBySlug = createServerFn({ method: "GET" })
   .validator((input: { slug: string }) => input)
   .handler(async ({ data }): Promise<CompanyService | null> => {
     if (!data.slug) return null;
-    const { servicesStore } = await import("./services.server");
     return servicesStore.getServiceBySlug(data.slug);
   });
 
 /** Admin: Fetch all services and industries for admin control room. */
 export const getAdminServicesData = createServerFn({ method: "GET" }).handler(
   async (): Promise<{ services: CompanyService[]; industries: IndustrySector[] }> => {
-    const { servicesStore } = await import("./services.server");
     return {
       services: servicesStore.services,
       industries: servicesStore.industries,
@@ -52,7 +50,6 @@ export const saveServiceFn = createServerFn({ method: "POST" })
         return { success: false, error: check.error || "Invalid service input." };
       }
 
-      const { servicesStore } = await import("./services.server");
       const saved = servicesStore.saveService(data);
       return { success: true, service: saved };
     },
@@ -64,7 +61,6 @@ export const deleteServiceFn = createServerFn({ method: "POST" })
   .handler(
     async ({ data }): Promise<{ success: boolean; error?: string | undefined }> => {
       if (!data.id) return { success: false, error: "Service ID is required." };
-      const { servicesStore } = await import("./services.server");
       const ok = servicesStore.deleteService(data.id);
       return { success: ok };
     },
@@ -85,7 +81,6 @@ export const saveIndustryFn = createServerFn({ method: "POST" })
         return { success: false, error: "Industry name and tagline are required." };
       }
 
-      const { servicesStore } = await import("./services.server");
       const saved = servicesStore.saveIndustry(data);
       return { success: true, industry: saved };
     },
@@ -97,7 +92,6 @@ export const deleteIndustryFn = createServerFn({ method: "POST" })
   .handler(
     async ({ data }): Promise<{ success: boolean; error?: string | undefined }> => {
       if (!data.id) return { success: false, error: "Industry ID is required." };
-      const { servicesStore } = await import("./services.server");
       const ok = servicesStore.deleteIndustry(data.id);
       return { success: ok };
     },
