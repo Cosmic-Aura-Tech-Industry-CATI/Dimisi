@@ -339,12 +339,68 @@ export const getReviewCampaign = createServerFn({ method: "GET" })
     scan: Boolean(input.scan),
   }))
   .handler(async ({ data }) => {
+    if (!data.slug) return { campaign: null, expired: false };
+
     // Ensure database sync
     await memoryStore.syncWithSupabase(supabaseAdmin);
 
-    if (!data.slug) return { campaign: null, expired: false };
-
     let campaign = memoryStore.campaigns.find((c) => c.slug === data.slug) ?? null;
+
+    // If not found in memory store, query Supabase database directly
+    if (!campaign && supabaseAdmin) {
+      try {
+        const { data: dbCamp } = await supabaseAdmin
+          .from("review_campaigns")
+          .select("*")
+          .eq("slug", data.slug)
+          .maybeSingle();
+
+        if (dbCamp) {
+          campaign = {
+            id: dbCamp.id,
+            campaign_name: dbCamp.campaign_name,
+            slug: dbCamp.slug,
+            service_name: dbCamp.service_name ?? null,
+            location: dbCamp.location ?? null,
+            is_active: dbCamp.is_active !== false,
+            expires_at: dbCamp.expires_at ?? null,
+            visits: Number(dbCamp.visits || 0),
+            scans: Number(dbCamp.scans || 0),
+            submissions: Number(dbCamp.submissions || 0),
+            created_by: dbCamp.created_by ?? "admin",
+            created_at: dbCamp.created_at ?? new Date().toISOString(),
+            updated_at: dbCamp.updated_at ?? new Date().toISOString(),
+          };
+          memoryStore.campaigns.unshift(campaign);
+        } else {
+          // Fallback to get_public_campaign RPC
+          const { data: rpcCamp } = await supabaseAdmin.rpc("get_public_campaign", {
+            _slug: data.slug,
+          });
+          const row = Array.isArray(rpcCamp) ? rpcCamp[0] : rpcCamp;
+          if (row) {
+            campaign = {
+              id: row.id,
+              campaign_name: row.campaign_name,
+              slug: data.slug,
+              service_name: row.service_name ?? null,
+              location: row.location ?? null,
+              is_active: true,
+              expires_at: null,
+              visits: 0,
+              scans: 0,
+              submissions: 0,
+              created_by: "admin",
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+            };
+            memoryStore.campaigns.unshift(campaign);
+          }
+        }
+      } catch (err) {
+        console.warn("[reviews] Direct campaign lookup fallback", err);
+      }
+    }
 
     if (campaign) {
       if (data.scan) campaign.scans += 1;
@@ -1111,29 +1167,67 @@ export const createCampaign = createServerFn({ method: "POST" })
       updated_at: new Date().toISOString(),
     };
 
-    memoryStore.campaigns.unshift(newCampaign);
+    if (supabaseAdmin) {
+      let dbSaved = false;
 
-    try {
-      if (supabaseAdmin) {
-        const { error: cErr } = await supabaseAdmin.from("review_campaigns").insert({
-          id: newCampaign.id,
-          campaign_name: newCampaign.campaign_name,
-          slug: newCampaign.slug,
-          service_name: newCampaign.service_name,
-          location: newCampaign.location,
-          is_active: true,
-          expires_at: newCampaign.expires_at,
-          visits: 0,
-          scans: 0,
-          submissions: 0,
+      // 1. Try secure save_review_campaign stored procedure first
+      try {
+        const { data: rpcRes, error: rpcErr } = await supabaseAdmin.rpc("save_review_campaign", {
+          _id: newCampaign.id,
+          _campaign_name: newCampaign.campaign_name,
+          _slug: newCampaign.slug,
+          _service_name: newCampaign.service_name,
+          _location: newCampaign.location,
+          _is_active: newCampaign.is_active,
+          _expires_at: newCampaign.expires_at,
+          _created_by: null,
         });
+
+        if (!rpcErr && rpcRes) {
+          dbSaved = true;
+          if (rpcRes.id) newCampaign.id = rpcRes.id;
+          if (rpcRes.created_at) newCampaign.created_at = rpcRes.created_at;
+          if (rpcRes.updated_at) newCampaign.updated_at = rpcRes.updated_at;
+        } else if (rpcErr) {
+          console.warn("[reviews] RPC save_review_campaign fallback to direct insert:", rpcErr.message);
+        }
+      } catch {
+        // Continue to direct insert
+      }
+
+      // 2. Direct insert if RPC not yet run in Postgres
+      if (!dbSaved) {
+        const { data: insRow, error: cErr } = await supabaseAdmin
+          .from("review_campaigns")
+          .insert({
+            id: newCampaign.id,
+            campaign_name: newCampaign.campaign_name,
+            slug: newCampaign.slug,
+            service_name: newCampaign.service_name,
+            location: newCampaign.location,
+            is_active: true,
+            expires_at: newCampaign.expires_at,
+            visits: 0,
+            scans: 0,
+            submissions: 0,
+          })
+          .select()
+          .maybeSingle();
+
         if (cErr) {
-          console.warn("[reviews] Supabase create campaign warning:", cErr.message);
+          console.error("[reviews] Supabase create campaign failed:", cErr.message);
+          // In connected environment, do NOT swallow RLS or DB errors
+          if (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL) {
+            throw new Error(`Database error creating campaign: ${cErr.message}`);
+          }
+        } else if (insRow) {
+          newCampaign.id = insRow.id;
+          if (insRow.created_at) newCampaign.created_at = insRow.created_at;
         }
       }
-    } catch (err) {
-      console.warn("[reviews] Supabase create campaign fallback", err);
     }
+
+    memoryStore.campaigns.unshift(newCampaign);
 
     await logAudit(
       supabaseAdmin,
@@ -1180,9 +1274,27 @@ export const updateCampaign = createServerFn({ method: "POST" })
     campaign.expires_at = data.expiresAt;
     campaign.updated_at = new Date().toISOString();
 
-    try {
-      if (supabaseAdmin) {
-        await supabaseAdmin
+    if (supabaseAdmin) {
+      let dbUpdated = false;
+
+      try {
+        const { error: rpcErr } = await supabaseAdmin.rpc("save_review_campaign", {
+          _id: data.id,
+          _campaign_name: data.campaignName,
+          _slug: campaign.slug,
+          _service_name: campaign.service_name,
+          _location: campaign.location,
+          _is_active: campaign.is_active,
+          _expires_at: campaign.expires_at,
+          _created_by: null,
+        });
+        if (!rpcErr) dbUpdated = true;
+      } catch {
+        // Continue to direct update
+      }
+
+      if (!dbUpdated) {
+        const { error: uErr } = await supabaseAdmin
           .from("review_campaigns")
           .update({
             campaign_name: campaign.campaign_name,
@@ -1193,9 +1305,12 @@ export const updateCampaign = createServerFn({ method: "POST" })
             updated_at: campaign.updated_at,
           })
           .eq("id", data.id);
+
+        if (uErr && (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL)) {
+          console.error("[reviews] Supabase update campaign error:", uErr.message);
+          throw new Error(`Database error updating campaign: ${uErr.message}`);
+        }
       }
-    } catch (err) {
-      console.warn("[reviews] Supabase update campaign fallback", err);
     }
 
     await logAudit(
@@ -1222,12 +1337,25 @@ export const deleteCampaign = createServerFn({ method: "POST" })
 
     if (idx >= 0) memoryStore.campaigns.splice(idx, 1);
 
-    try {
-      if (supabaseAdmin) {
-        await supabaseAdmin.from("review_campaigns").delete().eq("id", data.id);
+    if (supabaseAdmin) {
+      let dbDeleted = false;
+
+      try {
+        const { error: rpcErr } = await supabaseAdmin.rpc("delete_review_campaign", {
+          _id: data.id,
+        });
+        if (!rpcErr) dbDeleted = true;
+      } catch {
+        // Fallback to direct delete
       }
-    } catch (err) {
-      console.warn("[reviews] Supabase delete campaign fallback", err);
+
+      if (!dbDeleted) {
+        const { error: dErr } = await supabaseAdmin.from("review_campaigns").delete().eq("id", data.id);
+        if (dErr && (process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL)) {
+          console.error("[reviews] Supabase delete campaign error:", dErr.message);
+          throw new Error(`Database error deleting campaign: ${dErr.message}`);
+        }
+      }
     }
 
     await logAudit(

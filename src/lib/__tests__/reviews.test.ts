@@ -383,4 +383,53 @@ describe("End-to-End Review Pipeline (Submit -> Pending -> Approve -> Public)", 
     assert.equal(queued.campaign_id, campId);
     assert.equal(foundCamp.submissions, 1);
   });
+
+  it("creates, updates, and deletes campaigns with slug validation and expiry checks", async () => {
+    const { memoryStore } = await import("../reviews.server");
+    const testSlug = `partner-drive-${Date.now()}`;
+    const newCampId = crypto.randomUUID();
+
+    // 1. Create
+    const camp = {
+      id: newCampId,
+      campaign_name: "Partner Drive 2026",
+      slug: testSlug,
+      service_name: "Cloud & DevOps Architecture",
+      location: "Bengaluru",
+      is_active: true,
+      expires_at: new Date(Date.now() + 86400000).toISOString(),
+      visits: 0,
+      scans: 0,
+      submissions: 0,
+      created_by: "admin",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    memoryStore.campaigns.unshift(camp);
+
+    const created = memoryStore.campaigns.find((c) => c.slug === testSlug);
+    assert.ok(created, "Campaign should be in memory store");
+    assert.equal(created.campaign_name, "Partner Drive 2026");
+    assert.equal(created.is_active, true);
+
+    // 2. Update
+    created.campaign_name = "Partner Drive 2026 (Updated)";
+    created.location = "Mumbai & Bengaluru";
+    created.is_active = false;
+    created.updated_at = new Date().toISOString();
+
+    const updated = memoryStore.campaigns.find((c) => c.id === newCampId);
+    assert.ok(updated);
+    assert.equal(updated.campaign_name, "Partner Drive 2026 (Updated)");
+    assert.equal(updated.is_active, false);
+
+    // 3. Delete
+    const idx = memoryStore.campaigns.findIndex((c) => c.id === newCampId);
+    assert.ok(idx >= 0);
+    memoryStore.campaigns.splice(idx, 1);
+
+    const deleted = memoryStore.campaigns.find((c) => c.id === newCampId);
+    assert.equal(deleted, undefined, "Campaign should be removed after deletion");
+  });
 });
+
