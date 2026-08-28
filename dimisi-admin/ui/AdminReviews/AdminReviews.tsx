@@ -541,8 +541,9 @@ export function AdminReviews({
                             className={styles.actionBtn}
                             onClick={() => setViewingReview(rev)}
                             title="View Full Details"
+                            aria-label="View Full Details"
                           >
-                            <Eye size={13} />
+                            <Eye size={15} color="#e2e8f0" />
                           </button>
 
                           {/* Status specific actions */}
@@ -554,8 +555,9 @@ export function AdminReviews({
                                 onClick={() => handleApprove(rev)}
                                 disabled={isPending}
                                 title="Approve Review"
+                                aria-label="Approve Review"
                               >
-                                <CheckCircle size={13} />
+                                <CheckCircle size={14} />
                                 <span>Approve</span>
                               </button>
                               <button
@@ -564,8 +566,9 @@ export function AdminReviews({
                                 onClick={() => setRejectingReview(rev)}
                                 disabled={isPending}
                                 title="Reject Review"
+                                aria-label="Reject Review"
                               >
-                                <XCircle size={13} />
+                                <XCircle size={15} />
                               </button>
                             </>
                           ) : rev.status === "approved" ? (
@@ -574,18 +577,23 @@ export function AdminReviews({
                                 type="button"
                                 className={styles.actionBtn}
                                 onClick={() => handleToggleFeatured(rev)}
-                                style={{ color: rev.is_featured ? "#ffab2e" : "#94a3b8" }}
                                 title={rev.is_featured ? "Remove Featured" : "Mark as Featured"}
+                                aria-label={rev.is_featured ? "Remove Featured" : "Mark as Featured"}
                               >
-                                <Flame size={13} fill={rev.is_featured ? "currentColor" : "none"} />
+                                <Flame
+                                  size={15}
+                                  color={rev.is_featured ? "#ff8c1a" : "#cbd5e1"}
+                                  fill={rev.is_featured ? "#ff8c1a" : "none"}
+                                />
                               </button>
                               <button
                                 type="button"
                                 className={styles.actionBtn}
                                 onClick={() => handleArchive(rev)}
                                 title="Archive / Hide"
+                                aria-label="Archive / Hide"
                               >
-                                <Archive size={13} />
+                                <Archive size={15} color="#cbd5e1" />
                               </button>
                             </>
                           ) : (
@@ -594,8 +602,9 @@ export function AdminReviews({
                               className={styles.actionBtn}
                               onClick={() => handleRestore(rev)}
                               title="Restore to Approved"
+                              aria-label="Restore to Approved"
                             >
-                              <RotateCcw size={13} />
+                              <RotateCcw size={15} color="#4ade80" />
                             </button>
                           )}
 
@@ -605,8 +614,9 @@ export function AdminReviews({
                             className={styles.actionBtn}
                             onClick={() => handleEditOpen(rev)}
                             title="Edit Review Content"
+                            aria-label="Edit Review Content"
                           >
-                            <Edit3 size={13} />
+                            <Edit3 size={15} color="#e2e8f0" />
                           </button>
 
                           {/* Delete */}
@@ -615,8 +625,9 @@ export function AdminReviews({
                             className={[styles.actionBtn, styles.btnDelete].join(" ")}
                             onClick={() => setDeletingReview(rev)}
                             title="Delete Review"
+                            aria-label="Delete Review"
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </td>
