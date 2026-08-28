@@ -2,8 +2,22 @@
   position: relative;
   width: 100%;
   padding: clamp(3.5rem, 7vw, 6.5rem) 0;
-  background: radial-gradient(circle at 50% 50%, rgba(255, 122, 0, 0.04) 0%, transparent 65%);
+  background: transparent;
   overflow: hidden;
+  color: var(--dm-warm, #fbf3e9);
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+}
+
+.ambientGlow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 75vw;
+  height: 55vh;
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(255, 140, 26, 0.08) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .container {
@@ -28,21 +42,21 @@
 .badgeWrap {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.35rem 0.85rem;
+  gap: 0.55rem;
+  padding: 0.4rem 1.1rem;
   border-radius: 999px;
-  background: rgba(255, 122, 0, 0.08);
-  border: 1px solid rgba(255, 122, 0, 0.25);
-  box-shadow: 0 0 20px rgba(255, 122, 0, 0.12);
+  background: rgba(255, 171, 46, 0.1);
+  border: 1px solid rgba(255, 171, 46, 0.3);
+  box-shadow: 0 0 24px rgba(255, 171, 46, 0.15);
 }
 
 .pulseDot {
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
-  background: var(--dm-amber, #ffb300);
-  box-shadow: 0 0 10px var(--dm-amber, #ffb300);
-  animation: pulseDot 2.2s infinite ease-in-out;
+  background: var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 10px var(--dm-amber, #ffab2e);
+  animation: pulseDot 2s infinite ease-in-out;
 }
 
 @keyframes pulseDot {
@@ -57,36 +71,35 @@
 }
 
 .badgeText {
-  font-family: var(--font-mono, "Space Mono", monospace);
-  font-size: 0.76rem;
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.26em;
   text-transform: uppercase;
-  color: var(--dm-amber, #ffb300);
+  color: var(--dm-amber, #ffab2e);
 }
 
 .title {
-  font-family: var(--font-display, "Chakra Petch", sans-serif);
-  font-size: clamp(2rem, 4.5vw, 3.4rem);
-  font-weight: 800;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: clamp(2.2rem, 4.5vw, 3.4rem);
+  font-weight: 700;
   line-height: 1.12;
-  letter-spacing: -0.02em;
-  color: #ffffff;
+  letter-spacing: -0.01em;
+  color: var(--dm-warm, #fbf3e9);
   margin: 0;
 }
 
 .gradientTitle {
-  background: linear-gradient(135deg, #ffffff 10%, #ffc043 45%, #ff7a00 80%, #ff4500 100%);
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff8c1a 40%, #ffd79a));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  filter: drop-shadow(0 0 25px rgba(255, 122, 0, 0.35));
 }
 
 .subtitle {
-  font-size: clamp(0.95rem, 1.4vw, 1.12rem);
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.65);
+  font-size: 1.02rem;
+  line-height: 1.65;
+  color: var(--dm-dim, #a09587);
   margin: 0;
   max-width: 680px;
 }
@@ -97,13 +110,13 @@
   align-items: center;
   justify-content: center;
   gap: 1.5rem;
-  padding: 0.65rem 1.4rem;
+  padding: 0.75rem 1.75rem;
   margin-top: 0.75rem;
   border-radius: 999px;
-  background: rgba(18, 19, 26, 0.75);
+  background: rgba(14, 14, 17, 0.72);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.4);
 }
 
 .metricItem {
@@ -113,17 +126,20 @@
 }
 
 .metricNumber {
-  font-family: var(--font-display, "Chakra Petch", monospace);
-  font-size: 1.15rem;
-  font-weight: 800;
-  color: var(--dm-amber, #ffb300);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
   line-height: 1.2;
 }
 
 .metricLabel {
-  font-size: 0.7rem;
-  color: rgba(255, 255, 255, 0.5);
-  letter-spacing: 0.02em;
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--dm-dim, #a09587);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
 }
 
 .metricDivider {
@@ -185,28 +201,32 @@
 .card {
   position: relative;
   flex-shrink: 0;
-  width: 380px;
-  padding: 1.45rem 1.45rem 1.3rem;
-  border-radius: 18px;
-  background: linear-gradient(150deg, rgba(17, 18, 26, 0.92), rgba(8, 9, 14, 0.97));
+  width: 390px;
+  padding: 1.65rem;
+  border-radius: 1.4rem;
+  background: rgba(14, 14, 17, 0.72);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s, box-shadow 0.3s;
   overflow: hidden;
 }
 
 .card:hover {
-  border-color: rgba(255, 166, 0, 0.5);
+  border-color: rgba(255, 171, 46, 0.4);
   box-shadow:
-    0 16px 40px -10px rgba(0, 0, 0, 0.85),
-    0 0 28px rgba(255, 122, 0, 0.2),
-    inset 0 0 20px rgba(255, 122, 0, 0.04);
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    0 0 30px rgba(255, 122, 24, 0.12);
   transform: translateY(-4px);
+}
+
+.cardFeatured {
+  background: linear-gradient(160deg, rgba(255, 122, 24, 0.08) 0%, rgba(14, 14, 17, 0.85) 100%);
+  border-color: rgba(255, 171, 46, 0.3);
 }
 
 .cardGlow {
@@ -216,7 +236,7 @@
   width: 120px;
   height: 120px;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 122, 0, 0.2) 0%, transparent 70%);
+  background: radial-gradient(circle, rgba(255, 140, 26, 0.15) 0%, transparent 70%);
   pointer-events: none;
   opacity: 0.3;
   transition: opacity 0.4s ease, transform 0.4s ease;
@@ -232,42 +252,61 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 0.95rem;
+  margin-bottom: 1rem;
 }
 
 .starRow {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.2rem;
+  color: var(--dm-amber, #ffab2e);
+  filter: drop-shadow(0 0 4px rgba(255, 171, 46, 0.35));
 }
 
 .starIcon {
-  width: 15px;
-  height: 15px;
+  width: 14px;
+  height: 14px;
 }
 
 .starFilled {
-  color: var(--dm-amber, #ffb300);
-  fill: var(--dm-amber, #ffb300);
-  filter: drop-shadow(0 0 4px rgba(255, 179, 0, 0.5));
+  color: var(--dm-amber, #ffab2e);
+  fill: var(--dm-amber, #ffab2e);
 }
 
 .starEmpty {
   color: rgba(255, 255, 255, 0.15);
 }
 
-.verifiedBadge {
+.verifiedBadgeClient {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  font-family: var(--font-mono, "Space Mono", monospace);
-  font-size: 0.68rem;
-  font-weight: 600;
-  padding: 0.2rem 0.5rem;
-  border-radius: 6px;
-  background: rgba(255, 122, 0, 0.08);
-  border: 1px solid rgba(255, 122, 0, 0.2);
-  color: var(--dm-amber, #ffb300);
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 140, 26, 0.12);
+  border: 1px solid rgba(255, 140, 26, 0.3);
+  color: var(--dm-amber, #ffab2e);
+}
+
+.verifiedBadgeEmp {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 214, 170, 0.08);
+  border: 1px solid rgba(255, 214, 170, 0.25);
+  color: #ffd79a;
 }
 
 .checkIcon {
@@ -277,15 +316,15 @@
 
 /* Review Text */
 .reviewText {
-  font-size: 0.92rem;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.8);
-  margin: 0 0 1rem;
-  font-style: italic;
+  font-size: 0.94rem;
+  line-height: 1.65;
+  color: rgba(251, 243, 233, 0.85);
+  margin: 0 0 1.15rem;
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  flex: 1;
 }
 
 /* Service Tag */
@@ -293,54 +332,68 @@
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  font-family: var(--font-mono, "Space Mono", monospace);
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
   font-size: 0.72rem;
   font-weight: 600;
-  padding: 0.25rem 0.6rem;
-  margin-bottom: 1rem;
-  border-radius: 6px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.65);
+  letter-spacing: 0.08em;
+  padding: 0.25rem 0.65rem;
+  margin-bottom: 1.1rem;
+  border-radius: 999px;
+  background: rgba(255, 171, 46, 0.1);
+  border: 1px solid rgba(255, 171, 46, 0.22);
+  color: var(--dm-amber, #ffab2e);
   width: fit-content;
+}
+
+.serviceTagEmp {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.09);
+  color: #ffd79a;
 }
 
 .serviceIcon {
   width: 12px;
   height: 12px;
-  color: var(--dm-amber, #ffb300);
 }
 
 /* Customer Row */
 .customerRow {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding-top: 0.85rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 0.85rem;
+  padding-top: 0.95rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
 }
 
 .avatarImg {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   object-fit: cover;
-  border: 1px solid rgba(255, 179, 0, 0.4);
+  border: 1.5px solid var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 12px rgba(255, 171, 46, 0.25);
 }
 
 .avatarFallback {
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(255, 122, 0, 0.25), rgba(255, 255, 255, 0.05));
-  border: 1px solid rgba(255, 179, 0, 0.35);
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  color: #0a0810;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--font-display, "Chakra Petch", sans-serif);
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: var(--dm-amber, #ffb300);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.88rem;
+  font-weight: 700;
+  box-shadow: 0 0 12px rgba(255, 122, 24, 0.3);
+}
+
+.avatarEmployee {
+  background: linear-gradient(135deg, rgba(255, 171, 46, 0.18) 0%, rgba(20, 17, 24, 0.95) 100%) !important;
+  border: 1.5px solid rgba(255, 214, 170, 0.35) !important;
+  color: #ffd79a !important;
+  box-shadow: 0 0 14px rgba(255, 171, 46, 0.2) !important;
 }
 
 .customerMeta {
@@ -349,12 +402,19 @@
 }
 
 .customerName {
-  font-family: var(--font-display, "Chakra Petch", sans-serif);
-  font-size: 0.98rem;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.96rem;
   font-weight: 700;
-  color: #ffffff;
+  color: var(--dm-warm, #fbf3e9);
   margin: 0;
   line-height: 1.2;
+}
+
+.customerRole {
+  font-size: 0.78rem;
+  color: #ffd79a;
+  margin: 0.2rem 0 0;
+  font-weight: 500;
 }
 
 .customerLoc {
@@ -362,14 +422,14 @@
   align-items: center;
   gap: 0.25rem;
   font-size: 0.76rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--dm-dim, #a09587);
   margin: 0.2rem 0 0;
 }
 
 .locIcon {
   width: 11px;
   height: 11px;
-  color: var(--dm-amber, #ffb300);
+  color: var(--dm-amber, #ffab2e);
 }
 
 /* Action Row */
@@ -392,14 +452,87 @@
   width: 16px;
   height: 16px;
   margin-right: 0.35rem;
-  color: var(--dm-amber, #ffb300);
+  color: var(--dm-amber, #ffab2e);
+}
+
+/* Skeletons */
+.skeletonCard {
+  width: 390px;
+  height: 240px;
+  flex-shrink: 0;
+  border-radius: 1.4rem;
+  background: rgba(14, 14, 17, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  animation: pulseSkeleton 1.8s infinite ease-in-out;
+}
+
+@keyframes pulseSkeleton {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+}
+
+/* Error & Empty State */
+.stateBox {
+  background: rgba(14, 14, 17, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.4rem;
+  padding: 3rem 2rem;
+  text-align: center;
+  max-width: 600px;
+  margin: 0 auto 2.5rem;
+  backdrop-filter: blur(20px);
+}
+
+.stateIcon {
+  color: var(--dm-amber, #ffab2e);
+  margin-bottom: 1rem;
+}
+
+.stateTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.35rem;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0 0 0.5rem;
+}
+
+.stateText {
+  color: var(--dm-dim, #a09587);
+  font-size: 0.94rem;
+  margin: 0 0 1.5rem;
+}
+
+.retryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.4rem;
+  background: rgba(255, 171, 46, 0.15);
+  border: 1px solid rgba(255, 171, 46, 0.35);
+  color: var(--dm-amber, #ffab2e);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.retryBtn:hover {
+  background: rgba(255, 171, 46, 0.25);
+  border-color: #ffab2e;
+  color: #ffd79a;
 }
 
 /* Responsive */
 @media (max-width: 640px) {
   .card {
-    width: 300px;
-    padding: 1.2rem;
+    width: 310px;
+    padding: 1.3rem;
+  }
+  .skeletonCard {
+    width: 310px;
   }
   .metricsBar {
     flex-direction: column;

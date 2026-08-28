@@ -34,7 +34,6 @@ import {
   PROCESS,
   STATS,
   TECHNOLOGIES,
-  TESTIMONIALS,
 } from "@/data/home";
 import { SERVICES } from "@/data/services";
 import styles from "./Home.module.css";
