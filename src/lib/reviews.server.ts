@@ -1,6 +1,6 @@
 /** Server-only helpers for the review system (captcha, storage, email, audit, dev-fallback). */
 import { createHmac, timingSafeEqual, randomBytes } from "crypto";
-import type { PublicReview, AdminReview, ReviewCampaign, ReviewReport, ReviewSettings } from "./reviews.shared";
+import type { PublicReview, AdminReview, ReviewCampaign, ReviewReport, ReviewSettings, ReviewType } from "./reviews.shared";
 
 const CAPTCHA_TTL_MS = 10 * 60 * 1000;
 
