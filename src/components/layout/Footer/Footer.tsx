@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { FaXTwitter, FaLinkedinIn, FaGithub, FaYoutube } from "react-icons/fa6";
+import { FaXTwitter, FaLinkedinIn, FaInstagram, FaYoutube } from "react-icons/fa6";
 import { COMPANY, LEGAL_LINKS, NAV_LINKS, SOCIALS } from "@/constants/site";
 import { SILVER_LOGO_URL } from "@/assets/logos";
 import styles from "./Footer.module.css";
@@ -7,7 +7,7 @@ import styles from "./Footer.module.css";
 const SOCIAL_ICON_MAP = {
   x: FaXTwitter,
   linkedin: FaLinkedinIn,
-  github: FaGithub,
+  instagram: FaInstagram,
   youtube: FaYoutube,
 } as const;
 

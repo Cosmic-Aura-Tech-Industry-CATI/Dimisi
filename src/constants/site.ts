@@ -43,6 +43,6 @@ export const LEGAL_LINKS: NavLink[] = [
 export const SOCIALS = [
   { label: "X", href: "https://x.com", ariaLabel: "DIMISI on X", id: "x" },
   { label: "LinkedIn", href: "https://linkedin.com", ariaLabel: "DIMISI on LinkedIn", id: "linkedin" },
-  { label: "GitHub", href: "https://github.com", ariaLabel: "DIMISI on GitHub", id: "github" },
+  { label: "Instagram", href: "https://instagram.com", ariaLabel: "DIMISI on Instagram", id: "instagram" },
   { label: "YouTube", href: "https://youtube.com", ariaLabel: "DIMISI on YouTube", id: "youtube" },
 ];
