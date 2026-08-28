@@ -182,6 +182,9 @@ export const getReviewCampaign = createServerFn({ method: "GET" })
     const { memoryStore } = await import("./reviews.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // Ensure database sync
+    await memoryStore.syncWithSupabase(supabaseAdmin);
+
     if (!data.slug) return { campaign: null, expired: false };
 
     let campaign = memoryStore.campaigns.find((c) => c.slug === data.slug) ?? null;
@@ -278,6 +281,9 @@ export const submitReview = createServerFn({ method: "POST" })
 
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // Sync database state before matching campaign
+    await memoryStore.syncWithSupabase(supabaseAdmin);
+
     // Duplicate check
     const isDupe = memoryStore.reviews.some(
       (r) =>
@@ -361,9 +367,40 @@ export const submitReview = createServerFn({ method: "POST" })
     // Try Supabase insert
     try {
       if (supabaseAdmin) {
+        // Resolve valid campaign ID in database to protect against FK constraints
+        let validCampaignIdInDb: string | null = null;
+        if (campaignId) {
+          const { data: dbCamp } = await supabaseAdmin
+            .from("review_campaigns")
+            .select("id")
+            .eq("id", campaignId)
+            .maybeSingle();
+
+          if (dbCamp?.id) {
+            validCampaignIdInDb = dbCamp.id;
+          } else if (data.slug) {
+            // Attempt inserting campaign into Supabase if missing
+            const localCamp = memoryStore.campaigns.find((c) => c.slug === data.slug);
+            if (localCamp) {
+              const { error: insCampErr } = await supabaseAdmin.from("review_campaigns").insert({
+                id: localCamp.id,
+                campaign_name: localCamp.campaign_name,
+                slug: localCamp.slug,
+                service_name: localCamp.service_name,
+                location: localCamp.location,
+                is_active: localCamp.is_active,
+                expires_at: localCamp.expires_at,
+              });
+              if (!insCampErr) {
+                validCampaignIdInDb = localCamp.id;
+              }
+            }
+          }
+        }
+
         const fullPayload: any = {
           id: newReview.id,
-          campaign_id: campaignId,
+          campaign_id: validCampaignIdInDb,
           customer_name: data.customerName,
           customer_email: data.customerEmail || null,
           customer_phone: data.customerPhone || null,
@@ -387,10 +424,10 @@ export const submitReview = createServerFn({ method: "POST" })
 
         const { error: insertErr } = await supabaseAdmin.from("reviews").insert(fullPayload);
         if (insertErr) {
-          // If insert failed (e.g. table schema doesn't have custom columns), try standard payload
+          // If insert failed, try basic payload without custom columns
           const basicPayload = {
             id: newReview.id,
-            campaign_id: campaignId,
+            campaign_id: validCampaignIdInDb,
             customer_name: data.customerName,
             customer_email: data.customerEmail || null,
             customer_phone: data.customerPhone || null,
@@ -405,7 +442,11 @@ export const submitReview = createServerFn({ method: "POST" })
             submitted_at: nowIso,
             updated_at: nowIso,
           };
-          await supabaseAdmin.from("reviews").insert(basicPayload);
+          const { error: basicErr } = await supabaseAdmin.from("reviews").insert(basicPayload);
+          if (basicErr) {
+            // If still failed due to foreign key or constraint, insert with campaign_id null
+            await supabaseAdmin.from("reviews").insert({ ...basicPayload, campaign_id: null });
+          }
         }
 
         if (data.slug) {
@@ -920,6 +961,9 @@ export const createCampaign = createServerFn({ method: "POST" })
     const { memoryStore, logAudit } = await import("./reviews.server");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
+    // Sync database before validating duplicate slug
+    await memoryStore.syncWithSupabase(supabaseAdmin);
+
     if (memoryStore.campaigns.some((c) => c.slug === data.slug)) {
       throw new Error(`Campaign slug "${data.slug}" already exists. Please choose a different slug.`);
     }
@@ -944,7 +988,7 @@ export const createCampaign = createServerFn({ method: "POST" })
 
     try {
       if (supabaseAdmin) {
-        await supabaseAdmin.from("review_campaigns").insert({
+        const { error: cErr } = await supabaseAdmin.from("review_campaigns").insert({
           id: newCampaign.id,
           campaign_name: newCampaign.campaign_name,
           slug: newCampaign.slug,
@@ -952,7 +996,13 @@ export const createCampaign = createServerFn({ method: "POST" })
           location: newCampaign.location,
           is_active: true,
           expires_at: newCampaign.expires_at,
+          visits: 0,
+          scans: 0,
+          submissions: 0,
         });
+        if (cErr) {
+          console.warn("[reviews] Supabase create campaign warning:", cErr.message);
+        }
       }
     } catch (err) {
       console.warn("[reviews] Supabase create campaign fallback", err);

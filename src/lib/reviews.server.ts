@@ -16,7 +16,6 @@ import {
   type ReviewStats,
   type ReviewStatus,
   type ReviewType,
-  type ReviewInput,
 } from "./reviews.shared";
 
 const CAPTCHA_TTL_MS = 10 * 60 * 1000;
@@ -67,7 +66,9 @@ export async function signPhotos<T extends { customer_photo_url: string | null }
   admin: any,
   rows: T[],
 ): Promise<Map<string, string>> {
-  const paths = rows.map((r) => r.customer_photo_url).filter((p): p is string => !!p && !p.startsWith("http") && !p.startsWith("data:"));
+  const paths = rows
+    .map((r) => r.customer_photo_url)
+    .filter((p): p is string => !!p && !p.startsWith("http") && !p.startsWith("data:"));
   const map = new Map<string, string>();
   if (paths.length === 0 || !admin?.storage) return map;
 
@@ -88,7 +89,10 @@ export function toPublicReview(
 ): PublicReview {
   const rType: ReviewType = normalizeReviewerType(row.reviewer_type);
   const photo = row.customer_photo_url
-    ? (photos.get(row.customer_photo_url) ?? (row.customer_photo_url.startsWith("http") || row.customer_photo_url.startsWith("data:") ? row.customer_photo_url : null))
+    ? (photos.get(row.customer_photo_url) ??
+      (row.customer_photo_url.startsWith("http") || row.customer_photo_url.startsWith("data:")
+        ? row.customer_photo_url
+        : null))
     : null;
 
   return {
@@ -494,21 +498,20 @@ class MemoryStore {
   private _dbSynced = false;
 
   async syncWithSupabase(supabaseAdmin: any) {
-    if (!supabaseAdmin || this._dbSynced) return;
+    if (!supabaseAdmin) return;
     try {
-      const { data: dbReviews, error } = await supabaseAdmin
+      // 1. Sync reviews
+      const { data: dbReviews, error: revErr } = await supabaseAdmin
         .from("reviews")
         .select("*")
         .order("submitted_at", { ascending: false });
 
-      if (!error && Array.isArray(dbReviews) && dbReviews.length > 0) {
-        // Merge Supabase rows into memory store (DB rows take precedence, but keep new local pending rows)
+      if (!revErr && Array.isArray(dbReviews) && dbReviews.length > 0) {
         const dbMap = new Map<string, any>(dbReviews.map((r: any) => [r.id, r]));
-        const merged: AdminReview[] = [];
+        const mergedReviews: AdminReview[] = [];
 
-        // Add all DB reviews
         for (const row of dbReviews) {
-          merged.push({
+          mergedReviews.push({
             id: row.id,
             campaign_id: row.campaign_id ?? null,
             customer_name: row.customer_name,
@@ -538,16 +541,102 @@ class MemoryStore {
           });
         }
 
-        // Keep any memory reviews not in DB (e.g. freshly submitted)
+        // Retain local memory reviews not yet in DB (e.g. freshly submitted)
         for (const local of this.reviews) {
           if (!dbMap.has(local.id)) {
-            merged.push(local);
+            mergedReviews.push(local);
           }
         }
-
-        this.reviews = merged;
-        this._dbSynced = true;
+        this.reviews = mergedReviews;
       }
+
+      // 2. Sync review_campaigns
+      const { data: dbCampaigns, error: campErr } = await supabaseAdmin
+        .from("review_campaigns")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!campErr && Array.isArray(dbCampaigns) && dbCampaigns.length > 0) {
+        const dbCampMap = new Map<string, any>(dbCampaigns.map((c: any) => [c.id, c]));
+        const mergedCamps: ReviewCampaign[] = [];
+
+        for (const row of dbCampaigns) {
+          mergedCamps.push({
+            id: row.id,
+            campaign_name: row.campaign_name,
+            slug: row.slug,
+            service_name: row.service_name ?? null,
+            location: row.location ?? null,
+            is_active: row.is_active !== false,
+            expires_at: row.expires_at ?? null,
+            visits: Number(row.visits || 0),
+            scans: Number(row.scans || 0),
+            submissions: Number(row.submissions || 0),
+            created_by: row.created_by ?? "admin",
+            created_at: row.created_at ?? new Date().toISOString(),
+            updated_at: row.updated_at ?? new Date().toISOString(),
+          });
+        }
+
+        // Retain local memory campaigns not yet in DB
+        for (const local of this.campaigns) {
+          if (!dbCampMap.has(local.id) && !mergedCamps.some((c) => c.slug === local.slug)) {
+            mergedCamps.push(local);
+          }
+        }
+        this.campaigns = mergedCamps;
+      }
+
+      // 3. Sync review_reports
+      const { data: dbReports, error: repErr } = await supabaseAdmin
+        .from("review_reports")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (!repErr && Array.isArray(dbReports) && dbReports.length > 0) {
+        const repMap = new Map<string, any>(dbReports.map((r: any) => [r.id, r]));
+        const mergedReps: ReviewReport[] = [];
+
+        for (const row of dbReports) {
+          mergedReps.push({
+            id: row.id,
+            review_id: row.review_id,
+            reporter_name: row.reporter_name ?? null,
+            reporter_email: row.reporter_email ?? null,
+            reason: row.reason,
+            message: row.message ?? null,
+            status: row.status ?? "open",
+            created_at: row.created_at ?? new Date().toISOString(),
+            resolved_at: row.resolved_at ?? null,
+            resolved_by: row.resolved_by ?? null,
+          });
+        }
+        for (const local of this.reports) {
+          if (!repMap.has(local.id)) mergedReps.push(local);
+        }
+        this.reports = mergedReps;
+      }
+
+      // 4. Sync settings
+      const { data: setRow, error: setErr } = await supabaseAdmin
+        .from("review_settings")
+        .select("*")
+        .maybeSingle();
+
+      if (!setErr && setRow) {
+        this.settings = {
+          id: true,
+          notify_on_submit: setRow.notify_on_submit ?? true,
+          notify_on_approve: setRow.notify_on_approve ?? true,
+          notify_on_reject: setRow.notify_on_reject ?? false,
+          notify_on_report: setRow.notify_on_report ?? true,
+          notify_campaign_summary: setRow.notify_campaign_summary ?? true,
+          notify_email: setRow.notify_email ?? "hello@dimisi.in",
+          updated_at: setRow.updated_at ?? new Date().toISOString(),
+        };
+      }
+
+      this._dbSynced = true;
     } catch (err) {
       console.warn("[reviews] initial Supabase sync fallback", err);
     }

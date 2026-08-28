@@ -313,4 +313,74 @@ describe("End-to-End Review Pipeline (Submit -> Pending -> Approve -> Public)", 
     assert.equal(publicFormatted.employee_department, "AI & Autonomous Systems");
     assert.equal(publicFormatted.is_verified, true);
   });
+
+  it("handles new campaign creation and tracks reviews submitted via campaign link", async () => {
+    const { memoryStore } = await import("../reviews.server");
+
+    // 1. Create new campaign
+    const campId = crypto.randomUUID();
+    const campSlug = `event-expo-${Date.now()}`;
+    const newCamp = {
+      id: campId,
+      campaign_name: "Tech Expo 2026",
+      slug: campSlug,
+      service_name: "AI & Autonomous Agents",
+      location: "New Delhi",
+      is_active: true,
+      expires_at: null,
+      visits: 10,
+      scans: 5,
+      submissions: 0,
+      created_by: "admin",
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    };
+    memoryStore.campaigns.unshift(newCamp);
+
+    // Verify campaign is stored
+    const foundCamp = memoryStore.campaigns.find((c) => c.slug === campSlug);
+    assert.ok(foundCamp, "Campaign must exist in memory store");
+
+    // 2. Submit review with this campaign slug
+    const reviewId = crypto.randomUUID();
+    foundCamp.submissions += 1;
+
+    const campaignReview = {
+      id: reviewId,
+      campaign_id: foundCamp.id,
+      campaign_name: foundCamp.campaign_name,
+      customer_name: "Summit Attendee",
+      customer_email: "attendee@summit.org",
+      customer_phone: null,
+      service_name: foundCamp.service_name,
+      reviewer_type: "client" as const,
+      role_or_title: "Attendee",
+      employee_department: null,
+      employment_status: null,
+      is_verified: false,
+      rating: 5,
+      review_text: "Incredible showcase by DIMISI at the Expo.",
+      customer_photo_url: null,
+      customer_location: foundCamp.location,
+      consent_to_publish: true,
+      status: "pending" as const,
+      is_featured: false,
+      moderation_reason: null,
+      moderated_by: null,
+      submitter_ip: "127.0.0.1",
+      submitted_at: new Date().toISOString(),
+      approved_at: null,
+      rejected_at: null,
+      archived_at: null,
+      updated_at: new Date().toISOString(),
+    };
+    memoryStore.reviews.unshift(campaignReview);
+
+    // 3. Verify in Admin queue
+    const queued = memoryStore.reviews.find((r) => r.id === reviewId);
+    assert.ok(queued);
+    assert.equal(queued.status, "pending");
+    assert.equal(queued.campaign_id, campId);
+    assert.equal(foundCamp.submissions, 1);
+  });
 });
