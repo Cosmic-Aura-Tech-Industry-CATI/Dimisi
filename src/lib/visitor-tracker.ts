@@ -1,7 +1,9 @@
-/**
- * First-Party Website Visitor Intelligence Tracker for DIMISI Technologies.
- * Non-invasive, privacy-preserving client tracker for anonymous and authenticated visitor journeys.
- */
+import {
+  recordVisitorSessionFn,
+  recordPageViewFn,
+  finalizePageViewFn,
+  heartbeatVisitorFn,
+} from "@/lib/visitors.functions";
 
 export interface VisitorContext {
   visitorId: string;
@@ -187,7 +189,6 @@ class VisitorLifecycleManager {
 
     try {
       const ctx = getVisitorContext();
-      const { recordVisitorSessionFn } = await import("@/lib/visitors.functions");
       await recordVisitorSessionFn({
         data: {
           visitor_id: ctx.visitorId,
@@ -207,7 +208,6 @@ class VisitorLifecycleManager {
         },
       });
     } catch (err) {
-      // Non-blocking tracker
       console.debug("[tracker] session init note:", err);
     }
   }
@@ -231,7 +231,6 @@ class VisitorLifecycleManager {
 
     try {
       const ctx = getVisitorContext();
-      const { recordPageViewFn } = await import("@/lib/visitors.functions");
       await recordPageViewFn({
         data: {
           page_view_id: this.currentPageViewId,
@@ -260,7 +259,6 @@ class VisitorLifecycleManager {
     this.pageEnteredAt = 0;
 
     try {
-      const { finalizePageViewFn } = await import("@/lib/visitors.functions");
       await finalizePageViewFn({
         data: {
           page_view_id: pageViewId,
@@ -334,7 +332,6 @@ class VisitorLifecycleManager {
       if (document.visibilityState === "visible" && this.currentPath) {
         try {
           const ctx = getVisitorContext();
-          const { heartbeatVisitorFn } = await import("@/lib/visitors.functions");
           await heartbeatVisitorFn({
             data: {
               visitor_id: ctx.visitorId,

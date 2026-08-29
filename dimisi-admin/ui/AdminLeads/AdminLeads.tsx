@@ -171,21 +171,26 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
 
   // Initial and reactive load
   useEffect(() => {
-    if (activeTab === "leads") {
-      void loadLeads();
-    } else {
-      void loadVisitors();
-    }
-  }, [activeTab, loadLeads, loadVisitors]);
+    void loadLeads();
+    void loadVisitors();
+  }, [loadLeads, loadVisitors]);
 
-  // Auto-refresh timer for Live Visitors view (every 20s)
+  // Live Auto-refresh timer (every 8s) to stream live visits and inquiries in real-time
   useEffect(() => {
-    if (!autoRefresh || activeTab !== "visitors") return;
+    if (!autoRefresh) return;
     const interval = setInterval(() => {
-      void loadVisitors();
-    }, 20000);
+      if (activeTab === "leads") {
+        void loadLeads();
+        // Also fetch live visitor count for tab badge
+        void getAdminVisitorsFn({
+          data: { page: 1, limit: 1, sortBy: "last_seen_at", sortOrder: "desc" },
+        }).then((res) => setVisitorStats(res.stats)).catch(() => {});
+      } else {
+        void loadVisitors();
+      }
+    }, 8000);
     return () => clearInterval(interval);
-  }, [autoRefresh, activeTab, loadVisitors]);
+  }, [autoRefresh, activeTab, loadLeads, loadVisitors]);
 
   /** Open Lead Details Drawer */
   const handleOpenLead = async (leadId: string) => {
@@ -318,16 +323,14 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
         </div>
 
         <div className={styles.headerActions}>
-          {activeTab === "visitors" && (
-            <label className={styles.autoRefreshBadge}>
-              <input
-                type="checkbox"
-                checked={autoRefresh}
-                onChange={(e) => setAutoRefresh(e.target.checked)}
-              />
-              <span>Live Auto-Sync</span>
-            </label>
-          )}
+          <label className={styles.autoRefreshBadge}>
+            <input
+              type="checkbox"
+              checked={autoRefresh}
+              onChange={(e) => setAutoRefresh(e.target.checked)}
+            />
+            <span>Live Auto-Sync (8s)</span>
+          </label>
 
           <button
             type="button"
@@ -351,7 +354,7 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
             <div className={styles.statCard}>
               <div className={styles.statHeader}>
                 <span className={styles.statLabel}>Total Inquiries</span>
-                <Users size={18} color="#60a5fa" />
+                <Users size={18} color="var(--dm-amber, #ffab2e)" />
               </div>
               <div className={styles.statValue}>{leadStats.totalLeads}</div>
             </div>
@@ -359,9 +362,9 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
             <div className={styles.statCard}>
               <div className={styles.statHeader}>
                 <span className={styles.statLabel}>New Today</span>
-                <Clock size={18} color="#38bdf8" />
+                <Clock size={18} color="var(--dm-gold, #ffd79a)" />
               </div>
-              <div className={styles.statValue} style={{ color: "#38bdf8" }}>
+              <div className={styles.statValue} style={{ color: "var(--dm-gold, #ffd79a)" }}>
                 {leadStats.newToday}
               </div>
             </div>
@@ -369,9 +372,9 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
             <div className={styles.statCard}>
               <div className={styles.statHeader}>
                 <span className={styles.statLabel}>Contacted</span>
-                <CheckCircle2 size={18} color="#fbbf24" />
+                <CheckCircle2 size={18} color="var(--dm-orange, #ff7a18)" />
               </div>
-              <div className={styles.statValue} style={{ color: "#fbbf24" }}>
+              <div className={styles.statValue} style={{ color: "var(--dm-orange, #ff7a18)" }}>
                 {leadStats.contactedCount}
               </div>
             </div>
@@ -389,9 +392,9 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
             <div className={styles.statCard}>
               <div className={styles.statHeader}>
                 <span className={styles.statLabel}>Conversion Rate</span>
-                <TrendingUp size={18} color="#c084fc" />
+                <TrendingUp size={18} color="var(--dm-amber, #ffab2e)" />
               </div>
-              <div className={styles.statValue} style={{ color: "#c084fc" }}>
+              <div className={styles.statValue} style={{ color: "var(--dm-amber, #ffab2e)" }}>
                 {leadStats.conversionRate}%
               </div>
             </div>
@@ -627,7 +630,7 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
             <div className={styles.statCard}>
               <div className={styles.statHeader}>
                 <span className={styles.statLabel}>Visitors Today</span>
-                <Globe size={18} color="#60a5fa" />
+                <Globe size={18} color="var(--dm-amber, #ffab2e)" />
               </div>
               <div className={styles.statValue}>{visitorStats.totalVisitorsToday}</div>
             </div>
@@ -635,9 +638,9 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
             <div className={styles.statCard}>
               <div className={styles.statHeader}>
                 <span className={styles.statLabel}>Page Views Today</span>
-                <FileText size={18} color="#38bdf8" />
+                <FileText size={18} color="var(--dm-gold, #ffd79a)" />
               </div>
-              <div className={styles.statValue} style={{ color: "#38bdf8" }}>
+              <div className={styles.statValue} style={{ color: "var(--dm-gold, #ffd79a)" }}>
                 {visitorStats.totalPageViewsToday}
               </div>
             </div>
@@ -645,9 +648,9 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
             <div className={styles.statCard}>
               <div className={styles.statHeader}>
                 <span className={styles.statLabel}>Avg Duration</span>
-                <Clock size={18} color="#fbbf24" />
+                <Clock size={18} color="var(--dm-orange, #ff7a18)" />
               </div>
-              <div className={styles.statValue} style={{ color: "#fbbf24" }}>
+              <div className={styles.statValue} style={{ color: "var(--dm-orange, #ff7a18)" }}>
                 {formatDuration(visitorStats.avgDurationSeconds)}
               </div>
             </div>
@@ -655,9 +658,9 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
             <div className={styles.statCard}>
               <div className={styles.statHeader}>
                 <span className={styles.statLabel}>Returning Visitors</span>
-                <UserCheck size={18} color="#c084fc" />
+                <UserCheck size={18} color="var(--dm-amber, #ffab2e)" />
               </div>
-              <div className={styles.statValue} style={{ color: "#c084fc" }}>
+              <div className={styles.statValue} style={{ color: "var(--dm-amber, #ffab2e)" }}>
                 {visitorStats.returningRatioPercent}%
               </div>
             </div>
