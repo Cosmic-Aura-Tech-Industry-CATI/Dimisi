@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
 import { useAuth } from "@/hooks/useAuth";
 import { submitLeadFn } from "@/lib/leads.functions";
+import { signInWithGoogleOAuth, handleGoogleOAuthCallback } from "@/lib/google-auth";
 import styles from "@/styles/auth.module.css";
 
 type Mode = "signin" | "signup";
@@ -19,8 +20,21 @@ export function AuthPage() {
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
 
+  // Check for existing session or Google OAuth redirect callback
   useEffect(() => {
+    let active = true;
+    void handleGoogleOAuthCallback().then((googleUser) => {
+      if (!active) return;
+      if (googleUser) {
+        void navigate({ to: "/account", replace: true });
+      }
+    });
+
     if (!loading && user) void navigate({ to: "/account", replace: true });
+
+    return () => {
+      active = false;
+    };
   }, [loading, user, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {
@@ -112,16 +126,32 @@ export function AuthPage() {
   async function handleGoogle() {
     setError(null);
     setBusy(true);
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
-    });
-    if (result.error) {
-      setError("Google sign-in failed. Please try again.");
+    try {
+      const result = await signInWithGoogleOAuth({
+        redirectUri: `${window.location.origin}/auth`,
+      });
+
+      if (!result.success) {
+        if (result.error && !result.error.includes("cancelled")) {
+          setError(result.error || "Google sign-in failed. Please try again.");
+        }
+        setBusy(false);
+        return;
+      }
+
+      if (result.redirected) return;
+
+      if (result.user) {
+        setNotice("Signed in with Google successfully.");
+        setTimeout(() => {
+          void navigate({ to: "/account", replace: true });
+        }, 600);
+      }
+    } catch (err: any) {
+      setError(err?.message || "Unable to sign in with Google. Please try again.");
+    } finally {
       setBusy(false);
-      return;
     }
-    if (result.redirected) return;
-    void navigate({ to: "/account", replace: true });
   }
 
   async function handleReset() {
