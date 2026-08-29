@@ -21,7 +21,7 @@ export const getGoogleAuthConfigFn = createServerFn({ method: "GET" })
     const clientId =
       process.env.GOOGLE_CLIENT_ID ||
       process.env.VITE_GOOGLE_CLIENT_ID ||
-      "33385750247-t0h4ckf0u5d7r9f6m1e8d9q1n4j5k6p7.apps.googleusercontent.com";
+      null;
     return { clientId };
   });
 

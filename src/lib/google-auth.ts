@@ -2,7 +2,7 @@
  * DIMISI Technologies — Official Google OAuth 2.0 Provider & Session Handler
  * Launches Google's official Account Chooser and synchronizes authenticated identity with MongoDB.
  */
-import { syncGoogleUserFn } from "./auth.functions";
+import { getGoogleAuthConfigFn, syncGoogleUserFn } from "./auth.functions";
 
 export interface GoogleUser {
   id: string;
@@ -146,10 +146,27 @@ export async function signInWithGoogleOAuth(options?: {
   }
 
   try {
-    const clientId =
+    let clientId: string | null | undefined =
       (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
-      (typeof process !== "undefined" ? process.env?.VITE_GOOGLE_CLIENT_ID : undefined) ||
-      "33385750247-t0h4ckf0u5d7r9f6m1e8d9q1n4j5k6p7.apps.googleusercontent.com";
+      (typeof process !== "undefined" ? process.env?.VITE_GOOGLE_CLIENT_ID : undefined);
+
+    // If client ID not found in frontend bundle, retrieve from server function
+    if (!clientId) {
+      try {
+        const serverConfig = await getGoogleAuthConfigFn();
+        clientId = serverConfig?.clientId;
+      } catch {
+        clientId = null;
+      }
+    }
+
+    if (!clientId || clientId.trim() === "" || clientId.includes("placeholder")) {
+      return {
+        success: false,
+        error:
+          "Google OAuth is not configured yet. Please configure VITE_GOOGLE_CLIENT_ID in your environment variables.",
+      };
+    }
 
     const redirectUri = options?.redirectUri || `${window.location.origin}/auth`;
 
@@ -157,11 +174,11 @@ export async function signInWithGoogleOAuth(options?: {
     const nonce = Math.random().toString(36).substring(2, 15);
 
     const params = new URLSearchParams({
-      client_id: clientId,
+      client_id: clientId.trim(),
       redirect_uri: redirectUri,
       response_type: "token id_token",
       scope: "openid email profile",
-      prompt: "select_account", // Opens Google's official Account Chooser UI
+      prompt: "select_account", // Google's official Account Chooser UI
       nonce,
     });
 
