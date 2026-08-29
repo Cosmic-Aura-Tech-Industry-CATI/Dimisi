@@ -16,7 +16,7 @@ import {
 import { SectionHeading } from "@/components/common/SectionHeading/SectionHeading";
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
-import { supabase } from "@/integrations/supabase/client";
+import { submitLeadFn } from "@/lib/leads.functions";
 import { SILVER_LOGO_URL } from "@/assets/logos";
 import pageStyles from "@/styles/page.module.css";
 import styles from "./ContactPage.module.css";
@@ -126,18 +126,16 @@ export function ContactPage() {
         .filter(Boolean)
         .join("\n\n");
 
-      // Insert into Supabase leads table
-      const { error } = await supabase.from("leads").insert({
-        email: form.email.trim().toLowerCase(),
-        full_name: form.name.trim(),
-        source: "contact_page",
-        page: "/contact",
-        message: combinedMessage,
+      // Insert into MongoDB leads via server function
+      await submitLeadFn({
+        data: {
+          email: form.email.trim().toLowerCase(),
+          fullName: form.name.trim(),
+          source: "contact_page",
+          page: "/contact",
+          message: combinedMessage,
+        },
       });
-
-      if (error) {
-        console.warn("[contact] Supabase lead insertion notice:", error.message);
-      }
 
       setSent(true);
     } catch (err: unknown) {

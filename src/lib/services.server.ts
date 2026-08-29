@@ -1301,7 +1301,7 @@ const SEED_SERVICES: CompanyService[] = [
           "We offer flexible hybrid arrangements (discounted cash fee + minority equity) for select high-conviction founders with proven domain expertise.",
       },
     ],
-    tech_stack: ["Next.js", "Supabase", "TanStack", "Stripe", "PostgreSQL", "Vercel", "Tailwind"],
+    tech_stack: ["Next.js", "MongoDB Atlas", "TanStack", "Stripe", "PostgreSQL", "Vercel", "Tailwind"],
     order_index: 11,
     is_featured: false,
     is_active: true,
@@ -1572,12 +1572,22 @@ class MemoryServicesStore {
     };
 
     this._services.push(newService);
+    try {
+      import("@/server/repositories/content.repository").then(({ contentRepository }) => {
+        contentRepository.saveService(newService).catch(() => {});
+      });
+    } catch {}
     return newService;
   }
 
   deleteService(id: string): boolean {
     const initLen = this._services.length;
     this._services = this._services.filter((s) => s.id !== id);
+    try {
+      import("@/server/repositories/content.repository").then(({ contentRepository }) => {
+        contentRepository.deleteService(id).catch(() => {});
+      });
+    } catch {}
     return this._services.length < initLen;
   }
 

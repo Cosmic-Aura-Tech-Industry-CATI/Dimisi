@@ -2,7 +2,6 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ShieldAlert, ArrowLeft } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminBackdrop } from "../AdminBackdrop/AdminBackdrop";
 import { AdminLogin } from "../AdminLogin/AdminLogin";
@@ -222,9 +221,6 @@ export function AdminPanel() {
     try {
       localStorage.removeItem("dimisi_admin_session");
       window.dispatchEvent(new Event("dimisi-auth-change"));
-    } catch {}
-    try {
-      await supabase.auth.signOut();
     } catch {}
     void navigate({ to: "/", replace: true });
   }

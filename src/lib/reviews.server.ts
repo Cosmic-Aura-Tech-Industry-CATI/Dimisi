@@ -21,7 +21,7 @@ import {
 const CAPTCHA_TTL_MS = 10 * 60 * 1000;
 
 function captchaSecret(): string {
-  return process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? process.env["SUPABASE_URL"] ?? "dimisi-review-secret-key-2026";
+  return process.env["SESSION_SECRET"] ?? process.env["MONGODB_URI"] ?? "dimisi-review-secret-key-2026";
 }
 
 export type Captcha = { question: string; token: string };
@@ -497,88 +497,40 @@ class MemoryStore {
 
   private _dbSynced = false;
 
-  async syncWithSupabase(supabaseAdmin: any) {
-    if (!supabaseAdmin) return;
+  async syncWithMongo() {
     try {
-      // 1. Sync reviews
-      const { data: dbReviews, error: revErr } = await supabaseAdmin
-        .from("reviews")
-        .select("*")
-        .order("submitted_at", { ascending: false });
+      const { reviewsRepository } = await import("@/server/repositories/reviews.repository");
+      const { campaignsRepository } = await import("@/server/repositories/campaigns.repository");
+      const { reportsRepository } = await import("@/server/repositories/reports.repository");
 
-      if (!revErr && Array.isArray(dbReviews) && dbReviews.length > 0) {
-        const dbMap = new Map<string, any>(dbReviews.map((r: any) => [r.id, r]));
-        const mergedReviews: AdminReview[] = [];
+      // 1. Initial Seeding if MongoDB collections are empty
+      await reviewsRepository.seedIfEmpty(this.reviews);
+      await campaignsRepository.seedIfEmpty(this.campaigns);
 
-        for (const row of dbReviews) {
-          mergedReviews.push({
-            id: row.id,
-            campaign_id: row.campaign_id ?? null,
-            customer_name: row.customer_name,
-            customer_email: row.customer_email ?? null,
-            customer_phone: row.customer_phone ?? null,
-            service_name: row.service_name ?? null,
-            reviewer_type: normalizeReviewerType(row.reviewer_type),
-            role_or_title: row.role_or_title ?? null,
-            employee_department: row.employee_department ?? null,
-            employment_status: row.employment_status ?? null,
-            is_verified: row.is_verified === true,
-            rating: row.rating,
-            review_text: row.review_text,
-            customer_photo_url: row.customer_photo_url ?? null,
-            customer_location: row.customer_location ?? null,
-            consent_to_publish: row.consent_to_publish ?? true,
-            status: (row.status as ReviewStatus) ?? "pending",
-            is_featured: row.is_featured === true,
-            moderation_reason: row.moderation_reason ?? null,
-            moderated_by: row.moderated_by ?? null,
-            submitter_ip: row.submitter_ip ?? null,
-            submitted_at: row.submitted_at ?? new Date().toISOString(),
-            approved_at: row.approved_at ?? null,
-            rejected_at: row.rejected_at ?? null,
-            archived_at: row.archived_at ?? null,
-            updated_at: row.updated_at ?? new Date().toISOString(),
-          });
-        }
+      // 2. Fetch latest MongoDB data
+      const [dbReviews, dbCampaigns, dbReports, dbSettings] = await Promise.all([
+        reviewsRepository.getAllForAdmin(),
+        campaignsRepository.getAllForAdmin(),
+        reportsRepository.getAllReports(),
+        reportsRepository.getSettings(),
+      ]);
 
-        // Retain local memory reviews not yet in DB (e.g. freshly submitted)
+      if (Array.isArray(dbReviews) && dbReviews.length > 0) {
+        const dbMap = new Map<string, AdminReview>(dbReviews.map((r) => [r.id, r]));
+        const merged: AdminReview[] = [...dbReviews];
+
         for (const local of this.reviews) {
           if (!dbMap.has(local.id)) {
-            mergedReviews.push(local);
+            merged.push(local);
           }
         }
-        this.reviews = mergedReviews;
+        this.reviews = merged;
       }
 
-      // 2. Sync review_campaigns
-      const { data: dbCampaigns, error: campErr } = await supabaseAdmin
-        .from("review_campaigns")
-        .select("*")
-        .order("created_at", { ascending: false });
+      if (Array.isArray(dbCampaigns) && dbCampaigns.length > 0) {
+        const dbCampMap = new Map<string, ReviewCampaign>(dbCampaigns.map((c) => [c.id, c]));
+        const mergedCamps: ReviewCampaign[] = [...dbCampaigns];
 
-      if (!campErr && Array.isArray(dbCampaigns) && dbCampaigns.length > 0) {
-        const dbCampMap = new Map<string, any>(dbCampaigns.map((c: any) => [c.id, c]));
-        const mergedCamps: ReviewCampaign[] = [];
-
-        for (const row of dbCampaigns) {
-          mergedCamps.push({
-            id: row.id,
-            campaign_name: row.campaign_name,
-            slug: row.slug,
-            service_name: row.service_name ?? null,
-            location: row.location ?? null,
-            is_active: row.is_active !== false,
-            expires_at: row.expires_at ?? null,
-            visits: Number(row.visits || 0),
-            scans: Number(row.scans || 0),
-            submissions: Number(row.submissions || 0),
-            created_by: row.created_by ?? "admin",
-            created_at: row.created_at ?? new Date().toISOString(),
-            updated_at: row.updated_at ?? new Date().toISOString(),
-          });
-        }
-
-        // Retain local memory campaigns not yet in DB
         for (const local of this.campaigns) {
           if (!dbCampMap.has(local.id) && !mergedCamps.some((c) => c.slug === local.slug)) {
             mergedCamps.push(local);
@@ -587,58 +539,22 @@ class MemoryStore {
         this.campaigns = mergedCamps;
       }
 
-      // 3. Sync review_reports
-      const { data: dbReports, error: repErr } = await supabaseAdmin
-        .from("review_reports")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      if (!repErr && Array.isArray(dbReports) && dbReports.length > 0) {
-        const repMap = new Map<string, any>(dbReports.map((r: any) => [r.id, r]));
-        const mergedReps: ReviewReport[] = [];
-
-        for (const row of dbReports) {
-          mergedReps.push({
-            id: row.id,
-            review_id: row.review_id,
-            reporter_name: row.reporter_name ?? null,
-            reporter_email: row.reporter_email ?? null,
-            reason: row.reason,
-            message: row.message ?? null,
-            status: row.status ?? "open",
-            created_at: row.created_at ?? new Date().toISOString(),
-            resolved_at: row.resolved_at ?? null,
-            resolved_by: row.resolved_by ?? null,
-          });
-        }
+      if (Array.isArray(dbReports) && dbReports.length > 0) {
+        const repMap = new Map<string, ReviewReport>(dbReports.map((r) => [r.id, r]));
+        const mergedReps: ReviewReport[] = [...dbReports];
         for (const local of this.reports) {
           if (!repMap.has(local.id)) mergedReps.push(local);
         }
         this.reports = mergedReps;
       }
 
-      // 4. Sync settings
-      const { data: setRow, error: setErr } = await supabaseAdmin
-        .from("review_settings")
-        .select("*")
-        .maybeSingle();
-
-      if (!setErr && setRow) {
-        this.settings = {
-          id: true,
-          notify_on_submit: setRow.notify_on_submit ?? true,
-          notify_on_approve: setRow.notify_on_approve ?? true,
-          notify_on_reject: setRow.notify_on_reject ?? false,
-          notify_on_report: setRow.notify_on_report ?? true,
-          notify_campaign_summary: setRow.notify_campaign_summary ?? true,
-          notify_email: setRow.notify_email ?? "hello@dimisi.in",
-          updated_at: setRow.updated_at ?? new Date().toISOString(),
-        };
+      if (dbSettings) {
+        this.settings = { ...this.settings, ...dbSettings };
       }
 
       this._dbSynced = true;
     } catch (err) {
-      console.warn("[reviews] initial Supabase sync fallback", err);
+      console.warn("[reviews] MongoDB sync note:", err instanceof Error ? err.message : String(err));
     }
   }
 }
@@ -651,7 +567,7 @@ if (!globalForStore.__DIMISI_REVIEW_STORE__) {
 export const memoryStore = globalForStore.__DIMISI_REVIEW_STORE__;
 
 export async function logAudit(
-  supabaseAdmin: any,
+  _legacyAdmin: any,
   adminId: string | null,
   action: string,
   entityType: string,
@@ -675,10 +591,18 @@ export async function logAudit(
   memoryStore.auditLogs.unshift(auditEntry);
 
   try {
-    if (supabaseAdmin) {
-      await supabaseAdmin.from("admin_audit_logs").insert(auditEntry);
-    }
+    const { auditLogsRepository } = await import("@/server/repositories/auditLogs.repository");
+    await auditLogsRepository.log({
+      admin_id: adminId,
+      action,
+      entity_type: entityType,
+      entity_id: entityId || "unknown",
+      old_value: oldVal,
+      new_value: newVal,
+      ip_address: ip,
+    });
   } catch (err) {
-    console.warn("[reviews] audit logging fallback to memory", err);
+    console.warn("[reviews] MongoDB audit logging note:", err);
   }
 }
+

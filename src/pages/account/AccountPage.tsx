@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
 import { useAuth } from "@/hooks/useAuth";
+import { getProfileFn, updateProfileFn } from "@/lib/profiles.functions";
 import styles from "@/styles/auth.module.css";
 
 export function AccountPage() {
@@ -20,16 +20,11 @@ export function AccountPage() {
   useEffect(() => {
     if (!user) return;
     let active = true;
-    void supabase
-      .from("profiles")
-      .select("full_name, notify_email")
-      .eq("id", user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (!active || !data) return;
-        setFullName(data.full_name ?? "");
-        setNotify(data.notify_email ?? true);
-      });
+    void getProfileFn({ data: { id: user.id } }).then((res) => {
+      if (!active || !res?.profile) return;
+      setFullName(res.profile.full_name ?? "");
+      setNotify(res.profile.notify_email ?? true);
+    });
     return () => {
       active = false;
     };
@@ -39,20 +34,26 @@ export function AccountPage() {
     if (!user) return;
     setSaving(true);
     setNotice(null);
-    const { error } = await supabase
-      .from("profiles")
-      .upsert({
-        id: user.id,
-        email: user.email ?? null,
-        full_name: fullName,
-        notify_email: notify,
+    try {
+      await updateProfileFn({
+        data: {
+          id: user.id,
+          email: user.email ?? undefined,
+          fullName,
+          notifyEmail: notify,
+        },
       });
-    setSaving(false);
-    setNotice(error ? error.message : "Saved.");
+      setNotice("Saved.");
+    } catch (err: any) {
+      setNotice(err?.message || "Failed to save profile.");
+    } finally {
+      setSaving(false);
+    }
   }
 
   async function signOut() {
-    await supabase.auth.signOut();
+    localStorage.removeItem("dimisi_admin_session");
+    window.dispatchEvent(new Event("dimisi-auth-change"));
     void navigate({ to: "/", replace: true });
   }
 

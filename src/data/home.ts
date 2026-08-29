@@ -60,7 +60,7 @@ export const TESTIMONIALS = [
   { quote: "It stopped feeling like software and started feeling like a colleague.", name: "Rhea Dsouza", role: "Head of Ops, Kite Robotics" },
 ];
 
-export const PARTNERS = ["NVIDIA", "Vercel", "Supabase", "Hugging Face", "Cloudflare", "Stripe"];
+export const PARTNERS = ["NVIDIA", "Vercel", "MongoDB Atlas", "Hugging Face", "Cloudflare", "Stripe"];
 
 export const FAQS: Faq[] = [
   { q: "How fast can you start?", a: "Discovery usually begins within ten days of the first call. Urgent engagements can start inside a week." },

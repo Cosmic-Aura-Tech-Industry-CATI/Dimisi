@@ -1,9 +1,10 @@
 /**
  * Server-side authorization and RBAC verification layer.
- * Authoritatively retrieves user roles and enforces permissions on server functions.
+ * Authoritatively retrieves user roles and enforces permissions on server functions using MongoDB.
  */
-
 import { type AdminRole, type Permission, hasPermission } from "../lib/rbac.shared";
+import { adminsRepository, ROOT_SUPER_ADMIN } from "@/server/repositories/admins.repository";
+import { auditLogsRepository } from "@/server/repositories/auditLogs.repository";
 
 export interface AuthenticatedAdmin {
   userId: string;
@@ -19,97 +20,50 @@ export interface AuthenticatedAdmin {
  * Does not trust any role supplied by the browser.
  */
 export async function getAuthenticatedAdmin(
-  context: { supabase: any; userId: string; claims?: any },
+  context: { userId?: string; claims?: any; email?: string | null },
 ): Promise<AuthenticatedAdmin> {
   const email = (context.claims?.email || "").toLowerCase();
+  const userId = context.userId || "";
 
-  // Root Super Admin direct identity check
-  if (context.userId === "usr-swatantra-001" || email === "swatantrasingh308@gmail.com") {
+  // 1. Root Super Admin direct identity check
+  if (
+    userId === ROOT_SUPER_ADMIN.user_id ||
+    email === ROOT_SUPER_ADMIN.email ||
+    userId === "usr-swatantra-001" ||
+    email === "swatantrasingh308@gmail.com"
+  ) {
     return {
-      userId: context.userId || "usr-swatantra-001",
-      email: "swatantrasingh308@gmail.com",
-      fullName: "Swatantra Singh",
-      designation: "CTO",
+      userId: ROOT_SUPER_ADMIN.user_id,
+      email: ROOT_SUPER_ADMIN.email,
+      fullName: ROOT_SUPER_ADMIN.full_name ?? "Swatantra Singh",
+      designation: ROOT_SUPER_ADMIN.designation ?? "CTO & Founder",
       role: "super_admin",
       isActive: true,
     };
   }
 
-  try {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    // 1. Verify user is in user_roles as admin
-    const { data: roleRow } = await supabaseAdmin
-      .from("user_roles")
-      .select("role, created_at")
-      .eq("user_id", context.userId)
-      .maybeSingle();
-
-    // If no user_roles entry, user is not an admin
-    if (!roleRow) {
-      throw new Error("Forbidden: Account does not have administrative privileges.");
-    }
-
-    // 2. Query profile for details, active status, and specific RBAC role
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("id, email, full_name, designation, is_active, created_at")
-      .eq("id", context.userId)
-      .maybeSingle();
-
-    const isActive = profile?.is_active !== false;
-    if (!isActive) {
-      throw new Error("Forbidden: Administrator account is currently inactive. Contact Super Admin.");
-    }
-
-    // 3. Resolve authoritative role:
-    let resolvedRole: AdminRole = "admin";
-
-    const { data: allAdminRoles } = await supabaseAdmin
-      .from("user_roles")
-      .select("user_id, created_at")
-      .eq("role", "admin")
-      .order("created_at", { ascending: true });
-
-  const earliestAdminId = allAdminRoles?.[0]?.user_id;
-
-  // If user is the earliest admin or specifically designated
-  if (earliestAdminId === context.userId) {
-    resolvedRole = "super_admin";
-  } else {
-    // Check if designated role in user_metadata
-    try {
-      const { data: authUser } = await supabaseAdmin.auth.admin.getUserById(context.userId);
-      const metaRole = authUser?.user?.user_metadata?.["admin_role"] as AdminRole | undefined;
-      if (metaRole && ["super_admin", "admin", "editor", "moderator", "analyst"].includes(metaRole)) {
-        resolvedRole = metaRole;
-      }
-    } catch {
-      // Keep default "admin"
-    }
+  // 2. Query MongoDB admins repository
+  let admin = userId ? await adminsRepository.findByUserId(userId) : null;
+  if (!admin && email) {
+    admin = await adminsRepository.findByEmail(email);
   }
 
-    return {
-      userId: context.userId,
-      email: profile?.email ?? context.claims?.email ?? null,
-      fullName: profile?.full_name ?? null,
-      designation: profile?.designation ?? null,
-      role: resolvedRole,
-      isActive,
-    };
-  } catch (err) {
-    if (context.userId === "usr-swatantra-001" || email === "swatantrasingh308@gmail.com") {
-      return {
-        userId: "usr-swatantra-001",
-        email: "swatantrasingh308@gmail.com",
-        fullName: "Swatantra Singh",
-        designation: "CTO",
-        role: "super_admin",
-        isActive: true,
-      };
-    }
-    throw err;
+  if (!admin) {
+    throw new Error("Forbidden: Account does not have administrative privileges.");
   }
+
+  if (!admin.is_active) {
+    throw new Error("Forbidden: Administrator account is currently inactive. Contact Super Admin.");
+  }
+
+  return {
+    userId: admin.user_id,
+    email: admin.email,
+    fullName: admin.full_name,
+    designation: admin.designation,
+    role: admin.role,
+    isActive: admin.is_active,
+  };
 }
 
 /**
@@ -117,7 +71,7 @@ export async function getAuthenticatedAdmin(
  * Throws a clean 403 Forbidden error if unauthorized.
  */
 export async function assertPermission(
-  context: { supabase: any; userId: string; claims?: any },
+  context: { userId?: string; claims?: any; email?: string | null },
   permission: Permission,
 ): Promise<AuthenticatedAdmin> {
   const admin = await getAuthenticatedAdmin(context);
@@ -132,10 +86,10 @@ export async function assertPermission(
 }
 
 /**
- * Log an administrative audit record to `admin_audit_logs` table.
+ * Log an administrative audit record to `admin_audit_logs` in MongoDB.
  */
 export async function logAdminAudit(
-  supabaseAdmin: any,
+  _clientOrAdmin: any,
   entry: {
     adminId: string;
     action: string;
@@ -147,16 +101,16 @@ export async function logAdminAudit(
   },
 ) {
   try {
-    await supabaseAdmin.from("admin_audit_logs").insert({
+    await auditLogsRepository.log({
       admin_id: entry.adminId,
       action: entry.action,
       entity_type: entry.entityType,
-      entity_id: entry.entityId ?? null,
-      old_value: entry.oldValue ?? null,
-      new_value: entry.newValue ?? null,
-      ip_address: entry.ipAddress ?? null,
+      entity_id: entry.entityId || "unknown",
+      old_value: entry.oldValue,
+      new_value: entry.newValue,
+      ip_address: entry.ipAddress,
     });
   } catch (err) {
-    console.warn("[audit] Failed to write audit log", err);
+    console.warn("[audit] Failed to write audit log to MongoDB:", err);
   }
 }

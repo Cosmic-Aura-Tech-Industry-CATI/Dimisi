@@ -1220,7 +1220,7 @@ export function AdminWork({ projects, onRefresh }: AdminWorkProps) {
                           type="text"
                           value={newTech}
                           onChange={(e) => setNewTech(e.target.value)}
-                          placeholder="Add technology (e.g. Next.js, PyTorch, Supabase, Tailwind)..."
+                          placeholder="Add technology (e.g. Next.js, PyTorch, MongoDB Atlas, Tailwind)..."
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();

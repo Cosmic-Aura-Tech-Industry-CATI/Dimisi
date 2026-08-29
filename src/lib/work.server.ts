@@ -46,7 +46,7 @@ const INITIAL_PROJECTS: ProjectItem[] = [
         caption: "Direct WhatsApp & Instant Quote Integration",
       },
     ],
-    tech_stack: ["React", "TypeScript", "Tailwind CSS", "Vite", "Supabase", "Cloudflare Edge"],
+    tech_stack: ["React", "TypeScript", "Tailwind CSS", "Vite", "MongoDB Atlas", "Cloudflare Edge"],
     metrics: [
       { label: "Inquiry Conversion", value: "+145%" },
       { label: "Mobile Page Load", value: "0.6s" },

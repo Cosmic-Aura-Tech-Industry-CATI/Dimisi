@@ -578,7 +578,7 @@ export function AdminAdmins({
             <div className={styles.modalBody}>
               <p className={styles.deleteWarningText}>
                 This action is <strong>irreversible</strong>. The user will be permanently removed
-                from Supabase Auth, profiles, and administrative access records.
+                from the system, profiles, and administrative access records.
               </p>
               <div className={styles.deleteUserSummary}>
                 <div>

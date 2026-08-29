@@ -328,6 +328,11 @@ class MemoryEventsStore {
         updated_at: new Date().toISOString(),
       };
       this.events[existingIndex] = updated;
+      try {
+        import("@/server/repositories/content.repository").then(({ contentRepository }) => {
+          contentRepository.saveEvent(updated).catch(() => {});
+        });
+      } catch {}
       return updated;
     } else {
       const id = `evt-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -355,6 +360,11 @@ class MemoryEventsStore {
         updated_at: new Date().toISOString(),
       };
       this.events.unshift(newEv);
+      try {
+        import("@/server/repositories/content.repository").then(({ contentRepository }) => {
+          contentRepository.saveEvent(newEv).catch(() => {});
+        });
+      } catch {}
       return newEv;
     }
   }
@@ -369,6 +379,11 @@ class MemoryEventsStore {
         g.event_title = null;
       }
     }
+    try {
+      import("@/server/repositories/content.repository").then(({ contentRepository }) => {
+        contentRepository.deleteEvent(id).catch(() => {});
+      });
+    } catch {}
     return this.events.length < lenBefore;
   }
 
@@ -389,6 +404,11 @@ class MemoryEventsStore {
         hue: input.hue ?? 30,
       };
       this.gallery[existingIndex] = updated;
+      try {
+        import("@/server/repositories/content.repository").then(({ contentRepository }) => {
+          contentRepository.saveGalleryItem(updated).catch(() => {});
+        });
+      } catch {}
       return updated;
     } else {
       const id = `gal-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
@@ -405,6 +425,11 @@ class MemoryEventsStore {
         created_at: new Date().toISOString(),
       };
       this.gallery.unshift(newItem);
+      try {
+        import("@/server/repositories/content.repository").then(({ contentRepository }) => {
+          contentRepository.saveGalleryItem(newItem).catch(() => {});
+        });
+      } catch {}
       return newItem;
     }
   }
@@ -412,6 +437,11 @@ class MemoryEventsStore {
   deleteGalleryItem(id: string): boolean {
     const lenBefore = this.gallery.length;
     this.gallery = this.gallery.filter((g) => g.id !== id);
+    try {
+      import("@/server/repositories/content.repository").then(({ contentRepository }) => {
+        contentRepository.deleteGalleryItem(id).catch(() => {});
+      });
+    } catch {}
     return this.gallery.length < lenBefore;
   }
 }

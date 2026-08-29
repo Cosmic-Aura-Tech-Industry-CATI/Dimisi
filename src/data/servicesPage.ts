@@ -174,7 +174,7 @@ export const TECH_GROUPS: { group: string; items: string[] }[] = [
   { group: "Mobile", items: ["Flutter", "React Native", "Kotlin", "Swift"] },
   { group: "Cloud", items: ["AWS", "Azure", "Docker", "Kubernetes", "Cloudflare"] },
   { group: "AI", items: ["OpenAI", "LangChain", "TensorFlow", "PyTorch", "pgvector"] },
-  { group: "Database", items: ["PostgreSQL", "MongoDB", "Redis", "Supabase"] },
+  { group: "Database", items: ["MongoDB Atlas", "PostgreSQL", "Redis", "Elasticsearch"] },
 ];
 
 export const INDUSTRIES: { name: string; icon: string }[] = [

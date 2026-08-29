@@ -9,7 +9,10 @@ import {
   emailTemplates,
   logAudit,
 } from "./reviews.server";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { reviewsRepository } from "@/server/repositories/reviews.repository";
+import { campaignsRepository } from "@/server/repositories/campaigns.repository";
+import { reportsRepository } from "@/server/repositories/reports.repository";
+import { auditLogsRepository } from "@/server/repositories/auditLogs.repository";
 import {
   computeStats,
   sanitizeText,
@@ -75,63 +78,27 @@ export type AdminDashboardData = {
   }[];
 };
 
-/** Resilient review finder that checks memory and fetches from Supabase across SSR workers */
+/** Resilient review finder that checks memory and fetches from MongoDB */
 async function findOrFetchReview(
   store: typeof memoryStore,
-  client: typeof supabaseAdmin,
+  _client: any,
   reviewId: string,
 ): Promise<AdminReview | null> {
   let review = store.reviews.find((r: AdminReview) => r.id === reviewId);
   if (review) return review;
 
-  if (client) {
-    await store.syncWithSupabase(client);
-    review = store.reviews.find((r: AdminReview) => r.id === reviewId);
-    if (review) return review;
+  await store.syncWithMongo();
+  review = store.reviews.find((r: AdminReview) => r.id === reviewId);
+  if (review) return review;
 
-    try {
-      const { data: dbRev } = await client
-        .from("reviews")
-        .select("*")
-        .eq("id", reviewId)
-        .maybeSingle();
-
-      if (dbRev) {
-        const loaded: AdminReview = {
-          id: dbRev.id,
-          campaign_id: dbRev.campaign_id ?? null,
-          campaign_name: null,
-          customer_name: dbRev.customer_name,
-          customer_email: dbRev.customer_email ?? null,
-          customer_phone: dbRev.customer_phone ?? null,
-          service_name: dbRev.service_name ?? null,
-          reviewer_type: normalizeReviewerType(dbRev.reviewer_type),
-          role_or_title: dbRev.role_or_title ?? null,
-          employee_department: dbRev.employee_department ?? null,
-          employment_status: dbRev.employment_status ?? null,
-          is_verified: dbRev.is_verified === true,
-          rating: dbRev.rating,
-          review_text: dbRev.review_text,
-          customer_photo_url: dbRev.customer_photo_url ?? null,
-          customer_location: dbRev.customer_location ?? null,
-          consent_to_publish: dbRev.consent_to_publish ?? true,
-          status: (dbRev.status as ReviewStatus) ?? "pending",
-          is_featured: dbRev.is_featured === true,
-          moderation_reason: dbRev.moderation_reason ?? null,
-          moderated_by: dbRev.moderated_by ?? null,
-          submitter_ip: dbRev.submitter_ip ?? null,
-          submitted_at: dbRev.submitted_at ?? new Date().toISOString(),
-          approved_at: dbRev.approved_at ?? null,
-          rejected_at: dbRev.rejected_at ?? null,
-          archived_at: dbRev.archived_at ?? null,
-          updated_at: dbRev.updated_at ?? new Date().toISOString(),
-        };
-        store.reviews.unshift(loaded);
-        return loaded;
-      }
-    } catch (err) {
-      console.warn("[reviews] Direct review fetch error", err);
+  try {
+    const dbRev = await reviewsRepository.findById(reviewId);
+    if (dbRev) {
+      store.reviews.unshift(dbRev);
+      return dbRev;
     }
+  } catch (err) {
+    console.warn("[reviews] Direct review fetch error:", err);
   }
 
   return null;
@@ -140,46 +107,24 @@ async function findOrFetchReview(
 /** Resilient campaign finder */
 async function findOrFetchCampaign(
   store: typeof memoryStore,
-  client: typeof supabaseAdmin,
+  _client: any,
   campaignId: string,
 ): Promise<ReviewCampaign | null> {
   let camp = store.campaigns.find((c: ReviewCampaign) => c.id === campaignId);
   if (camp) return camp;
 
-  if (client) {
-    await store.syncWithSupabase(client);
-    camp = store.campaigns.find((c: ReviewCampaign) => c.id === campaignId);
-    if (camp) return camp;
+  await store.syncWithMongo();
+  camp = store.campaigns.find((c: ReviewCampaign) => c.id === campaignId);
+  if (camp) return camp;
 
-    try {
-      const { data: dbCamp } = await client
-        .from("review_campaigns")
-        .select("*")
-        .eq("id", campaignId)
-        .maybeSingle();
-
-      if (dbCamp) {
-        const loaded: ReviewCampaign = {
-          id: dbCamp.id,
-          campaign_name: dbCamp.campaign_name,
-          slug: dbCamp.slug,
-          service_name: dbCamp.service_name ?? null,
-          location: dbCamp.location ?? null,
-          is_active: dbCamp.is_active !== false,
-          expires_at: dbCamp.expires_at ?? null,
-          visits: Number(dbCamp.visits || 0),
-          scans: Number(dbCamp.scans || 0),
-          submissions: Number(dbCamp.submissions || 0),
-          created_by: dbCamp.created_by ?? "admin",
-          created_at: dbCamp.created_at ?? new Date().toISOString(),
-          updated_at: dbCamp.updated_at ?? new Date().toISOString(),
-        };
-        store.campaigns.unshift(loaded);
-        return loaded;
-      }
-    } catch (err) {
-      console.warn("[reviews] Direct campaign fetch error", err);
+  try {
+    const dbCamp = await campaignsRepository.findById(campaignId);
+    if (dbCamp) {
+      store.campaigns.unshift(dbCamp);
+      return dbCamp;
     }
+  } catch (err) {
+    console.warn("[reviews] Direct campaign fetch error:", err);
   }
   return null;
 }
@@ -187,44 +132,16 @@ async function findOrFetchCampaign(
 /** Resilient report finder */
 async function findOrFetchReport(
   store: typeof memoryStore,
-  client: typeof supabaseAdmin,
+  _client: any,
   reportId: string,
 ): Promise<ReviewReport | null> {
   let rep = store.reports.find((r: ReviewReport) => r.id === reportId);
   if (rep) return rep;
 
-  if (client) {
-    await store.syncWithSupabase(client);
-    rep = store.reports.find((r: ReviewReport) => r.id === reportId);
-    if (rep) return rep;
+  await store.syncWithMongo();
+  rep = store.reports.find((r: ReviewReport) => r.id === reportId);
+  if (rep) return rep;
 
-    try {
-      const { data: dbRep } = await client
-        .from("review_reports")
-        .select("*")
-        .eq("id", reportId)
-        .maybeSingle();
-
-      if (dbRep) {
-        const loaded: ReviewReport = {
-          id: dbRep.id,
-          review_id: dbRep.review_id,
-          reporter_name: dbRep.reporter_name ?? null,
-          reporter_email: dbRep.reporter_email ?? null,
-          reason: dbRep.reason,
-          message: dbRep.message ?? null,
-          status: dbRep.status ?? "open",
-          created_at: dbRep.created_at ?? new Date().toISOString(),
-          resolved_at: dbRep.resolved_at ?? null,
-          resolved_by: dbRep.resolved_by ?? null,
-        };
-        store.reports.unshift(loaded);
-        return loaded;
-      }
-    } catch (err) {
-      console.warn("[reviews] Direct report fetch error", err);
-    }
-  }
   return null;
 }
 
@@ -250,194 +167,157 @@ export const getPublicReviews = createServerFn({ method: "GET" })
     }),
   )
   .handler(async ({ data }): Promise<PublicReviewsPayload> => {
-    // Sync Supabase records if available
-    await memoryStore.syncWithSupabase(supabaseAdmin);
+    await memoryStore.syncWithMongo();
 
-    // Filter all approved reviews
-    const allApproved = memoryStore.reviews.filter((r) => r.status === "approved");
+    // 1. Approved reviews
+    const approvedAll = memoryStore.reviews.filter((r) => r.status === "approved");
 
-    // Compute stats from ALL approved reviews
-    const stats = computeStats(allApproved);
-    const services = Array.from(
-      new Set(allApproved.map((r) => r.service_name).filter((s): s is string => !!s)),
-    );
+    // 2. Global stats across all approved reviews
+    const stats = computeStats(approvedAll);
 
-    // Featured list
-    const featuredRows = allApproved.filter((r) => r.is_featured).slice(0, 4);
-
-    // Apply filtering
-    let filtered = [...allApproved];
-    if (data.type && data.type !== "all") {
-      filtered = filtered.filter((r) => normalizeReviewerType(r.reviewer_type) === data.type);
+    // 3. Unique services filter list
+    const servicesSet = new Set<string>();
+    for (const r of approvedAll) {
+      if (r.service_name) servicesSet.add(r.service_name);
     }
-    if (data.rating > 0) {
-      filtered = filtered.filter((r) => Math.round(r.rating) === data.rating);
+    const services = Array.from(servicesSet).sort();
+
+    // 4. Featured items for carousel
+    const featured = approvedAll
+      .filter((r) => r.is_featured)
+      .slice(0, 8)
+      .map(toPublicReview);
+
+    // 5. Apply user filters
+    let filtered = [...approvedAll];
+
+    if (data?.type && data.type !== "all") {
+      filtered = filtered.filter((r) => r.reviewer_type === data.type);
     }
-    if (data.service) {
-      filtered = filtered.filter((r) => r.service_name === data.service);
+
+    if (data?.rating && data.rating > 0) {
+      filtered = filtered.filter((r) => r.rating === data.rating);
     }
-    if (data.search) {
+
+    if (data?.service) {
+      filtered = filtered.filter(
+        (r) => r.service_name?.toLowerCase() === data.service?.toLowerCase(),
+      );
+    }
+
+    if (data?.search) {
+      const q = data.search;
       filtered = filtered.filter(
         (r) =>
-          r.customer_name.toLowerCase().includes(data.search) ||
-          r.review_text.toLowerCase().includes(data.search) ||
-          (r.role_or_title && r.role_or_title.toLowerCase().includes(data.search)) ||
-          (r.employee_department && r.employee_department.toLowerCase().includes(data.search)) ||
-          (r.customer_location && r.customer_location.toLowerCase().includes(data.search)),
+          r.customer_name.toLowerCase().includes(q) ||
+          r.review_text.toLowerCase().includes(q) ||
+          r.service_name?.toLowerCase().includes(q) ||
+          r.role_or_title?.toLowerCase().includes(q) ||
+          r.employee_department?.toLowerCase().includes(q) ||
+          r.customer_location?.toLowerCase().includes(q),
       );
     }
 
-    // Sorting
-    if (data.sort === "highest") {
-      filtered.sort(
-        (a, b) =>
-          b.rating - a.rating ||
-          new Date(b.approved_at || b.submitted_at).getTime() -
-            new Date(a.approved_at || a.submitted_at).getTime(),
-      );
-    } else if (data.sort === "lowest") {
-      filtered.sort(
-        (a, b) =>
-          a.rating - b.rating ||
-          new Date(b.approved_at || b.submitted_at).getTime() -
-            new Date(a.approved_at || a.submitted_at).getTime(),
-      );
+    // 6. Sort
+    if (data?.sort === "highest") {
+      filtered.sort((a, b) => b.rating - a.rating || new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
+    } else if (data?.sort === "lowest") {
+      filtered.sort((a, b) => a.rating - b.rating || new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
     } else {
-      // newest
-      filtered.sort(
-        (a, b) =>
-          new Date(b.approved_at || b.submitted_at).getTime() -
-          new Date(a.approved_at || a.submitted_at).getTime(),
-      );
+      // Default: Newest first
+      filtered.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
     }
 
-    const start = data.page * data.pageSize;
-    const paginated = filtered.slice(start, start + data.pageSize);
-    const hasMore = start + data.pageSize < filtered.length;
-
-    const photos = await signPhotos(supabaseAdmin as never, [...paginated, ...featuredRows]);
+    // 7. Paginate
+    const page = data?.page ?? 0;
+    const pageSize = data?.pageSize ?? 9;
+    const start = page * pageSize;
+    const paginated = filtered.slice(start, start + pageSize);
+    const hasMore = start + pageSize < filtered.length;
 
     return {
-      reviews: paginated.map((r) => toPublicReview(r, photos)),
-      featured: featuredRows.map((r) => toPublicReview(r, photos)),
+      reviews: paginated.map(toPublicReview),
+      featured,
       stats,
       services,
-      totalApproved: allApproved.length,
+      totalApproved: filtered.length,
       hasMore,
     };
   });
 
-/** Public: fresh anti-spam challenge for the review form. */
-export const getReviewCaptcha = createServerFn({ method: "GET" }).handler(async () => {
-  return issueCaptcha();
-});
+/** Public: issue a cryptographic arithmetic captcha challenge. */
+export const getReviewCaptcha = createServerFn({ method: "GET" }).handler(
+  async (): Promise<{ token: string; question: string }> => {
+    return issueCaptcha();
+  },
+);
 
-/** Public: resolve a campaign slug and count the visit / QR scan. */
+/** Public: get single campaign details by slug for `/review/$slug`. */
 export const getReviewCampaign = createServerFn({ method: "GET" })
   .validator((input: { slug: string; scan?: boolean }) => ({
     slug: sanitizeText(input.slug, 60).toLowerCase(),
     scan: Boolean(input.scan),
   }))
-  .handler(async ({ data }) => {
-    if (!data.slug) return { campaign: null, expired: false };
-
-    // Ensure database sync
-    await memoryStore.syncWithSupabase(supabaseAdmin);
-
-    let campaign = memoryStore.campaigns.find((c) => c.slug === data.slug) ?? null;
-
-    // If not found in memory store, query Supabase database directly
-    if (!campaign && supabaseAdmin) {
-      try {
-        const { data: dbCamp } = await supabaseAdmin
-          .from("review_campaigns")
-          .select("*")
-          .eq("slug", data.slug)
-          .maybeSingle();
-
-        if (dbCamp) {
-          campaign = {
-            id: dbCamp.id,
-            campaign_name: dbCamp.campaign_name,
-            slug: dbCamp.slug,
-            service_name: dbCamp.service_name ?? null,
-            location: dbCamp.location ?? null,
-            is_active: dbCamp.is_active !== false,
-            expires_at: dbCamp.expires_at ?? null,
-            visits: Number(dbCamp.visits || 0),
-            scans: Number(dbCamp.scans || 0),
-            submissions: Number(dbCamp.submissions || 0),
-            created_by: dbCamp.created_by ?? "admin",
-            created_at: dbCamp.created_at ?? new Date().toISOString(),
-            updated_at: dbCamp.updated_at ?? new Date().toISOString(),
-          };
-          memoryStore.campaigns.unshift(campaign);
-        } else {
-          // Fallback to get_public_campaign RPC
-          const { data: rpcCamp } = await supabaseAdmin.rpc("get_public_campaign", {
-            _slug: data.slug,
-          });
-          const row = Array.isArray(rpcCamp) ? rpcCamp[0] : rpcCamp;
-          if (row) {
-            campaign = {
-              id: row.id,
-              campaign_name: row.campaign_name,
-              slug: data.slug,
-              service_name: row.service_name ?? null,
-              location: row.location ?? null,
-              is_active: true,
-              expires_at: null,
-              visits: 0,
-              scans: 0,
-              submissions: 0,
-              created_by: "admin",
-              created_at: new Date().toISOString(),
-              updated_at: new Date().toISOString(),
-            };
-            memoryStore.campaigns.unshift(campaign);
-          }
-        }
-      } catch (err) {
-        console.warn("[reviews] Direct campaign lookup fallback", err);
-      }
-    }
-
-    if (campaign) {
-      if (data.scan) campaign.scans += 1;
-      else campaign.visits += 1;
-      campaign.updated_at = new Date().toISOString();
-    }
-
-    try {
-      if (supabaseAdmin) {
-        await supabaseAdmin.rpc("bump_campaign_counter", {
-          _slug: data.slug,
-          _kind: data.scan ? "scan" : "visit",
-        });
-      }
-    } catch {
-      // ignore counter rpc error
-    }
-
-    if (
-      !campaign ||
-      !campaign.is_active ||
-      (campaign.expires_at && new Date(campaign.expires_at) < new Date())
-    ) {
-      return { campaign: null, expired: Boolean(campaign) };
-    }
-
-    return {
+  .handler(
+    async ({
+      data,
+    }): Promise<{
       campaign: {
-        id: campaign.id,
-        campaign_name: campaign.campaign_name,
-        service_name: campaign.service_name,
-        location: campaign.location,
-        slug: campaign.slug,
-      },
-      expired: false,
-    };
-  });
+        id: string;
+        campaign_name: string;
+        service_name: string | null;
+        location: string | null;
+        slug: string;
+      } | null;
+      expired: boolean;
+    }> => {
+      await memoryStore.syncWithMongo();
+
+      let campaign = memoryStore.campaigns.find((c) => c.slug === data.slug);
+      if (!campaign) {
+        try {
+          const dbCamp = await campaignsRepository.findBySlug(data.slug);
+          if (dbCamp) {
+            campaign = dbCamp;
+            memoryStore.campaigns.unshift(dbCamp);
+          }
+        } catch (err) {
+          console.warn("[reviews] Direct campaign lookup fallback:", err);
+        }
+      }
+
+      if (campaign) {
+        if (data.scan) campaign.scans += 1;
+        else campaign.visits += 1;
+        campaign.updated_at = new Date().toISOString();
+      }
+
+      try {
+        await campaignsRepository.incrementCounter(data.slug, data.scan ? "scans" : "visits");
+      } catch {
+        // ignore counter error
+      }
+
+      if (
+        !campaign ||
+        !campaign.is_active ||
+        (campaign.expires_at && new Date(campaign.expires_at) < new Date())
+      ) {
+        return { campaign: null, expired: Boolean(campaign) };
+      }
+
+      return {
+        campaign: {
+          id: campaign.id,
+          campaign_name: campaign.campaign_name,
+          service_name: campaign.service_name,
+          location: campaign.location,
+          slug: campaign.slug,
+        },
+        expired: false,
+      };
+    },
+  );
 
 /** Public: submit a review. Always stored as pending; rate limited and captcha protected. */
 export const submitReview = createServerFn({ method: "POST" })
@@ -483,13 +363,13 @@ export const submitReview = createServerFn({ method: "POST" })
     const firstError = Object.values(errors)[0];
     if (firstError) throw new Error(firstError);
 
-    // Verify arithmetic challenge (bypass if token is "fallback" during offline dev)
+    // Verify arithmetic challenge
     if (data.captchaToken !== "fallback" && !verifyCaptcha(data.captchaToken, data.captchaAnswer)) {
       throw new Error("Anti-spam verification failed. Please solve the math challenge again.");
     }
 
     // Sync database state before matching campaign
-    await memoryStore.syncWithSupabase(supabaseAdmin);
+    await memoryStore.syncWithMongo();
 
     // Duplicate check
     const isDupe = memoryStore.reviews.some(
@@ -530,7 +410,7 @@ export const submitReview = createServerFn({ method: "POST" })
       photoUrl = data.photo.dataUrl;
     }
 
-    // Server-side employee verification check (e.g. employee with verified @dimisi.in work email)
+    // Server-side employee verification check
     const isVerifiedDomain =
       data.reviewerType === "employee" &&
       Boolean(data.customerEmail && data.customerEmail.endsWith("@dimisi.in"));
@@ -568,100 +448,17 @@ export const submitReview = createServerFn({ method: "POST" })
       updated_at: nowIso,
     };
 
-    // Save directly to unified memory store
+    // Save directly to memory store
     memoryStore.reviews.unshift(newReview);
 
-    // Try Supabase insert
+    // Save into MongoDB
     try {
-      if (supabaseAdmin) {
-        // Resolve valid campaign ID in database to protect against FK constraints
-        let validCampaignIdInDb: string | null = null;
-        if (campaignId) {
-          const { data: dbCamp } = await supabaseAdmin
-            .from("review_campaigns")
-            .select("id")
-            .eq("id", campaignId)
-            .maybeSingle();
-
-          if (dbCamp?.id) {
-            validCampaignIdInDb = dbCamp.id;
-          } else if (data.slug) {
-            // Attempt inserting campaign into Supabase if missing
-            const localCamp = memoryStore.campaigns.find((c) => c.slug === data.slug);
-            if (localCamp) {
-              const { error: insCampErr } = await supabaseAdmin.from("review_campaigns").insert({
-                id: localCamp.id,
-                campaign_name: localCamp.campaign_name,
-                slug: localCamp.slug,
-                service_name: localCamp.service_name,
-                location: localCamp.location,
-                is_active: localCamp.is_active,
-                expires_at: localCamp.expires_at,
-              });
-              if (!insCampErr) {
-                validCampaignIdInDb = localCamp.id;
-              }
-            }
-          }
-        }
-
-        const fullPayload: any = {
-          id: newReview.id,
-          campaign_id: validCampaignIdInDb,
-          customer_name: data.customerName,
-          customer_email: data.customerEmail || null,
-          customer_phone: data.customerPhone || null,
-          service_name: data.serviceName || null,
-          reviewer_type: data.reviewerType,
-          role_or_title: data.roleOrTitle || null,
-          employee_department: data.employeeDepartment || null,
-          employment_status: data.reviewerType === "employee" ? data.employmentStatus : null,
-          is_verified: isVerifiedDomain,
-          rating: data.rating,
-          review_text: data.reviewText,
-          customer_photo_url: photoUrl,
-          customer_location: data.customerLocation || null,
-          consent_to_publish: true,
-          status: "pending",
-          is_featured: false,
-          submitter_ip: "127.0.0.1",
-          submitted_at: nowIso,
-          updated_at: nowIso,
-        };
-
-        const { error: insertErr } = await supabaseAdmin.from("reviews").insert(fullPayload);
-        if (insertErr) {
-          // If insert failed, try basic payload without custom columns
-          const basicPayload = {
-            id: newReview.id,
-            campaign_id: validCampaignIdInDb,
-            customer_name: data.customerName,
-            customer_email: data.customerEmail || null,
-            customer_phone: data.customerPhone || null,
-            service_name: data.serviceName || null,
-            rating: data.rating,
-            review_text: data.reviewText,
-            customer_photo_url: photoUrl,
-            customer_location: data.customerLocation || null,
-            consent_to_publish: true,
-            status: "pending",
-            submitter_ip: "127.0.0.1",
-            submitted_at: nowIso,
-            updated_at: nowIso,
-          };
-          const { error: basicErr } = await supabaseAdmin.from("reviews").insert(basicPayload);
-          if (basicErr) {
-            // If still failed due to foreign key or constraint, insert with campaign_id null
-            await supabaseAdmin.from("reviews").insert({ ...basicPayload, campaign_id: null });
-          }
-        }
-
-        if (data.slug) {
-          await supabaseAdmin.rpc("bump_campaign_counter", { _slug: data.slug, _kind: "submission" });
-        }
+      await reviewsRepository.insert(newReview);
+      if (data.slug) {
+        await campaignsRepository.incrementCounter(data.slug, "submissions");
       }
     } catch (err) {
-      console.warn("[reviews] Supabase review insert fallback to memory", err);
+      console.warn("[reviews] MongoDB review insert note:", err);
     }
 
     // Trigger email notification if enabled
@@ -700,7 +497,7 @@ export const reportReview = createServerFn({ method: "POST" })
       throw new Error("Please choose a valid reason for reporting.");
     }
 
-    const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
+    const review = await findOrFetchReview(memoryStore, null, data.reviewId);
     if (!review) throw new Error("Review not found.");
 
     const newReport: ReviewReport = {
@@ -725,19 +522,9 @@ export const reportReview = createServerFn({ method: "POST" })
     memoryStore.reports.unshift(newReport);
 
     try {
-      if (supabaseAdmin) {
-        await supabaseAdmin.from("review_reports").insert({
-          id: newReport.id,
-          review_id: review.id,
-          reason: data.reason,
-          message: data.message || null,
-          reporter_name: data.reporterName || null,
-          reporter_email: data.reporterEmail || null,
-          status: "open",
-        });
-      }
+      await reportsRepository.insertReport(newReport);
     } catch (err) {
-      console.warn("[reviews] Supabase report insert fallback", err);
+      console.warn("[reviews] MongoDB report insert note:", err);
     }
 
     if (memoryStore.settings.notify_on_report && memoryStore.settings.notify_email) {
@@ -758,8 +545,7 @@ export const reportReview = createServerFn({ method: "POST" })
 /** Admin: Load full reviews, campaigns, reports, settings, and analytics. */
 export const getAdminReviewsData = createServerFn({ method: "GET" }).handler(
   async (): Promise<AdminDashboardData> => {
-    // Sync Supabase records if available
-    await memoryStore.syncWithSupabase(supabaseAdmin);
+    await memoryStore.syncWithMongo();
 
     const reviews = [...memoryStore.reviews];
     const campaigns = [...memoryStore.campaigns];
@@ -855,7 +641,7 @@ export const updateReviewStatus = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
+    const review = await findOrFetchReview(memoryStore, null, data.reviewId);
     if (!review) throw new Error("Review not found.");
 
     const oldStatus = review.status;
@@ -863,33 +649,25 @@ export const updateReviewStatus = createServerFn({ method: "POST" })
     review.moderation_reason = data.moderationReason || null;
     review.updated_at = new Date().toISOString();
 
-    const updates: Partial<AdminReview> = {
-      status: data.status,
-      moderation_reason: data.moderationReason || null,
-      updated_at: review.updated_at,
-    };
-
     if (data.status === "approved") {
       review.approved_at = new Date().toISOString();
-      updates.approved_at = review.approved_at;
     } else if (data.status === "rejected") {
       review.rejected_at = new Date().toISOString();
-      updates.rejected_at = review.rejected_at;
     } else if (data.status === "archived") {
       review.archived_at = new Date().toISOString();
-      updates.archived_at = review.archived_at;
     }
 
     try {
-      if (supabaseAdmin) {
-        await supabaseAdmin.from("reviews").update(updates as any).eq("id", data.reviewId);
-      }
+      await reviewsRepository.updateStatus(data.reviewId, data.status, {
+        moderated_by: "admin",
+        moderation_reason: data.moderationReason || null,
+      });
     } catch (err) {
-      console.warn("[reviews] Supabase status update fallback", err);
+      console.warn("[reviews] MongoDB status update note:", err);
     }
 
     await logAudit(
-      supabaseAdmin,
+      null,
       "admin",
       `update_status_${data.status}`,
       "review",
@@ -943,7 +721,7 @@ export const updateReviewContent = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
+    const review = await findOrFetchReview(memoryStore, null, data.reviewId);
     if (!review) throw new Error("Review not found.");
 
     const oldContent = {
@@ -973,25 +751,24 @@ export const updateReviewContent = createServerFn({ method: "POST" })
     review.updated_at = new Date().toISOString();
 
     try {
-      if (supabaseAdmin) {
-        await supabaseAdmin
-          .from("reviews")
-          .update({
-            customer_name: review.customer_name,
-            service_name: review.service_name,
-            review_text: review.review_text,
-            customer_location: review.customer_location,
-            rating: review.rating,
-            updated_at: review.updated_at,
-          })
-          .eq("id", data.reviewId);
-      }
+      await reviewsRepository.updateFields(data.reviewId, {
+        customer_name: review.customer_name,
+        service_name: review.service_name,
+        reviewer_type: review.reviewer_type,
+        role_or_title: review.role_or_title,
+        employee_department: review.employee_department,
+        employment_status: review.employment_status,
+        is_verified: review.is_verified,
+        review_text: review.review_text,
+        customer_location: review.customer_location,
+        rating: review.rating,
+      });
     } catch (err) {
-      console.warn("[reviews] Supabase edit content fallback", err);
+      console.warn("[reviews] MongoDB edit content note:", err);
     }
 
     await logAudit(
-      supabaseAdmin,
+      null,
       "admin",
       "edit_review_content",
       "review",
@@ -1015,32 +792,27 @@ export const updateReviewContent = createServerFn({ method: "POST" })
     return { ok: true, message: "Review content successfully updated." };
   });
 
-/** Admin: Toggle verified status (for verified client / verified employee). */
+/** Admin: Toggle verified status. */
 export const toggleReviewVerified = createServerFn({ method: "POST" })
   .validator((input: { reviewId: string; isVerified: boolean }) => ({
     reviewId: String(input.reviewId ?? ""),
     isVerified: Boolean(input.isVerified),
   }))
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
+    const review = await findOrFetchReview(memoryStore, null, data.reviewId);
     if (!review) throw new Error("Review not found.");
 
     review.is_verified = data.isVerified;
     review.updated_at = new Date().toISOString();
 
     try {
-      if (supabaseAdmin) {
-        await supabaseAdmin
-          .from("reviews")
-          .update({ is_verified: data.isVerified, updated_at: review.updated_at })
-          .eq("id", data.reviewId);
-      }
+      await reviewsRepository.updateFields(data.reviewId, { is_verified: data.isVerified });
     } catch (err) {
-      console.warn("[reviews] Supabase toggle verified fallback", err);
+      console.warn("[reviews] MongoDB toggle verified note:", err);
     }
 
     await logAudit(
-      supabaseAdmin,
+      null,
       "admin",
       `toggle_verified_${data.isVerified ? "true" : "false"}`,
       "review",
@@ -1060,25 +832,20 @@ export const toggleReviewFeatured = createServerFn({ method: "POST" })
     isFeatured: Boolean(input.isFeatured),
   }))
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
+    const review = await findOrFetchReview(memoryStore, null, data.reviewId);
     if (!review) throw new Error("Review not found.");
 
     review.is_featured = data.isFeatured;
     review.updated_at = new Date().toISOString();
 
     try {
-      if (supabaseAdmin) {
-        await supabaseAdmin
-          .from("reviews")
-          .update({ is_featured: data.isFeatured, updated_at: review.updated_at })
-          .eq("id", data.reviewId);
-      }
+      await reviewsRepository.updateFields(data.reviewId, { is_featured: data.isFeatured });
     } catch (err) {
-      console.warn("[reviews] Supabase toggle featured fallback", err);
+      console.warn("[reviews] MongoDB toggle featured note:", err);
     }
 
     await logAudit(
-      supabaseAdmin,
+      null,
       "admin",
       data.isFeatured ? "set_featured" : "remove_featured",
       "review",
@@ -1095,22 +862,20 @@ export const toggleReviewFeatured = createServerFn({ method: "POST" })
 export const deleteReview = createServerFn({ method: "POST" })
   .validator((input: { reviewId: string }) => ({ reviewId: String(input.reviewId ?? "") }))
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const review = await findOrFetchReview(memoryStore, supabaseAdmin, data.reviewId);
+    const review = await findOrFetchReview(memoryStore, null, data.reviewId);
     const idx = memoryStore.reviews.findIndex((r) => r.id === data.reviewId);
     const existing = idx >= 0 ? memoryStore.reviews[idx] : review;
 
     if (idx >= 0) memoryStore.reviews.splice(idx, 1);
 
     try {
-      if (supabaseAdmin) {
-        await supabaseAdmin.from("reviews").delete().eq("id", data.reviewId);
-      }
+      await reviewsRepository.delete(data.reviewId);
     } catch (err) {
-      console.warn("[reviews] Supabase delete review fallback", err);
+      console.warn("[reviews] MongoDB delete review note:", err);
     }
 
     await logAudit(
-      supabaseAdmin,
+      null,
       "admin",
       "delete_review",
       "review",
@@ -1144,8 +909,7 @@ export const createCampaign = createServerFn({ method: "POST" })
     if (!data.campaignName) throw new Error("Campaign name is required.");
     if (!data.slug) throw new Error("Campaign slug is required.");
 
-    // Sync database before validating duplicate slug
-    await memoryStore.syncWithSupabase(supabaseAdmin);
+    await memoryStore.syncWithMongo();
 
     if (memoryStore.campaigns.some((c) => c.slug === data.slug)) {
       throw new Error(`Campaign slug "${data.slug}" already exists. Please choose a different slug.`);
@@ -1167,70 +931,16 @@ export const createCampaign = createServerFn({ method: "POST" })
       updated_at: new Date().toISOString(),
     };
 
-    if (supabaseAdmin) {
-      let dbSaved = false;
-
-      // 1. Try secure save_review_campaign stored procedure first
-      try {
-        const { data: rpcRes, error: rpcErr } = await supabaseAdmin.rpc("save_review_campaign", {
-          _id: newCampaign.id,
-          _campaign_name: newCampaign.campaign_name,
-          _slug: newCampaign.slug,
-          _service_name: newCampaign.service_name,
-          _location: newCampaign.location,
-          _is_active: newCampaign.is_active,
-          _expires_at: newCampaign.expires_at,
-          _created_by: null,
-        });
-
-        if (!rpcErr && rpcRes) {
-          dbSaved = true;
-          if (rpcRes.id) newCampaign.id = rpcRes.id;
-          if (rpcRes.created_at) newCampaign.created_at = rpcRes.created_at;
-          if (rpcRes.updated_at) newCampaign.updated_at = rpcRes.updated_at;
-        } else if (rpcErr) {
-          console.warn("[reviews] RPC save_review_campaign fallback to direct insert:", rpcErr.message);
-        }
-      } catch {
-        // Continue to direct insert
-      }
-
-      // 2. Direct insert if RPC not yet run in Postgres
-      if (!dbSaved) {
-        try {
-          const { data: insRow, error: cErr } = await supabaseAdmin
-            .from("review_campaigns")
-            .insert({
-              id: newCampaign.id,
-              campaign_name: newCampaign.campaign_name,
-              slug: newCampaign.slug,
-              service_name: newCampaign.service_name,
-              location: newCampaign.location,
-              is_active: true,
-              expires_at: newCampaign.expires_at,
-              visits: 0,
-              scans: 0,
-              submissions: 0,
-            })
-            .select()
-            .maybeSingle();
-
-          if (cErr) {
-            console.warn("[reviews] Supabase review_campaigns insert notice:", cErr.message);
-          } else if (insRow) {
-            newCampaign.id = insRow.id;
-            if (insRow.created_at) newCampaign.created_at = insRow.created_at;
-          }
-        } catch (dbEx) {
-          console.warn("[reviews] Supabase create campaign exception:", dbEx);
-        }
-      }
-    }
-
     memoryStore.campaigns.unshift(newCampaign);
 
+    try {
+      await campaignsRepository.save(newCampaign);
+    } catch (err) {
+      console.warn("[reviews] MongoDB create campaign note:", err);
+    }
+
     await logAudit(
-      supabaseAdmin,
+      null,
       "admin",
       "create_campaign",
       "campaign",
@@ -1263,7 +973,7 @@ export const updateCampaign = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const campaign = await findOrFetchCampaign(memoryStore, supabaseAdmin, data.id);
+    const campaign = await findOrFetchCampaign(memoryStore, null, data.id);
     if (!campaign) throw new Error("Campaign not found.");
 
     const old = { ...campaign };
@@ -1274,50 +984,14 @@ export const updateCampaign = createServerFn({ method: "POST" })
     campaign.expires_at = data.expiresAt;
     campaign.updated_at = new Date().toISOString();
 
-    if (supabaseAdmin) {
-      let dbUpdated = false;
-
-      try {
-        const { error: rpcErr } = await supabaseAdmin.rpc("save_review_campaign", {
-          _id: data.id,
-          _campaign_name: data.campaignName,
-          _slug: campaign.slug,
-          _service_name: campaign.service_name,
-          _location: campaign.location,
-          _is_active: campaign.is_active,
-          _expires_at: campaign.expires_at,
-          _created_by: null,
-        });
-        if (!rpcErr) dbUpdated = true;
-      } catch {
-        // Continue to direct update
-      }
-
-      if (!dbUpdated) {
-        try {
-          const { error: uErr } = await supabaseAdmin
-            .from("review_campaigns")
-            .update({
-              campaign_name: campaign.campaign_name,
-              service_name: campaign.service_name,
-              location: campaign.location,
-              is_active: campaign.is_active,
-              expires_at: campaign.expires_at,
-              updated_at: campaign.updated_at,
-            })
-            .eq("id", data.id);
-
-          if (uErr) {
-            console.warn("[reviews] Supabase update campaign notice:", uErr.message);
-          }
-        } catch (dbEx) {
-          console.warn("[reviews] Supabase update campaign exception:", dbEx);
-        }
-      }
+    try {
+      await campaignsRepository.save(campaign);
+    } catch (err) {
+      console.warn("[reviews] MongoDB update campaign note:", err);
     }
 
     await logAudit(
-      supabaseAdmin,
+      null,
       "admin",
       "update_campaign",
       "campaign",
@@ -1334,38 +1008,20 @@ export const updateCampaign = createServerFn({ method: "POST" })
 export const deleteCampaign = createServerFn({ method: "POST" })
   .validator((input: { id: string }) => ({ id: String(input.id ?? "") }))
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const campaign = await findOrFetchCampaign(memoryStore, supabaseAdmin, data.id);
+    const campaign = await findOrFetchCampaign(memoryStore, null, data.id);
     const idx = memoryStore.campaigns.findIndex((c) => c.id === data.id);
     const existing = idx >= 0 ? memoryStore.campaigns[idx] : campaign;
 
     if (idx >= 0) memoryStore.campaigns.splice(idx, 1);
 
-    if (supabaseAdmin) {
-      let dbDeleted = false;
-
-      try {
-        const { error: rpcErr } = await supabaseAdmin.rpc("delete_review_campaign", {
-          _id: data.id,
-        });
-        if (!rpcErr) dbDeleted = true;
-      } catch {
-        // Fallback to direct delete
-      }
-
-      if (!dbDeleted) {
-        try {
-          const { error: dErr } = await supabaseAdmin.from("review_campaigns").delete().eq("id", data.id);
-          if (dErr) {
-            console.warn("[reviews] Supabase delete campaign notice:", dErr.message);
-          }
-        } catch (dbEx) {
-          console.warn("[reviews] Supabase delete campaign exception:", dbEx);
-        }
-      }
+    try {
+      await campaignsRepository.delete(data.id);
+    } catch (err) {
+      console.warn("[reviews] MongoDB delete campaign note:", err);
     }
 
     await logAudit(
-      supabaseAdmin,
+      null,
       "admin",
       "delete_campaign",
       "campaign",
@@ -1392,14 +1048,14 @@ export const resolveReport = createServerFn({ method: "POST" })
     }),
   )
   .handler(async ({ data }): Promise<{ ok: true; message: string }> => {
-    const report = await findOrFetchReport(memoryStore, supabaseAdmin, data.reportId);
+    const report = await findOrFetchReport(memoryStore, null, data.reportId);
     if (!report) throw new Error("Report not found.");
 
     report.status = "resolved";
     report.resolved_at = new Date().toISOString();
     report.resolved_by = "admin";
 
-    const review = await findOrFetchReview(memoryStore, supabaseAdmin, report.review_id);
+    const review = await findOrFetchReview(memoryStore, null, report.review_id);
 
     if (review) {
       if (data.action === "archive") {
@@ -1407,40 +1063,29 @@ export const resolveReport = createServerFn({ method: "POST" })
         review.archived_at = new Date().toISOString();
         review.moderation_reason =
           `Archived following report: ${report.reason}. ${data.moderationNotes || ""}`.trim();
+        try {
+          await reviewsRepository.updateStatus(review.id, "archived", {
+            moderated_by: "admin",
+            moderation_reason: review.moderation_reason,
+          });
+        } catch {}
       } else if (data.action === "delete") {
         const revIdx = memoryStore.reviews.findIndex((r) => r.id === report.review_id);
         if (revIdx >= 0) memoryStore.reviews.splice(revIdx, 1);
+        try {
+          await reviewsRepository.delete(report.review_id);
+        } catch {}
       }
     }
 
     try {
-      if (supabaseAdmin) {
-        await supabaseAdmin
-          .from("review_reports")
-          .update({ status: "resolved", resolved_at: report.resolved_at, resolved_by: "admin" })
-          .eq("id", data.reportId);
-
-        if (review) {
-          if (data.action === "archive") {
-            await supabaseAdmin
-              .from("reviews")
-              .update({
-                status: "archived",
-                archived_at: review.archived_at,
-                moderation_reason: review.moderation_reason,
-              })
-              .eq("id", review.id);
-          } else if (data.action === "delete") {
-            await supabaseAdmin.from("reviews").delete().eq("id", review.id);
-          }
-        }
-      }
+      await reportsRepository.resolveReport(data.reportId, "resolved", "admin");
     } catch (err) {
-      console.warn("[reviews] Supabase resolve report fallback", err);
+      console.warn("[reviews] MongoDB resolve report note:", err);
     }
 
     await logAudit(
-      supabaseAdmin,
+      null,
       "admin",
       `resolve_report_${data.action}`,
       "report",
@@ -1485,29 +1130,13 @@ export const updateReviewSettings = createServerFn({ method: "POST" })
     };
 
     try {
-      if (supabaseAdmin) {
-        await supabaseAdmin
-          .from("review_settings")
-          .upsert(
-            {
-              id: true,
-              notify_on_submit: data.notifyOnSubmit,
-              notify_on_approve: data.notifyOnApprove,
-              notify_on_reject: data.notifyOnReject,
-              notify_on_report: data.notifyOnReport,
-              notify_campaign_summary: data.notifyCampaignSummary,
-              notify_email: data.notifyEmail || null,
-              updated_at: memoryStore.settings.updated_at,
-            } as any,
-            { onConflict: "id" },
-          );
-      }
+      await reportsRepository.updateSettings(memoryStore.settings);
     } catch (err) {
-      console.warn("[reviews] Supabase settings update fallback", err);
+      console.warn("[reviews] MongoDB settings update note:", err);
     }
 
     await logAudit(
-      supabaseAdmin,
+      null,
       "admin",
       "update_review_settings",
       "settings",

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Eye, EyeOff, Lock, ShieldCheck } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
+import { loginAdminFn } from "../../server/admin.functions";
 import styles from "../styles/admin.module.css";
 
 /** Secure sign-in gate for the DIMISI admin panel with Super Admin credentials support. */
@@ -19,48 +19,26 @@ export function AdminLogin() {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    // Direct root Super Admin credentials verification
-    if (
-      cleanEmail === "swatantrasingh308@gmail.com" &&
-      cleanPassword === "ss123&&&"
-    ) {
-      localStorage.setItem(
-        "dimisi_admin_session",
-        JSON.stringify({
-          user: {
-            id: "usr-swatantra-001",
-            email: "swatantrasingh308@gmail.com",
-            user_metadata: {
-              full_name: "Swatantra Singh",
-              admin_role: "super_admin",
-            },
-          },
-          token: "mock-super-admin-token",
-          expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
-        })
-      );
-      window.dispatchEvent(new Event("dimisi-auth-change"));
-
-      // Try Supabase auth in parallel if connected
-      try {
-        await supabase.auth.signInWithPassword({
+    try {
+      const res = await loginAdminFn({
+        data: {
           email: cleanEmail,
           password: cleanPassword,
-        });
-      } catch {}
-
-      setBusy(false);
-      return;
-    }
-
-    try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: cleanEmail,
-        password: cleanPassword,
+        },
       });
 
-      if (signInError) {
-        setError(signInError.message || "Invalid email or password.");
+      if (res?.success && res.user) {
+        localStorage.setItem(
+          "dimisi_admin_session",
+          JSON.stringify({
+            user: res.user,
+            token: res.token,
+            expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
+          }),
+        );
+        window.dispatchEvent(new Event("dimisi-auth-change"));
+      } else {
+        setError("Invalid email or password.");
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Authentication failed.");
