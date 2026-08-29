@@ -526,6 +526,14 @@ export function AdminOverview({
               <span className={styles.navTileCount}>{reviewsData.campaigns.length}</span>
             </button>
 
+            <button type="button" className={styles.navTile} onClick={() => onTab("leads")}>
+              <div className={styles.navTileLeft}>
+                <Users size={16} className={styles.navTileIcon} />
+                <span className={styles.navTileTitle}>Leads & Visitors</span>
+              </div>
+              <span className={styles.navTileCount}>{overviewData.leads.length}</span>
+            </button>
+
             <button type="button" className={styles.navTile} onClick={() => onTab("admins")}>
               <div className={styles.navTileLeft}>
                 <ShieldCheck size={16} className={styles.navTileIcon} />

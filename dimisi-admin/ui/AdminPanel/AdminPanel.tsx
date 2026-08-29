@@ -19,6 +19,7 @@ import { AdminCampaigns } from "../AdminCampaigns/AdminCampaigns";
 import { AdminReports } from "../AdminReports/AdminReports";
 import { AdminAnalytics } from "../AdminAnalytics/AdminAnalytics";
 import { AdminSettings } from "../AdminSettings/AdminSettings";
+import { AdminLeads } from "../AdminLeads/AdminLeads";
 import { canAccessTab, getRoleMeta, type AdminRole } from "../../lib/rbac.shared";
 import {
   getAdminOverview,
@@ -165,6 +166,12 @@ export function AdminPanel() {
       .then((res) => setBlogData(res))
       .catch((err) => console.warn("Failed to refresh blog data", err));
   }, [loadBlogData]);
+
+  const refreshOverview = useCallback(() => {
+    load()
+      .then((res) => setData(res))
+      .catch((err) => console.warn("Failed to refresh overview data", err));
+  }, [load]);
 
   useEffect(() => {
     if (!user) {
@@ -458,40 +465,13 @@ export function AdminPanel() {
               <AdminSettings settings={reviewsData.settings} onRefresh={refreshReviews} />
             )}
 
-            {/* LEADS TAB */}
+            {/* LEADS & VISITOR INTELLIGENCE TAB */}
             {tab === "leads" && (
-              <div className={styles.tableWrap}>
-                <table className={styles.table}>
-                  <thead>
-                    <tr>
-                      <th>Email</th>
-                      <th>Name</th>
-                      <th>Source</th>
-                      <th>Page</th>
-                      <th>Message</th>
-                      <th>When</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.leads.length === 0 ? (
-                      <tr>
-                        <td colSpan={6}>No leads yet.</td>
-                      </tr>
-                    ) : (
-                      data.leads.map((lead) => (
-                        <tr key={lead.id}>
-                          <td>{lead.email}</td>
-                          <td>{lead.full_name ?? "—"}</td>
-                          <td>{lead.source}</td>
-                          <td>{lead.page ?? "—"}</td>
-                          <td>{lead.message ?? "—"}</td>
-                          <td>{new Date(lead.created_at).toLocaleString()}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <AdminLeads
+                initialLeads={data.leads as any}
+                currentUserRole={userRole}
+                onRefreshOverview={refreshOverview}
+              />
             )}
 
             {/* ADMINS TAB */}

@@ -17,6 +17,7 @@ import { SectionHeading } from "@/components/common/SectionHeading/SectionHeadin
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
 import { submitLeadFn } from "@/lib/leads.functions";
+import { getVisitorContext } from "@/lib/visitor-tracker";
 import { SILVER_LOGO_URL } from "@/assets/logos";
 import pageStyles from "@/styles/page.module.css";
 import styles from "./ContactPage.module.css";
@@ -126,14 +127,21 @@ export function ContactPage() {
         .filter(Boolean)
         .join("\n\n");
 
-      // Insert into MongoDB leads via server function
+      const visitorCtx = typeof window !== "undefined" ? getVisitorContext() : null;
+
+      // Insert into MongoDB leads via server function with visitor session linking
       await submitLeadFn({
         data: {
           email: form.email.trim().toLowerCase(),
           fullName: form.name.trim(),
+          phone: form.phone.trim() || undefined,
+          company: form.company.trim() || undefined,
+          inquiryType: form.inquiryType || undefined,
           source: "contact_page",
           page: "/contact",
           message: combinedMessage,
+          visitorId: visitorCtx?.visitorId,
+          sessionId: visitorCtx?.sessionId,
         },
       });
 

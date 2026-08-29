@@ -19,6 +19,7 @@ import { GrainOverlay } from "@/components/effects/GrainOverlay/GrainOverlay";
 import { ScrollProgress } from "@/components/effects/ScrollProgress/ScrollProgress";
 import { CinematicStage } from "@/components/three/CinematicStage/CinematicStage";
 import { VideoPreloader } from "@/components/loader/VideoPreloader/VideoPreloader";
+import { VisitorTracker } from "@/components/VisitorTracker/VisitorTracker";
 import { useSmoothScroll } from "@/hooks/useSmoothScroll";
 
 function NotFoundComponent() {
@@ -204,6 +205,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
+      <VisitorTracker />
       {intro ? <VideoPreloader onDone={finishIntro} /> : null}
       {intro ? null : <CinematicStage />}
       <Navbar />

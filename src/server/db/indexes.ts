@@ -41,6 +41,33 @@ export async function ensureMongoIndexes(): Promise<void> {
       await leadsCol.createIndex({ id: 1 }, { unique: true });
       await leadsCol.createIndex({ created_at: -1 });
       await leadsCol.createIndex({ email: 1 });
+      await leadsCol.createIndex({ status: 1 });
+      await leadsCol.createIndex({ visitor_id: 1 });
+      await leadsCol.createIndex({ session_id: 1 });
+    }
+
+    // 4.1. Visitor Sessions collection
+    const visitorSessionsCol = await getCollection(COLLECTIONS.VISITOR_SESSIONS);
+    if (visitorSessionsCol) {
+      await visitorSessionsCol.createIndex({ id: 1 }, { unique: true });
+      await visitorSessionsCol.createIndex({ session_id: 1 }, { unique: true });
+      await visitorSessionsCol.createIndex({ visitor_id: 1 });
+      await visitorSessionsCol.createIndex({ last_seen_at: -1 });
+      await visitorSessionsCol.createIndex({ started_at: -1 });
+      await visitorSessionsCol.createIndex({ is_active: 1 });
+      await visitorSessionsCol.createIndex({ device_category: 1 });
+      await visitorSessionsCol.createIndex({ auth_state: 1 });
+    }
+
+    // 4.2. Page Views collection
+    const pageViewsCol = await getCollection(COLLECTIONS.PAGE_VIEWS);
+    if (pageViewsCol) {
+      await pageViewsCol.createIndex({ id: 1 }, { unique: true });
+      await pageViewsCol.createIndex({ page_view_id: 1 }, { unique: true });
+      await pageViewsCol.createIndex({ session_id: 1 });
+      await pageViewsCol.createIndex({ visitor_id: 1 });
+      await pageViewsCol.createIndex({ entered_at: -1 });
+      await pageViewsCol.createIndex({ path: 1 });
     }
 
     // 5. Admin Users & Profiles
