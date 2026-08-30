@@ -5,6 +5,7 @@ import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import path from "path";
 
 export default defineConfig(({ command }) => ({
+  envPrefix: ["VITE_", "GOOGLE_"],
   server: {
     port: 8080,
   },

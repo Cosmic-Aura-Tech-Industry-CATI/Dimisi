@@ -148,9 +148,12 @@ export async function signInWithGoogleOAuth(options?: {
   try {
     let clientId: string | null | undefined =
       (import.meta as any).env?.VITE_GOOGLE_CLIENT_ID ||
-      (typeof process !== "undefined" ? process.env?.VITE_GOOGLE_CLIENT_ID : undefined);
+      (import.meta as any).env?.GOOGLE_CLIENT_ID ||
+      (typeof process !== "undefined"
+        ? process.env?.VITE_GOOGLE_CLIENT_ID || process.env?.GOOGLE_CLIENT_ID
+        : undefined);
 
-    // If client ID not found in frontend bundle, retrieve from server function
+    // If client ID not found in frontend bundle, retrieve dynamically from server function
     if (!clientId) {
       try {
         const serverConfig = await getGoogleAuthConfigFn();
