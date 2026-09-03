@@ -1,0 +1,395 @@
+.section {
+  position: relative;
+  padding: clamp(4rem, 10vh, 8rem) clamp(1.2rem, 5vw, 4rem);
+  max-width: 78rem;
+  margin: 0 auto;
+}
+
+/* ---------- Showcase Card Stage ---------- */
+.showcaseStage {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.15fr 0.85fr;
+  gap: 3rem;
+  align-items: center;
+  margin-top: 2.5rem;
+  padding: clamp(2rem, 5vw, 3.5rem);
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at 10% 20%, rgba(255, 122, 24, 0.08), transparent 45%),
+    radial-gradient(circle at 90% 80%, rgba(255, 171, 46, 0.06), transparent 50%),
+    rgba(14, 11, 19, 0.72);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  backdrop-filter: blur(24px) saturate(130%);
+  box-shadow:
+    0 30px 70px -20px rgba(0, 0, 0, 0.85),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  will-change: transform;
+}
+
+.stageGlowAmbient {
+  position: absolute;
+  top: -40%;
+  right: -20%;
+  width: 500px;
+  height: 500px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 122, 24, 0.15), transparent 70%);
+  pointer-events: none;
+  filter: blur(40px);
+  animation: floatAmbient 10s infinite ease-in-out alternate;
+}
+
+@keyframes floatAmbient {
+  0% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  100% {
+    transform: translate3d(-30px, 30px, 0) scale(1.15);
+  }
+}
+
+/* ---------- Left Column: Content ---------- */
+.contentCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  z-index: 2;
+}
+
+.categoryBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: fit-content;
+  padding: 0.45rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 171, 46, 0.3);
+  background: rgba(255, 171, 46, 0.08);
+  font-family: var(--dm-font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--dm-amber);
+}
+
+.badgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dm-amber);
+  box-shadow: 0 0 10px var(--dm-amber);
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.35;
+    transform: scale(0.75);
+  }
+}
+
+.productHeading {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.productName {
+  font-family: var(--dm-font-display);
+  font-size: clamp(2.4rem, 5.5vw, 4.2rem);
+  font-weight: 700;
+  line-height: 1.05;
+  letter-spacing: -0.02em;
+  color: var(--dm-warm);
+  margin: 0;
+  text-shadow: 0 4px 25px rgba(0, 0, 0, 0.7);
+}
+
+.productTagline {
+  font-family: var(--dm-font-display);
+  font-size: clamp(1.2rem, 2.4vw, 1.8rem);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: rgba(255, 244, 230, 0.85);
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+}
+
+.taglineAccent {
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.description {
+  font-family: var(--dm-font-body);
+  font-size: clamp(0.98rem, 1.3vw, 1.12rem);
+  line-height: 1.8;
+  color: rgba(255, 244, 230, 0.88);
+  margin: 0;
+  max-width: 42rem;
+}
+
+/* Feature Badges */
+.featurePills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 0.4rem;
+}
+
+.featurePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  color: var(--dm-warm);
+  font-size: 0.82rem;
+  font-weight: 500;
+  transition: all 0.25s var(--dm-ease);
+}
+
+.featurePill:hover {
+  background: rgba(255, 171, 46, 0.12);
+  border-color: rgba(255, 171, 46, 0.4);
+  color: var(--dm-gold);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(255, 122, 24, 0.2);
+}
+
+.pillIcon {
+  color: var(--dm-amber);
+  flex-shrink: 0;
+}
+
+/* Actions Row */
+.actionsRow {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-top: 0.8rem;
+}
+
+/* ---------- Right Column: Visual Simulator / Mockup ---------- */
+.visualCol {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 2;
+}
+
+.deviceFrame {
+  position: relative;
+  width: 100%;
+  max-width: 360px;
+  border-radius: 24px;
+  background: rgba(8, 6, 12, 0.92);
+  border: 1px solid rgba(255, 171, 46, 0.28);
+  padding: 1.5rem 1.4rem;
+  box-shadow:
+    0 25px 60px -10px rgba(0, 0, 0, 0.9),
+    0 0 35px rgba(255, 122, 24, 0.12),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  transform: translate3d(0, 0, 0);
+  transition: transform 0.4s var(--dm-ease), border-color 0.4s;
+}
+
+.deviceFrame:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 171, 46, 0.5);
+  box-shadow:
+    0 30px 70px -10px rgba(0, 0, 0, 0.95),
+    0 0 45px rgba(255, 122, 24, 0.22);
+}
+
+.deviceHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid rgba(255, 214, 170, 0.08);
+}
+
+.liveTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--dm-font-display);
+  font-size: 0.66rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #34d399;
+}
+
+.liveDotGreen {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #34d399;
+  box-shadow: 0 0 8px #34d399;
+}
+
+.appBrand {
+  font-family: var(--dm-font-display);
+  font-weight: 700;
+  font-size: 0.82rem;
+  letter-spacing: 0.14em;
+  color: var(--dm-gold);
+}
+
+/* Mockup Feed Cards */
+.feedCard {
+  border-radius: 16px;
+  background: rgba(20, 16, 26, 0.7);
+  border: 1px solid rgba(255, 214, 170, 0.1);
+  padding: 1.1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: background 0.25s, border-color 0.25s;
+}
+
+.feedCard:hover {
+  background: rgba(26, 20, 35, 0.85);
+  border-color: rgba(255, 171, 46, 0.25);
+}
+
+.feedCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.authorTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-family: var(--dm-font-display);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  color: var(--dm-warm);
+}
+
+.anonAvatar {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  display: grid;
+  place-items: center;
+  color: #0a0810;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.timeTag {
+  font-size: 0.66rem;
+  color: var(--dm-dim);
+}
+
+.postBody {
+  font-size: 0.84rem;
+  line-height: 1.5;
+  color: rgba(255, 244, 230, 0.85);
+  margin: 0;
+}
+
+.reactionRow {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-top: 0.2rem;
+}
+
+.reactionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.7rem;
+  color: var(--dm-dim);
+  font-family: var(--dm-font-display);
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.reactionActive {
+  color: var(--dm-amber);
+  background: rgba(255, 171, 46, 0.1);
+}
+
+/* Quick Metrics Row below device */
+.deviceMetrics {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  padding-top: 0.4rem;
+  border-top: 1px solid rgba(255, 214, 170, 0.08);
+  text-align: center;
+}
+
+.metricValue {
+  display: block;
+  font-family: var(--dm-font-display);
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--dm-gold);
+}
+
+.metricLabel {
+  display: block;
+  font-size: 0.62rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dm-dim);
+  margin-top: 0.15rem;
+}
+
+/* ---------- Responsive Breakpoints ---------- */
+@media (max-width: 980px) {
+  .showcaseStage {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+    padding: 2.2rem 1.8rem;
+  }
+  .deviceFrame {
+    max-width: 440px;
+  }
+}
+
+@media (max-width: 640px) {
+  .showcaseStage {
+    padding: 1.6rem 1.25rem;
+    border-radius: 20px;
+  }
+  .categoryBadge {
+    font-size: 0.66rem;
+    padding: 0.35rem 0.8rem;
+  }
+  .featurePill {
+    font-size: 0.76rem;
+    padding: 0.32rem 0.65rem;
+  }
+  .deviceMetrics {
+    grid-template-columns: 1fr 1fr;
+  }
+}

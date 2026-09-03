@@ -1,0 +1,45 @@
+.rotatingWord {
+  display: inline-block;
+  vertical-align: baseline;
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  will-change: transform, opacity, filter;
+  transition:
+    transform 0.45s var(--dm-ease, cubic-bezier(0.16, 1, 0.3, 1)),
+    opacity 0.35s ease,
+    filter 0.35s ease;
+}
+
+.visible {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  filter: blur(0px);
+}
+
+.exit {
+  opacity: 0;
+  transform: translateY(-16px) scale(0.96);
+  filter: blur(4px);
+  transition:
+    transform 0.3s cubic-bezier(0.4, 0, 1, 1),
+    opacity 0.25s ease,
+    filter 0.25s ease;
+}
+
+.enter {
+  opacity: 0;
+  transform: translateY(16px) scale(0.96);
+  filter: blur(4px);
+  transition: none !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotatingWord {
+    transition: opacity 0.3s ease !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}

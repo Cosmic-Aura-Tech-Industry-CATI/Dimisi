@@ -1,0 +1,657 @@
+.page {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  padding: clamp(7.5rem, 18vh, 10rem) clamp(1.2rem, 5vw, 3.5rem) 5rem;
+  background: transparent;
+  color: var(--dm-warm, #fbf3e9);
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.campaignBanner {
+  background: rgba(255, 122, 24, 0.08);
+  border: 1px solid rgba(255, 171, 46, 0.28);
+  border-radius: 1.25rem;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.campaignBadge {
+  font-size: 0.72rem;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  color: #05040a;
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.campaignTitle {
+  font-size: 0.92rem;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0;
+  font-weight: 500;
+}
+
+.card {
+  background: rgba(14, 14, 17, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.4rem;
+  padding: 2.5rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px) saturate(140%);
+}
+
+@media (max-width: 640px) {
+  .card {
+    padding: 1.5rem;
+    border-radius: 1.25rem;
+  }
+}
+
+.header {
+  text-align: center;
+  margin-bottom: 2.25rem;
+}
+
+.kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--dm-amber, #ffab2e);
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+}
+
+.kickerDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 10px var(--dm-amber, #ffab2e);
+}
+
+.title {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: clamp(1.8rem, 4.5vw, 2.35rem);
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0 0 0.6rem;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+}
+
+.subtitle {
+  font-size: 0.94rem;
+  color: var(--dm-dim, #a09587);
+  margin: 0 auto;
+  max-width: 480px;
+  line-height: 1.6;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* Reviewer Type Selector */
+.typeSelectorSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.typeToggleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+@media (max-width: 580px) {
+  .typeToggleGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.typeToggleBtn {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.85rem;
+  padding: 1.1rem 1.25rem;
+  background: rgba(8, 8, 10, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.25s ease;
+}
+
+.typeToggleBtn:hover {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 171, 46, 0.3);
+}
+
+.typeToggleActive {
+  background: rgba(255, 140, 26, 0.1) !important;
+  border-color: var(--dm-amber, #ffab2e) !important;
+  box-shadow: 0 0 24px rgba(255, 171, 46, 0.18);
+}
+
+.typeToggleIcon {
+  color: var(--dm-amber, #ffab2e);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.typeToggleText {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.typeToggleText strong {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  letter-spacing: 0.04em;
+}
+
+.typeToggleText span {
+  font-size: 0.76rem;
+  color: var(--dm-dim, #a09587);
+  line-height: 1.4;
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+@media (max-width: 540px) {
+  .row2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.statusToggleRow {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.statusChoiceBtn {
+  flex: 1;
+  padding: 0.75rem 0.5rem;
+  background: rgba(8, 8, 10, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--dm-dim, #a09587);
+  border-radius: 12px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.statusChoiceBtn:hover {
+  color: var(--dm-warm, #fbf3e9);
+  border-color: rgba(255, 171, 46, 0.3);
+}
+
+.statusChoiceActive {
+  background: rgba(255, 171, 46, 0.14) !important;
+  border-color: #ffab2e !important;
+  color: #ffd79a !important;
+  font-weight: 700;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.label {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: rgba(255, 244, 230, 0.75);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.req {
+  color: var(--dm-amber, #ff8c1a);
+  margin-left: 0.2rem;
+}
+
+.opt {
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  font-size: 0.72rem;
+  text-transform: none;
+  letter-spacing: normal;
+  color: var(--dm-dim, #a09587);
+}
+
+.charCount {
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.72rem;
+  color: var(--dm-dim, #a09587);
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  background: rgba(8, 8, 10, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f5f5f7;
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  font-size: 0.92rem;
+  outline: none;
+  transition: all 0.25s ease;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  border-color: var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 24px rgba(255, 171, 46, 0.25);
+  background: rgba(8, 8, 10, 0.85);
+}
+
+.inputErr {
+  border-color: #f87171 !important;
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.2) !important;
+}
+
+.textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.ratingSection {
+  text-align: center;
+  background: rgba(8, 8, 10, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 1.5rem 1rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ratingLabel {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #ffd79a;
+  margin-bottom: 0.85rem;
+}
+
+.starsRow {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  margin-bottom: 0.75rem;
+}
+
+.starBtn {
+  background: none;
+  border: none;
+  color: rgba(255, 255, 255, 0.18);
+  cursor: pointer;
+  padding: 0.25rem;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), color 0.2s;
+  outline: none;
+}
+
+.starBtn:hover,
+.starFilled {
+  color: var(--dm-amber, #ffab2e) !important;
+  transform: scale(1.15);
+  filter: drop-shadow(0 0 8px rgba(255, 171, 46, 0.5));
+}
+
+.ratingDescriptor {
+  font-size: 0.84rem;
+  color: var(--dm-dim, #a09587);
+  min-height: 1.25rem;
+}
+
+/* Photo Upload */
+.photoUploadBox {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  background: rgba(8, 8, 10, 0.45);
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 14px;
+  padding: 1rem;
+}
+
+.photoPreview {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--dm-amber, #ffab2e);
+}
+
+.photoPlaceholder {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--dm-dim, #a09587);
+}
+
+.photoActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.fileBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 999px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--dm-warm, #fbf3e9);
+  cursor: pointer;
+  transition: all 0.2s;
+  width: fit-content;
+}
+
+.fileBtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+  border-color: var(--dm-amber, #ffab2e);
+}
+
+.fileInput {
+  display: none;
+}
+
+.removePhotoBtn {
+  background: none;
+  border: none;
+  color: #f87171;
+  font-size: 0.74rem;
+  cursor: pointer;
+  padding: 0;
+  text-align: left;
+}
+
+/* Consent Box */
+.consentBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  background: rgba(8, 8, 10, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.checkbox {
+  margin-top: 0.2rem;
+  accent-color: var(--dm-flame, #ff5f2e);
+  cursor: pointer;
+  width: 16px;
+  height: 16px;
+}
+
+.consentText {
+  font-size: 0.82rem;
+  color: var(--dm-dim, #a09587);
+  line-height: 1.55;
+}
+
+.privacyLink {
+  background: none;
+  border: none;
+  color: var(--dm-amber, #ffab2e);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Captcha Box */
+.captchaBox {
+  background: rgba(8, 8, 10, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.captchaQuestion {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ffd79a;
+}
+
+.honeypot {
+  display: none;
+}
+
+.formError {
+  padding: 0.85rem 1.15rem;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 12px;
+  color: #fca5a5;
+  font-size: 0.88rem;
+}
+
+.errorText {
+  font-size: 0.74rem;
+  color: #f87171;
+  margin-top: 0.15rem;
+}
+
+.submitBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.95rem;
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  color: #0a0810;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 10px 40px -10px rgba(255, 140, 20, 0.7);
+  transition: transform 0.3s var(--dm-ease, ease), box-shadow 0.3s var(--dm-ease, ease);
+}
+
+.submitBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 50px -8px rgba(255, 160, 30, 0.9);
+}
+
+.submitBtn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+/* Success Card */
+.successCard {
+  text-align: center;
+  padding: 2rem 1rem;
+}
+
+.successIcon {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.15);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #4ade80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.5rem;
+}
+
+.successTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.85rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0 0 0.75rem;
+}
+
+.successMsg {
+  font-size: 0.98rem;
+  color: var(--dm-dim, #a09587);
+  line-height: 1.65;
+  max-width: 480px;
+  margin: 0 auto 2rem;
+}
+
+.successActions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.btnSecondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.65rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: var(--dm-warm, #fbf3e9);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: all 0.2s;
+}
+
+.btnSecondary:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--dm-amber, #ffab2e);
+}
+
+/* Modal */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(16px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.modalContent {
+  background: #100e16;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.4rem;
+  padding: 2.25rem;
+  max-width: 580px;
+  width: 100%;
+  color: var(--dm-warm, #fbf3e9);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.9);
+}
+
+.modalTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.35rem;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0;
+}
+
+.modalBody {
+  font-size: 0.88rem;
+  color: var(--dm-dim, #a09587);
+  line-height: 1.65;
+  margin: 1.25rem 0 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.closeModalBtn {
+  width: 100%;
+  padding: 0.75rem;
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  color: #0a0810;
+  border: none;
+  border-radius: 999px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+}

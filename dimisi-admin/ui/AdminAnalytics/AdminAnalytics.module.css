@@ -1,0 +1,149 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  color: var(--dm-warm, #fbf3e9);
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 1.25rem;
+}
+
+.statCard {
+  background: rgba(19, 16, 25, 0.75);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+  border-radius: 18px;
+  padding: 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+}
+
+.statValue {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 2.4rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  line-height: 1;
+}
+
+.statLabel {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--dm-dim, #a09587);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.sectionGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.75rem;
+}
+
+@media (max-width: 860px) {
+  .sectionGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.chartCard {
+  background: rgba(19, 16, 25, 0.75);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+  border-radius: 18px;
+  padding: 1.85rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+  backdrop-filter: blur(16px);
+}
+
+.cardTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.distRow {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  font-size: 0.86rem;
+}
+
+.barTrack {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.barFill {
+  height: 100%;
+  background: var(--dm-grad-flare, linear-gradient(90deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  border-radius: 999px;
+  box-shadow: 0 0 10px rgba(255, 122, 24, 0.35);
+}
+
+.serviceList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.serviceItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: rgba(10, 8, 14, 0.6);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.08));
+  border-radius: 10px;
+  font-size: 0.88rem;
+}
+
+.tableCard {
+  background: rgba(19, 16, 25, 0.75);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  text-align: left;
+}
+
+.table th {
+  background: rgba(10, 8, 14, 0.5);
+  color: var(--dm-gold, #ffd79a);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.95rem 1.1rem;
+  border-bottom: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+}
+
+.table td {
+  padding: 0.95rem 1.1rem;
+  border-bottom: 1px solid var(--dm-line, rgba(255, 214, 170, 0.05));
+  color: var(--dm-warm, #fbf3e9);
+}

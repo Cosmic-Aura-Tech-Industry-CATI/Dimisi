@@ -1,0 +1,205 @@
+.hall {
+  position: relative;
+  padding: clamp(2rem, 6vw, 4rem) 0;
+  perspective: 1400px;
+}
+
+.floor {
+  position: absolute;
+  inset: auto 0 0;
+  height: 40%;
+  background:
+    linear-gradient(to top, rgba(255, 140, 26, 0.09), transparent 70%),
+    repeating-linear-gradient(to right, rgba(255, 171, 46, 0.09) 0 1px, transparent 1px 6%);
+  transform: perspective(600px) rotateX(64deg);
+  transform-origin: bottom;
+  pointer-events: none;
+  opacity: 0.7;
+}
+
+.grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+  gap: clamp(1.1rem, 3vw, 2.2rem);
+  max-width: 76rem;
+  margin: 0 auto;
+  padding: 0 clamp(1rem, 4vw, 2rem);
+}
+
+.portal {
+  position: relative;
+  display: grid;
+  place-items: center;
+  aspect-ratio: 1;
+  border: 0;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  color: var(--dm-warm);
+  transform-style: preserve-3d;
+  animation: float var(--drift, 6s) ease-in-out infinite alternate;
+  animation-delay: calc(var(--i) * -0.7s);
+  transition:
+    transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1),
+    filter 0.5s ease,
+    opacity 0.5s ease;
+}
+
+@keyframes float {
+  from { transform: translate3d(0, -8px, 0); }
+  to { transform: translate3d(0, 10px, 0); }
+}
+
+.core {
+  position: absolute;
+  inset: 16%;
+  border-radius: 50%;
+  background:
+    radial-gradient(circle at 35% 30%, rgba(255, 208, 150, 0.35), transparent 60%),
+    radial-gradient(circle at 65% 70%, rgba(255, 106, 0, 0.35), transparent 62%),
+    rgba(16, 12, 10, 0.55);
+  border: 1px solid rgba(255, 171, 46, 0.35);
+  backdrop-filter: blur(16px);
+  box-shadow:
+    0 0 50px rgba(255, 122, 24, 0.28),
+    inset 0 0 40px rgba(255, 122, 24, 0.18);
+  transition: box-shadow 0.5s ease, inset 0.5s ease;
+}
+
+.ringA,
+.ringB {
+  position: absolute;
+  inset: 4%;
+  border-radius: 50%;
+  border: 1px solid rgba(255, 171, 46, 0.28);
+  animation: spin 22s linear infinite;
+}
+
+.ringB {
+  inset: 9%;
+  border-style: dashed;
+  border-color: rgba(255, 215, 154, 0.22);
+  animation-duration: 15s;
+  animation-direction: reverse;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.glyph {
+  position: relative;
+  font-size: clamp(1.7rem, 4vw, 2.4rem);
+  color: var(--dm-gold);
+  text-shadow: 0 0 22px rgba(255, 140, 26, 0.7);
+  transform: translateY(-1.6rem);
+  transition: transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), opacity 0.4s ease;
+}
+
+.meta {
+  position: absolute;
+  inset: auto 8% 16%;
+  display: grid;
+  gap: 0.25rem;
+  text-align: center;
+  pointer-events: none;
+}
+
+.index {
+  font-family: var(--dm-font-display);
+  font-size: 0.6rem;
+  letter-spacing: 0.32em;
+  color: var(--dm-amber);
+}
+
+.name {
+  font-family: var(--dm-font-display);
+  font-size: clamp(0.9rem, 1.6vw, 1.05rem);
+  line-height: 1.2;
+  color: var(--dm-warm);
+}
+
+.tagline {
+  font-size: 0.72rem;
+  color: var(--dm-dim);
+}
+
+.explore {
+  margin-top: 0.35rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--dm-amber);
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+
+.portal:hover,
+.portal:focus-visible {
+  transform: scale(1.07) translateZ(40px);
+  outline: none;
+}
+
+.portal:hover .core,
+.portal:focus-visible .core {
+  box-shadow:
+    0 0 90px rgba(255, 140, 26, 0.55),
+    inset 0 0 60px rgba(255, 140, 26, 0.32);
+  border-color: rgba(255, 200, 130, 0.7);
+}
+
+.portal:hover .glyph,
+.portal:focus-visible .glyph {
+  transform: translateY(-1.9rem) rotate(360deg) scale(1.12);
+}
+
+.portal:hover .explore,
+.portal:focus-visible .explore {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.flying {
+  transform: scale(9) translateZ(600px) !important;
+  filter: blur(6px);
+  opacity: 0;
+  z-index: 5;
+  transition:
+    transform 1s cubic-bezier(0.6, 0, 0.9, 0.4),
+    opacity 1s ease,
+    filter 1s ease;
+}
+
+.dim {
+  opacity: 0;
+  filter: blur(8px);
+  transform: scale(0.85);
+}
+
+.warp {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  z-index: 40;
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 140, 26, 0.35), transparent 55%),
+    rgba(11, 11, 13, 0.85);
+  transition: opacity 0.75s ease;
+}
+
+.warpOn {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .portal,
+  .ringA,
+  .ringB {
+    animation: none;
+  }
+}

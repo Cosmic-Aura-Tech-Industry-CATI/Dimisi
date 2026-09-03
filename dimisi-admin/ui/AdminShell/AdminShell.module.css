@@ -1,0 +1,24 @@
+.shell {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  min-height: 100vh;
+  background: transparent;
+}
+
+.main {
+  flex: 1;
+  min-width: 0;
+  margin-left: 15.5rem;
+}
+
+.content {
+  padding: clamp(1.2rem, 3vw, 2rem);
+  max-width: 1180px;
+}
+
+@media (max-width: 900px) {
+  .main {
+    margin-left: 0;
+  }
+}

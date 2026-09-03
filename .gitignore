@@ -30,11 +30,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+.env
+.lovable
 
-# Next.js build and cache
-.next/
-out/
-
-# TypeScript build info
-tsconfig.tsbuildinfo
-
+# Vercel build output
+.vercel/output
+.env
+.env.local
+.env.production

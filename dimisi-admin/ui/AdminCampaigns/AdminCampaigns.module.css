@@ -1,0 +1,427 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  color: var(--dm-warm, #fbf3e9);
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.titleBox h2 {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.55rem;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0 0 0.3rem;
+}
+
+.titleBox p {
+  color: var(--dm-dim, #a09587);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.createBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  color: #0a0810;
+  border: none;
+  padding: 0.65rem 1.4rem;
+  border-radius: 999px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-weight: 700;
+  font-size: 0.84rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 8px 24px rgba(255, 122, 24, 0.35);
+  transition: transform 0.2s var(--dm-ease, ease), box-shadow 0.2s;
+}
+
+.createBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(255, 140, 20, 0.5);
+}
+
+/* Campaign Grid */
+.campaignsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.75rem;
+}
+
+.campaignCard {
+  background: rgba(19, 16, 25, 0.75);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+  border-radius: 18px;
+  padding: 1.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  transition: border-color 0.25s, transform 0.25s, box-shadow 0.25s;
+  backdrop-filter: blur(16px);
+}
+
+.campaignCard:hover {
+  border-color: rgba(255, 171, 46, 0.4);
+  transform: translateY(-3px);
+  box-shadow:
+    0 20px 50px -10px rgba(0, 0, 0, 0.7),
+    0 0 30px rgba(255, 122, 24, 0.08);
+}
+
+.cardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+
+.campaignName {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0 0 0.35rem;
+}
+
+.campaignSlug {
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--dm-amber, #ffab2e);
+  background: rgba(255, 171, 46, 0.1);
+  border: 1px solid rgba(255, 171, 46, 0.25);
+  padding: 0.2rem 0.5rem;
+  border-radius: 6px;
+}
+
+.cardMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  font-size: 0.84rem;
+  color: var(--dm-dim, #a09587);
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+/* Metrics Row */
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  background: rgba(10, 8, 14, 0.6);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.08));
+  border-radius: 12px;
+  padding: 0.85rem 0.5rem;
+  text-align: center;
+}
+
+.metricItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.metricVal {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--dm-gold, #ffd79a);
+}
+
+.metricLbl {
+  font-size: 0.68rem;
+  color: var(--dm-dim, #a09587);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.cardActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: auto;
+  border-top: 1px solid var(--dm-line, rgba(255, 214, 170, 0.08));
+  padding-top: 1.1rem;
+  flex-wrap: wrap;
+}
+
+.btnAction {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  border-radius: 8px;
+  color: var(--dm-warm, #fbf3e9);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  transition: all 0.2s var(--dm-ease, ease);
+  white-space: nowrap;
+}
+
+.btnAction:hover {
+  background: rgba(255, 214, 170, 0.08);
+  border-color: rgba(255, 171, 46, 0.4);
+}
+
+.btnPrimaryAction {
+  background: rgba(255, 171, 46, 0.12);
+  border-color: rgba(255, 171, 46, 0.35);
+  color: var(--dm-amber, #ffab2e);
+}
+
+.btnPrimaryAction:hover {
+  background: rgba(255, 171, 46, 0.25);
+}
+
+/* Modal styles */
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 4, 10, 0.85);
+  backdrop-filter: blur(12px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.25rem;
+}
+
+.modalContent {
+  background: var(--dm-charcoal, #131019);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.15));
+  border-radius: 20px;
+  padding: 2.25rem;
+  max-width: 620px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  color: var(--dm-warm, #fbf3e9);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.9);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.35rem;
+}
+
+.modalTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.4rem;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 1.1rem;
+}
+
+.label {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(255, 244, 230, 0.7);
+}
+
+.input,
+.select {
+  width: 100%;
+  background: rgba(10, 8, 14, 0.75);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  color: var(--dm-warm, #fbf3e9);
+  padding: 0.75rem 0.95rem;
+  border-radius: 10px;
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input:focus,
+.select:focus {
+  border-color: var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 16px rgba(255, 171, 46, 0.2);
+}
+
+/* QR Studio */
+.qrStudioBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 1.25rem;
+  padding: 1.75rem;
+  background: rgba(10, 8, 14, 0.6);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+}
+
+.qrCanvasWrap {
+  background: #ffffff;
+  padding: 1.25rem;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.qrScanHint {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0;
+}
+
+.qrShortUrl {
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.85rem;
+  color: var(--dm-amber, #ffab2e);
+  word-break: break-all;
+}
+
+.downloadButtonsRow {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  width: 100%;
+}
+
+.shareButtonsRow {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.6rem;
+  width: 100%;
+}
+
+@media (max-width: 500px) {
+  .shareButtonsRow {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+.shareBtn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.85rem 0.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+  border-radius: 12px;
+  color: var(--dm-warm, #fbf3e9);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s var(--dm-ease, ease);
+}
+
+.shareBtn:hover {
+  background: rgba(255, 214, 170, 0.08);
+  border-color: rgba(255, 171, 46, 0.4);
+  color: var(--dm-gold, #ffd79a);
+}
+
+/* Printable Flyer Preview Area */
+.flyerPreviewBox {
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 16px;
+  padding: 2.25rem;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.6);
+  margin-bottom: 1.5rem;
+  border: 2px solid #e2e8f0;
+}
+
+.flyerBrand {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.5rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  color: #0f172a;
+  margin: 0 0 0.25rem;
+}
+
+.flyerTagline {
+  font-size: 0.82rem;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #d97706;
+  font-weight: 700;
+  margin: 0 0 1.35rem;
+}
+
+.flyerCallout {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 1rem;
+}
+
+.flyerQrContainer {
+  display: flex;
+  justify-content: center;
+  margin: 1.25rem 0;
+}
+
+.flyerShortLink {
+  font-family: monospace;
+  font-size: 0.88rem;
+  color: #475569;
+  margin-top: 0.75rem;
+  font-weight: 600;
+}
+
+/* Print Only Stylesheet */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .flyerPreviewBox,
+  .flyerPreviewBox * {
+    visibility: visible;
+  }
+  .flyerPreviewBox {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    box-shadow: none;
+    border: none;
+    padding: 3rem;
+  }
+}

@@ -1,0 +1,317 @@
+.footer {
+  position: relative;
+  z-index: 2;
+  margin-top: 8rem;
+  padding: 5rem clamp(1.2rem, 5vw, 4rem) 2.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: linear-gradient(180deg, rgba(11, 11, 13, 0.82) 0%, rgba(6, 6, 8, 0.98) 100%);
+  backdrop-filter: blur(18px);
+  overflow: hidden;
+}
+
+.glow {
+  position: absolute;
+  top: -40%;
+  left: 50%;
+  width: 75vw;
+  height: 60vh;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(255, 140, 26, 0.12) 0%, transparent 65%);
+  pointer-events: none;
+}
+
+.inner {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.8fr 1fr 1fr 0.9fr 1.3fr;
+  gap: 2.8rem;
+  max-width: 82rem;
+  margin: 0 auto;
+}
+
+.lead {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.logoLink {
+  display: inline-block;
+  text-decoration: none;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+}
+
+.logoLink:hover {
+  transform: translateY(-2px);
+  opacity: 0.95;
+}
+
+.brandLogo {
+  width: clamp(140px, 14vw, 190px);
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 16px rgba(255, 140, 26, 0.12));
+}
+
+.mission {
+  margin: 1.4rem 0 1.2rem;
+  max-width: 26rem;
+  color: rgba(255, 244, 230, 0.62);
+  line-height: 1.75;
+  font-size: 0.9rem;
+  font-family: var(--dm-font-body);
+}
+
+.mail {
+  display: inline-block;
+  font-family: var(--dm-font-display);
+  color: var(--dm-amber, #ff8c1a);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+  letter-spacing: 0.05em;
+  transition: all 0.25s ease;
+}
+
+.mail:hover {
+  text-decoration: underline;
+  text-shadow: 0 0 12px rgba(255, 140, 26, 0.4);
+}
+
+.col {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+}
+
+.colTitle {
+  margin: 0 0 0.6rem;
+  font-family: var(--dm-font-display);
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: rgba(255, 244, 230, 0.5);
+}
+
+.linkList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.colLink {
+  color: rgba(255, 244, 230, 0.65);
+  text-decoration: none;
+  font-size: 0.88rem;
+  width: fit-content;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.colLink:hover {
+  color: var(--dm-amber, #ff8c1a);
+  transform: translateX(4px);
+}
+
+/* Social Icons in Connect Column */
+.socialGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.socialBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #d8d8d8;
+  text-decoration: none;
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.socialIcon {
+  width: 17px;
+  height: 17px;
+  transition: transform 0.25s ease;
+}
+
+.socialBtn:hover {
+  background: rgba(255, 140, 26, 0.12);
+  border-color: rgba(255, 140, 26, 0.5);
+  color: var(--dm-amber, #ff8c1a);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 16px rgba(255, 140, 26, 0.22);
+}
+
+.socialBtn:hover .socialIcon {
+  transform: scale(1.1);
+}
+
+/* Address & Phone Column */
+.addressLink {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  text-decoration: none;
+  color: rgba(255, 244, 230, 0.65);
+  font-size: 0.86rem;
+  line-height: 1.6;
+  transition: color 0.25s ease;
+}
+
+.addressLine {
+  display: block;
+}
+
+.addressLink:hover {
+  color: var(--dm-amber, #ff8c1a);
+}
+
+.phoneBox {
+  margin-top: 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.phoneLabel {
+  font-family: var(--dm-font-display);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(255, 244, 230, 0.4);
+}
+
+.phoneLink {
+  color: rgba(255, 244, 230, 0.85);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  width: fit-content;
+  transition: color 0.25s ease, transform 0.25s ease;
+}
+
+.phoneLink:hover {
+  color: var(--dm-amber, #ff8c1a);
+  transform: translateX(2px);
+}
+
+/* Large DIMISI Technologies Watermark */
+.mega {
+  position: relative;
+  margin: 3.5rem auto 0;
+  max-width: 82rem;
+  font-family: var(--dm-font-display);
+  font-weight: 800;
+  font-size: clamp(2.4rem, 8.5vw, 6.4rem);
+  line-height: 0.9;
+  letter-spacing: -0.02em;
+  text-align: center;
+  background: linear-gradient(180deg, rgba(255, 140, 26, 0.2) 0%, rgba(255, 140, 26, 0.01) 85%, transparent 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  user-select: none;
+  pointer-events: none;
+  white-space: nowrap;
+  overflow: hidden;
+  text-transform: uppercase;
+}
+
+/* Bottom Bar */
+.bottom {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 82rem;
+  margin: 1.8rem auto 0;
+  padding-top: 1.6rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  font-size: 0.8rem;
+  color: rgba(255, 244, 230, 0.45);
+}
+
+.copyright {
+  line-height: 1.5;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+}
+
+.pulse {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 10px #4ade80;
+  animation: beat 2s ease-in-out infinite;
+}
+
+@keyframes beat {
+  0%,
+  100% {
+    opacity: 0.45;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+/* Responsive Breakpoints */
+@media (max-width: 1200px) {
+  .inner {
+    grid-template-columns: 1.6fr 1fr 1fr 1.2fr;
+    gap: 2.2rem;
+  }
+}
+
+@media (max-width: 900px) {
+  .inner {
+    grid-template-columns: 1fr 1fr;
+    gap: 2.4rem;
+  }
+  .lead {
+    grid-column: 1 / -1;
+  }
+  .footer {
+    margin-top: 5rem;
+    padding-top: 3.5rem;
+  }
+}
+
+@media (max-width: 600px) {
+  .inner {
+    grid-template-columns: 1fr;
+    gap: 2rem;
+  }
+  .brandLogo {
+    width: 160px;
+  }
+  .mega {
+    margin-top: 2.5rem;
+    font-size: clamp(1.8rem, 7.5vw, 3rem);
+  }
+  .bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.8rem;
+  }
+}
