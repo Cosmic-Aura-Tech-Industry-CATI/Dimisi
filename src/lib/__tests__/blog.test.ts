@@ -6,7 +6,7 @@ import {
   type BlogPostInput,
   type BlogPostItem,
 } from "../blog.shared";
-import { blogStore } from "../blog.server";
+import { blogStore } from "../blog.data";
 
 test("Blog System - slugifyBlog helper produces clean URL-friendly slugs", () => {
   assert.equal(

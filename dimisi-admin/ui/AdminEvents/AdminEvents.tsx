@@ -8,7 +8,6 @@ import {
   type ChangeEvent,
   type ClipboardEvent,
 } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import {
   Calendar,
   MapPin,
@@ -76,10 +75,10 @@ const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
 
 export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
-  const saveEvent = useServerFn(saveEventFn);
-  const deleteEvent = useServerFn(deleteEventFn);
-  const saveGallery = useServerFn(saveGalleryItemFn);
-  const deleteGallery = useServerFn(deleteGalleryItemFn);
+  const saveEvent = saveEventFn;
+  const deleteEvent = deleteEventFn;
+  const saveGallery = saveGalleryItemFn;
+  const deleteGallery = deleteGalleryItemFn;
 
   const [activeTab, setActiveTab] = useState<"events" | "gallery">("events");
   const [statusFilter, setStatusFilter] = useState<string>("All");

@@ -8,7 +8,6 @@ import {
   type ChangeEvent,
   type ClipboardEvent,
 } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import {
   BookOpen,
   Plus,
@@ -84,9 +83,9 @@ export function AdminBlog({
   onRefresh,
 }: AdminBlogProps) {
   const [isPending, startTransition] = useTransition();
-  const savePost = useServerFn(saveBlogPostFn);
-  const deletePost = useServerFn(deleteBlogPostFn);
-  const saveConfig = useServerFn(saveBlogConfigFn);
+  const savePost = saveBlogPostFn;
+  const deletePost = deleteBlogPostFn;
+  const saveConfig = saveBlogConfigFn;
 
   // Sub-section tab
   const [activeSection, setActiveSection] = useState<"posts" | "settings">("posts");

@@ -9,7 +9,6 @@ import {
   type ChangeEvent,
   type ClipboardEvent,
 } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import {
   FolderGit2,
   Rocket,
@@ -70,8 +69,8 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/webp
 
 export function AdminWork({ projects, onRefresh }: AdminWorkProps) {
   const [isPending, startTransition] = useTransition();
-  const saveProject = useServerFn(saveProjectFn);
-  const deleteProject = useServerFn(deleteProjectFn);
+  const saveProject = saveProjectFn;
+  const deleteProject = deleteProjectFn;
 
   const [activeTabFilter, setActiveTabFilter] = useState<"all" | ProjectType>("all");
 

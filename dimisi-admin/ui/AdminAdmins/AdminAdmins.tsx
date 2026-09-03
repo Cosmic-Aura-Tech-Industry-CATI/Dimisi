@@ -1,5 +1,4 @@
 import { useState, useTransition } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import {
   ShieldCheck,
   UserPlus,
@@ -50,11 +49,11 @@ export function AdminAdmins({
   currentUserRole = "super_admin",
   onAdmins,
 }: AdminAdminsProps) {
-  const create = useServerFn(createAdminAccount);
-  const changeRole = useServerFn(setAdminRole);
-  const destroy = useServerFn(deleteUserAccount);
-  const toggleActive = useServerFn(setAdminActive);
-  const saveDesignation = useServerFn(setAdminDesignation);
+  const create = createAdminAccount;
+  const changeRole = setAdminRole;
+  const destroy = deleteUserAccount;
+  const toggleActive = setAdminActive;
+  const saveDesignation = setAdminDesignation;
 
   // Form State
   const [email, setEmail] = useState("");

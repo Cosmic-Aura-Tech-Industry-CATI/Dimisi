@@ -1,6 +1,5 @@
 import { useEffect, useState, useTransition } from "react";
 import { Link } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import {
   Star,
   CheckCircle,
@@ -27,8 +26,8 @@ import { getPublicReviews, reportReview } from "@/lib/reviews.functions";
 import styles from "./ReviewsPage.module.css";
 
 export function ReviewsPage() {
-  const loadReviews = useServerFn(getPublicReviews);
-  const sendReport = useServerFn(reportReview);
+  const loadReviews = getPublicReviews;
+  const sendReport = reportReview;
 
   const [reviews, setReviews] = useState<PublicReview[]>([]);
   const [featured, setFeatured] = useState<PublicReview[]>([]);

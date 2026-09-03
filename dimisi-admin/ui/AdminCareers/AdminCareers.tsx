@@ -1,5 +1,4 @@
 import { useState, useTransition } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import {
   Briefcase,
   Plus,
@@ -65,11 +64,11 @@ export function AdminCareers({
   onRefresh,
 }: AdminCareersProps) {
   const [isPending, startTransition] = useTransition();
-  const saveJob = useServerFn(saveJobFn);
-  const deleteJob = useServerFn(deleteJobFn);
-  const saveSteps = useServerFn(saveHiringStepsFn);
-  const saveBenefitsList = useServerFn(saveBenefitsFn);
-  const saveHeroSettings = useServerFn(saveCareersHeroFn);
+  const saveJob = saveJobFn;
+  const deleteJob = deleteJobFn;
+  const saveSteps = saveHiringStepsFn;
+  const saveBenefitsList = saveBenefitsFn;
+  const saveHeroSettings = saveCareersHeroFn;
 
   // Active sub-section
   const [activeSection, setActiveSection] = useState<"jobs" | "steps" | "benefits" | "hero">("jobs");

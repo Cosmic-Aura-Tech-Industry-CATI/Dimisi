@@ -1,5 +1,4 @@
 import { useState, useTransition, useRef, type DragEvent, type ChangeEvent } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import {
   Layers,
   Plus,
@@ -64,10 +63,10 @@ const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/webp
 
 export function AdminServices({ services, industries, onRefresh }: AdminServicesProps) {
   const [isPending, startTransition] = useTransition();
-  const saveService = useServerFn(saveServiceFn);
-  const deleteService = useServerFn(deleteServiceFn);
-  const saveIndustry = useServerFn(saveIndustryFn);
-  const deleteIndustry = useServerFn(deleteIndustryFn);
+  const saveService = saveServiceFn;
+  const deleteService = deleteServiceFn;
+  const saveIndustry = saveIndustryFn;
+  const deleteIndustry = deleteIndustryFn;
 
   // Active Tab: Services list vs Industries list
   const [activeSection, setActiveSection] = useState<"services" | "industries">("services");

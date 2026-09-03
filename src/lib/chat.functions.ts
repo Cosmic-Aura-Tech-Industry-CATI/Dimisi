@@ -1,61 +1,64 @@
-import { createServerFn } from "@tanstack/react-start";
-import { z } from "zod";
-import { buildSystemPrompt, crawlSite } from "./dimisi-knowledge.server";
+/**
+ * DIMISI Technologies — Client-Side Assistant Knowledge & Chat
+ * Pure client-side robot guide response engine.
+ */
 
-const MessageSchema = z.object({
-  role: z.enum(["user", "assistant"]),
-  content: z.string().min(1).max(2000),
-});
+export interface ChatMessage {
+  role: "user" | "assistant";
+  content: string;
+}
 
-const AskSchema = z.object({
-  messages: z.array(MessageSchema).min(1).max(20),
-  origin: z.string().url().max(200).optional(),
-});
+const FAQ_KNOWLEDGE: { keywords: string[]; answer: string }[] = [
+  {
+    keywords: ["service", "what do you do", "build", "offerings", "product"],
+    answer:
+      "DIMISI Technologies is an advanced engineering and product innovation studio. We specialize in AI & Autonomous Multi-Agent Systems, 3D WebGL Web Experiences, Enterprise Cloud & DevOps, High-Performance Mobile Applications, and custom digital transformation.",
+  },
+  {
+    keywords: ["contact", "reach", "email", "phone", "hire", "talk"],
+    answer:
+      "You can connect directly with our engineering leadership at hello@dimisi.in or visit our Contact page to schedule an architectural consultation.",
+  },
+  {
+    keywords: ["kalesh", "mobile app", "app"],
+    answer:
+      "Kalesh is our viral mobile social app built with high-throughput real-time architecture, sub-second media delivery, and community moderation engines.",
+  },
+  {
+    keywords: ["review", "feedback", "rating", "client"],
+    answer:
+      "Our clients and team members rate DIMISI 5.0★ for engineering excellence, zero-bloat delivery, and production-grade reliability. Check out our Reviews page to read verified testimonials!",
+  },
+  {
+    keywords: ["career", "job", "hiring", "apply", "intern"],
+    answer:
+      "We are always looking for visionary builders, full-stack engineers, and 3D artists. Head over to our Careers page to see open roles and our 5-step transparent hiring process.",
+  },
+  {
+    keywords: ["team", "founder", "who is", "swatantra"],
+    answer:
+      "DIMISI Technologies is founded and led by Swatantra Singh along with a team of elite architects, researchers, and creative technologists based in India and operating globally.",
+  },
+];
 
-export type ChatMessage = z.infer<typeof MessageSchema>;
+export async function askDimisi({
+  data,
+}: {
+  data: {
+    messages: ChatMessage[];
+    origin?: string;
+  };
+}): Promise<{ reply: string }> {
+  const lastMsg = data.messages[data.messages.length - 1]?.content?.toLowerCase() || "";
 
-/** Ask the DIMISI Technologies robot guide a question about the company. */
-export const askDimisi = createServerFn({ method: "POST" })
-  .validator((input: unknown) => AskSchema.parse(input))
-  .handler(async ({ data }) => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("AI is not configured right now.");
-
-    // Auto-update: DIMISI walks the live site and reads the latest content.
-    let live = "";
-    if (data.origin) {
-      try {
-        live = await crawlSite(data.origin);
-      } catch {
-        live = "";
-      }
+  for (const item of FAQ_KNOWLEDGE) {
+    if (item.keywords.some((k) => lastMsg.includes(k))) {
+      return { reply: item.answer };
     }
+  }
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Lovable-API-Key": key,
-      },
-      body: JSON.stringify({
-        model: "google/gemini-3.6-flash",
-        messages: [{ role: "system", content: buildSystemPrompt(live) }, ...data.messages],
-      }),
-    });
-
-    if (response.status === 429) {
-      throw new Error("I am getting a lot of questions right now — try again in a moment.");
-    }
-    if (response.status === 402) {
-      throw new Error("My AI credits ran out. Please reach the team on the Contact page.");
-    }
-    if (!response.ok) {
-      throw new Error("I could not reach my brain just now. Please try again.");
-    }
-
-    const json = (await response.json()) as {
-      choices?: { message?: { content?: string } }[];
-    };
-    const reply = json.choices?.[0]?.message?.content?.trim();
-    return { reply: reply || "I did not catch that — could you rephrase?" };
-  });
+  return {
+    reply:
+      "Welcome to DIMISI Technologies! We engineer autonomous AI agents, high-speed platforms, and cinematic 3D digital experiences. How can we help bring your vision to life?",
+  };
+}

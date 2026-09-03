@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { ShieldAlert, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { AdminBackdrop } from "../AdminBackdrop/AdminBackdrop";
@@ -64,14 +63,14 @@ type Tab = AdminTab;
 export function AdminPanel() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const load = useServerFn(getAdminOverview);
-  const loadReviewsData = useServerFn(getAdminReviewsData);
-  const loadEventsData = useServerFn(getAdminEventsData);
-  const loadServicesData = useServerFn(getAdminServicesData);
-  const loadWorkData = useServerFn(getAdminWorkData);
-  const loadCareersData = useServerFn(getAdminCareersData);
-  const loadBlogData = useServerFn(getAdminBlogData);
-  const saveProfile = useServerFn(updateAdminProfile);
+  const load = getAdminOverview;
+  const loadReviewsData = getAdminReviewsData;
+  const loadEventsData = getAdminEventsData;
+  const loadServicesData = getAdminServicesData;
+  const loadWorkData = getAdminWorkData;
+  const loadCareersData = getAdminCareersData;
+  const loadBlogData = getAdminBlogData;
+  const saveProfile = updateAdminProfile;
 
   const [data, setData] = useState<AdminOverview | null>(null);
   const [reviewsData, setReviewsData] = useState<AdminDashboardData | null>(null);

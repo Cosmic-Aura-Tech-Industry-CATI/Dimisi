@@ -1,5 +1,4 @@
 import { useTransition } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import {
   ShieldAlert,
   CheckCircle,
@@ -20,7 +19,7 @@ export function AdminReports({
   reports: ReviewReport[];
   onRefresh: () => void;
 }) {
-  const resolve = useServerFn(resolveReport);
+  const resolve = resolveReport;
   const [isPending, startTransition] = useTransition();
 
   const openReports = reports.filter((r) => r.status === "open");

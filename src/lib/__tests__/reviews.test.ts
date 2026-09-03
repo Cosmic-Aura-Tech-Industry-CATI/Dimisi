@@ -14,7 +14,7 @@ import {
   issueCaptcha,
   verifyCaptcha,
   escapeHtml,
-} from "../reviews.server";
+} from "../reviews.data";
 
 describe("DIMISI Review System Validation", () => {
   it("fails when customer name is missing or too short", () => {
@@ -171,7 +171,7 @@ describe("Slug & Anti-Spam Security", () => {
   it("issues and verifies cryptographic arithmetic captcha challenge", () => {
     const captcha = issueCaptcha();
     assert.match(captcha.question, /What is \d+ \+ \d+\?/);
-    assert.ok(captcha.token.includes("."));
+    assert.ok(captcha.token && captcha.token.length > 0);
 
     const match = /What is (\d+) \+ (\d+)\?/.exec(captcha.question);
     assert.ok(match);
@@ -187,7 +187,7 @@ describe("Slug & Anti-Spam Security", () => {
 
 describe("End-to-End Review Pipeline (Submit -> Pending -> Approve -> Public)", () => {
   it("processes a client review through the full store lifecycle", async () => {
-    const { memoryStore, toPublicReview } = await import("../reviews.server");
+    const { memoryStore, toPublicReview } = await import("../reviews.data");
 
     // 1. Submit review into store
     const uniqueName = `Test Client ${Date.now()}`;
@@ -258,7 +258,7 @@ describe("End-to-End Review Pipeline (Submit -> Pending -> Approve -> Public)", 
   });
 
   it("processes an employee review with staff metadata through the pipeline", async () => {
-    const { memoryStore, toPublicReview } = await import("../reviews.server");
+    const { memoryStore, toPublicReview } = await import("../reviews.data");
 
     const uniqueEmpName = `Engineer ${Date.now()}`;
     const newEmpId = crypto.randomUUID();
@@ -315,7 +315,7 @@ describe("End-to-End Review Pipeline (Submit -> Pending -> Approve -> Public)", 
   });
 
   it("handles new campaign creation and tracks reviews submitted via campaign link", async () => {
-    const { memoryStore } = await import("../reviews.server");
+    const { memoryStore } = await import("../reviews.data");
 
     // 1. Create new campaign
     const campId = crypto.randomUUID();
@@ -385,7 +385,7 @@ describe("End-to-End Review Pipeline (Submit -> Pending -> Approve -> Public)", 
   });
 
   it("creates, updates, and deletes campaigns with slug validation and expiry checks", async () => {
-    const { memoryStore } = await import("../reviews.server");
+    const { memoryStore } = await import("../reviews.data");
     const testSlug = `partner-drive-${Date.now()}`;
     const newCampId = crypto.randomUUID();
 

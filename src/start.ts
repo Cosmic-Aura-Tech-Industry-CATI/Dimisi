@@ -5,7 +5,6 @@ import {
 } from "@tanstack/react-start";
 
 import { renderErrorPage } from "./lib/error-page";
-import { attachAdminAuth } from "@/server/auth/auth-attacher";
 
 const csrfMiddleware = createCsrfMiddleware({
   filter: (ctx) => ctx.handlerType === "serverFn",
@@ -27,6 +26,5 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
 });
 
 export const startInstance = createStart(() => ({
-  functionMiddleware: [attachAdminAuth],
   requestMiddleware: [csrfMiddleware, errorMiddleware],
 }));

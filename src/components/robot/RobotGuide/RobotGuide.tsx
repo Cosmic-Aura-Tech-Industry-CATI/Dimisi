@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouterState, useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { askDimisi, type ChatMessage } from "@/lib/chat.functions";
 import { isAdminIntent, ADMIN_REPLY, ADMIN_ROUTE } from "@admin/lib/intent";
 import styles from "./RobotGuide.module.css";
@@ -68,7 +67,7 @@ export function RobotGuide() {
   const navigate = useNavigate();
   const shellRef = useRef<HTMLDivElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
-  const ask = useServerFn(askDimisi);
+  const ask = askDimisi;
 
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;

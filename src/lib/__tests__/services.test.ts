@@ -6,7 +6,7 @@ import {
   type ServiceInput,
   type IndustryInput,
 } from "../services.shared";
-import { servicesStore } from "../services.server";
+import { servicesStore } from "../services.data";
 
 test("Services System - Slugification", async (t) => {
   await t.test("creates clean URL slugs from service titles", () => {

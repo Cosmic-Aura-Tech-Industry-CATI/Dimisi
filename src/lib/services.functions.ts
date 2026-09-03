@@ -1,5 +1,8 @@
-import { createServerFn } from "@tanstack/react-start";
-import { servicesStore } from "./services.server";
+/**
+ * DIMISI Technologies — Client-Side Services Functions
+ * Pure client-side implementation backed by in-memory and local data.
+ */
+import { servicesStore } from "./services.data";
 import {
   type CompanyService,
   type IndustrySector,
@@ -9,90 +12,77 @@ import {
   validateServiceInput,
 } from "./services.shared";
 
-/** Public: Fetch all active services, industries, and metrics for the main Services hub. */
-export const getPublicServicesData = createServerFn({ method: "GET" }).handler(
-  async (): Promise<PublicServicesPayload> => {
-    return servicesStore.getPublicPayload();
-  },
-);
+export async function getPublicServicesData(): Promise<PublicServicesPayload> {
+  return servicesStore.getPublicPayload();
+}
 
-/** Public: Fetch full details for a single service by slug. */
-export const getServiceBySlug = createServerFn({ method: "GET" })
-  .validator((input: { slug: string }) => input)
-  .handler(async ({ data }): Promise<CompanyService | null> => {
-    if (!data.slug) return null;
-    return servicesStore.getServiceBySlug(data.slug);
-  });
+export async function getServiceBySlug({
+  data,
+}: {
+  data: { slug: string };
+}): Promise<CompanyService | null> {
+  if (!data.slug) return null;
+  return servicesStore.getServiceBySlug(data.slug);
+}
 
-/** Admin: Fetch all services and industries for admin control room. */
-export const getAdminServicesData = createServerFn({ method: "GET" }).handler(
-  async (): Promise<{ services: CompanyService[]; industries: IndustrySector[] }> => {
-    return {
-      services: servicesStore.services,
-      industries: servicesStore.industries,
-    };
-  },
-);
+export async function getAdminServicesData(): Promise<{ services: CompanyService[]; industries: IndustrySector[] }> {
+  return {
+    services: servicesStore.services,
+    industries: servicesStore.industries,
+  };
+}
 
-/** Admin: Create or update a company service. */
-export const saveServiceFn = createServerFn({ method: "POST" })
-  .validator((input: ServiceInput) => input)
-  .handler(
-    async ({
-      data,
-    }): Promise<{
-      success: boolean;
-      service?: CompanyService | undefined;
-      error?: string | undefined;
-    }> => {
-      const check = validateServiceInput(data);
-      if (!check.valid) {
-        return { success: false, error: check.error || "Invalid service input." };
-      }
+export async function saveServiceFn({
+  data,
+}: {
+  data: ServiceInput;
+}): Promise<{
+  success: boolean;
+  service?: CompanyService | undefined;
+  error?: string | undefined;
+}> {
+  const check = validateServiceInput(data);
+  if (!check.valid) {
+    return { success: false, error: check.error || "Invalid service input." };
+  }
 
-      const saved = servicesStore.saveService(data);
-      return { success: true, service: saved };
-    },
-  );
+  const saved = servicesStore.saveService(data);
+  return { success: true, service: saved };
+}
 
-/** Admin: Delete a service by ID. */
-export const deleteServiceFn = createServerFn({ method: "POST" })
-  .validator((input: { id: string }) => input)
-  .handler(
-    async ({ data }): Promise<{ success: boolean; error?: string | undefined }> => {
-      if (!data.id) return { success: false, error: "Service ID is required." };
-      const ok = servicesStore.deleteService(data.id);
-      return { success: ok };
-    },
-  );
+export async function deleteServiceFn({
+  data,
+}: {
+  data: { id: string };
+}): Promise<{ success: boolean; error?: string | undefined }> {
+  if (!data.id) return { success: false, error: "Service ID is required." };
+  const ok = servicesStore.deleteService(data.id);
+  return { success: ok };
+}
 
-/** Admin: Create or update an industry sector. */
-export const saveIndustryFn = createServerFn({ method: "POST" })
-  .validator((input: IndustryInput) => input)
-  .handler(
-    async ({
-      data,
-    }): Promise<{
-      success: boolean;
-      industry?: IndustrySector | undefined;
-      error?: string | undefined;
-    }> => {
-      if (!data.name || !data.tagline) {
-        return { success: false, error: "Industry name and tagline are required." };
-      }
+export async function saveIndustryFn({
+  data,
+}: {
+  data: IndustryInput;
+}): Promise<{
+  success: boolean;
+  industry?: IndustrySector | undefined;
+  error?: string | undefined;
+}> {
+  if (!data.name || !data.tagline) {
+    return { success: false, error: "Industry name and tagline are required." };
+  }
 
-      const saved = servicesStore.saveIndustry(data);
-      return { success: true, industry: saved };
-    },
-  );
+  const saved = servicesStore.saveIndustry(data);
+  return { success: true, industry: saved };
+}
 
-/** Admin: Delete an industry sector by ID. */
-export const deleteIndustryFn = createServerFn({ method: "POST" })
-  .validator((input: { id: string }) => input)
-  .handler(
-    async ({ data }): Promise<{ success: boolean; error?: string | undefined }> => {
-      if (!data.id) return { success: false, error: "Industry ID is required." };
-      const ok = servicesStore.deleteIndustry(data.id);
-      return { success: ok };
-    },
-  );
+export async function deleteIndustryFn({
+  data,
+}: {
+  data: { id: string };
+}): Promise<{ success: boolean; error?: string | undefined }> {
+  if (!data.id) return { success: false, error: "Industry ID is required." };
+  const ok = servicesStore.deleteIndustry(data.id);
+  return { success: ok };
+}

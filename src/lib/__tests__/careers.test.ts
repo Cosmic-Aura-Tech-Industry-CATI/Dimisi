@@ -5,7 +5,7 @@ import {
   validateJobInput,
   type JobInput,
 } from "../careers.shared";
-import { careersStore } from "../careers.server";
+import { careersStore } from "../careers.data";
 
 test("Careers System - Slugification", async (t) => {
   await t.test("creates clean URL slugs from job titles", () => {
