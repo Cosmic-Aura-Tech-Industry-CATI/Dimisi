@@ -1,0 +1,1070 @@
+.page {
+  position: relative;
+  z-index: 2;
+  min-height: 100vh;
+  padding: clamp(7.5rem, 18vh, 10.5rem) clamp(1.2rem, 5vw, 3.5rem) 6rem;
+  background: transparent;
+  color: var(--dm-warm, #fbf3e9);
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  overflow-x: clip;
+}
+
+.ambientGlow {
+  position: absolute;
+  top: 5%;
+  left: 50%;
+  width: 80vw;
+  height: 65vh;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(255, 140, 26, 0.12) 0%, transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.container {
+  position: relative;
+  z-index: 1;
+  max-width: 78rem;
+  margin: 0 auto;
+}
+
+/* 01 — HERO */
+.hero {
+  text-align: center;
+  max-width: 820px;
+  margin: 0 auto 3.5rem;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.4rem 1.1rem;
+  background: rgba(255, 171, 46, 0.1);
+  border: 1px solid rgba(255, 171, 46, 0.3);
+  border-radius: 999px;
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.26em;
+  color: var(--dm-amber, #ffab2e);
+  text-transform: uppercase;
+  margin-bottom: 1.2rem;
+  box-shadow: 0 0 24px rgba(255, 171, 46, 0.15);
+}
+
+.badgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 10px var(--dm-amber, #ffab2e);
+}
+
+.heroTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: clamp(2.2rem, 5vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0 0 1.2rem;
+  letter-spacing: -0.02em;
+}
+
+.heroSub {
+  font-size: 1.05rem;
+  color: var(--dm-dim, #a09587);
+  line-height: 1.7;
+  margin: 0 0 2.25rem;
+}
+
+.heroActions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.leaveReviewBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.9rem 2.1rem;
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  color: #0a0810;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  text-decoration: none;
+  box-shadow: 0 10px 40px -10px rgba(255, 140, 20, 0.7);
+  transition: transform 0.3s var(--dm-ease, ease), box-shadow 0.3s var(--dm-ease, ease);
+}
+
+.leaveReviewBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 50px -8px rgba(255, 160, 30, 0.9);
+}
+
+/* 02 — REVIEW SUMMARY (4-Grid Dynamic Stats) */
+.statsSummaryGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  margin-bottom: 2.75rem;
+}
+
+@media (max-width: 960px) {
+  .statsSummaryGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 480px) {
+  .statsSummaryGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.statBox {
+  background: rgba(14, 14, 17, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  padding: 1.6rem 1.75rem;
+  display: flex;
+  flex-direction: column;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  transition: border-color 0.25s, transform 0.25s;
+}
+
+.statBox:hover {
+  border-color: rgba(255, 171, 46, 0.35);
+  transform: translateY(-2px);
+}
+
+.statBoxLabel {
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: var(--dm-dim, #a09587);
+  text-transform: uppercase;
+  margin-bottom: 0.5rem;
+}
+
+.statBoxValue {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 2.2rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  line-height: 1.1;
+  margin-bottom: 0.35rem;
+}
+
+.statRatingMax {
+  font-size: 1rem;
+  color: var(--dm-dim, #a09587);
+  font-weight: 500;
+  margin-left: 0.2rem;
+}
+
+.statBoxSub {
+  font-size: 0.8rem;
+  color: var(--dm-dim, #a09587);
+}
+
+.statBoxRating .scoreStars {
+  display: flex;
+  gap: 0.25rem;
+  color: var(--dm-amber, #ffab2e);
+  margin-top: 0.4rem;
+  filter: drop-shadow(0 0 4px rgba(255, 171, 46, 0.35));
+}
+
+/* 03 — REVIEW TYPE SWITCHER (Segmented Control) */
+.switcherWrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 2rem;
+}
+
+.segmentedControl {
+  display: inline-flex;
+  background: rgba(10, 8, 14, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 0.35rem;
+  border-radius: 999px;
+  gap: 0.35rem;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5);
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.segBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem 1.45rem;
+  border-radius: 999px;
+  background: none;
+  border: none;
+  color: var(--dm-dim, #a09587);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  white-space: nowrap;
+}
+
+.segBtn:hover:not(.segBtnActive) {
+  color: var(--dm-warm, #fbf3e9);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.segBtnActive {
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff8c1a 40%, #ffd79a));
+  color: #08070b;
+  box-shadow: 0 4px 20px rgba(255, 140, 26, 0.45);
+}
+
+.segBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 20px;
+  padding: 0 0.4rem;
+  border-radius: 10px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: rgba(0, 0, 0, 0.25);
+  color: inherit;
+}
+
+/* 04 — RATING FILTERS & SEARCH ROW */
+.filterBar {
+  background: rgba(14, 14, 17, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.25rem;
+  padding: 1rem 1.35rem;
+  margin-bottom: 2.75rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  backdrop-filter: blur(20px);
+}
+
+.ratingFilterRow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  overflow-x: auto;
+  max-width: 100%;
+  padding-bottom: 0.15rem;
+}
+
+.ratingPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.45rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(8, 8, 10, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--dm-dim, #a09587);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  white-space: nowrap;
+}
+
+.ratingPill:hover {
+  color: var(--dm-warm, #fbf3e9);
+  border-color: rgba(255, 171, 46, 0.3);
+}
+
+.ratingPillActive {
+  background: rgba(255, 140, 26, 0.16) !important;
+  border-color: var(--dm-amber, #ffab2e) !important;
+  color: var(--dm-amber, #ffab2e) !important;
+  font-weight: 700;
+}
+
+.distSmallCount {
+  font-size: 0.7rem;
+  opacity: 0.75;
+}
+
+.searchAndSortWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.searchBox {
+  position: relative;
+  min-width: 260px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: 0.95rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--dm-dim, #a09587);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  padding: 0.55rem 0.95rem 0.55rem 2.4rem;
+  background: rgba(8, 8, 10, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  color: var(--dm-warm, #fbf3e9);
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  font-size: 0.86rem;
+  outline: none;
+  transition: border-color 0.25s, box-shadow 0.25s;
+}
+
+.searchInput:focus {
+  border-color: var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 20px rgba(255, 171, 46, 0.2);
+}
+
+.filterSelect {
+  background: rgba(8, 8, 10, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--dm-warm, #fbf3e9);
+  padding: 0.55rem 0.95rem;
+  border-radius: 12px;
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  font-size: 0.84rem;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.25s;
+}
+
+.filterSelect:focus {
+  border-color: var(--dm-amber, #ffab2e);
+}
+
+/* 05 — DYNAMIC SECTION HEADER */
+.dynamicSectionHeader {
+  margin-bottom: 2rem;
+}
+
+.sectionEyebrow {
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  color: var(--dm-amber, #ffab2e);
+  text-transform: uppercase;
+  display: block;
+  margin-bottom: 0.4rem;
+}
+
+.sectionHeading {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+}
+
+.sectionDesc {
+  font-size: 0.95rem;
+  color: var(--dm-dim, #a09587);
+  margin: 0;
+}
+
+/* Featured Section */
+.featuredSection {
+  margin-bottom: 3.5rem;
+}
+
+.featuredHeader {
+  margin-bottom: 1.25rem;
+}
+
+.featuredHeading {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0;
+}
+
+.featuredGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+  gap: 1.75rem;
+}
+
+/* Reviews Grid */
+.reviewsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+  gap: 1.75rem;
+  margin-bottom: 4rem;
+}
+
+@media (max-width: 480px) {
+  .reviewsGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.reviewCard {
+  background: rgba(14, 14, 17, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.4rem;
+  padding: 1.85rem;
+  display: flex;
+  flex-direction: column;
+  transition: transform 0.3s var(--dm-ease, ease), border-color 0.3s, box-shadow 0.3s;
+  position: relative;
+  backdrop-filter: blur(20px);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+}
+
+.reviewCard:hover {
+  transform: translateY(-4px);
+  border-color: rgba(255, 171, 46, 0.35);
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.6),
+    0 0 30px rgba(255, 122, 24, 0.12);
+}
+
+.featuredCard {
+  background: linear-gradient(160deg, rgba(255, 122, 24, 0.08) 0%, rgba(14, 14, 17, 0.85) 100%);
+  border: 1px solid rgba(255, 171, 46, 0.3);
+  box-shadow: 0 0 35px rgba(255, 122, 24, 0.08);
+}
+
+.employeeCardBorder {
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+.employeeCardBorder:hover {
+  border-color: rgba(255, 171, 46, 0.35);
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1.1rem;
+}
+
+.authorBox {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1.5px solid var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 14px rgba(255, 171, 46, 0.3);
+}
+
+.avatarInitials {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  color: #0a0810;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.92rem;
+  box-shadow: 0 0 14px rgba(255, 122, 24, 0.35);
+}
+
+.avatarEmployee {
+  background: linear-gradient(135deg, rgba(255, 171, 46, 0.18) 0%, rgba(20, 17, 24, 0.95) 100%) !important;
+  border: 1.5px solid rgba(255, 214, 170, 0.35) !important;
+  color: #ffd79a !important;
+  box-shadow: 0 0 16px rgba(255, 171, 46, 0.2) !important;
+}
+
+.authorMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.authorNameRow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.authorName {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-weight: 700;
+  font-size: 0.98rem;
+  color: var(--dm-warm, #fbf3e9);
+}
+
+.clientBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 140, 26, 0.12);
+  border: 1px solid rgba(255, 140, 26, 0.3);
+  color: var(--dm-amber, #ff8c1a);
+  font-size: 0.65rem;
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.employeeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 214, 170, 0.08);
+  border: 1px solid rgba(255, 214, 170, 0.25);
+  color: #ffd79a;
+  font-size: 0.65rem;
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.authorRole {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #ffd79a;
+  letter-spacing: 0.02em;
+}
+
+.authorLocation {
+  font-size: 0.78rem;
+  color: var(--dm-dim, #a09587);
+}
+
+.stars {
+  display: flex;
+  gap: 0.2rem;
+  color: var(--dm-amber, #ffab2e);
+  filter: drop-shadow(0 0 4px rgba(255, 171, 46, 0.35));
+}
+
+.serviceTag {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  letter-spacing: 0.08em;
+  color: var(--dm-amber, #ffab2e);
+  background: rgba(255, 171, 46, 0.1);
+  border: 1px solid rgba(255, 171, 46, 0.22);
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  margin-bottom: 0.95rem;
+  width: fit-content;
+}
+
+.serviceTagEmp {
+  background: rgba(255, 255, 255, 0.04) !important;
+  border-color: rgba(255, 255, 255, 0.09) !important;
+  color: #ffd79a !important;
+}
+
+.reviewText {
+  font-size: 0.94rem;
+  line-height: 1.68;
+  color: rgba(251, 243, 233, 0.85);
+  margin: 0 0 1.35rem;
+  flex: 1;
+}
+
+.cardFoot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  padding-top: 0.95rem;
+  margin-top: auto;
+}
+
+.reviewDate {
+  font-size: 0.78rem;
+  color: var(--dm-dim, #a09587);
+}
+
+.reportBtn {
+  background: none;
+  border: none;
+  color: var(--dm-dim, #a09587);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.76rem;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+}
+
+.reportBtn:hover {
+  color: #ff9a85;
+  background: rgba(255, 95, 46, 0.1);
+}
+
+/* Skeletons */
+.skeletonCard {
+  min-height: 220px;
+  animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+}
+
+.skeletonAvatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.skeletonLineShort {
+  width: 120px;
+  height: 14px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  margin-bottom: 6px;
+}
+
+.skeletonLineTiny {
+  width: 80px;
+  height: 10px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.skeletonLineFull {
+  width: 100%;
+  height: 12px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  margin-top: 10px;
+}
+
+.skeletonLineMed {
+  width: 70%;
+  height: 12px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  margin-top: 10px;
+}
+
+/* Empty State */
+.emptyState {
+  text-align: center;
+  padding: 4.5rem 2rem;
+  background: rgba(14, 14, 17, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.4rem;
+  margin-bottom: 3.5rem;
+}
+
+.emptyTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.5rem;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 1.25rem 0 0.5rem;
+}
+
+.emptyText {
+  font-size: 0.95rem;
+  color: var(--dm-dim, #a09587);
+  max-width: 480px;
+  margin: 0 auto 2rem;
+}
+
+.loadMoreWrap {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 4rem;
+}
+
+.loadMoreBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 2rem;
+  background: rgba(14, 14, 17, 0.8);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--dm-warm, #fbf3e9);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.84rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.loadMoreBtn:hover {
+  border-color: var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 24px rgba(255, 171, 46, 0.25);
+}
+
+.spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* 06 — SHARE EXPERIENCE */
+.shareExperienceSection {
+  margin-bottom: 4rem;
+}
+
+.shareExpCard {
+  background: linear-gradient(145deg, rgba(255, 122, 24, 0.08) 0%, rgba(14, 14, 17, 0.85) 100%);
+  border: 1px solid rgba(255, 171, 46, 0.25);
+  border-radius: 1.4rem;
+  padding: 3rem 2.5rem;
+  text-align: center;
+  max-width: 900px;
+  margin: 0 auto;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(20px);
+}
+
+.shareExpBadge {
+  display: inline-block;
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  color: var(--dm-amber, #ffab2e);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+}
+
+.shareExpTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: clamp(1.8rem, 4vw, 2.4rem);
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0 0 0.85rem;
+}
+
+.shareExpDesc {
+  font-size: 1rem;
+  color: var(--dm-dim, #a09587);
+  max-width: 580px;
+  margin: 0 auto 2rem;
+  line-height: 1.65;
+}
+
+.shareExpButtons {
+  display: flex;
+  justify-content: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.shareBtnClient {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.85rem 1.85rem;
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff8c1a 40%, #ffd79a));
+  color: #08070b;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  text-decoration: none;
+  box-shadow: 0 8px 30px rgba(255, 140, 26, 0.4);
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+
+.shareBtnClient:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(255, 140, 26, 0.6);
+}
+
+.shareBtnEmployee {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.85rem 1.85rem;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 214, 170, 0.25);
+  color: #fbf3e9;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: all 0.25s;
+}
+
+.shareBtnEmployee:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 171, 46, 0.4);
+  transform: translateY(-2px);
+}
+
+/* 07 — CTA SECTION */
+.ctaSection {
+  background: radial-gradient(circle at 50% 50%, rgba(255, 95, 46, 0.12) 0%, rgba(14, 14, 17, 0.95) 75%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1.4rem;
+  padding: 3.5rem 2rem;
+  text-align: center;
+  backdrop-filter: blur(20px);
+}
+
+.ctaContent {
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+.ctaTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: clamp(1.8rem, 4vw, 2.5rem);
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0 0 0.85rem;
+}
+
+.ctaSub {
+  font-size: 1rem;
+  color: var(--dm-dim, #a09587);
+  line-height: 1.65;
+  margin: 0 0 2rem;
+}
+
+.ctaBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.95rem 2.25rem;
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
+  color: #0a0810;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  text-decoration: none;
+  box-shadow: 0 10px 40px -10px rgba(255, 140, 20, 0.7);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.ctaBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 50px -8px rgba(255, 160, 30, 0.9);
+}
+
+/* Modal Overlay & Card */
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(16px);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.modalCard {
+  background: #100e16;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 1.4rem;
+  padding: 2.25rem;
+  max-width: 520px;
+  width: 100%;
+  color: var(--dm-warm, #fbf3e9);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.9);
+  position: relative;
+}
+
+.modalClose {
+  position: absolute;
+  top: 1.25rem;
+  right: 1.25rem;
+  background: none;
+  border: none;
+  color: var(--dm-dim, #a09587);
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 6px;
+  transition: color 0.2s;
+}
+
+.modalClose:hover {
+  color: var(--dm-warm, #fbf3e9);
+}
+
+.modalTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.4rem;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0 0 0.4rem;
+}
+
+.modalDesc {
+  font-size: 0.88rem;
+  color: var(--dm-dim, #a09587);
+  margin: 0 0 1.5rem;
+}
+
+.reportSuccessBox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: rgba(34, 197, 94, 0.12);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 12px;
+  color: #4ade80;
+  font-size: 0.9rem;
+}
+
+.reportForm {
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field label {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffd79a;
+}
+
+.row2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.85rem;
+}
+
+@media (max-width: 500px) {
+  .row2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+.selectInput,
+.textInput,
+.textAreaInput {
+  width: 100%;
+  background: rgba(8, 8, 10, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--dm-warm, #fbf3e9);
+  padding: 0.65rem 0.85rem;
+  border-radius: 10px;
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  font-size: 0.88rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.selectInput:focus,
+.textInput:focus,
+.textAreaInput:focus {
+  border-color: var(--dm-amber, #ffab2e);
+  box-shadow: 0 0 20px rgba(255, 171, 46, 0.25);
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.85rem;
+  margin-top: 0.75rem;
+}
+
+.cancelBtn {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--dm-warm, #fbf3e9);
+  padding: 0.6rem 1.2rem;
+  border-radius: 999px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.78rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.cancelBtn:hover {
+  border-color: var(--dm-dim, #a09587);
+}
+
+.submitReportBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--dm-flame, #ff5f2e);
+  color: #ffffff;
+  border: none;
+  padding: 0.6rem 1.35rem;
+  border-radius: 999px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 4px 18px rgba(255, 95, 46, 0.4);
+}

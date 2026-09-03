@@ -1,0 +1,29 @@
+.wrap {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 1;
+  max-width: 36rem;
+  margin-inline: auto;
+  isolation: isolate;
+}
+
+.wrap canvas {
+  position: relative;
+  z-index: 1;
+}
+
+.halo {
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 140, 26, 0.22), transparent 65%);
+  filter: blur(30px);
+  pointer-events: none;
+  z-index: 0;
+}
+
+@media (max-width: 720px) {
+  .wrap {
+    max-width: 22rem;
+  }
+}

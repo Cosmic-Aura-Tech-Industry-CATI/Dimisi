@@ -1,0 +1,135 @@
+.wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  color: var(--dm-warm, #fbf3e9);
+}
+
+.topBar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.titleBox h2 {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.55rem;
+  color: var(--dm-warm, #fbf3e9);
+  margin: 0 0 0.3rem;
+}
+
+.titleBox p {
+  color: var(--dm-dim, #a09587);
+  font-size: 0.88rem;
+  margin: 0;
+}
+
+.tableCard {
+  background: rgba(19, 16, 25, 0.75);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+  border-radius: 18px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(20px);
+}
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.86rem;
+  text-align: left;
+}
+
+.table th {
+  background: rgba(10, 8, 14, 0.5);
+  color: var(--dm-gold, #ffd79a);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.95rem 1.1rem;
+  border-bottom: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--dm-line, rgba(255, 214, 170, 0.05));
+  color: var(--dm-warm, #fbf3e9);
+  vertical-align: middle;
+}
+
+.table tr:hover td {
+  background: rgba(255, 214, 170, 0.03);
+}
+
+.reasonBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(255, 95, 46, 0.12);
+  color: #ff9a85;
+  border: 1px solid rgba(255, 95, 46, 0.35);
+}
+
+.btnAction {
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--dm-warm, #fbf3e9);
+  transition: all 0.2s var(--dm-ease, ease);
+}
+
+.btnAction:hover {
+  background: rgba(255, 214, 170, 0.08);
+  border-color: rgba(255, 171, 46, 0.4);
+}
+
+.btnKeep {
+  background: rgba(52, 211, 153, 0.12);
+  color: #34d399;
+  border-color: rgba(52, 211, 153, 0.35);
+}
+
+.btnArchive {
+  background: rgba(255, 171, 46, 0.12);
+  color: var(--dm-amber, #ffab2e);
+  border-color: rgba(255, 171, 46, 0.35);
+}
+
+.btnDelete {
+  background: rgba(255, 95, 46, 0.12);
+  color: #ff9a85;
+  border-color: rgba(255, 95, 46, 0.35);
+}
+
+.emptyState {
+  text-align: center;
+  padding: 3.5rem 1rem;
+  color: var(--dm-dim, #a09587);
+}

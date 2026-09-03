@@ -1,0 +1,28 @@
+.split {
+  display: block;
+  margin: 0;
+}
+
+.mask {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: bottom;
+  line-height: 1.14;
+  padding-bottom: 0.14em;
+  margin-bottom: -0.14em;
+}
+
+.token {
+  display: inline-block;
+  transform: translate3d(0, 110%, 0) rotate(4deg);
+  opacity: 0;
+  transition:
+    transform 1s var(--dm-ease),
+    opacity 1s var(--dm-ease);
+  will-change: transform;
+}
+
+.visible .token {
+  transform: translate3d(0, 0, 0) rotate(0deg);
+  opacity: 1;
+}
