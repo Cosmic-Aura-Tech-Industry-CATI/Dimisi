@@ -220,6 +220,8 @@ export function WorldScene({ motif }: { motif: WorldMotif }) {
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.2;
+          const canvas = gl.domElement;
+          canvas.addEventListener("webglcontextlost", (e) => e.preventDefault(), false);
         }}
       >
         <fog attach="fog" args={["#0b0b0d", 8, 34]} />

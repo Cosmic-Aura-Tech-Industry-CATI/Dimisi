@@ -492,7 +492,9 @@ export async function getAdminReviews({
 }> {
   let reviews = getStoredReviews();
   const allReviews = [...reviews];
-  const stats = computeStats(allReviews.filter((r) => r.status === "approved"));
+  const campaigns = getStoredCampaigns();
+  const reports = getStoredReports();
+  const stats = computeStats(allReviews, campaigns, reports);
 
   if (data?.status && data.status !== "all") {
     reviews = reviews.filter((r) => r.status === data.status);
@@ -535,7 +537,9 @@ export async function getAdminReviews({
 
 export async function getReviewStats(): Promise<ReviewStats> {
   const reviews = getStoredReviews();
-  return computeStats(reviews.filter((r) => r.status === "approved"));
+  const campaigns = getStoredCampaigns();
+  const reports = getStoredReports();
+  return computeStats(reviews, campaigns, reports);
 }
 
 export async function updateReviewStatus({

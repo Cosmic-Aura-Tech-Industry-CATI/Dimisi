@@ -84,6 +84,8 @@ export function CinematicStage() {
         onCreated={({ gl }) => {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.15;
+          const canvas = gl.domElement;
+          canvas.addEventListener("webglcontextlost", (e) => e.preventDefault(), false);
         }}
       >
         <fog attach="fog" args={["#050507", 14, 95]} />

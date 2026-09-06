@@ -34,7 +34,7 @@ export function VideoPreloader({ onDone }: { onDone: () => void }) {
   const [tier, setTier] = useState<number | null>(null);
   const src = tier === null ? undefined : LADDER[tier];
   const [fade, setFade] = useState(false);
-  const [muted, setMuted] = useState(false);
+  const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const doneRef = useRef(false);
   const stallTimerRef = useRef(0);
@@ -69,7 +69,7 @@ export function VideoPreloader({ onDone }: { onDone: () => void }) {
         const el = videoRef.current;
         if (!el) return;
         el.currentTime = at;
-        void el.play();
+        el.play()?.catch(() => {});
       }, 0);
       return i + 1;
     });
@@ -116,29 +116,36 @@ export function VideoPreloader({ onDone }: { onDone: () => void }) {
     const v = videoRef.current;
     if (!v || tier === null) return;
     v.volume = 0.9;
-    v.muted = false;
+    
+    // Attempt playback
+    const playPromise = v.play();
+    if (playPromise !== undefined) {
+      playPromise.catch(() => {
+        v.muted = true;
+        setMuted(true);
+        v.play()?.catch(finish);
+      });
+    }
+
     let cleanup = () => {};
-    v.play().catch(() => {
-      v.muted = true;
-      setMuted(true);
-      void v.play().catch(finish);
-      const unmute = () => {
-        v.muted = false;
-        v.volume = 0.9;
-        setMuted(false);
-        void v.play();
-        cleanup();
-      };
-      const opts = { once: true } as const;
-      window.addEventListener("pointerdown", unmute, opts);
-      window.addEventListener("keydown", unmute, opts);
-      window.addEventListener("touchstart", unmute, opts);
-      cleanup = () => {
-        window.removeEventListener("pointerdown", unmute);
-        window.removeEventListener("keydown", unmute);
-        window.removeEventListener("touchstart", unmute);
-      };
-    });
+    const unmute = () => {
+      v.muted = false;
+      v.volume = 0.9;
+      setMuted(false);
+      v.play()?.catch(() => {});
+      cleanup();
+    };
+
+    const opts = { once: true } as const;
+    window.addEventListener("pointerdown", unmute, opts);
+    window.addEventListener("keydown", unmute, opts);
+    window.addEventListener("touchstart", unmute, opts);
+    cleanup = () => {
+      window.removeEventListener("pointerdown", unmute);
+      window.removeEventListener("keydown", unmute);
+      window.removeEventListener("touchstart", unmute);
+    };
+
     return () => cleanup();
   }, [finish, tier]);
 
@@ -148,7 +155,7 @@ export function VideoPreloader({ onDone }: { onDone: () => void }) {
     v.muted = false;
     v.volume = 0.9;
     setMuted(false);
-    void v.play();
+    v.play()?.catch(() => {});
   }, []);
 
   return (
