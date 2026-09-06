@@ -183,7 +183,7 @@ export function AdminPanel() {
     setBusy(true);
     setError(null);
 
-    Promise.all([
+    Promise.allSettled([
       load(),
       loadReviewsData(),
       loadEventsData(),
@@ -194,17 +194,17 @@ export function AdminPanel() {
     ])
       .then(([resOverview, resReviews, resEvents, resServices, resWork, resCareers, resBlog]) => {
         if (active) {
-          setData(resOverview);
-          setReviewsData(resReviews);
-          setEventsData(resEvents);
-          setServicesData(resServices);
-          setWorkData(resWork);
-          setCareersData(resCareers);
-          setBlogData(resBlog);
+          if (resOverview.status === "fulfilled") setData(resOverview.value);
+          if (resReviews.status === "fulfilled") setReviewsData(resReviews.value);
+          if (resEvents.status === "fulfilled") setEventsData(resEvents.value);
+          if (resServices.status === "fulfilled") setServicesData(resServices.value);
+          if (resWork.status === "fulfilled") setWorkData(resWork.value);
+          if (resCareers.status === "fulfilled") setCareersData(resCareers.value);
+          if (resBlog.status === "fulfilled") setBlogData(resBlog.value);
         }
       })
       .catch((err: unknown) => {
-        if (active) setError(err instanceof Error ? err.message : "Could not load admin data.");
+        console.warn("Admin panel non-fatal data fetch warning:", err);
       })
       .finally(() => {
         if (active) setBusy(false);
