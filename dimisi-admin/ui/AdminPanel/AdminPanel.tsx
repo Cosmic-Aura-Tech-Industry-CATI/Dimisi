@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ShieldAlert, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { logoutAdmin } from "@/services/adminAuth.service";
 import { AdminBackdrop } from "../AdminBackdrop/AdminBackdrop";
 import { AdminLogin } from "../AdminLogin/AdminLogin";
 import { AdminShell, type AdminTab } from "../AdminShell/AdminShell";
@@ -225,8 +226,7 @@ export function AdminPanel() {
 
   async function signOut() {
     try {
-      localStorage.removeItem("dimisi_admin_session");
-      window.dispatchEvent(new Event("dimisi-auth-change"));
+      logoutAdmin();
     } catch {}
     void navigate({ to: "/", replace: true });
   }

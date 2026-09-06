@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Eye, EyeOff, Lock, ShieldCheck } from "lucide-react";
-import { loginAdminFn } from "../../server/admin.functions";
+import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { loginAdmin } from "@/services/adminAuth.service";
+import { ApiError } from "@/services/apiClient";
 import styles from "../styles/admin.module.css";
 
-/** Secure sign-in gate for the DIMISI admin panel with Super Admin credentials support. */
+/** Secure sign-in gate for the DIMISI admin panel with Express backend authentication. */
 export function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,29 +20,33 @@ export function AdminLogin() {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    try {
-      const res = await loginAdminFn({
-        data: {
-          email: cleanEmail,
-          password: cleanPassword,
-        },
-      });
+    if (!cleanEmail || !cleanPassword) {
+      setError("Please provide both email and password.");
+      setBusy(false);
+      return;
+    }
 
-      if (res?.success && res.user) {
-        localStorage.setItem(
-          "dimisi_admin_session",
-          JSON.stringify({
-            user: res.user,
-            token: res.token,
-            expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
-          }),
-        );
-        window.dispatchEvent(new Event("dimisi-auth-change"));
-      } else {
-        setError("Invalid email or password.");
-      }
+    try {
+      await loginAdmin({
+        email: cleanEmail,
+        password: cleanPassword,
+      });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Authentication failed.");
+      if (err instanceof ApiError) {
+        if (err.status === 401) {
+          setError("Invalid email or password.");
+        } else if (err.status === 0) {
+          setError("Unable to connect to the server. Please try again.");
+        } else if (err.status >= 500) {
+          setError("Something went wrong. Please try again.");
+        } else {
+          setError(err.message || "Authentication failed.");
+        }
+      } else if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError("Authentication failed. Please try again.");
+      }
     } finally {
       setBusy(false);
     }
