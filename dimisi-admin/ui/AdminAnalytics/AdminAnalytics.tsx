@@ -29,37 +29,37 @@ export function AdminAnalytics({ data }: { data: AdminDashboardData }) {
       {/* Key Metric Scorecards */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
-          <div className={styles.statValue}>{stats.averageRating.toFixed(1)} ★</div>
+          <div className={styles.statValue}>{Number(stats?.averageRating ?? stats?.average ?? 0).toFixed(1)} ★</div>
           <div className={styles.statLabel}>Average Rating</div>
         </div>
 
         <div className={styles.statCard}>
-          <div className={styles.statValue}>{stats.totalReviews}</div>
+          <div className={styles.statValue}>{stats?.totalReviews ?? stats?.total ?? 0}</div>
           <div className={styles.statLabel}>Total Reviews</div>
         </div>
 
         <div className={styles.statCard}>
           <div className={styles.statValue} style={{ color: "#fbbf24" }}>
-            {stats.pendingCount}
+            {stats?.pendingCount ?? 0}
           </div>
           <div className={styles.statLabel}>Pending Moderation</div>
         </div>
 
         <div className={styles.statCard}>
           <div className={styles.statValue} style={{ color: "#34d399" }}>
-            {stats.approvedCount}
+            {stats?.approvedCount ?? 0}
           </div>
           <div className={styles.statLabel}>Published Reviews</div>
         </div>
 
         <div className={styles.statCard}>
-          <div className={styles.statValue}>{stats.reviewsThisMonth}</div>
+          <div className={styles.statValue}>{stats?.reviewsThisMonth ?? 0}</div>
           <div className={styles.statLabel}>New (Last 30 Days)</div>
         </div>
 
         <div className={styles.statCard}>
           <div className={styles.statValue} style={{ color: "#818cf8" }}>
-            {stats.overallConversionRate}%
+            {stats?.overallConversionRate ?? 0}%
           </div>
           <div className={styles.statLabel}>Overall QR/Link Conv.</div>
         </div>

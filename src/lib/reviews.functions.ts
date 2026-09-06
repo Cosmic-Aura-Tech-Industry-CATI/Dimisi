@@ -269,6 +269,40 @@ function saveStoredCampaigns(campaigns: ReviewCampaign[]): void {
   } catch {}
 }
 
+const SEED_REPORTS: ReviewReport[] = [
+  {
+    id: "rep-001",
+    review_id: "rev-004",
+    reporter_name: "Visitor",
+    reporter_email: "visitor@example.com",
+    reason: "Spam",
+    message: "Testing moderation queue functionality.",
+    status: "open",
+    created_at: new Date(Date.now() - 3600000).toISOString(),
+    resolved_at: null,
+    resolved_by: null,
+  },
+];
+
+function getStoredReports(): ReviewReport[] {
+  if (typeof window === "undefined") return SEED_REPORTS;
+  try {
+    const raw = localStorage.getItem(REPORTS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch {}
+  return SEED_REPORTS;
+}
+
+function saveStoredReports(reports: ReviewReport[]): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify(reports));
+  } catch {}
+}
+
 export function toPublicReview(row: AdminReview): PublicReview {
   return {
     id: row.id,
@@ -492,7 +526,9 @@ export async function getAdminReviews({
 }> {
   let reviews = getStoredReviews();
   const allReviews = [...reviews];
-  const stats = computeStats(allReviews.filter((r) => r.status === "approved"));
+  const campaigns = getStoredCampaigns();
+  const reports = getStoredReports();
+  const stats = computeStats(allReviews, campaigns, reports);
 
   if (data?.status && data.status !== "all") {
     reviews = reviews.filter((r) => r.status === data.status);
@@ -535,7 +571,9 @@ export async function getAdminReviews({
 
 export async function getReviewStats(): Promise<ReviewStats> {
   const reviews = getStoredReviews();
-  return computeStats(reviews.filter((r) => r.status === "approved"));
+  const campaigns = getStoredCampaigns();
+  const reports = getStoredReports();
+  return computeStats(reviews, campaigns, reports);
 }
 
 export async function updateReviewStatus({
@@ -710,20 +748,7 @@ export async function deleteCampaign({
 
 export async function getAdminReports(): Promise<{ reports: ReviewReport[] }> {
   return {
-    reports: [
-      {
-        id: "rep-001",
-        review_id: "rev-004",
-        reporter_name: "Visitor",
-        reporter_email: "visitor@example.com",
-        reason: "Spam",
-        message: "Testing moderation queue functionality.",
-        status: "open",
-        created_at: new Date(Date.now() - 3600000).toISOString(),
-        resolved_at: null,
-        resolved_by: null,
-      },
-    ],
+    reports: getStoredReports(),
   };
 }
 
@@ -732,6 +757,13 @@ export async function resolveReport({
 }: {
   data: { reportId: string; status: "resolved" | "dismissed" };
 }): Promise<{ success: boolean }> {
+  let reports = getStoredReports();
+  reports = reports.map((r) =>
+    r.id === data.reportId
+      ? { ...r, status: data.status, resolved_at: new Date().toISOString(), resolved_by: "admin" }
+      : r,
+  );
+  saveStoredReports(reports);
   return { success: true };
 }
 

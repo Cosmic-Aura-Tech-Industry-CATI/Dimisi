@@ -195,39 +195,24 @@ export async function updateAdminProfile({
   return { success: true };
 }
 
+import { loginAdmin } from "@/services/adminAuth.service";
+
 export async function loginAdminFn({
   data,
 }: {
   data: { email: string; password?: string };
-}): Promise<{ success: boolean; session?: any; error?: string }> {
+}): Promise<{ success: boolean; token?: string; user?: any; error?: string }> {
   const cleanEmail = data.email.trim().toLowerCase();
-  const cleanPassword = data.password?.trim();
+  const cleanPassword = data.password?.trim() || "";
 
-  if (
-    cleanEmail === "swatantrasingh308@gmail.com" &&
-    cleanPassword === "ss123&&&"
-  ) {
-    const session = {
-      user: {
-        id: "usr-swatantra-001",
-        email: "swatantrasingh308@gmail.com",
-        user_metadata: { full_name: "Swatantra Singh", admin_role: "super_admin" },
-      },
-      token: "mock-super-admin-token",
-      expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
-    };
-    return { success: true, session };
-  }
+  const result = await loginAdmin({
+    email: cleanEmail,
+    password: cleanPassword,
+  });
 
-  // Allow general demo sign-in
-  const session = {
-    user: {
-      id: `usr-${Date.now()}`,
-      email: cleanEmail,
-      user_metadata: { full_name: cleanEmail.split("@")[0], admin_role: "admin" },
-    },
-    token: `token-${Date.now()}`,
-    expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
+  return {
+    success: result.success,
+    token: result.token,
+    user: result.user,
   };
-  return { success: true, session };
 }
