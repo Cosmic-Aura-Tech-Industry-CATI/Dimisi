@@ -1,26 +1,17 @@
-import { useState, useTransition } from "react";
+import { useState } from "react";
 import {
   ShieldCheck,
-  UserPlus,
   Trash2,
-  Lock,
-  Eye,
-  EyeOff,
   AlertCircle,
   CheckCircle,
   AlertTriangle,
   X,
-  Users,
   Shield,
-  Clock,
-  Sparkles,
-  Info,
 } from "lucide-react";
 import {
-  createAdminAccount,
+  grantAdminAccess,
   setAdminRole,
   setAdminActive,
-  setAdminDesignation,
   deleteUserAccount,
   type AdminUser,
 } from "../../server/admin.functions";
@@ -30,7 +21,6 @@ import {
   getRoleMeta,
   isSuperAdmin,
 } from "../../lib/rbac.shared";
-import { DESIGNATIONS } from "../AdminProfile/AdminProfile";
 import shared from "../styles/admin.module.css";
 import styles from "./AdminAdmins.module.css";
 
@@ -49,23 +39,17 @@ export function AdminAdmins({
   currentUserRole = "super_admin",
   onAdmins,
 }: AdminAdminsProps) {
-  const create = createAdminAccount;
+  const grant = grantAdminAccess;
   const changeRole = setAdminRole;
   const destroy = deleteUserAccount;
   const toggleActive = setAdminActive;
-  const saveDesignation = setAdminDesignation;
 
-  // Form State
+  // Form State (Only Account Email & Assigned Role)
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [fullName, setFullName] = useState("");
-  const [designation, setDesignation] = useState("");
   const [role, setRole] = useState<AdminRole>("editor");
-  const [showPassword, setShowPassword] = useState(false);
 
   // Status & Feedback State
   const [busy, setBusy] = useState(false);
-  const [isPending, startTransition] = useTransition();
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -94,22 +78,22 @@ export function AdminAdmins({
     }
   }
 
-  // Handle Create Admin Submission
-  const handleCreateAdmin = (e: React.FormEvent) => {
+  // Handle Grant Administrator Access Submission
+  const handleGrantAdmin = (e: React.FormEvent) => {
     e.preventDefault();
-    if (password.length < 8) {
-      setError("Password must be at least 8 characters long.");
+    const cleanEmail = email.trim();
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!cleanEmail || !emailRegex.test(cleanEmail)) {
+      setError("Please provide a valid account email address.");
       return;
     }
 
     void run(async () => {
-      const res = await create({
-        data: { email, password, fullName, designation, role },
+      const res = await grant({
+        data: { email: cleanEmail, role },
       });
       setEmail("");
-      setPassword("");
-      setFullName("");
-      setDesignation("");
       setRole("editor");
       return res;
     });
@@ -123,7 +107,7 @@ export function AdminAdmins({
 
     void run(async () => {
       return changeRole({
-        data: { userId: targetUser.user_id, role: targetRole },
+        data: { targetUserId: targetUser.user_id, newRole: targetRole },
       });
     });
   };
@@ -135,7 +119,7 @@ export function AdminAdmins({
     setDeleteModalTarget(null);
 
     void run(async () => {
-      return destroy({ data: { userId: targetUser.user_id } });
+      return destroy({ data: { targetUserId: targetUser.user_id } });
     });
   };
 
@@ -179,39 +163,25 @@ export function AdminAdmins({
         </div>
       )}
 
-      {/* CREATE ADMIN FORM */}
+      {/* GRANT ADMINISTRATOR ACCESS FORM */}
       <div className={shared.panelCard}>
         <div className={styles.cardHeader}>
           <div className={styles.cardIconBox}>
-            <UserPlus size={18} className={styles.cardIcon} />
+            <ShieldCheck size={18} className={styles.cardIcon} />
           </div>
           <div>
-            <h3 className={shared.sectionTitle}>Create an Administrator</h3>
+            <h3 className={shared.sectionTitle}>Grant Administrator Access</h3>
             <p className={shared.sub}>
-              Provision a new administrative account with designated organizational title and authoritative system role.
+              Assign administrative access to an existing DIMISI account.
             </p>
           </div>
         </div>
 
-        <form onSubmit={handleCreateAdmin}>
+        <form onSubmit={handleGrantAdmin}>
           <div className={styles.formGrid}>
             <div className={shared.field}>
-              <label className={shared.label} htmlFor="a-name">
-                Full Name
-              </label>
-              <input
-                id="a-name"
-                className={shared.input}
-                type="text"
-                placeholder="e.g. Swatantra Soni"
-                value={fullName}
-                onChange={(e) => setFullName(e.target.value)}
-              />
-            </div>
-
-            <div className={shared.field}>
               <label className={shared.label} htmlFor="a-email">
-                Account Email *
+                ACCOUNT EMAIL *
               </label>
               <input
                 id="a-email"
@@ -221,63 +191,20 @@ export function AdminAdmins({
                 placeholder="teammate@dimisi.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={busy}
               />
             </div>
 
             <div className={shared.field}>
-              <label className={shared.label} htmlFor="a-pass">
-                Password * (min 8 characters)
-              </label>
-              <div className={styles.passwordInputWrap}>
-                <input
-                  id="a-pass"
-                  className={shared.input}
-                  type={showPassword ? "text" : "password"}
-                  required
-                  minLength={8}
-                  placeholder="••••••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className={styles.passToggleBtn}
-                  onClick={() => setShowPassword(!showPassword)}
-                  title={showPassword ? "Hide password" : "Show password"}
-                >
-                  {showPassword ? <EyeOff size={15} /> : <Eye size={15} />}
-                </button>
-              </div>
-            </div>
-
-            <div className={shared.field}>
-              <label className={shared.label} htmlFor="a-desig">
-                Designation (Organizational Title)
-              </label>
-              <select
-                id="a-desig"
-                className={styles.select}
-                value={designation}
-                onChange={(e) => setDesignation(e.target.value)}
-              >
-                <option value="">Select designation…</option>
-                {DESIGNATIONS.map((d) => (
-                  <option key={d} value={d}>
-                    {d}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <div className={shared.field} style={{ gridColumn: "span 2" }}>
               <label className={shared.label} htmlFor="a-role">
-                Assigned Role * (Access Level)
+                ASSIGNED ROLE * (ACCESS LEVEL)
               </label>
               <select
                 id="a-role"
                 className={styles.selectRole}
                 value={role}
                 onChange={(e) => setRole(e.target.value as AdminRole)}
+                disabled={busy}
               >
                 {ADMIN_ROLES.map((r) => (
                   <option key={r.id} value={r.id}>
@@ -285,7 +212,9 @@ export function AdminAdmins({
                   </option>
                 ))}
               </select>
+            </div>
 
+            <div className={shared.field} style={{ gridColumn: "span 2" }}>
               {/* Dynamic Role Explanation Box */}
               <div className={styles.roleExplanationBox}>
                 <div className={styles.roleBadgeBox}>
@@ -306,8 +235,8 @@ export function AdminAdmins({
           </div>
 
           <div className={styles.createBtnRow}>
-            <button type="submit" className={shared.btn} disabled={busy || isPending}>
-              {busy ? "Provisioning…" : "Create Administrator"}
+            <button type="submit" className={shared.btn} disabled={busy}>
+              {busy ? "GRANTING…" : "GRANT ADMINISTRATOR"}
             </button>
           </div>
         </form>
@@ -318,7 +247,7 @@ export function AdminAdmins({
         <div className={styles.tableCardHeader}>
           <h3 className={styles.tableTitle}>
             <Shield size={16} />
-            <span>Active Administrators ({admins.length})</span>
+            <span>Active Administrators ({admins?.length ?? 0})</span>
           </h3>
         </div>
 
@@ -336,9 +265,10 @@ export function AdminAdmins({
               </tr>
             </thead>
             <tbody>
-              {admins.map((a) => {
+              {(admins ?? []).map((a) => {
                 const isSelf = a.user_id === selfId;
                 const roleMeta = getRoleMeta(a.role);
+                const designationDisplay = a.designation ? a.designation : "Not set";
 
                 return (
                   <tr key={a.user_id}>
@@ -352,25 +282,7 @@ export function AdminAdmins({
                       <span className={styles.nameText}>{a.full_name ?? "—"}</span>
                     </td>
                     <td>
-                      <select
-                        className={styles.cellSelect}
-                        value={a.designation ?? ""}
-                        disabled={busy || !canManageRoles}
-                        onChange={(e) =>
-                          void run(() =>
-                            saveDesignation({
-                              data: { userId: a.user_id, designation: e.target.value },
-                            }),
-                          )
-                        }
-                      >
-                        <option value="">Not set</option>
-                        {DESIGNATIONS.map((d) => (
-                          <option key={d} value={d}>
-                            {d}
-                          </option>
-                        ))}
-                      </select>
+                      <span className={styles.designationText}>{designationDisplay}</span>
                     </td>
                     <td>
                       {canManageRoles && !isSelf ? (
@@ -419,7 +331,7 @@ export function AdminAdmins({
                     </td>
                     <td>
                       <span className={styles.dateText}>
-                        {new Date(a.created_at).toLocaleDateString()}
+                        {a.created_at ? new Date(a.created_at).toLocaleDateString() : "—"}
                       </span>
                     </td>
                     <td>
@@ -434,7 +346,7 @@ export function AdminAdmins({
                             onClick={() =>
                               void run(() =>
                                 toggleActive({
-                                  data: { userId: a.user_id, active: !a.is_active },
+                                  data: { targetUserId: a.user_id, active: !a.is_active },
                                 }),
                               )
                             }

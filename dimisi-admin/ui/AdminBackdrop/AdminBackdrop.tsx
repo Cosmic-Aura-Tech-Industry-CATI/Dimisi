@@ -1,7 +1,12 @@
-import { useEffect } from "react";
-import { CinematicStage } from "@/components/three/CinematicStage/CinematicStage";
+import { useEffect, lazy, Suspense } from "react";
 import { GrainOverlay } from "@/components/effects/GrainOverlay/GrainOverlay";
 import styles from "./AdminBackdrop.module.css";
+
+const CinematicStage = lazy(() =>
+  import("@/components/three/CinematicStage/CinematicStage").then((m) => ({
+    default: m.CinematicStage,
+  })),
+);
 
 /**
  * Cinematic DIMISI backdrop for the admin panel.
@@ -16,7 +21,9 @@ export function AdminBackdrop() {
 
   return (
     <>
-      <CinematicStage />
+      <Suspense fallback={null}>
+        <CinematicStage />
+      </Suspense>
       <div className={styles.aura} aria-hidden="true" />
       <div className={styles.grid} aria-hidden="true" />
       <div className={styles.sweep} aria-hidden="true" />

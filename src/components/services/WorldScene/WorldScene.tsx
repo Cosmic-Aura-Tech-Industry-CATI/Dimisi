@@ -221,7 +221,15 @@ export function WorldScene({ motif }: { motif: WorldMotif }) {
           gl.toneMapping = THREE.ACESFilmicToneMapping;
           gl.toneMappingExposure = 1.2;
           const canvas = gl.domElement;
-          canvas.addEventListener("webglcontextlost", (e) => e.preventDefault(), false);
+          const onLost = (e: Event) => {
+            e.preventDefault();
+            setActive(false);
+          };
+          const onRestored = () => {
+            setActive(true);
+          };
+          canvas.addEventListener("webglcontextlost", onLost, false);
+          canvas.addEventListener("webglcontextrestored", onRestored, false);
         }}
       >
         <fog attach="fog" args={["#0b0b0d", 8, 34]} />

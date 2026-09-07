@@ -30,14 +30,6 @@ import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as ReviewSlugRouteImport } from './routes/review.$slug'
 import { Route as ServicesIndexRouteImport } from './routes/services.index'
 import { Route as ServicesSlugRouteImport } from './routes/services.$slug'
-import { Route as ServicesAiRouteImport } from './routes/services.ai'
-import { Route as ServicesApiRouteImport } from './routes/services.api'
-import { Route as ServicesAutomationRouteImport } from './routes/services.automation'
-import { Route as ServicesCloudRouteImport } from './routes/services.cloud'
-import { Route as ServicesEnterpriseRouteImport } from './routes/services.enterprise'
-import { Route as ServicesMobileAppRouteImport } from './routes/services.mobile-app'
-import { Route as ServicesUiUxRouteImport } from './routes/services.ui-ux'
-import { Route as ServicesWebDevelopmentRouteImport } from './routes/services.web-development'
 import { Route as WorkIndexRouteImport } from './routes/work.index'
 import { Route as WorkSlugRouteImport } from './routes/work.$slug'
 
@@ -146,46 +138,6 @@ const ServicesSlugRoute = ServicesSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => ServicesRoute,
 } as any)
-const ServicesAiRoute = ServicesAiRouteImport.update({
-  id: '/ai',
-  path: '/ai',
-  getParentRoute: () => ServicesRoute,
-} as any)
-const ServicesApiRoute = ServicesApiRouteImport.update({
-  id: '/api',
-  path: '/api',
-  getParentRoute: () => ServicesRoute,
-} as any)
-const ServicesAutomationRoute = ServicesAutomationRouteImport.update({
-  id: '/automation',
-  path: '/automation',
-  getParentRoute: () => ServicesRoute,
-} as any)
-const ServicesCloudRoute = ServicesCloudRouteImport.update({
-  id: '/cloud',
-  path: '/cloud',
-  getParentRoute: () => ServicesRoute,
-} as any)
-const ServicesEnterpriseRoute = ServicesEnterpriseRouteImport.update({
-  id: '/enterprise',
-  path: '/enterprise',
-  getParentRoute: () => ServicesRoute,
-} as any)
-const ServicesMobileAppRoute = ServicesMobileAppRouteImport.update({
-  id: '/mobile-app',
-  path: '/mobile-app',
-  getParentRoute: () => ServicesRoute,
-} as any)
-const ServicesUiUxRoute = ServicesUiUxRouteImport.update({
-  id: '/ui-ux',
-  path: '/ui-ux',
-  getParentRoute: () => ServicesRoute,
-} as any)
-const ServicesWebDevelopmentRoute = ServicesWebDevelopmentRouteImport.update({
-  id: '/web-development',
-  path: '/web-development',
-  getParentRoute: () => ServicesRoute,
-} as any)
 const WorkIndexRoute = WorkIndexRouteImport.update({
   id: '/work/',
   path: '/work/',
@@ -218,14 +170,6 @@ export interface FileRoutesByFullPath {
   '/blog/$slug': typeof BlogSlugRoute
   '/review/$slug': typeof ReviewSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
-  '/services/ai': typeof ServicesAiRoute
-  '/services/api': typeof ServicesApiRoute
-  '/services/automation': typeof ServicesAutomationRoute
-  '/services/cloud': typeof ServicesCloudRoute
-  '/services/enterprise': typeof ServicesEnterpriseRoute
-  '/services/mobile-app': typeof ServicesMobileAppRoute
-  '/services/ui-ux': typeof ServicesUiUxRoute
-  '/services/web-development': typeof ServicesWebDevelopmentRoute
   '/work/$slug': typeof WorkSlugRoute
   '/services/': typeof ServicesIndexRoute
   '/work/': typeof WorkIndexRoute
@@ -250,14 +194,6 @@ export interface FileRoutesByTo {
   '/blog/$slug': typeof BlogSlugRoute
   '/review/$slug': typeof ReviewSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
-  '/services/ai': typeof ServicesAiRoute
-  '/services/api': typeof ServicesApiRoute
-  '/services/automation': typeof ServicesAutomationRoute
-  '/services/cloud': typeof ServicesCloudRoute
-  '/services/enterprise': typeof ServicesEnterpriseRoute
-  '/services/mobile-app': typeof ServicesMobileAppRoute
-  '/services/ui-ux': typeof ServicesUiUxRoute
-  '/services/web-development': typeof ServicesWebDevelopmentRoute
   '/work/$slug': typeof WorkSlugRoute
   '/services': typeof ServicesIndexRoute
   '/work': typeof WorkIndexRoute
@@ -284,14 +220,6 @@ export interface FileRoutesById {
   '/blog/$slug': typeof BlogSlugRoute
   '/review/$slug': typeof ReviewSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
-  '/services/ai': typeof ServicesAiRoute
-  '/services/api': typeof ServicesApiRoute
-  '/services/automation': typeof ServicesAutomationRoute
-  '/services/cloud': typeof ServicesCloudRoute
-  '/services/enterprise': typeof ServicesEnterpriseRoute
-  '/services/mobile-app': typeof ServicesMobileAppRoute
-  '/services/ui-ux': typeof ServicesUiUxRoute
-  '/services/web-development': typeof ServicesWebDevelopmentRoute
   '/work/$slug': typeof WorkSlugRoute
   '/services/': typeof ServicesIndexRoute
   '/work/': typeof WorkIndexRoute
@@ -319,14 +247,6 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/review/$slug'
     | '/services/$slug'
-    | '/services/ai'
-    | '/services/api'
-    | '/services/automation'
-    | '/services/cloud'
-    | '/services/enterprise'
-    | '/services/mobile-app'
-    | '/services/ui-ux'
-    | '/services/web-development'
     | '/work/$slug'
     | '/services/'
     | '/work/'
@@ -351,14 +271,6 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/review/$slug'
     | '/services/$slug'
-    | '/services/ai'
-    | '/services/api'
-    | '/services/automation'
-    | '/services/cloud'
-    | '/services/enterprise'
-    | '/services/mobile-app'
-    | '/services/ui-ux'
-    | '/services/web-development'
     | '/work/$slug'
     | '/services'
     | '/work'
@@ -384,14 +296,6 @@ export interface FileRouteTypes {
     | '/blog/$slug'
     | '/review/$slug'
     | '/services/$slug'
-    | '/services/ai'
-    | '/services/api'
-    | '/services/automation'
-    | '/services/cloud'
-    | '/services/enterprise'
-    | '/services/mobile-app'
-    | '/services/ui-ux'
-    | '/services/web-development'
     | '/work/$slug'
     | '/services/'
     | '/work/'
@@ -568,62 +472,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServicesSlugRouteImport
       parentRoute: typeof ServicesRoute
     }
-    '/services/ai': {
-      id: '/services/ai'
-      path: '/ai'
-      fullPath: '/services/ai'
-      preLoaderRoute: typeof ServicesAiRouteImport
-      parentRoute: typeof ServicesRoute
-    }
-    '/services/api': {
-      id: '/services/api'
-      path: '/api'
-      fullPath: '/services/api'
-      preLoaderRoute: typeof ServicesApiRouteImport
-      parentRoute: typeof ServicesRoute
-    }
-    '/services/automation': {
-      id: '/services/automation'
-      path: '/automation'
-      fullPath: '/services/automation'
-      preLoaderRoute: typeof ServicesAutomationRouteImport
-      parentRoute: typeof ServicesRoute
-    }
-    '/services/cloud': {
-      id: '/services/cloud'
-      path: '/cloud'
-      fullPath: '/services/cloud'
-      preLoaderRoute: typeof ServicesCloudRouteImport
-      parentRoute: typeof ServicesRoute
-    }
-    '/services/enterprise': {
-      id: '/services/enterprise'
-      path: '/enterprise'
-      fullPath: '/services/enterprise'
-      preLoaderRoute: typeof ServicesEnterpriseRouteImport
-      parentRoute: typeof ServicesRoute
-    }
-    '/services/mobile-app': {
-      id: '/services/mobile-app'
-      path: '/mobile-app'
-      fullPath: '/services/mobile-app'
-      preLoaderRoute: typeof ServicesMobileAppRouteImport
-      parentRoute: typeof ServicesRoute
-    }
-    '/services/ui-ux': {
-      id: '/services/ui-ux'
-      path: '/ui-ux'
-      fullPath: '/services/ui-ux'
-      preLoaderRoute: typeof ServicesUiUxRouteImport
-      parentRoute: typeof ServicesRoute
-    }
-    '/services/web-development': {
-      id: '/services/web-development'
-      path: '/web-development'
-      fullPath: '/services/web-development'
-      preLoaderRoute: typeof ServicesWebDevelopmentRouteImport
-      parentRoute: typeof ServicesRoute
-    }
     '/work/': {
       id: '/work/'
       path: '/work'
@@ -664,27 +512,11 @@ const ReviewRouteWithChildren =
 
 interface ServicesRouteChildren {
   ServicesSlugRoute: typeof ServicesSlugRoute
-  ServicesAiRoute: typeof ServicesAiRoute
-  ServicesApiRoute: typeof ServicesApiRoute
-  ServicesAutomationRoute: typeof ServicesAutomationRoute
-  ServicesCloudRoute: typeof ServicesCloudRoute
-  ServicesEnterpriseRoute: typeof ServicesEnterpriseRoute
-  ServicesMobileAppRoute: typeof ServicesMobileAppRoute
-  ServicesUiUxRoute: typeof ServicesUiUxRoute
-  ServicesWebDevelopmentRoute: typeof ServicesWebDevelopmentRoute
   ServicesIndexRoute: typeof ServicesIndexRoute
 }
 
 const ServicesRouteChildren: ServicesRouteChildren = {
   ServicesSlugRoute: ServicesSlugRoute,
-  ServicesAiRoute: ServicesAiRoute,
-  ServicesApiRoute: ServicesApiRoute,
-  ServicesAutomationRoute: ServicesAutomationRoute,
-  ServicesCloudRoute: ServicesCloudRoute,
-  ServicesEnterpriseRoute: ServicesEnterpriseRoute,
-  ServicesMobileAppRoute: ServicesMobileAppRoute,
-  ServicesUiUxRoute: ServicesUiUxRoute,
-  ServicesWebDevelopmentRoute: ServicesWebDevelopmentRoute,
   ServicesIndexRoute: ServicesIndexRoute,
 }
 

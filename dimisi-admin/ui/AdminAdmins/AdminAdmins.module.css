@@ -511,3 +511,9 @@
     grid-template-columns: 1fr;
   }
 }
+
+
+.designationText {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.84rem;
+}

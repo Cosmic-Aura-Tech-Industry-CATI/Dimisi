@@ -59,26 +59,53 @@ export function FloatingGeometry({ scrollRef, count = 22 }: FloatingGeometryProp
     });
   });
 
+  const geometries = useMemo(
+    () => ({
+      icosahedron: new THREE.IcosahedronGeometry(1, 0),
+      octahedron: new THREE.OctahedronGeometry(1, 0),
+      torus: new THREE.TorusGeometry(1, 0.12, 12, 40),
+    }),
+    [],
+  );
+
+  const materials = useMemo(
+    () => ({
+      standard: new THREE.MeshStandardMaterial({
+        color: "#1a1a20",
+        metalness: 1,
+        roughness: 0.3,
+        emissive: "#ff7a12",
+        emissiveIntensity: 0.12,
+        flatShading: true,
+      }),
+      torusEmissive: new THREE.MeshStandardMaterial({
+        color: "#1a1a20",
+        metalness: 1,
+        roughness: 0.3,
+        emissive: "#ff7a12",
+        emissiveIntensity: 0.5,
+        flatShading: true,
+      }),
+    }),
+    [],
+  );
+
   return (
     <group ref={group}>
       {shards.map((shard, i) => (
-        <mesh key={i} position={shard.position} scale={shard.scale}>
-          {shard.kind === 0 ? (
-            <icosahedronGeometry args={[1, 0]} />
-          ) : shard.kind === 1 ? (
-            <octahedronGeometry args={[1, 0]} />
-          ) : (
-            <torusGeometry args={[1, 0.12, 12, 40]} />
-          )}
-          <meshStandardMaterial
-            color="#1a1a20"
-            metalness={1}
-            roughness={0.3}
-            emissive="#ff7a12"
-            emissiveIntensity={shard.kind === 2 ? 0.5 : 0.12}
-            flatShading
-          />
-        </mesh>
+        <mesh
+          key={i}
+          position={shard.position}
+          scale={shard.scale}
+          geometry={
+            shard.kind === 0
+              ? geometries.icosahedron
+              : shard.kind === 1
+                ? geometries.octahedron
+                : geometries.torus
+          }
+          material={shard.kind === 2 ? materials.torusEmissive : materials.standard}
+        />
       ))}
     </group>
   );

@@ -328,57 +328,102 @@ export async function getPublicReviews({
   data?: {
     page?: number;
     pageSize?: number;
-    rating?: number;
+    type?: ReviewType | "all";
     reviewerType?: ReviewType | "all";
+    rating?: number;
     service?: string;
+    search?: string;
+    sort?: "newest" | "highest" | "lowest";
     sortBy?: "newest" | "highest" | "lowest";
   };
 } = {}): Promise<{
   reviews: PublicReview[];
+  featured: PublicReview[];
   stats: ReviewStats;
+  services: string[];
   total: number;
+  totalApproved: number;
+  hasMore: boolean;
   page: number;
   pageSize: number;
   totalPages: number;
 }> {
   const allReviews = getStoredReviews();
-  const approved = allReviews.filter((r) => r.status === "approved");
+  const approved = allReviews.filter((r) => r.status === "approved" || r.status === undefined);
   const stats = computeStats(approved);
+
+  // Extract unique services list
+  const services = Array.from(
+    new Set(approved.map((r) => r.service_name).filter(Boolean) as string[]),
+  ).sort();
+
+  // Extract featured reviews (or highest rated reviews if none explicitly featured)
+  let featuredList = approved.filter((r) => r.is_featured);
+  if (featuredList.length === 0) {
+    featuredList = approved.filter((r) => r.rating >= 5).slice(0, 3);
+  }
+  const featured = featuredList.map(toPublicReview);
 
   let filtered = [...approved];
 
+  // Rating filter
   if (data?.rating && data.rating >= 1 && data.rating <= 5) {
     filtered = filtered.filter((r) => Math.round(r.rating) === data.rating);
   }
 
-  if (data?.reviewerType && data.reviewerType !== "all") {
-    filtered = filtered.filter((r) => r.reviewer_type === data.reviewerType);
+  // Reviewer type filter (support both 'type' and 'reviewerType')
+  const targetType = data?.type || data?.reviewerType;
+  if (targetType && targetType !== "all") {
+    filtered = filtered.filter((r) => r.reviewer_type === targetType);
   }
 
+  // Service filter
   if (data?.service && data.service !== "all") {
     filtered = filtered.filter((r) => r.service_name === data.service);
   }
 
-  if (data?.sortBy === "highest") {
-    filtered.sort((a, b) => b.rating - a.rating);
-  } else if (data?.sortBy === "lowest") {
-    filtered.sort((a, b) => a.rating - b.rating);
-  } else {
-    filtered.sort((a, b) => new Date(b.submitted_at).getTime() - new Date(a.submitted_at).getTime());
+  // Search filter
+  if (data?.search && data.search.trim()) {
+    const q = data.search.toLowerCase().trim();
+    filtered = filtered.filter(
+      (r) =>
+        r.review_text?.toLowerCase().includes(q) ||
+        r.customer_name?.toLowerCase().includes(q) ||
+        r.role_or_title?.toLowerCase().includes(q) ||
+        r.service_name?.toLowerCase().includes(q) ||
+        r.employee_department?.toLowerCase().includes(q),
+    );
   }
 
-  const page = data?.page || 1;
-  const pageSize = data?.pageSize || 12;
+  // Sort order (support both 'sort' and 'sortBy')
+  const sortOrder = data?.sort || data?.sortBy || "newest";
+  if (sortOrder === "highest") {
+    filtered.sort((a, b) => b.rating - a.rating);
+  } else if (sortOrder === "lowest") {
+    filtered.sort((a, b) => a.rating - b.rating);
+  } else {
+    filtered.sort(
+      (a, b) => new Date(b.submitted_at || 0).getTime() - new Date(a.submitted_at || 0).getTime(),
+    );
+  }
+
+  const pageIdx = typeof data?.page === "number" ? Math.max(0, data.page) : 0;
+  const pageSize = typeof data?.pageSize === "number" ? Math.max(1, data.pageSize) : 9;
   const total = filtered.length;
   const totalPages = Math.ceil(total / pageSize) || 1;
-  const start = (page - 1) * pageSize;
+  const start = pageIdx * pageSize;
   const paginated = filtered.slice(start, start + pageSize).map(toPublicReview);
+  const hasMore = start + pageSize < total;
 
   return {
     reviews: paginated,
+    featured,
     stats,
+    services,
     total,
-    page,
+    totalApproved: approved.length,
+    hasMore,
+    page: pageIdx,
     pageSize,
     totalPages,
   };
