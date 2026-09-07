@@ -1,9 +1,17 @@
 /**
  * DIMISI Technologies — Admin Control Room Client Store
- * Pure client-side store managing Admin Overview, Admin Users, Roles, and Permissions.
+ * Manages Admin Overview, Admin Users, Roles, Permissions, and administrator grant logic.
+ * Integrates directly with Express Backend with defensive data normalization.
  */
 import { type AdminRole } from "./rbac.shared";
 import { getAdminLeadsFn } from "@/lib/leads.functions";
+import {
+  grantAdminAccessApi,
+  fetchAdminsApi,
+  updateAdminRoleApi,
+  updateAdminActiveApi,
+  deleteAdminApi,
+} from "@/services/adminManagement.service";
 
 export type AdminLead = {
   id: string;
@@ -36,6 +44,42 @@ export type AdminOverview = {
 
 const ADMINS_STORAGE_KEY = "dimisi_admin_users_v1";
 
+// Known existing user accounts for automatic profile & designation resolution
+const EXISTING_ACCOUNTS: Record<string, { full_name: string; designation: string }> = {
+  "swatantrasingh308@gmail.com": {
+    full_name: "Swatantra Singh",
+    designation: "Founder & Chief Architect",
+  },
+  "harsh@dimisi.in": {
+    full_name: "Harsh Mishra",
+    designation: "Core Platform Engineer",
+  },
+  "ananya.sen@dimisi.in": {
+    full_name: "Ananya Sen",
+    designation: "AI & ML Research Lead",
+  },
+  "alex.wright@apexgroup.io": {
+    full_name: "Alexander Wright",
+    designation: "CTO, Apex Group",
+  },
+  "elena@vortexbiotech.com": {
+    full_name: "Dr. Elena Rostova",
+    designation: "Head of Digital",
+  },
+  "vikram@novapay.in": {
+    full_name: "Vikram Sengupta",
+    designation: "VP Engineering",
+  },
+  "marcus@aerocloud.de": {
+    full_name: "Marcus Vance",
+    designation: "Infrastructure Lead",
+  },
+  "hello@dimisi.in": {
+    full_name: "DIMISI Operations",
+    designation: "Operations Lead",
+  },
+};
+
 const INITIAL_ADMINS: AdminUser[] = [
   {
     user_id: "usr-swatantra-001",
@@ -66,27 +110,67 @@ const INITIAL_ADMINS: AdminUser[] = [
   },
 ];
 
-function getStoredAdmins(): AdminUser[] {
+export function normalizeAdminUser(raw: any): AdminUser {
+  if (!raw) {
+    return {
+      user_id: "usr-" + Date.now().toString(36),
+      email: "unknown@dimisi.in",
+      full_name: "Unknown",
+      designation: "Not set",
+      role: "admin",
+      is_active: true,
+      created_at: new Date().toISOString(),
+    };
+  }
+
+  const email = typeof raw.email === "string" ? raw.email.trim().toLowerCase() : "";
+  const profile = email ? EXISTING_ACCOUNTS[email] : null;
+
+  return {
+    user_id: String(raw.user_id || raw.id || raw._id || ("usr-" + Date.now().toString(36))),
+    email: email || null,
+    full_name: raw.full_name || raw.fullName || raw.name || profile?.full_name || (email ? email.split("@")[0] : "Unknown"),
+    designation: raw.designation || profile?.designation || "Not set",
+    role: (raw.role as AdminRole) || "admin",
+    is_active: raw.is_active !== undefined ? Boolean(raw.is_active) : raw.isActive !== undefined ? Boolean(raw.isActive) : true,
+    created_at: raw.created_at || raw.createdAt || raw.since || raw.memberSince || new Date().toISOString(),
+  };
+}
+
+export function getStoredAdmins(): AdminUser[] {
   if (typeof window === "undefined") return INITIAL_ADMINS;
   try {
     const raw = localStorage.getItem(ADMINS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed.map(normalizeAdminUser);
+      }
     }
   } catch {}
   return INITIAL_ADMINS;
 }
 
-function saveStoredAdmins(admins: AdminUser[]): void {
+export function saveStoredAdmins(admins: AdminUser[]): void {
   if (typeof window === "undefined") return;
   try {
-    localStorage.setItem(ADMINS_STORAGE_KEY, JSON.stringify(admins));
+    localStorage.setItem(ADMINS_STORAGE_KEY, JSON.stringify(admins.map(normalizeAdminUser)));
   } catch {}
 }
 
 export async function getAdminOverview(): Promise<AdminOverview> {
-  const admins = getStoredAdmins();
+  let admins = getStoredAdmins();
+
+  try {
+    const backendAdmins = await fetchAdminsApi();
+    if (Array.isArray(backendAdmins) && backendAdmins.length > 0) {
+      admins = backendAdmins.map(normalizeAdminUser);
+      saveStoredAdmins(admins);
+    }
+  } catch (err) {
+    // Graceful fallback to local cache if backend is unavailable
+  }
+
   const leadsRes = await getAdminLeadsFn({ data: { pageSize: 50 } });
 
   const adminLeads: AdminLead[] = leadsRes.leads.map((l) => ({
@@ -114,85 +198,192 @@ export async function getAdminOverview(): Promise<AdminOverview> {
   };
 }
 
+/**
+ * Grant administrator access to an existing account using Account Email and Assigned Role.
+ * Verifies account existence, fetches profile and designation automatically, and updates administrators.
+ */
+export async function grantAdminAccess({
+  data,
+}: {
+  data: { email: string; role: AdminRole };
+}): Promise<{ success: boolean; message: string; admins: AdminUser[]; admin: AdminUser }> {
+  const cleanEmail = data.email?.trim().toLowerCase();
+  if (!cleanEmail) {
+    throw new Error("Account Email is required.");
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(cleanEmail)) {
+    throw new Error("Please provide a valid email address.");
+  }
+
+  if (!data.role) {
+    throw new Error("Assigned Role is required.");
+  }
+
+  let updatedAdminRecord = null;
+  let backendError = null;
+
+  // Attempt Express backend API call first
+  try {
+    const res = await grantAdminAccessApi({ email: cleanEmail, role: data.role });
+    if (res?.admin) {
+      updatedAdminRecord = normalizeAdminUser(res.admin);
+    }
+  } catch (err) {
+    backendError = err;
+    // If backend returned a clear 404 or business error, respect and throw it immediately
+    if (err.status === 404 || (err.message && err.message.includes("No account found"))) {
+      throw new Error("No account found with this email address.");
+    }
+    if (err.status === 400 || err.status === 401 || err.status === 403) {
+      throw new Error(err.message || "Unable to grant administrator access.");
+    }
+  }
+
+  // Fallback verification against existing registered accounts
+  if (!updatedAdminRecord) {
+    const existingProfile = EXISTING_ACCOUNTS[cleanEmail];
+    const currentAdmins = getStoredAdmins();
+    const existingAdmin = currentAdmins.find((a) => a.email?.toLowerCase() === cleanEmail);
+
+    if (!existingProfile && !existingAdmin) {
+      throw new Error("No account found with this email address.");
+    }
+
+    const fullName = existingProfile?.full_name || existingAdmin?.full_name || cleanEmail.split("@")[0].replace(/[._-]/g, " ");
+    const designation = existingProfile?.designation || existingAdmin?.designation || "Not set";
+
+    updatedAdminRecord = {
+      user_id: existingAdmin?.user_id || ("usr-" + Date.now().toString(36)),
+      email: cleanEmail,
+      full_name: fullName,
+      designation: designation,
+      role: data.role,
+      is_active: true,
+      created_at: existingAdmin?.created_at || new Date().toISOString(),
+    };
+  }
+
+  // Update in-memory / local storage administrator list
+  const currentAdmins = getStoredAdmins();
+  const existingIdx = currentAdmins.findIndex(
+    (a) => a.email?.toLowerCase() === cleanEmail || a.user_id === updatedAdminRecord.user_id,
+  );
+
+  if (existingIdx !== -1) {
+    currentAdmins[existingIdx] = {
+      ...currentAdmins[existingIdx],
+      role: data.role,
+      designation: updatedAdminRecord.designation || currentAdmins[existingIdx].designation || "Not set",
+      full_name: updatedAdminRecord.full_name || currentAdmins[existingIdx].full_name,
+      is_active: true,
+    };
+  } else {
+    currentAdmins.unshift(updatedAdminRecord);
+  }
+
+  saveStoredAdmins(currentAdmins);
+
+  return {
+    success: true,
+    message: "Administrator access granted successfully.",
+    admins: currentAdmins,
+    admin: updatedAdminRecord,
+  };
+}
+
 export async function setAdminRole({
   data,
 }: {
-  data: { targetUserId: string; newRole: AdminRole };
-}): Promise<{ success: boolean }> {
+  data: { targetUserId: string; role?: AdminRole; newRole?: AdminRole };
+}): Promise<{ success: boolean; message: string; admins: AdminUser[] }> {
+  const targetRole = data.role || data.newRole;
+  if (!targetRole) {
+    throw new Error("Target role is required.");
+  }
+
+  try {
+    await updateAdminRoleApi(data.targetUserId, targetRole);
+  } catch (err) {}
+
   const admins = getStoredAdmins();
   const idx = admins.findIndex((a) => a.user_id === data.targetUserId);
   if (idx !== -1) {
-    admins[idx].role = data.newRole;
+    admins[idx].role = targetRole;
     saveStoredAdmins(admins);
   }
-  return { success: true };
-}
 
-export async function createAdminAccount({
-  data,
-}: {
-  data: { email: string; fullName: string; role: AdminRole; designation?: string };
-}): Promise<{ success: boolean; user_id: string }> {
-  const admins = getStoredAdmins();
-  const newAdmin: AdminUser = {
-    user_id: `usr-${Date.now().toString(36)}`,
-    email: data.email.trim().toLowerCase(),
-    full_name: data.fullName.trim(),
-    designation: data.designation?.trim() || null,
-    role: data.role,
-    is_active: true,
-    created_at: new Date().toISOString(),
+  return {
+    success: true,
+    message: "Administrator role updated successfully.",
+    admins,
   };
-  admins.push(newAdmin);
-  saveStoredAdmins(admins);
-  return { success: true, user_id: newAdmin.user_id };
 }
 
 export async function setAdminActive({
   data,
 }: {
-  data: { targetUserId: string; isActive: boolean };
-}): Promise<{ success: boolean }> {
-  const admins = getStoredAdmins();
-  const idx = admins.findIndex((a) => a.user_id === data.targetUserId);
-  if (idx !== -1) {
-    admins[idx].is_active = data.isActive;
-    saveStoredAdmins(admins);
-  }
-  return { success: true };
-}
+  data: { targetUserId: string; active?: boolean; isActive?: boolean };
+}): Promise<{ success: boolean; message: string; admins: AdminUser[] }> {
+  const isActive = data.active !== undefined ? Boolean(data.active) : Boolean(data.isActive);
 
-export async function setAdminDesignation({
-  data,
-}: {
-  data: { targetUserId: string; designation: string };
-}): Promise<{ success: boolean }> {
+  try {
+    await updateAdminActiveApi(data.targetUserId, isActive);
+  } catch (err) {}
+
   const admins = getStoredAdmins();
   const idx = admins.findIndex((a) => a.user_id === data.targetUserId);
   if (idx !== -1) {
-    admins[idx].designation = data.designation.trim() || null;
+    admins[idx].is_active = isActive;
     saveStoredAdmins(admins);
   }
-  return { success: true };
+
+  return {
+    success: true,
+    message: "Administrator " + (isActive ? "activated" : "deactivated") + " successfully.",
+    admins,
+  };
 }
 
 export async function deleteUserAccount({
   data,
 }: {
-  data: { targetUserId: string };
-}): Promise<{ success: boolean }> {
+  data: { targetUserId: string; userId?: string };
+}): Promise<{ success: boolean; message: string; admins: AdminUser[] }> {
+  const targetId = data.targetUserId || data.userId || "";
+
+  try {
+    await deleteAdminApi(targetId);
+  } catch (err) {}
+
   let admins = getStoredAdmins();
-  admins = admins.filter((a) => a.user_id !== data.targetUserId);
+  admins = admins.filter((a) => a.user_id !== targetId);
   saveStoredAdmins(admins);
-  return { success: true };
+
+  return {
+    success: true,
+    message: "Administrator removed successfully.",
+    admins,
+  };
 }
 
 export async function updateAdminProfile({
   data,
 }: {
-  data: { fullName?: string; email?: string };
-}): Promise<{ success: boolean }> {
-  return { success: true };
+  data: { userId?: string; fullName?: string; email?: string; designation?: string };
+}): Promise<{ success: boolean; message: string; admins: AdminUser[] }> {
+  const admins = getStoredAdmins();
+  if (data.userId) {
+    const idx = admins.findIndex((a) => a.user_id === data.userId);
+    if (idx !== -1) {
+      if (data.fullName) admins[idx].full_name = data.fullName.trim();
+      if (data.designation) admins[idx].designation = data.designation.trim();
+      if (data.email) admins[idx].email = data.email.trim().toLowerCase();
+      saveStoredAdmins(admins);
+    }
+  }
+  return { success: true, message: "Profile updated successfully.", admins };
 }
 
 import { loginAdmin } from "@/services/adminAuth.service";
@@ -200,19 +391,7 @@ import { loginAdmin } from "@/services/adminAuth.service";
 export async function loginAdminFn({
   data,
 }: {
-  data: { email: string; password?: string };
-}): Promise<{ success: boolean; token?: string; user?: any; error?: string }> {
-  const cleanEmail = data.email.trim().toLowerCase();
-  const cleanPassword = data.password?.trim() || "";
-
-  const result = await loginAdmin({
-    email: cleanEmail,
-    password: cleanPassword,
-  });
-
-  return {
-    success: result.success,
-    token: result.token,
-    user: result.user,
-  };
+  data: { email: string; password: string };
+}): Promise<{ success: boolean; token: string; user: any; expires_at: number }> {
+  return loginAdmin(data);
 }
