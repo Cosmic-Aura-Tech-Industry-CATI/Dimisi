@@ -45,8 +45,21 @@ export async function apiRequest<T = any>(
     Accept: "application/json",
   };
 
-  if (token) {
-    defaultHeaders["Authorization"] = `Bearer ${token}`;
+  let authToken = token;
+  if (!authToken && typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("dimisi_admin_session");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.token) {
+          authToken = parsed.token;
+        }
+      }
+    } catch {}
+  }
+
+  if (authToken) {
+    defaultHeaders["Authorization"] = `Bearer ${authToken}`;
   }
 
   const controller = new AbortController();

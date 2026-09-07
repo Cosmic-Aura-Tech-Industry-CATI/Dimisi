@@ -123,7 +123,7 @@ export function logoutAdmin(): void {
  * Retrieve current active admin session if not expired.
  */
 export function getStoredAdminSession(): AdminAuthSession | null {
-  if (typeof window !== "undefined") return null;
+  if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(ADMIN_SESSION_KEY);
     if (!raw) return null;
