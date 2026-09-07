@@ -23,7 +23,6 @@ import { AdminLeads } from "../AdminLeads/AdminLeads";
 import { canAccessTab, getRoleMeta, type AdminRole } from "../../lib/rbac.shared";
 import {
   getAdminOverview,
-  updateAdminProfile,
   type AdminOverview,
 } from "../../server/admin.functions";
 import {
@@ -71,7 +70,6 @@ export function AdminPanel() {
   const loadWorkData = getAdminWorkData;
   const loadCareersData = getAdminCareersData;
   const loadBlogData = getAdminBlogData;
-  const saveProfile = updateAdminProfile;
 
   const [data, setData] = useState<AdminOverview | null>(null);
   const [reviewsData, setReviewsData] = useState<AdminDashboardData | null>(null);
@@ -336,13 +334,6 @@ export function AdminPanel() {
             designation={self?.designation ?? null}
             role={userRole}
             memberSince={self?.created_at}
-            onSave={async ({ fullName, designation }) => {
-              const res = await saveProfile({
-                data: { userId: data.selfId, fullName, designation },
-              });
-              setData((prev) => (prev ? { ...prev, admins: res.admins } : prev));
-              return res.message;
-            }}
           />
         }
       >
