@@ -1,5 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { AdminPanel } from "@admin/ui/AdminPanel/AdminPanel";
+import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/dimisi-admin")({
   head: () => ({
@@ -20,5 +19,5 @@ export const Route = createFileRoute("/dimisi-admin")({
       { name: "twitter:card", content: "summary_large_image" },
     ],
   }),
-  component: AdminPanel,
+  component: lazyRouteComponent(() => import("@admin/ui/AdminPanel/AdminPanel"), "AdminPanel"),
 });

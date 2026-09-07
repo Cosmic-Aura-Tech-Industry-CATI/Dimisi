@@ -8,7 +8,7 @@ import {
   HeadContent,
   Scripts,
 } from "@tanstack/react-router";
-import { useCallback, useEffect, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useState, lazy, Suspense, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportAppError } from "../lib/app-error-reporting";
@@ -17,10 +17,15 @@ import { Footer } from "@/components/layout/Footer/Footer";
 import { RobotGuide } from "@/components/robot/RobotGuide/RobotGuide";
 import { GrainOverlay } from "@/components/effects/GrainOverlay/GrainOverlay";
 import { ScrollProgress } from "@/components/effects/ScrollProgress/ScrollProgress";
-import { CinematicStage } from "@/components/three/CinematicStage/CinematicStage";
 import { VideoPreloader } from "@/components/loader/VideoPreloader/VideoPreloader";
 import { VisitorTracker } from "@/components/VisitorTracker/VisitorTracker";
 import { useSmoothScroll } from "@/hooks/useSmoothScroll";
+
+const CinematicStage = lazy(() =>
+  import("@/components/three/CinematicStage/CinematicStage").then((m) => ({
+    default: m.CinematicStage,
+  })),
+);
 
 function NotFoundComponent() {
   return (
@@ -207,7 +212,11 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <VisitorTracker />
       {intro ? <VideoPreloader onDone={finishIntro} /> : null}
-      {intro ? null : <CinematicStage />}
+      {intro ? null : (
+        <Suspense fallback={null}>
+          <CinematicStage />
+        </Suspense>
+      )}
       <Navbar />
       <ScrollProgress />
       <main id="content">

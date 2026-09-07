@@ -173,6 +173,7 @@ export function VideoPreloader({ onDone }: { onDone: () => void }) {
           poster={poster.url}
           autoPlay
           playsInline
+          muted={muted}
           preload="auto"
           onEnded={finish}
           onStalled={onStall}
