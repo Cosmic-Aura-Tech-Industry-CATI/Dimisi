@@ -18,6 +18,7 @@ import { AdminEvents } from "../AdminEvents/AdminEvents";
 import { AdminCampaigns } from "../AdminCampaigns/AdminCampaigns";
 import { AdminReports } from "../AdminReports/AdminReports";
 import { AdminAnalytics } from "../AdminAnalytics/AdminAnalytics";
+import { AdminLogs } from "../AdminLogs/AdminLogs";
 import { AdminSettings } from "../AdminSettings/AdminSettings";
 import { AdminLeads } from "../AdminLeads/AdminLeads";
 import { canAccessTab, getRoleMeta, type AdminRole } from "../../lib/rbac.shared";
@@ -127,7 +128,15 @@ export function AdminPanel() {
   });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlTab = params.get("tab") as Tab;
+      if (urlTab) return urlTab;
+      if (window.location.pathname.endsWith("/logs")) return "logs";
+    }
+    return "overview";
+  });
 
   const refreshReviews = useCallback(() => {
     loadReviewsData()
@@ -448,6 +457,11 @@ export function AdminPanel() {
             {/* ANALYTICS TAB */}
             {tab === "analytics" && (
               <AdminAnalytics data={reviewsData} />
+            )}
+
+            {/* ADMIN LOGS TAB */}
+            {tab === "logs" && (
+              <AdminLogs currentUserRole={userRole} />
             )}
 
             {/* SETTINGS TAB */}

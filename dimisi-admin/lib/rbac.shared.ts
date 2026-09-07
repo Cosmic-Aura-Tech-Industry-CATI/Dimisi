@@ -106,11 +106,12 @@ export type Permission =
   // Campaigns & QR
   | "campaigns.view"
   | "campaigns.manage"
-  // Analytics, Notifications, Leads, Settings
+  // Analytics, Notifications, Leads, Settings, Logs
   | "analytics.view"
   | "notifications.manage"
   | "leads.view"
-  | "settings.manage";
+  | "settings.manage"
+  | "logs.view";
 
 /** Mapping of Roles to their authorized Permission sets */
 export const ROLE_PERMISSIONS: Record<AdminRole, Set<Permission>> = {
@@ -154,6 +155,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Set<Permission>> = {
     "notifications.manage",
     "leads.view",
     "settings.manage",
+    "logs.view",
   ]),
 
   admin: new Set<Permission>([
@@ -191,6 +193,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Set<Permission>> = {
     "analytics.view",
     "notifications.manage",
     "leads.view",
+    "logs.view",
   ]),
 
   editor: new Set<Permission>([
@@ -232,6 +235,7 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Set<Permission>> = {
     "campaigns.view",
     "analytics.view",
     "leads.view",
+    "logs.view",
   ]),
 };
 
@@ -247,6 +251,7 @@ export const TAB_PERMISSION_MAP: Record<string, Permission> = {
   campaigns: "campaigns.view",
   reports: "moderation.view",
   analytics: "analytics.view",
+  logs: "logs.view",
   settings: "notifications.manage",
   leads: "leads.view",
   admins: "admins.view",
