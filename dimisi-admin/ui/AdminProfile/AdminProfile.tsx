@@ -1,29 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Shield } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { type AdminRole, getRoleMeta } from "../../lib/rbac.shared";
 import styles from "./AdminProfile.module.css";
-
-export const DESIGNATIONS = [
-  "CEO",
-  "CTO",
-  "CFO",
-  "COO",
-  "CMO",
-  "Product Manager",
-  "Frontend Engineer",
-  "Backend Engineer",
-  "Full Stack Engineer",
-  "UI/UX Designer",
-  "DevOps Engineer",
-  "QA Engineer",
-  "HR Manager",
-  "Intern",
-];
 
 function initials(name: string | null | undefined, email: string | null | undefined) {
   const src = (name ?? email ?? "A").trim();
   const parts = src.split(/[\s.@_-]+/).filter(Boolean);
   return ((parts[0]?.[0] ?? "A") + (parts[1]?.[0] ?? "")).toUpperCase();
+}
+
+export interface AdminProfileProps {
+  email: string | null | undefined;
+  fullName: string | null;
+  designation: string | null;
+  role?: AdminRole | undefined;
+  userId: string;
+  memberSince?: string | undefined;
 }
 
 /** Topbar admin identity chip + detail popover with role awareness. */
@@ -34,28 +26,9 @@ export function AdminProfile({
   role = "super_admin",
   userId,
   memberSince,
-  onSave,
-}: {
-  email: string | null | undefined;
-  fullName: string | null;
-  designation: string | null;
-  role?: AdminRole | undefined;
-  userId: string;
-  memberSince?: string | undefined;
-  onSave: (values: { fullName: string; designation: string }) => Promise<string>;
-}) {
+}: AdminProfileProps) {
   const [open, setOpen] = useState(false);
-  const [name, setName] = useState(fullName ?? "");
-  const [desig, setDesig] = useState(designation ?? "");
-  const [busy, setBusy] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [err, setErr] = useState<string | null>(null);
   const box = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    setName(fullName ?? "");
-    setDesig(designation ?? "");
-  }, [fullName, designation]);
 
   useEffect(() => {
     if (!open) return;
@@ -72,19 +45,6 @@ export function AdminProfile({
       document.removeEventListener("keydown", onKey);
     };
   }, [open]);
-
-  async function save() {
-    setBusy(true);
-    setMsg(null);
-    setErr(null);
-    try {
-      setMsg(await onSave({ fullName: name, designation: desig }));
-    } catch (e: unknown) {
-      setErr(e instanceof Error ? e.message : "Could not save.");
-    } finally {
-      setBusy(false);
-    }
-  }
 
   const roleMeta = getRoleMeta(role);
 
@@ -109,7 +69,7 @@ export function AdminProfile({
               {initials(fullName, email)}
             </span>
             <div>
-              <p className={styles.name}>{fullName || email || "DIMISI Admin"}</p>
+              <p className={styles.name}>{fullName || "DIMISI Admin"}</p>
               <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", marginTop: "0.2rem" }}>
                 <span
                   style={{
@@ -154,34 +114,6 @@ export function AdminProfile({
             <div className={styles.row}>
               <span className={styles.key}>Account ID</span>
               <span className={styles.val}>{userId.slice(0, 8)}…</span>
-            </div>
-          </div>
-
-          <div className={styles.form}>
-            <input
-              className={styles.input}
-              value={name}
-              placeholder="Full name"
-              onChange={(e) => setName(e.target.value)}
-            />
-            <select
-              className={styles.select}
-              value={desig}
-              onChange={(e) => setDesig(e.target.value)}
-            >
-              <option value="">Select designation…</option>
-              {DESIGNATIONS.map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-            <div className={styles.actions}>
-              <button type="button" className={styles.save} disabled={busy} onClick={() => void save()}>
-                {busy ? "Saving…" : "Save details"}
-              </button>
-              {msg ? <p className={styles.msg}>{msg}</p> : null}
-              {err ? <p className={styles.err}>{err}</p> : null}
             </div>
           </div>
         </div>
