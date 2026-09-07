@@ -15,6 +15,7 @@ import {
   FolderGit2,
   Briefcase,
   BookOpen,
+  ScrollText,
 } from "lucide-react";
 import { type AdminRole, canAccessTab } from "../../lib/rbac.shared";
 import styles from "./AdminSidebar.module.css";
@@ -30,6 +31,7 @@ export type AdminTab =
   | "campaigns"
   | "reports"
   | "analytics"
+  | "logs"
   | "settings"
   | "leads"
   | "admins";
@@ -50,6 +52,7 @@ export const ADMIN_NAV: {
   { id: "campaigns", label: "Campaigns & QR", icon: QrCode },
   { id: "reports", label: "Moderation Queue", icon: Flag, badgeKey: "openReports" },
   { id: "analytics", label: "Analytics", icon: TrendingUp },
+  { id: "logs", label: "Admin Logs", icon: ScrollText },
   { id: "settings", label: "Notifications", icon: Settings },
   { id: "leads", label: "Leads", icon: Users },
   { id: "admins", label: "Admins", icon: ShieldCheck },
