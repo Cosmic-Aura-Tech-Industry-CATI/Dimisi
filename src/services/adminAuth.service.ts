@@ -15,9 +15,16 @@ export interface AdminLoginCredentials {
 export interface BackendLoginResponse {
   success: boolean;
   message: string;
-  data: {
-    token: string;
+  data?: {
+    token?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    user?: any;
   };
+  token?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  user?: any;
 }
 
 export interface AdminAuthSession {
@@ -70,22 +77,42 @@ export async function loginAdmin(
     }),
   });
 
-  const token = response?.data?.token;
+  const token =
+    response?.data?.token ||
+    response?.data?.accessToken ||
+    response?.token ||
+    response?.accessToken;
+
   if (!token) {
     throw new Error("Authentication response did not contain a valid access token.");
   }
 
-  // Decode JWT payload to extract user ID & expiration
+  // Extract user details from backend response or decode JWT payload
   const payload = decodeJwtPayload(token);
-  const userId = payload?.id || `admin-${Date.now()}`;
+  const backendPanelUser = response?.data?.user || response?.user;
+  const backendBaseUser = backendPanelUser?.user;
+
+  const userId =
+    (typeof backendBaseUser === "object" ? backendBaseUser?._id : backendBaseUser) ||
+    backendPanelUser?._id ||
+    payload?.id ||
+    `admin-${Date.now()}`;
+
+  const userName =
+    (typeof backendBaseUser === "object" ? backendBaseUser?.name : null) ||
+    backendPanelUser?.name ||
+    cleanEmail.split("@")[0].replace(/[._-]/g, " ");
+
+  const adminRole = backendPanelUser?.role || "super_admin";
+
   const expiresAt = payload?.exp ? payload.exp * 1000 : Date.now() + 7 * 24 * 60 * 60 * 1000;
 
   const user: AuthUser = {
     id: userId,
     email: cleanEmail,
     user_metadata: {
-      full_name: cleanEmail.split("@")[0].replace(/[._-]/g, " "),
-      admin_role: "super_admin",
+      full_name: userName,
+      admin_role: adminRole,
     },
   };
 
