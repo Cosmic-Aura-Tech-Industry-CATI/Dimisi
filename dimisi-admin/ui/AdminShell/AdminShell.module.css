@@ -2,19 +2,69 @@
   position: relative;
   z-index: 1;
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 100dvh;
+  max-height: 100dvh;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
   background: transparent;
 }
 
 .main {
   flex: 1;
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  max-height: 100%;
+  display: flex;
+  flex-direction: column;
   margin-left: 15.5rem;
+  overflow: hidden;
 }
 
 .content {
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  width: 100%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
   padding: clamp(1.2rem, 3vw, 2rem);
+  box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 171, 46, 0.4) transparent;
+}
+
+.content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.content::-webkit-scrollbar-thumb {
+  background: rgba(255, 171, 46, 0.3);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 171, 46, 0.6);
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.contentInner {
+  width: 100%;
   max-width: 1180px;
+  min-width: 0;
+  padding-bottom: 3.5rem;
 }
 
 @media (max-width: 900px) {
@@ -22,3 +72,4 @@
     margin-left: 0;
   }
 }
+

@@ -7,9 +7,79 @@ import {
   type ProjectItem,
   type ProjectInput,
   type PublicWorkPayload,
+  type WorkCategoryItem,
+  type WorkCategoryInput,
   slugifyProject,
+  slugifyWorkCategory,
   validateProjectInput,
+  validateWorkCategoryInput,
 } from "./work.shared";
+
+export const INITIAL_WORK_CATEGORIES: WorkCategoryItem[] = [
+  {
+    id: "cat-travel",
+    name: "Travel",
+    slug: "travel",
+    description: "Custom Travel Booking & Itinerary Platforms for Expeditions and Tours",
+    status: "active",
+    order_index: 1,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-social",
+    name: "Social Platform",
+    slug: "social-platform",
+    description: "Anonymous Polling, Real-Time Community Chats & Unfiltered Opinion Networks",
+    status: "active",
+    order_index: 2,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-home-services",
+    name: "Home Services",
+    slug: "home-services",
+    description: "On-Demand Home Services Booking Engines & Verified Trade Portals",
+    status: "active",
+    order_index: 3,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-conference",
+    name: "Conference",
+    slug: "conference",
+    description: "Academic Research & Registration Portals for Summits and Events",
+    status: "active",
+    order_index: 4,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-saas",
+    name: "SaaS Platform",
+    slug: "saas-platform",
+    description: "Cloud-Native Multi-Tenant SaaS & Enterprise Software",
+    status: "active",
+    order_index: 5,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-webapp",
+    name: "Web Application",
+    slug: "web-application",
+    description: "Bespoke Full-Stack Web Applications, Dashboards & Portals",
+    status: "active",
+    order_index: 6,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-ai-autonomy",
+    name: "AI & Autonomy",
+    slug: "ai-autonomy",
+    description: "Autonomous AI Agent Workflows, Neural Pipelines & Perception Systems",
+    status: "active",
+    order_index: 7,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+];
 
 const INITIAL_PROJECTS: ProjectItem[] = [
   {
@@ -200,9 +270,97 @@ const INITIAL_PROJECTS: ProjectItem[] = [
 
 class MemoryWorkStore {
   private projects: Map<string, ProjectItem> = new Map();
+  private categoryItems: Map<string, WorkCategoryItem> = new Map(
+    INITIAL_WORK_CATEGORIES.map((c) => [c.id, { ...c }]),
+  );
 
   constructor() {
     INITIAL_PROJECTS.forEach((p) => this.projects.set(p.id, { ...p }));
+  }
+
+  public getCategoryItems(): WorkCategoryItem[] {
+    return Array.from(this.categoryItems.values()).sort((a, b) => a.order_index - b.order_index);
+  }
+
+  public getActiveCategories(): WorkCategoryItem[] {
+    return this.getCategoryItems().filter((c) => c.status === "active");
+  }
+
+  public getCategoryNames(): string[] {
+    const list = this.getActiveCategories().map((c) => c.name);
+    return ["All", ...list];
+  }
+
+  public getCategoryProjectCounts(): Record<string, number> {
+    const counts: Record<string, number> = {};
+    const projectsList = Array.from(this.projects.values());
+    for (const cat of this.categoryItems.values()) {
+      const catLower = cat.name.trim().toLowerCase();
+      const count = projectsList.filter((p) => {
+        const pCat = p.category.trim().toLowerCase();
+        return pCat === catLower || pCat.startsWith(catLower) || pCat.includes(catLower);
+      }).length;
+      counts[cat.name] = count;
+      counts[catLower] = count;
+    }
+    return counts;
+  }
+
+  public getCategoryProjectCount(categoryName: string): number {
+    const clean = categoryName.trim().toLowerCase();
+    return Array.from(this.projects.values()).filter((p) => {
+      const pCat = p.category.trim().toLowerCase();
+      return pCat === clean || pCat.startsWith(clean) || pCat.includes(clean);
+    }).length;
+  }
+
+  public saveCategory(input: WorkCategoryInput): WorkCategoryItem {
+    const validation = validateWorkCategoryInput(input);
+    if (!validation.valid) {
+      throw new Error(validation.error || "Invalid category input.");
+    }
+
+    const now = new Date().toISOString();
+    const id = input.id || `cat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const slug = input.slug?.trim() || slugifyWorkCategory(input.name);
+    const existing = this.categoryItems.get(id);
+
+    const oldName = existing?.name;
+    const newName = input.name.trim();
+
+    const item: WorkCategoryItem = {
+      id,
+      name: newName,
+      slug,
+      description: input.description?.trim() || (existing ? existing.description : undefined),
+      status: input.status ?? (existing ? existing.status : "active"),
+      order_index: input.order_index ?? (existing ? existing.order_index : this.categoryItems.size + 1),
+      created_at: existing?.created_at || now,
+      updated_at: now,
+    };
+
+    this.categoryItems.set(id, item);
+
+    // If renamed, cascade rename to projects using this category
+    if (oldName && oldName.toLowerCase() !== newName.toLowerCase()) {
+      for (const [pId, p] of this.projects.entries()) {
+        if (p.category.toLowerCase().includes(oldName.toLowerCase())) {
+          const updatedCat = p.category.replace(new RegExp(oldName, "i"), newName);
+          this.projects.set(pId, { ...p, category: updatedCat, updated_at: now });
+        }
+      }
+    }
+
+    return item;
+  }
+
+  public deleteCategory(id: string): { success: boolean; projectCount: number; category?: WorkCategoryItem } {
+    const cat = this.categoryItems.get(id);
+    if (!cat) return { success: false, projectCount: 0 };
+
+    const projectCount = this.getCategoryProjectCount(cat.name);
+    this.categoryItems.delete(id);
+    return { success: true, projectCount, category: cat };
   }
 
   public getPublicPayload(): PublicWorkPayload {
@@ -212,9 +370,13 @@ class MemoryWorkStore {
 
     const totalWork = list.filter((p) => p.type === "work").length;
     const totalProducts = list.filter((p) => p.type === "product").length;
+    const categories = this.getCategoryNames();
+    const categoryItems = this.getCategoryItems();
 
     return {
       projects: list,
+      categories,
+      categoryItems,
       stats: {
         totalProjects: list.length,
         totalWork,
@@ -295,3 +457,4 @@ export const workStore = globalForWork.__dimisi_work_store__ || new MemoryWorkSt
 if (process.env.NODE_ENV !== "production") {
   globalForWork.__dimisi_work_store__ = workStore;
 }
+

@@ -251,7 +251,7 @@ export function AdminAdmins({
           </h3>
         </div>
 
-        <div className={shared.tableWrap}>
+        <div className={styles.tableWrap}>
           <table className={shared.table}>
             <thead>
               <tr>

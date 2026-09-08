@@ -500,16 +500,16 @@
 
 .modalContent {
   position: relative;
-  width: 100%;
-  max-width: 780px;
-  max-height: 90vh;
-  overflow-y: auto;
+  width: min(94vw, 840px);
+  max-width: calc(100vw - 2rem);
+  max-height: 92vh;
   border-radius: 20px;
   background: #11131c;
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 24px 70px rgba(0, 0, 0, 0.9);
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .modalHeader {
@@ -518,6 +518,7 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  flex-shrink: 0;
 }
 
 .modalTitle {
@@ -546,28 +547,49 @@
   align-items: center;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   background: rgba(0, 0, 0, 0.35);
-  padding: 0.75rem 1.5rem;
-  gap: 0.65rem;
+  padding: 0.75rem 1.25rem;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 100%;
   overflow-x: auto;
-  scrollbar-width: none;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 171, 46, 0.35) transparent;
+  flex-shrink: 0;
 }
 
 .modalTabsBar::-webkit-scrollbar {
-  display: none;
+  height: 4px;
+}
+
+.modalTabsBar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modalTabsBar::-webkit-scrollbar-thumb {
+  background: rgba(255, 171, 46, 0.35);
+  border-radius: 9999px;
+}
+
+.modalTabsBar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 171, 46, 0.65);
 }
 
 .modalTabBtn {
   font-family: var(--font-mono, monospace);
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 600;
   line-height: 1.4;
-  padding: 0.5rem 1rem;
+  padding: 0.45rem 0.8rem;
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   color: rgba(255, 255, 255, 0.75);
   cursor: pointer;
   white-space: nowrap;
+  flex-shrink: 0;
   transition: all 0.2s ease;
 }
 
@@ -694,9 +716,31 @@
 }
 
 @media (max-width: 768px) {
+  .modalBackdrop {
+    padding: 0.75rem;
+  }
+  .modalContent {
+    max-width: 100%;
+    max-height: 96vh;
+    border-radius: 14px;
+  }
+  .modalHeader {
+    padding: 1rem 1.25rem;
+  }
+  .modalTabsBar {
+    padding: 0.55rem 1rem;
+    gap: 0.4rem;
+  }
+  .modalTabBtn {
+    font-size: 0.72rem;
+    padding: 0.4rem 0.65rem;
+  }
   .formGrid2,
   .formGrid3,
   .benefitsGridEditor {
     grid-template-columns: 1fr;
+  }
+  .modalFooter {
+    padding: 1rem 1.25rem;
   }
 }

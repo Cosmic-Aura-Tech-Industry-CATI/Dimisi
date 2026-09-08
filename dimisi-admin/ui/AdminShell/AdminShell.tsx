@@ -29,7 +29,7 @@ export function AdminShell({
   const [open, setOpen] = useState(false);
 
   return (
-    <div className={styles.shell}>
+    <div className={styles.shell} data-lenis-prevent>
       <AdminSidebar
         tab={tab}
         onTab={onTab}
@@ -47,7 +47,11 @@ export function AdminShell({
           onToggleNav={() => setOpen((v) => !v)}
           profile={profile}
         />
-        <div className={styles.content}>{children}</div>
+        <main className={styles.content} data-lenis-prevent>
+          <div className={styles.contentInner}>
+            {children}
+          </div>
+        </main>
       </div>
     </div>
   );

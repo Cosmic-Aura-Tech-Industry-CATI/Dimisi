@@ -173,7 +173,7 @@ export async function getAdminLeadsFn({
   const newToday = allLeads.filter((l) => l.status === "new").length;
   const contactedCount = allLeads.filter((l) => l.status === "contacted").length;
   const convertedCount = allLeads.filter((l) => l.status === "converted").length;
-  const conversionRate = totalLeads > 0 ? (convertedCount / totalLeads) * 100 : 0;
+  const conversionRate = totalLeads > 0 ? Math.round((convertedCount / totalLeads) * 10000) / 100 : 0;
 
   const page = data?.page || 1;
   const pageSize = data?.pageSize || 20;

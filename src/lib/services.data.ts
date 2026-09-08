@@ -7,8 +7,11 @@ import {
   type ServiceInput,
   type IndustrySector,
   type IndustryInput,
+  type ServiceCategoryItem,
+  type ServiceCategoryInput,
   type PublicServicesPayload,
   slugifyService,
+  slugifyServiceCategory,
 } from "./services.shared";
 
 const SEED_SERVICES: CompanyService[] = [
@@ -1466,9 +1469,123 @@ const SEED_INDUSTRIES: IndustrySector[] = [
   },
 ];
 
+export const INITIAL_SERVICE_CATEGORIES: ServiceCategoryItem[] = [
+  {
+    id: "scat-full-stack",
+    name: "Full-Stack Engineering",
+    slug: "full-stack-engineering",
+    description: "Enterprise web platforms, portals, and scalable cloud-native web architectures.",
+    status: "active",
+    order_index: 1,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "scat-mobile",
+    name: "Mobile Engineering",
+    slug: "mobile-engineering",
+    description: "Native and cross-platform mobile apps for iOS and Android with offline-first capabilities.",
+    status: "active",
+    order_index: 2,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "scat-autonomous",
+    name: "Autonomous Systems",
+    slug: "autonomous-systems",
+    description: "Agentic AI workflows, LLM integrations, RAG architectures, and predictive machine learning.",
+    status: "active",
+    order_index: 3,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "scat-design",
+    name: "Design & Creative Technology",
+    slug: "design-creative-technology",
+    description: "Human-centered UI/UX design, interactive motion systems, and multi-device design systems.",
+    status: "active",
+    order_index: 4,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "scat-custom-software",
+    name: "Custom Software",
+    slug: "custom-software",
+    description: "Bespoke enterprise desktop, embedded, and specialized software systems.",
+    status: "active",
+    order_index: 5,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "scat-infrastructure",
+    name: "Infrastructure & Cloud",
+    slug: "infrastructure-cloud",
+    description: "Multi-cloud DevOps, Kubernetes clustering, CI/CD pipelines, and high-availability systems.",
+    status: "active",
+    order_index: 6,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "scat-advisory",
+    name: "Strategic Advisory",
+    slug: "strategic-advisory",
+    description: "Technology roadmapping, Fractional CTO advisory, and technical due diligence.",
+    status: "active",
+    order_index: 7,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "scat-support",
+    name: "Support & Uptime",
+    slug: "support-uptime",
+    description: "24/7 SLA maintenance, real-time security monitoring, and proactive incident response.",
+    status: "active",
+    order_index: 8,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "scat-growth",
+    name: "Growth & Search",
+    slug: "growth-search",
+    description: "Data-driven SEO engineering, programmatic landing pages, and conversion rate optimization.",
+    status: "active",
+    order_index: 9,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "scat-digital-enablement",
+    name: "Digital Enablement",
+    slug: "digital-enablement",
+    description: "Legacy system modernization, enterprise automation, and workflow digitisation.",
+    status: "active",
+    order_index: 10,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+  {
+    id: "scat-ventures",
+    name: "Ventures & Acceleration",
+    slug: "ventures-acceleration",
+    description: "Rapid MVP prototyping, venture co-building, and investor-ready technical prototypes.",
+    status: "active",
+    order_index: 11,
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  },
+];
+
 class MemoryServicesStore {
   private _services: CompanyService[] = [...SEED_SERVICES];
   private _industries: IndustrySector[] = [...SEED_INDUSTRIES];
+  private _categories: ServiceCategoryItem[] = [...INITIAL_SERVICE_CATEGORIES];
 
   get services(): CompanyService[] {
     return [...this._services].sort((a, b) => a.order_index - b.order_index);
@@ -1478,16 +1595,108 @@ class MemoryServicesStore {
     return [...this._industries].sort((a, b) => a.order_index - b.order_index);
   }
 
+  get categoryItems(): ServiceCategoryItem[] {
+    return [...this._categories].sort((a, b) => a.order_index - b.order_index);
+  }
+
+  get categories(): string[] {
+    return this._categories
+      .filter((c) => c.status === "active")
+      .sort((a, b) => a.order_index - b.order_index)
+      .map((c) => c.name);
+  }
+
+  getCategoryItems(): ServiceCategoryItem[] {
+    return this.categoryItems;
+  }
+
+  getActiveCategories(): ServiceCategoryItem[] {
+    return this._categories
+      .filter((c) => c.status === "active")
+      .sort((a, b) => a.order_index - b.order_index);
+  }
+
+  getCategoryServiceCounts(): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const s of this._services) {
+      const cat = s.category?.trim();
+      if (cat) {
+        counts[cat] = (counts[cat] || 0) + 1;
+        counts[cat.toLowerCase()] = (counts[cat.toLowerCase()] || 0) + 1;
+      }
+    }
+    return counts;
+  }
+
+  saveCategory(input: ServiceCategoryInput): ServiceCategoryItem {
+    const now = new Date().toISOString();
+    const name = input.name.trim();
+    const slug = input.slug?.trim() ? slugifyServiceCategory(input.slug) : slugifyServiceCategory(name);
+
+    if (input.id) {
+      const idx = this._categories.findIndex((c) => c.id === input.id);
+      if (idx !== -1) {
+        const existing = this._categories[idx];
+        const oldName = existing.name;
+        const updated: ServiceCategoryItem = {
+          ...existing,
+          name,
+          slug,
+          description: input.description ?? existing.description,
+          status: input.status ?? existing.status,
+          order_index: typeof input.order_index === "number" ? input.order_index : existing.order_index,
+          updated_at: now,
+        };
+        this._categories[idx] = updated;
+
+        // Cascade rename across services if category name changed
+        if (oldName !== name) {
+          this._services = this._services.map((s) => {
+            if (s.category === oldName) {
+              return { ...s, category: name, updated_at: now };
+            }
+            return s;
+          });
+        }
+
+        return updated;
+      }
+    }
+
+    const newCategory: ServiceCategoryItem = {
+      id: `scat-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      name,
+      slug,
+      description: input.description || "",
+      status: input.status || "active",
+      order_index: typeof input.order_index === "number" ? input.order_index : this._categories.length + 1,
+      created_at: now,
+      updated_at: now,
+    };
+
+    this._categories.push(newCategory);
+    return newCategory;
+  }
+
+  deleteCategory(id: string): boolean {
+    const initLen = this._categories.length;
+    this._categories = this._categories.filter((c) => c.id !== id);
+    return this._categories.length < initLen;
+  }
+
   getPublicPayload(): PublicServicesPayload {
     const activeServices = this._services
       .filter((s) => s.is_active)
       .sort((a, b) => a.order_index - b.order_index);
 
     const sortedIndustries = [...this._industries].sort((a, b) => a.order_index - b.order_index);
+    const activeCategories = this.getActiveCategories();
 
     return {
       services: activeServices,
       industries: sortedIndustries,
+      categories: activeCategories.map((c) => c.name),
+      categoryItems: activeCategories,
       stats: {
         totalServices: activeServices.length,
         totalIndustries: sortedIndustries.length,
@@ -1548,7 +1757,7 @@ class MemoryServicesStore {
       id: `srv-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       title: input.title,
       slug,
-      category: input.category || "Custom Engineering",
+      category: input.category || "Custom Software",
       summary: input.summary,
       tagline: input.tagline || input.summary.slice(0, 80),
       hero_image: input.hero_image,
@@ -1631,4 +1840,13 @@ class MemoryServicesStore {
   }
 }
 
-export const servicesStore = new MemoryServicesStore();
+const globalForServices = globalThis as unknown as {
+  dimisiServicesStore?: MemoryServicesStore;
+};
+
+export const servicesStore =
+  globalForServices.dimisiServicesStore ?? new MemoryServicesStore();
+
+if (process.env.NODE_ENV !== "production") {
+  globalForServices.dimisiServicesStore = servicesStore;
+}
