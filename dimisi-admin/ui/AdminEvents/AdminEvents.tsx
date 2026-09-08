@@ -4,6 +4,7 @@ import {
   useRef,
   useEffect,
   useCallback,
+  useMemo,
   type DragEvent,
   type ChangeEvent,
   type ClipboardEvent,
@@ -20,9 +21,11 @@ import {
   Layers,
   Sparkles,
   CheckCircle,
+  CheckCircle2,
   ExternalLink,
   X,
   AlertCircle,
+  AlertTriangle,
   Loader2,
   Filter,
   ChevronRight,
@@ -36,6 +39,12 @@ import {
   ArrowUp,
   ArrowDown,
   Globe,
+  SlidersHorizontal,
+  FolderPlus,
+  Save,
+  Check,
+  EyeOff,
+  Search,
 } from "lucide-react";
 import {
   type CompanyEvent,
@@ -43,22 +52,33 @@ import {
   type EventInput,
   type GalleryItemInput,
   type EventStatus,
+  type EventCategoryItem,
+  type EventCategoryInput,
   EVENT_STATUSES,
-  EVENT_CATEGORIES,
   slugifyEvent,
+  slugifyEventCategory,
   validateEvent,
+  validateEventCategoryInput,
 } from "@/lib/events.shared";
+import {
+  INITIAL_EVENT_CATEGORIES,
+} from "@/lib/events.data";
 import {
   saveEventFn,
   deleteEventFn,
   saveGalleryItemFn,
   deleteGalleryItemFn,
+  getEventCategoriesFn,
+  saveEventCategoryFn,
+  deleteEventCategoryFn,
 } from "@/lib/events.functions";
 import styles from "./AdminEvents.module.css";
 
 interface AdminEventsProps {
   events: CompanyEvent[];
   gallery: EventGalleryItem[];
+  categoryItems?: EventCategoryItem[];
+  categoryCounts?: Record<string, number>;
   onRefresh: () => void;
 }
 
@@ -74,7 +94,13 @@ const EVENT_MODAL_STEPS: { id: EventModalTab; label: string; num: string }[] = [
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
 
-export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
+export function AdminEvents({
+  events,
+  gallery,
+  categoryItems: initialCategoryItems,
+  categoryCounts: initialCategoryCounts,
+  onRefresh,
+}: AdminEventsProps) {
   const saveEvent = saveEventFn;
   const deleteEvent = deleteEventFn;
   const saveGallery = saveGalleryItemFn;
@@ -82,6 +108,68 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
 
   const [activeTab, setActiveTab] = useState<"events" | "gallery">("events");
   const [statusFilter, setStatusFilter] = useState<string>("All");
+  const [categoryFilter, setCategoryFilter] = useState<string>("All");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Dynamic Categories State
+  const [categoryList, setCategoryList] = useState<EventCategoryItem[]>(() => {
+    if (initialCategoryItems && initialCategoryItems.length > 0) {
+      return initialCategoryItems;
+    }
+    return INITIAL_EVENT_CATEGORIES;
+  });
+
+  // Load latest categories from store
+  const refreshCategories = useCallback(async () => {
+    try {
+      const res = await getEventCategoriesFn();
+      if (res && res.categories && res.categories.length > 0) {
+        setCategoryList(res.categories);
+      }
+    } catch (err) {
+      console.warn("Failed to load event categories", err);
+    }
+  }, []);
+
+  useEffect(() => {
+    refreshCategories();
+  }, [refreshCategories, events]);
+
+  // Compute category event counts dynamically
+  const categoryEventCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    events.forEach((ev) => {
+      const cat = ev.category?.trim();
+      if (cat) {
+        counts[cat] = (counts[cat] || 0) + 1;
+        counts[cat.toLowerCase()] = (counts[cat.toLowerCase()] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [events]);
+
+  // Active category items for filter pills & event selector
+  const activeCategories = useMemo(() => {
+    return categoryList
+      .filter((c) => c.status === "active")
+      .sort((a, b) => a.order_index - b.order_index);
+  }, [categoryList]);
+
+  // Category Taxonomy Modal State
+  const [showCatModal, setShowCatModal] = useState(false);
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [catName, setCatName] = useState("");
+  const [catSlug, setCatSlug] = useState("");
+  const [catDescription, setCatDescription] = useState("");
+  const [catStatus, setCatStatus] = useState<"active" | "inactive">("active");
+  const [catOrderIndex, setCatOrderIndex] = useState(1);
+  const [catFormError, setCatFormError] = useState<string | null>(null);
+  const [catSuccessMsg, setCatSuccessMsg] = useState<string | null>(null);
+  const [catDeleteConfirm, setCatDeleteConfirm] = useState<{
+    id: string;
+    name: string;
+    count: number;
+  } | null>(null);
 
   // Event modal state
   const [showEventModal, setShowEventModal] = useState(false);
@@ -104,7 +192,7 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
   const [category, setCategory] = useState<string>("Product Launch");
   const [description, setDescription] = useState("");
   const [fullDescription, setFullDescription] = useState("");
-  
+
   // Cover Image State
   const [coverSourceType, setCoverSourceType] = useState<"upload" | "url">("upload");
   const [coverImage, setCoverImage] = useState("");
@@ -142,17 +230,32 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
   const [galPreviewUrl, setGalPreviewUrl] = useState<string | null>(null);
   const [galSourceType, setGalSourceType] = useState<"upload" | "url">("upload");
   const standaloneGalInputRef = useRef<HTMLInputElement>(null);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useEffect(() => {
+    if (showEventModal && modalTab && tabRefs.current[modalTab]) {
+      tabRefs.current[modalTab]?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+    }
+  }, [modalTab, showEventModal]);
 
   // Body Lock & ESC Key Listener
   useEffect(() => {
-    if (!showEventModal && !showGalleryModal) return;
+    if (!showEventModal && !showGalleryModal && !showCatModal) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        setShowEventModal(false);
-        setShowGalleryModal(false);
+        if (showCatModal) {
+          setShowCatModal(false);
+        } else {
+          setShowEventModal(false);
+          setShowGalleryModal(false);
+        }
       }
     };
 
@@ -161,8 +264,138 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [showEventModal, showGalleryModal]);
+  }, [showEventModal, showGalleryModal, showCatModal]);
 
+  // CATEGORY TAXONOMY HANDLERS
+  const handleOpenCatModal = (catToEdit?: EventCategoryItem) => {
+    setCatFormError(null);
+    setCatSuccessMsg(null);
+    setCatDeleteConfirm(null);
+    if (catToEdit) {
+      setEditingCatId(catToEdit.id);
+      setCatName(catToEdit.name);
+      setCatSlug(catToEdit.slug);
+      setCatDescription(catToEdit.description || "");
+      setCatStatus(catToEdit.status);
+      setCatOrderIndex(catToEdit.order_index);
+    } else {
+      setEditingCatId(null);
+      setCatName("");
+      setCatSlug("");
+      setCatDescription("");
+      setCatStatus("active");
+      setCatOrderIndex(categoryList.length + 1);
+    }
+    setShowCatModal(true);
+  };
+
+  const handleResetCatForm = () => {
+    setEditingCatId(null);
+    setCatName("");
+    setCatSlug("");
+    setCatDescription("");
+    setCatStatus("active");
+    setCatOrderIndex(categoryList.length + 1);
+    setCatFormError(null);
+    setCatSuccessMsg(null);
+  };
+
+  const handleSaveCategory = (e: React.FormEvent) => {
+    e.preventDefault();
+    setCatFormError(null);
+    setCatSuccessMsg(null);
+
+    const input: EventCategoryInput = {
+      id: editingCatId || undefined,
+      name: catName.trim(),
+      slug: catSlug.trim() || slugifyEventCategory(catName),
+      description: catDescription.trim() || undefined,
+      status: catStatus,
+      order_index: Number(catOrderIndex) || categoryList.length + 1,
+    };
+
+    const validation = validateEventCategoryInput(input);
+    if (!validation.valid) {
+      setCatFormError(validation.error || "Please enter a valid category name.");
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const res = await saveEventCategoryFn({ data: input });
+        if (res.success && res.category) {
+          setCatSuccessMsg(
+            editingCatId
+              ? `Category "${res.category.name}" updated successfully.`
+              : `Category "${res.category.name}" added successfully.`
+          );
+          await refreshCategories();
+          onRefresh();
+          handleResetCatForm();
+        } else {
+          setCatFormError(res.error || "Failed to save category.");
+        }
+      } catch (err) {
+        setCatFormError(err instanceof Error ? err.message : "Error saving category.");
+      }
+    });
+  };
+
+  const handleToggleCategoryStatus = (cat: EventCategoryItem) => {
+    const nextStatus = cat.status === "active" ? "inactive" : "active";
+    startTransition(async () => {
+      try {
+        const res = await saveEventCategoryFn({
+          data: {
+            id: cat.id,
+            name: cat.name,
+            slug: cat.slug,
+            description: cat.description,
+            order_index: cat.order_index,
+            status: nextStatus,
+          },
+        });
+        if (res.success) {
+          await refreshCategories();
+          onRefresh();
+        }
+      } catch (err) {
+        console.warn("Failed to toggle category status", err);
+      }
+    });
+  };
+
+  const handleDeleteCategoryClick = (cat: EventCategoryItem) => {
+    const count = categoryEventCounts[cat.name.toLowerCase()] || 0;
+    setCatDeleteConfirm({
+      id: cat.id,
+      name: cat.name,
+      count,
+    });
+  };
+
+  const handleConfirmDeleteCategory = () => {
+    if (!catDeleteConfirm) return;
+    const targetId = catDeleteConfirm.id;
+
+    startTransition(async () => {
+      try {
+        const res = await deleteEventCategoryFn({ data: { id: targetId } });
+        if (res.success) {
+          setCatDeleteConfirm(null);
+          setCatSuccessMsg(`Category removed successfully.`);
+          await refreshCategories();
+          onRefresh();
+        } else {
+          setCatFormError(res.error || "Failed to delete category.");
+        }
+      } catch (err) {
+        setCatFormError(err instanceof Error ? err.message : "Error deleting category.");
+      }
+    });
+  };
+
+  // EVENT CRUD HANDLERS
   const openCreateEvent = () => {
     setEditingEvent(null);
     setTitle("");
@@ -174,7 +407,8 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
     setVenueDetails("Sector 62, Innovation Arena");
     setMode("offline");
     setStatus("upcoming");
-    setCategory("Product Launch");
+    const defaultCat = activeCategories[0]?.name || "Product Launch";
+    setCategory(defaultCat);
     setDescription("");
     setFullDescription("");
     setCoverSourceType("upload");
@@ -283,7 +517,6 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
 
   // Batch Multi-Image Gallery File Processing
   const processGalleryFiles = useCallback((files: FileList | File[]) => {
-    const newUrls: string[] = [];
     const fileArray = Array.from(files);
 
     fileArray.forEach((file) => {
@@ -373,7 +606,7 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
     setHighlights((prev) => prev.filter((_, i) => i !== index));
   };
 
-  // Step-by-Step Navigation & Validation
+  // Step Navigation & Validation
   const handleNextStep = () => {
     setFormError(null);
     const errors: Record<string, string> = {};
@@ -496,7 +729,7 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
     }
   };
 
-  // Standalone Gallery Item Actions
+  // STANDALONE GALLERY ACTIONS
   const openCreateGalleryItem = () => {
     setEditingGalItem(null);
     setGalTitle("");
@@ -541,10 +774,29 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
     }
   };
 
-  const filteredEvents = events.filter((ev) => {
-    if (statusFilter === "All") return true;
-    return ev.status.toLowerCase() === statusFilter.toLowerCase();
-  });
+  // Filtered Events List
+  const filteredEvents = useMemo(() => {
+    return events.filter((ev) => {
+      // Status filter
+      if (statusFilter !== "All" && ev.status.toLowerCase() !== statusFilter.toLowerCase()) {
+        return false;
+      }
+      // Category filter
+      if (categoryFilter !== "All" && ev.category.trim().toLowerCase() !== categoryFilter.trim().toLowerCase()) {
+        return false;
+      }
+      // Search query filter
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchTitle = ev.title.toLowerCase().includes(q);
+        const matchLoc = ev.location.toLowerCase().includes(q);
+        const matchSlug = ev.slug.toLowerCase().includes(q);
+        const matchDesc = ev.description.toLowerCase().includes(q);
+        if (!matchTitle && !matchLoc && !matchSlug && !matchDesc) return false;
+      }
+      return true;
+    });
+  }, [events, statusFilter, categoryFilter, searchQuery]);
 
   return (
     <div className={styles.wrapper}>
@@ -583,6 +835,16 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
             </button>
           </div>
 
+          <button
+            type="button"
+            className={styles.manageCatBtn}
+            onClick={() => handleOpenCatModal()}
+            title="Manage Dynamic Event Categories & Taxonomies"
+          >
+            <SlidersHorizontal size={15} />
+            <span>Manage Categories ({categoryList.length})</span>
+          </button>
+
           {activeTab === "events" ? (
             <button type="button" className={styles.createBtn} onClick={openCreateEvent}>
               <Plus size={16} />
@@ -600,114 +862,272 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
       {/* TAB 1: EVENTS LIST */}
       {activeTab === "events" && (
         <div className={styles.postsSection}>
-          {/* Status Filter Bar */}
+          {/* Filters & Search Control Bar */}
           <div className={styles.filtersBar}>
-            <div className={styles.catPills}>
-              {["All", "upcoming", "ongoing", "completed"].map((st) => (
-                <button
-                  key={st}
-                  type="button"
-                  className={[
-                    styles.catPill,
-                    statusFilter.toLowerCase() === st.toLowerCase() ? styles.catPillActive : "",
-                  ].join(" ")}
-                  onClick={() => setStatusFilter(st)}
-                >
-                  {st === "All" ? "All Events" : st.charAt(0).toUpperCase() + st.slice(1)}
-                </button>
-              ))}
+            {/* Dynamic Category Filter Pills */}
+            <div className={styles.catPillsScroll}>
+              <button
+                type="button"
+                className={[
+                  styles.catPill,
+                  categoryFilter === "All" ? styles.catPillActive : "",
+                ].join(" ")}
+                onClick={() => setCategoryFilter("All")}
+              >
+                All Categories ({events.length})
+              </button>
+              {activeCategories.map((c) => {
+                const count = categoryEventCounts[c.name.toLowerCase()] || 0;
+                const isActive = categoryFilter.toLowerCase() === c.name.toLowerCase();
+                return (
+                  <button
+                    key={c.id}
+                    type="button"
+                    className={[
+                      styles.catPill,
+                      isActive ? styles.catPillActive : "",
+                    ].join(" ")}
+                    onClick={() => setCategoryFilter(c.name)}
+                  >
+                    <span>{c.name}</span>
+                    <span className={styles.catPillCount}>({count})</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Status & Search Secondary Controls */}
+            <div className={styles.secondaryFiltersRow}>
+              <div className={styles.searchBox}>
+                <Search size={14} className={styles.searchIcon} />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search events by title or location..."
+                  className={styles.searchInput}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className={styles.searchClearBtn}
+                    onClick={() => setSearchQuery("")}
+                    title="Clear search"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              <div className={styles.statusPillsGroup}>
+                {[
+                  { id: "All", label: "All Status" },
+                  { id: "upcoming", label: "Upcoming" },
+                  { id: "ongoing", label: "Live Now" },
+                  { id: "completed", label: "Concluded" },
+                ].map((st) => (
+                  <button
+                    key={st.id}
+                    type="button"
+                    className={[
+                      styles.statusPillBtn,
+                      statusFilter.toLowerCase() === st.id.toLowerCase()
+                        ? styles.statusPillBtnActive
+                        : "",
+                    ].join(" ")}
+                    onClick={() => setStatusFilter(st.id)}
+                  >
+                    {st.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
-          {/* Table Card */}
+          {/* Table Container Card */}
           <div className={styles.tableCard}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th style={{ width: "80px" }}>Cover</th>
-                  <th>Event Title</th>
-                  <th>Category</th>
-                  <th>Date &amp; Timing</th>
-                  <th>Location</th>
-                  <th>Status</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredEvents.map((ev) => (
-                  <tr key={ev.id}>
-                    <td>
-                      <img src={ev.cover_image} alt={ev.title} className={styles.thumbImg} />
-                    </td>
-                    <td>
-                      <div className={styles.titleCol}>
-                        <span className={styles.postTitle}>{ev.title}</span>
-                        <code className={styles.slugCode}>/events/{ev.slug}</code>
-                      </div>
-                    </td>
-                    <td>
-                      <span className={styles.categoryBadge}>{ev.category}</span>
-                    </td>
-                    <td>
-                      <div className={styles.timeCol}>
-                        <span>{ev.date}</span>
-                        {ev.start_time && <span className={styles.subTime}>{ev.start_time}</span>}
-                      </div>
-                    </td>
-                    <td>
-                      <div className={styles.locationCell}>
-                        <MapPin size={13} />
-                        <span>{ev.location}</span>
-                      </div>
-                    </td>
-                    <td>
-                      <span
-                        className={styles.statusBadge}
-                        style={{
-                          color:
-                            ev.status === "upcoming"
-                              ? "#ffb300"
-                              : ev.status === "ongoing"
-                              ? "#10b981"
-                              : "rgba(255,255,255,0.6)",
-                        }}
-                      >
-                        {ev.status.toUpperCase()}
-                      </span>
-                    </td>
-                    <td>
-                      <div className={styles.rowActions}>
-                        <button
-                          type="button"
-                          className={styles.editBtn}
-                          onClick={() => openEditEvent(ev)}
-                          title="Edit Event"
-                        >
-                          <Edit2 size={15} />
-                        </button>
-                        <a
-                          href="/events"
-                          target="_blank"
-                          rel="noreferrer"
-                          className={styles.viewBtn}
-                          title="View Live Page"
-                        >
-                          <ExternalLink size={15} />
-                        </a>
-                        <button
-                          type="button"
-                          className={styles.delBtn}
-                          onClick={() => handleDeleteEvent(ev.id, ev.title)}
-                          title="Delete Event"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      </div>
-                    </td>
+            <div className={styles.tableScrollContainer}>
+              <table className={styles.table}>
+                <colgroup>
+                  <col style={{ width: "90px" }} />
+                  <col style={{ width: "320px" }} />
+                  <col style={{ width: "160px" }} />
+                  <col style={{ width: "170px" }} />
+                  <col style={{ width: "220px" }} />
+                  <col style={{ width: "130px" }} />
+                  <col style={{ width: "150px" }} />
+                </colgroup>
+                <thead>
+                  <tr>
+                    <th className={styles.thCenter}>Cover</th>
+                    <th>Event Title &amp; Slug</th>
+                    <th>Category</th>
+                    <th>Date &amp; Timing</th>
+                    <th>Location &amp; Venue</th>
+                    <th className={styles.thCenter}>Status</th>
+                    <th className={styles.thCenter}>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {filteredEvents.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className={styles.emptyTableTd}>
+                        <div className={styles.emptyStateContainer}>
+                          <Calendar size={32} className={styles.emptyIcon} />
+                          <h4>No company events found</h4>
+                          <p>
+                            {searchQuery || categoryFilter !== "All" || statusFilter !== "All"
+                              ? "Try adjusting your filter criteria or search query."
+                              : "Get started by creating your first company event."}
+                          </p>
+                          {(searchQuery || categoryFilter !== "All" || statusFilter !== "All") && (
+                            <button
+                              type="button"
+                              className={styles.resetFiltersBtn}
+                              onClick={() => {
+                                setSearchQuery("");
+                                setCategoryFilter("All");
+                                setStatusFilter("All");
+                              }}
+                            >
+                              Reset All Filters
+                            </button>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredEvents.map((ev) => (
+                      <tr key={ev.id}>
+                        {/* 1. Cover Thumbnail */}
+                        <td className={styles.coverCell}>
+                          <img src={ev.cover_image} alt={ev.title} className={styles.thumbImg} />
+                        </td>
+
+                        {/* 2. Event Title & Slug */}
+                        <td>
+                          <div className={styles.titleCol}>
+                            <span className={styles.postTitle}>{ev.title}</span>
+                            <div className={styles.slugRow}>
+                              <a
+                                href="/events"
+                                target="_blank"
+                                rel="noreferrer"
+                                className={styles.slugCodeLink}
+                                title="Open Live Events"
+                              >
+                                <LinkIcon size={11} style={{ marginRight: 3, flexShrink: 0 }} />
+                                <span>/events/{ev.slug}</span>
+                              </a>
+                              {ev.is_featured && (
+                                <span className={styles.featuredSpotlightBadge}>
+                                  <Star size={10} style={{ fill: "currentColor" }} />
+                                  <span>SPOTLIGHT</span>
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* 3. Category Badge */}
+                        <td>
+                          <span className={styles.categoryBadge}>
+                            <Tag size={12} className={styles.badgeTagIcon} />
+                            <span>{ev.category}</span>
+                          </span>
+                        </td>
+
+                        {/* 4. Date & Timing */}
+                        <td>
+                          <div className={styles.timeCol}>
+                            <div className={styles.dateRow}>
+                              <Calendar size={13} className={styles.dateIcon} />
+                              <span className={styles.dateText}>{ev.date}</span>
+                            </div>
+                            {ev.start_time && (
+                              <div className={styles.timeRow}>
+                                <Clock size={12} className={styles.clockIcon} />
+                                <span className={styles.subTime}>
+                                  {ev.start_time}
+                                  {ev.end_time ? ` – ${ev.end_time}` : ""}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* 5. Location & Venue */}
+                        <td>
+                          <div className={styles.locationCell}>
+                            <div className={styles.locMain}>
+                              <MapPin size={13} className={styles.mapIcon} />
+                              <span className={styles.locText}>{ev.location}</span>
+                            </div>
+                            {ev.venue_details && (
+                              <span className={styles.venueSubText}>{ev.venue_details}</span>
+                            )}
+                          </div>
+                        </td>
+
+                        {/* 6. Status */}
+                        <td className={styles.thCenter}>
+                          <span
+                            className={[
+                              styles.statusBadge,
+                              ev.status === "upcoming"
+                                ? styles.statusUpcoming
+                                : ev.status === "ongoing"
+                                ? styles.statusOngoing
+                                : styles.statusCompleted,
+                            ].join(" ")}
+                          >
+                            <span className={styles.statusDot} />
+                            <span>
+                              {ev.status === "upcoming"
+                                ? "Upcoming"
+                                : ev.status === "ongoing"
+                                ? "Live Now"
+                                : "Concluded"}
+                            </span>
+                          </span>
+                        </td>
+
+                        {/* 7. Action Buttons */}
+                        <td className={styles.thCenter}>
+                          <div className={styles.rowActions}>
+                            <button
+                              type="button"
+                              className={styles.editBtn}
+                              onClick={() => openEditEvent(ev)}
+                              title="Edit Event"
+                            >
+                              <Edit2 size={14} />
+                            </button>
+                            <a
+                              href="/events"
+                              target="_blank"
+                              rel="noreferrer"
+                              className={styles.viewBtn}
+                              title="View Live Page"
+                            >
+                              <ExternalLink size={14} />
+                            </a>
+                            <button
+                              type="button"
+                              className={styles.delBtn}
+                              onClick={() => handleDeleteEvent(ev.id, ev.title)}
+                              title="Delete Event"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
@@ -735,6 +1155,331 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {/* CATEGORY TAXONOMY MANAGEMENT MODAL */}
+      {showCatModal && (
+        <div
+          className={styles.modalBackdrop}
+          role="dialog"
+          aria-modal="true"
+          data-lenis-prevent
+          onClick={() => setShowCatModal(false)}
+        >
+          <div
+            className={[styles.modalContent, styles.catModalContent].join(" ")}
+            data-lenis-prevent
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className={styles.modalHeader}>
+              <div className={styles.catModalHeaderTitle}>
+                <div className={styles.catModalIconBox}>
+                  <SlidersHorizontal size={20} className={styles.catModalIcon} />
+                </div>
+                <div>
+                  <h3 className={styles.modalTitle}>Event Category Taxonomy &amp; Topics</h3>
+                  <p className={styles.modalSub}>
+                    Manage dynamic event categories, filter taxonomies, slugs, and active display states.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                className={styles.modalClose}
+                onClick={() => setShowCatModal(false)}
+                title="Close Modal (Esc)"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            {/* Notification Messages */}
+            {catFormError && (
+              <div className={styles.errorAlert} style={{ margin: "1rem 1.75rem 0" }}>
+                <AlertCircle size={16} />
+                <span>{catFormError}</span>
+              </div>
+            )}
+
+            {catSuccessMsg && (
+              <div className={styles.successAlert} style={{ margin: "1rem 1.75rem 0" }}>
+                <CheckCircle2 size={16} />
+                <span>{catSuccessMsg}</span>
+              </div>
+            )}
+
+            {/* Category Safety Warning Prompt */}
+            {catDeleteConfirm && (
+              <div className={styles.deleteWarningAlert}>
+                <AlertTriangle size={20} className={styles.deleteWarningIcon} />
+                <div className={styles.deleteWarningText}>
+                  <h5>Delete Category: "{catDeleteConfirm.name}"?</h5>
+                  <p>
+                    {catDeleteConfirm.count > 0
+                      ? `Warning: There are currently ${catDeleteConfirm.count} event(s) tagged with this category. Deleting this category will remove it from the taxonomy and active filters.`
+                      : 'Are you sure you want to permanently delete this category?'}
+                  </p>
+                  <div className={styles.deleteWarningActions}>
+                    <button
+                      type="button"
+                      className={styles.confirmDeleteBtn}
+                      onClick={handleConfirmDeleteCategory}
+                      disabled={isPending}
+                    >
+                      {isPending ? "Deleting..." : "Yes, Delete Category"}
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.cancelDeleteBtn}
+                      onClick={() => setCatDeleteConfirm(null)}
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Modal Two-Column Layout */}
+            <div className={styles.catModalBody} data-lenis-prevent>
+              {/* Left Column: Category Form */}
+              <div className={styles.catFormCard}>
+                <div className={styles.catFormHeader}>
+                  <h4 className={styles.catFormTitle}>
+                    {editingCatId ? (
+                      <>
+                        <Edit2 size={15} /> Edit Category
+                      </>
+                    ) : (
+                      <>
+                        <FolderPlus size={15} /> Create New Category
+                      </>
+                    )}
+                  </h4>
+                  {editingCatId && (
+                    <button
+                      type="button"
+                      className={styles.resetFormBtn}
+                      onClick={handleResetCatForm}
+                    >
+                      + Create New Instead
+                    </button>
+                  )}
+                </div>
+
+                <form onSubmit={handleSaveCategory} className={styles.catInnerForm}>
+                  <div className={styles.formGroup}>
+                    <label>Category Display Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={catName}
+                      onChange={(e) => {
+                        setCatName(e.target.value);
+                        if (!editingCatId) {
+                          setCatSlug(slugifyEventCategory(e.target.value));
+                        }
+                      }}
+                      placeholder="e.g. AI & Autonomy Summit"
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>URL / Filter Slug *</label>
+                    <input
+                      type="text"
+                      required
+                      value={catSlug}
+                      onChange={(e) => setCatSlug(e.target.value)}
+                      placeholder="e.g. ai-autonomy-summit"
+                    />
+                  </div>
+
+                  <div className={styles.formGroup}>
+                    <label>Short Description (Optional)</label>
+                    <textarea
+                      rows={2}
+                      value={catDescription}
+                      onChange={(e) => setCatDescription(e.target.value)}
+                      placeholder="e.g. Flagship conferences, technical keynotes and live demos..."
+                    />
+                  </div>
+
+                  <div className={styles.formGrid2}>
+                    <div className={styles.formGroup}>
+                      <label>Display Order Index</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={catOrderIndex}
+                        onChange={(e) => setCatOrderIndex(Number(e.target.value))}
+                      />
+                    </div>
+
+                    <div className={styles.formGroup}>
+                      <label>Taxonomy Status</label>
+                      <select
+                        value={catStatus}
+                        onChange={(e) =>
+                          setCatStatus(e.target.value as "active" | "inactive")
+                        }
+                        className={styles.selectInput}
+                      >
+                        <option value="active">Active (Visible in Filter &amp; Events)</option>
+                        <option value="inactive">Inactive (Hidden)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className={styles.catFormSubmitRow}>
+                    {editingCatId && (
+                      <button
+                        type="button"
+                        className={styles.cancelBtn}
+                        onClick={handleResetCatForm}
+                      >
+                        Cancel Edit
+                      </button>
+                    )}
+                    <button
+                      type="submit"
+                      disabled={isPending}
+                      className={styles.saveSubmitBtn}
+                    >
+                      <Save size={14} />
+                      <span>{editingCatId ? "Update Category" : "Add Category"}</span>
+                    </button>
+                  </div>
+                </form>
+              </div>
+
+              {/* Right Column: Existing Categories List Table */}
+              <div className={styles.catListCard}>
+                <div className={styles.catListHeader}>
+                  <h4 className={styles.catListTitle}>
+                    <span>Configured Categories</span>
+                    <span className={styles.catCountBadge}>{categoryList.length}</span>
+                  </h4>
+                  <span className={styles.catListSub}>
+                    Active categories appear on the public and admin event filter bars.
+                  </span>
+                </div>
+
+                <div className={styles.catListScrollContainer}>
+                  <table className={styles.catTable}>
+                    <thead>
+                      <tr>
+                        <th style={{ width: "50px" }}>Order</th>
+                        <th>Category &amp; Slug</th>
+                        <th style={{ width: "90px" }}>Events</th>
+                        <th style={{ width: "95px" }}>Status</th>
+                        <th style={{ width: "110px", textAlign: "right" }}>Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {categoryList
+                        .sort((a, b) => a.order_index - b.order_index)
+                        .map((cat) => {
+                          const count = categoryEventCounts[cat.name.toLowerCase()] || 0;
+                          const isBeingEdited = editingCatId === cat.id;
+                          return (
+                            <tr
+                              key={cat.id}
+                              className={[
+                                isBeingEdited ? styles.catRowEditing : "",
+                                cat.status === "inactive" ? styles.catRowInactive : "",
+                              ].join(" ")}
+                            >
+                              <td className={styles.orderCell}>{cat.order_index}</td>
+                              <td>
+                                <div className={styles.catItemMeta}>
+                                  <span className={styles.catItemName}>{cat.name}</span>
+                                  <code className={styles.catItemSlug}>#{cat.slug}</code>
+                                  {cat.description && (
+                                    <span className={styles.catItemDesc}>
+                                      {cat.description}
+                                    </span>
+                                  )}
+                                </div>
+                              </td>
+                              <td>
+                                <span className={styles.catPostCountBadge}>
+                                  {count} event{count !== 1 ? "s" : ""}
+                                </span>
+                              </td>
+                              <td>
+                                <button
+                                  type="button"
+                                  className={[
+                                    styles.catStatusPill,
+                                    cat.status === "active"
+                                      ? styles.catStatusPillActive
+                                      : styles.catStatusPillInactive,
+                                  ].join(" ")}
+                                  onClick={() => handleToggleCategoryStatus(cat)}
+                                  title={
+                                    cat.status === "active"
+                                      ? "Active — Click to Deactivate"
+                                      : "Inactive — Click to Activate"
+                                  }
+                                >
+                                  {cat.status === "active" ? (
+                                    <Check size={11} />
+                                  ) : (
+                                    <EyeOff size={11} />
+                                  )}
+                                  <span>{cat.status === "active" ? "Active" : "Inactive"}</span>
+                                </button>
+                              </td>
+                              <td>
+                                <div className={styles.catRowActions}>
+                                  <button
+                                    type="button"
+                                    className={styles.editBtn}
+                                    onClick={() => handleOpenCatModal(cat)}
+                                    title="Edit Category Details"
+                                  >
+                                    <Edit2 size={13} />
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={styles.delBtn}
+                                    onClick={() => handleDeleteCategoryClick(cat)}
+                                    title="Delete Category"
+                                  >
+                                    <Trash2 size={13} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className={styles.modalFooter}>
+              <div className={styles.footerLeft}>
+                <span className={styles.footerHint}>
+                  Categories marked as active are instantly available in event creation and filters.
+                </span>
+              </div>
+              <div className={styles.footerRight}>
+                <button
+                  type="button"
+                  className={styles.saveSubmitBtn}
+                  onClick={() => setShowCatModal(false)}
+                >
+                  Done / Close
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -773,10 +1518,15 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
             </div>
 
             {/* Sticky Stepper Tabs */}
-            <div className={styles.modalTabsBar} data-lenis-prevent>
+            <div className={styles.modalTabsBar} role="tablist" aria-label="Event Form Steps" data-lenis-prevent>
               {EVENT_MODAL_STEPS.map((t) => (
                 <button
                   key={t.id}
+                  ref={(el) => {
+                    tabRefs.current[t.id] = el;
+                  }}
+                  role="tab"
+                  aria-selected={modalTab === t.id}
                   type="button"
                   className={[
                     styles.modalTabBtn,
@@ -855,11 +1605,14 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
                           onChange={(e) => setCategory(e.target.value)}
                           className={styles.selectInput}
                         >
-                          {EVENT_CATEGORIES.filter((c) => c !== "All").map((c) => (
-                            <option key={c} value={c}>
-                              {c}
+                          {activeCategories.map((c) => (
+                            <option key={c.id} value={c.name}>
+                              {c.name}
                             </option>
                           ))}
+                          {!activeCategories.some((c) => c.name === category) && (
+                            <option value={category}>{category}</option>
+                          )}
                         </select>
                       </div>
 
@@ -1137,7 +1890,7 @@ export function AdminEvents({ events, gallery, onRefresh }: AdminEventsProps) {
                           {coverPreviewUrl ? (
                             <div className={styles.previewContainer}>
                               <img src={coverPreviewUrl} alt="Cover Preview" className={styles.dropzonePreviewImg} />
-                              
+
                               <div className={styles.previewMetaRow}>
                                 <div className={styles.fileInfoBadge}>
                                   <FileCheck size={14} className={styles.checkIcon} />

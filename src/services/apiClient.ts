@@ -51,14 +51,14 @@ export async function apiRequest<T = any>(
       const raw = localStorage.getItem("dimisi_admin_session");
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed?.token) {
+        if (parsed?.token && !parsed.token.includes("cookie")) {
           authToken = parsed.token;
         }
       }
     } catch {}
   }
 
-  if (authToken) {
+  if (authToken && !authToken.includes("cookie")) {
     defaultHeaders["Authorization"] = `Bearer ${authToken}`;
   }
 
@@ -87,9 +87,22 @@ export async function apiRequest<T = any>(
     }
 
     if (!response.ok) {
-      const errorMessage =
-        (data && typeof data === "object" && (data.message || data.error?.message || data.error)) ||
-        (response.status === 401 ? "Invalid email or password." : `Request failed with status ${response.status}`);
+      let errorMessage =
+        (data && typeof data === "object" && (data.message || data.error?.message || data.error)) || null;
+
+      if (!errorMessage) {
+        if (response.status === 401) {
+          errorMessage = "Invalid administrator credentials.";
+        } else if (response.status === 403) {
+          errorMessage = "You do not have permission to access the control room.";
+        } else if (response.status === 404) {
+          errorMessage = "The requested authentication endpoint was not found.";
+        } else if (response.status >= 500) {
+          errorMessage = "Authentication service is temporarily unavailable.";
+        } else {
+          errorMessage = `Request failed with status ${response.status}`;
+        }
+      }
 
       throw new ApiError(errorMessage, response.status, data);
     }
@@ -103,12 +116,12 @@ export async function apiRequest<T = any>(
     }
 
     if (err instanceof Error && err.name === "AbortError") {
-      throw new ApiError("Request timed out. Please check your network or server status.", 408);
+      throw new ApiError("Authentication request timed out. Please try again.", 408);
     }
 
     // Network error (backend down, connection refused, CORS failure)
     throw new ApiError(
-      "Unable to connect to the backend server. Please verify the server is running on " + API_BASE_URL,
+      "Unable to reach the authentication service. Please verify the backend is running.",
       0,
     );
   }

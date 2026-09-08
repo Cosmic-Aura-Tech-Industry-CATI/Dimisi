@@ -1,4 +1,4 @@
-import { useState, useTransition } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import {
   Briefcase,
   Plus,
@@ -97,6 +97,17 @@ export function AdminCareers({
   const [isFeatured, setIsFeatured] = useState(false);
   const [status, setStatus] = useState<JobStatus>("open");
   const [formError, setFormError] = useState<string | null>(null);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useEffect(() => {
+    if (showJobModal && modalTab && tabRefs.current[modalTab]) {
+      tabRefs.current[modalTab]?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+    }
+  }, [modalTab, showJobModal]);
 
   // Editable Steps State
   const [stepsList, setStepsList] = useState<HiringProcessStep[]>(hiringSteps);
@@ -700,7 +711,7 @@ export function AdminCareers({
             </div>
 
             {/* Modal Tabs */}
-            <div className={styles.modalTabsBar}>
+            <div className={styles.modalTabsBar} role="tablist" aria-label="Job Form Steps" data-lenis-prevent>
               {[
                 { id: "basic", label: "1. Basic Info & Setup" },
                 { id: "details", label: "2. Summary & Responsibilities" },
@@ -708,6 +719,11 @@ export function AdminCareers({
               ].map((t) => (
                 <button
                   key={t.id}
+                  ref={(el) => {
+                    tabRefs.current[t.id] = el;
+                  }}
+                  role="tab"
+                  aria-selected={modalTab === t.id}
                   type="button"
                   className={[
                     styles.modalTabBtn,

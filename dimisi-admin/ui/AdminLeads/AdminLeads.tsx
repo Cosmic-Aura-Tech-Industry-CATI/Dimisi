@@ -395,7 +395,7 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
                 <TrendingUp size={18} color="var(--dm-amber, #ffab2e)" />
               </div>
               <div className={styles.statValue} style={{ color: "var(--dm-amber, #ffab2e)" }}>
-                {leadStats.conversionRate}%
+                {(Number(leadStats.conversionRate) || 0).toFixed(2)}%
               </div>
             </div>
           </div>
@@ -469,7 +469,7 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
                     <th>Visitor Context</th>
                     <th>Created</th>
                     <th>Status</th>
-                    <th style={{ textAlign: "right" }}>Actions</th>
+                    <th style={{ textAlign: "right", minWidth: "150px" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -550,25 +550,25 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
                             </span>
                           </td>
 
-                          <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: "0.4rem" }}>
+                          <td style={{ textAlign: "right", minWidth: "150px", whiteSpace: "nowrap" }} onClick={(e) => e.stopPropagation()}>
+                            <div className={styles.tableActions}>
                               <button
                                 type="button"
-                                className={styles.actionBtn}
+                                className={styles.tableDetailsBtn}
                                 onClick={() => handleOpenLead(lead.id)}
                                 title="View Lead Details & Journey"
                               >
-                                <Eye size={13} />
+                                <Eye size={14} />
                                 <span>Details</span>
                               </button>
                               <button
                                 type="button"
-                                className={styles.actionBtn}
-                                style={{ color: "#f87171" }}
+                                className={styles.tableDeleteBtn}
                                 onClick={() => handleDeleteLead(lead.id)}
-                                title="Delete Lead"
+                                title="Delete lead"
+                                aria-label="Delete lead"
                               >
-                                <Trash2 size={13} />
+                                <Trash2 size={15} />
                               </button>
                             </div>
                           </td>
@@ -661,7 +661,7 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
                 <UserCheck size={18} color="var(--dm-amber, #ffab2e)" />
               </div>
               <div className={styles.statValue} style={{ color: "var(--dm-amber, #ffab2e)" }}>
-                {visitorStats.returningRatioPercent}%
+                {(Number(visitorStats.returningRatioPercent) || 0).toFixed(2)}%
               </div>
             </div>
           </div>
@@ -726,7 +726,7 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
                     <th>Source / UTM</th>
                     <th>Auth State</th>
                     <th>Last Active</th>
-                    <th style={{ textAlign: "right" }}>Journey</th>
+                    <th style={{ textAlign: "right", minWidth: "120px" }}>Journey</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -834,13 +834,14 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
                             {getRelativeTime(v.last_seen_at)}
                           </td>
 
-                          <td style={{ textAlign: "right" }} onClick={(e) => e.stopPropagation()}>
+                          <td style={{ textAlign: "right", minWidth: "120px", whiteSpace: "nowrap" }} onClick={(e) => e.stopPropagation()}>
                             <button
                               type="button"
-                              className={styles.actionBtn}
+                              className={styles.tableDetailsBtn}
                               onClick={() => handleOpenVisitorJourney(v)}
+                              title="View Visitor Journey"
                             >
-                              <Compass size={13} />
+                              <Compass size={14} />
                               <span>Journey</span>
                             </button>
                           </td>

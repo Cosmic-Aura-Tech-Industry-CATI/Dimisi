@@ -6,9 +6,12 @@ import { blogStore } from "./blog.data";
 import {
   type BlogPostItem,
   type BlogPostInput,
+  type BlogCategoryItem,
+  type BlogCategoryInput,
   type BlogConfig,
   type PublicBlogPayload,
   validateBlogPostInput,
+  validateBlogCategoryInput,
 } from "./blog.shared";
 
 export async function getPublicBlogData(): Promise<PublicBlogPayload> {
@@ -28,16 +31,70 @@ export async function getAdminBlogData(): Promise<{
   posts: BlogPostItem[];
   config: BlogConfig;
   categories: string[];
+  categoryItems: BlogCategoryItem[];
+  categoryCounts: Record<string, number>;
   stats: PublicBlogPayload["stats"];
 }> {
   const payload = blogStore.getPublicPayload();
   const all = blogStore.getAllPosts();
+  const categoryItems = blogStore.getCategoryItems();
+  const categoryCounts = blogStore.getCategoryPostCounts();
   return {
     posts: all,
     config: payload.config,
     categories: payload.categories,
+    categoryItems,
+    categoryCounts,
     stats: payload.stats,
   };
+}
+
+export async function getBlogCategoriesFn(): Promise<{
+  categories: BlogCategoryItem[];
+  categoryCounts: Record<string, number>;
+}> {
+  return {
+    categories: blogStore.getCategoryItems(),
+    categoryCounts: blogStore.getCategoryPostCounts(),
+  };
+}
+
+export async function saveBlogCategoryFn({
+  data,
+}: {
+  data: BlogCategoryInput;
+}): Promise<{ success: boolean; category?: BlogCategoryItem; error?: string }> {
+  try {
+    const validation = validateBlogCategoryInput(data);
+    if (!validation.valid) {
+      return { success: false, error: validation.error || "Category validation failed." };
+    }
+    const saved = blogStore.saveCategory(data);
+    return { success: true, category: saved };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to save category.",
+    };
+  }
+}
+
+export async function deleteBlogCategoryFn({
+  data,
+}: {
+  data: { id: string };
+}): Promise<{ success: boolean; postCount: number; error?: string }> {
+  try {
+    if (!data?.id) return { success: false, postCount: 0, error: "Category ID is required." };
+    const res = blogStore.deleteCategory(data.id);
+    return res;
+  } catch (err) {
+    return {
+      success: false,
+      postCount: 0,
+      error: err instanceof Error ? err.message : "Failed to delete category.",
+    };
+  }
 }
 
 export async function saveBlogPostFn({

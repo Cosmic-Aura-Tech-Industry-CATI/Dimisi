@@ -9,18 +9,69 @@ import {
   type EventInput,
   type GalleryItemInput,
   type PublicEventsPayload,
+  type EventCategoryItem,
+  type EventCategoryInput,
   validateEvent,
+  validateEventCategoryInput,
 } from "./events.shared";
 
 export async function getPublicEvents(): Promise<PublicEventsPayload> {
   return eventsStore.getPublicPayload();
 }
 
-export async function getAdminEventsData(): Promise<{ events: CompanyEvent[]; gallery: EventGalleryItem[] }> {
+export async function getAdminEventsData(): Promise<{
+  events: CompanyEvent[];
+  gallery: EventGalleryItem[];
+  categoryItems: EventCategoryItem[];
+  categoryCounts: Record<string, number>;
+}> {
   return {
     events: eventsStore.events,
     gallery: eventsStore.gallery,
+    categoryItems: eventsStore.getCategoryItems(),
+    categoryCounts: eventsStore.getCategoryEventCounts(),
   };
+}
+
+export async function getEventCategoriesFn(): Promise<{
+  categories: EventCategoryItem[];
+  counts: Record<string, number>;
+}> {
+  return {
+    categories: eventsStore.getCategoryItems(),
+    counts: eventsStore.getCategoryEventCounts(),
+  };
+}
+
+export async function saveEventCategoryFn({
+  data,
+}: {
+  data: EventCategoryInput;
+}): Promise<{
+  success: boolean;
+  category?: EventCategoryItem | undefined;
+  error?: string | undefined;
+}> {
+  const check = validateEventCategoryInput(data);
+  if (!check.valid) {
+    return { success: false, error: check.error || "Invalid category input." };
+  }
+  try {
+    const saved = eventsStore.saveCategory(data);
+    return { success: true, category: saved };
+  } catch (err) {
+    return { success: false, error: err instanceof Error ? err.message : "Failed to save category." };
+  }
+}
+
+export async function deleteEventCategoryFn({
+  data,
+}: {
+  data: { id: string };
+}): Promise<{ success: boolean; eventCount?: number | undefined; error?: string | undefined }> {
+  if (!data?.id) return { success: false, error: "Category ID is required." };
+  const res = eventsStore.deleteCategory(data.id);
+  return { success: res.success, eventCount: res.eventCount };
 }
 
 export async function saveEventFn({

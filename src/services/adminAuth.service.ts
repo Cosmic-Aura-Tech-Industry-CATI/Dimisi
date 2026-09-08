@@ -77,19 +77,21 @@ export async function loginAdmin(
     }),
   });
 
-  const token =
+  if (!response || (!response.success && response.user === undefined && response.data?.user === undefined)) {
+    throw new Error(response?.message || "Unexpected authentication response.");
+  }
+
+  // Extract token if present in JSON payload; otherwise backend set HttpOnly cookies
+  const rawToken =
     response?.data?.token ||
     response?.data?.accessToken ||
     response?.token ||
-    response?.accessToken;
+    response?.accessToken ||
+    "cookie-session";
 
-  if (!token) {
-    throw new Error("Authentication response did not contain a valid access token.");
-  }
-
-  // Extract user details from backend response or decode JWT payload
-  const payload = decodeJwtPayload(token);
-  const backendPanelUser = response?.data?.user || response?.user;
+  // Extract user details from backend response or decode JWT payload if available
+  const payload = rawToken !== "cookie-session" ? decodeJwtPayload(rawToken) : null;
+  const backendPanelUser = response?.user || response?.data?.user;
   const backendBaseUser = backendPanelUser?.user;
 
   const userId =
@@ -108,7 +110,7 @@ export async function loginAdmin(
   const expiresAt = payload?.exp ? payload.exp * 1000 : Date.now() + 7 * 24 * 60 * 60 * 1000;
 
   const user: AuthUser = {
-    id: userId,
+    id: String(userId),
     email: cleanEmail,
     user_metadata: {
       full_name: userName,
@@ -118,7 +120,7 @@ export async function loginAdmin(
 
   // Save session to localStorage for persistent state across refreshes
   const sessionData: AdminAuthSession = {
-    token,
+    token: rawToken,
     user,
     expires_at: expiresAt,
   };
@@ -130,7 +132,7 @@ export async function loginAdmin(
 
   return {
     success: true,
-    token,
+    token: rawToken,
     user,
     expires_at: expiresAt,
   };

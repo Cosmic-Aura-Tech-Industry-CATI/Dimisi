@@ -130,6 +130,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 0.95rem;
+  width: 100%;
 }
 
 .statCard {
@@ -141,6 +142,8 @@
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  min-width: 0;
+  overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   transition: transform 0.25s var(--dm-ease, ease), border-color 0.25s var(--dm-ease, ease);
 }
@@ -154,6 +157,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
 }
 
 .statValue {
@@ -162,6 +166,10 @@
   font-weight: 700;
   color: var(--dm-warm, #fbf3e9);
   line-height: 1.1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
 }
 
 .statLabel {
@@ -171,6 +179,68 @@
   color: var(--dm-dim, #a09587);
   text-transform: uppercase;
   letter-spacing: 0.16em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Dedicated Table Action Buttons */
+.tableActions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.tableDetailsBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(255, 171, 46, 0.1);
+  color: var(--dm-gold, #ffd79a);
+  border: 1px solid rgba(255, 171, 46, 0.25);
+  padding: 0.42rem 0.85rem;
+  border-radius: 8px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.tableDetailsBtn:hover {
+  background: rgba(255, 171, 46, 0.22);
+  border-color: rgba(255, 171, 46, 0.55);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.tableDeleteBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.tableDeleteBtn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #ffffff;
+  box-shadow: 0 0 12px rgba(239, 68, 68, 0.35);
+  transform: translateY(-1px);
 }
 
 /* Filter & Search Bar */
@@ -258,8 +328,7 @@
 .tableScrollArea {
   width: 100%;
   overflow-x: auto;
-  overflow-y: auto;
-  max-height: 620px;
+  overflow-y: visible;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 171, 46, 0.3) rgba(5, 4, 10, 0.5);
 }

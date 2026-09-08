@@ -336,9 +336,8 @@
 /* Dedicated Scroll Container for Table (Vertical + Horizontal Scrolling) */
 .tableWrap {
   width: 100%;
-  max-height: 580px;
   overflow-x: auto;
-  overflow-y: auto;
+  overflow-y: visible;
   position: relative;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 171, 46, 0.35) rgba(14, 12, 20, 0.6);
