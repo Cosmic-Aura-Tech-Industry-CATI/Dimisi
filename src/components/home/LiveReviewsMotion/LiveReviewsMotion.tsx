@@ -162,11 +162,12 @@ export function LiveReviewsMotion() {
 
   // Split into 2 rows for opposite motion loops
   const { track1, track2 } = useMemo(() => {
-    if (!activeReviews.length) {
+    const total = activeReviews?.length ?? 0;
+    if (!total) {
       return { track1: [], track2: [] };
     }
 
-    const half = Math.ceil(activeReviews.length / 2);
+    const half = Math.ceil(total / 2);
     const row1 = activeReviews.slice(0, half);
     const row2 =
       activeReviews.slice(half).length > 0 ? activeReviews.slice(half) : activeReviews.slice(0, half);
@@ -179,7 +180,7 @@ export function LiveReviewsMotion() {
   }, [activeReviews]);
 
   const totalReviewsCount =
-    serverPayload?.stats?.total || serverPayload?.totalApproved || activeReviews.length;
+    serverPayload?.stats?.total || serverPayload?.totalApproved || (activeReviews?.length ?? 0);
   const avgScore = serverPayload?.stats?.average
     ? serverPayload.stats.average.toFixed(1)
     : "5.0";
