@@ -34,11 +34,15 @@ export function AdminLogin() {
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
-          setError("Invalid email or password.");
+          setError("Invalid admin email or password.");
+        } else if (err.status === 403) {
+          setError(err.message || "Access Denied: Your account does not have administrator privileges.");
+        } else if (err.status === 408) {
+          setError("Authentication request timed out. Please try again.");
         } else if (err.status === 0) {
-          setError("Unable to connect to the server. Please try again.");
+          setError("Unable to connect to the authentication server. Please verify the backend is running.");
         } else if (err.status >= 500) {
-          setError("Something went wrong. Please try again.");
+          setError("An internal server error occurred. Please try again.");
         } else {
           setError(err.message || "Authentication failed.");
         }
