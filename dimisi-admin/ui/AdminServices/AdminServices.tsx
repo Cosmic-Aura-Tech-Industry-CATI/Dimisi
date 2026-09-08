@@ -116,11 +116,11 @@ export function AdminServices({
     return INITIAL_SERVICE_CATEGORIES;
   });
 
-  // Refresh categories from store
+  // Refresh categories from backend API or store
   const refreshCategories = useCallback(async () => {
     try {
       const res = await getServiceCategoriesFn();
-      if (res && res.categories && res.categories.length > 0) {
+      if (res && Array.isArray(res.categories)) {
         setCategoryList(res.categories);
       }
     } catch (err) {
@@ -413,9 +413,12 @@ export function AdminServices({
         if (res.success) {
           await refreshCategories();
           onRefresh();
+        } else {
+          setCatFormError(res.error || "Failed to toggle category status.");
         }
       } catch (err) {
         console.warn("Failed to toggle category status", err);
+        setCatFormError(err instanceof Error ? err.message : "Failed to toggle status.");
       }
     });
   };
