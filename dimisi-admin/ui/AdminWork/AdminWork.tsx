@@ -125,6 +125,12 @@ export function AdminWork({
     refreshCategories();
   }, [refreshCategories, projects]);
 
+  useEffect(() => {
+    if (initialCategoryItems && initialCategoryItems.length > 0) {
+      setCategoryList(initialCategoryItems);
+    }
+  }, [initialCategoryItems]);
+
   // Compute category project counts dynamically
   const categoryProjectCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -881,7 +887,7 @@ export function AdminWork({
             ].join(" ")}
             onClick={() => setCategoryFilter("All")}
           >
-            All Categories ({projects.length})
+            All Categories ({categoryList.length})
           </button>
           {activeCategories.map((c) => {
             const count = categoryProjectCounts[c.name.toLowerCase()] || 0;

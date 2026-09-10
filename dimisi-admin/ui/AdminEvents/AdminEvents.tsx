@@ -135,6 +135,12 @@ export function AdminEvents({
     refreshCategories();
   }, [refreshCategories, events]);
 
+  useEffect(() => {
+    if (initialCategoryItems && initialCategoryItems.length > 0) {
+      setCategoryList(initialCategoryItems);
+    }
+  }, [initialCategoryItems]);
+
   // Compute category event counts dynamically
   const categoryEventCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -874,7 +880,7 @@ export function AdminEvents({
                 ].join(" ")}
                 onClick={() => setCategoryFilter("All")}
               >
-                All Categories ({events.length})
+                All Categories ({categoryList.length})
               </button>
               {activeCategories.map((c) => {
                 const count = categoryEventCounts[c.name.toLowerCase()] || 0;

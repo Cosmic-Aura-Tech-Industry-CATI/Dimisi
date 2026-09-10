@@ -1582,10 +1582,42 @@ export const INITIAL_SERVICE_CATEGORIES: ServiceCategoryItem[] = [
   },
 ];
 
+const SERVICE_CATEGORIES_STORAGE_KEY = "dimisi_admin_service_categories_v2";
+
 class MemoryServicesStore {
   private _services: CompanyService[] = [...SEED_SERVICES];
   private _industries: IndustrySector[] = [...SEED_INDUSTRIES];
   private _categories: ServiceCategoryItem[] = [...INITIAL_SERVICE_CATEGORIES];
+
+  constructor() {
+    this.loadFromLocalStorage();
+  }
+
+  private loadFromLocalStorage(): void {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem(SERVICE_CATEGORIES_STORAGE_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            this._categories = parsed;
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load service categories from localStorage", err);
+      }
+    }
+  }
+
+  private saveToLocalStorage(): void {
+    if (typeof window !== "undefined") {
+      try {
+        localStorage.setItem(SERVICE_CATEGORIES_STORAGE_KEY, JSON.stringify(this._categories));
+      } catch (err) {
+        console.warn("Failed to save service categories to localStorage", err);
+      }
+    }
+  }
 
   get services(): CompanyService[] {
     return [...this._services].sort((a, b) => a.order_index - b.order_index);
@@ -1616,6 +1648,19 @@ class MemoryServicesStore {
       .sort((a, b) => a.order_index - b.order_index);
   }
 
+  setCategories(categories: ServiceCategoryItem[]): void {
+    if (Array.isArray(categories) && categories.length > 0) {
+      this._categories = [...categories];
+      this.saveToLocalStorage();
+    }
+  }
+
+  setServices(services: CompanyService[]): void {
+    if (Array.isArray(services)) {
+      this._services = [...services];
+    }
+  }
+
   getCategoryServiceCounts(): Record<string, number> {
     const counts: Record<string, number> = {};
     for (const s of this._services) {
@@ -1633,38 +1678,48 @@ class MemoryServicesStore {
     const name = input.name.trim();
     const slug = input.slug?.trim() ? slugifyServiceCategory(input.slug) : slugifyServiceCategory(name);
 
+    let existingIdx = -1;
     if (input.id) {
-      const idx = this._categories.findIndex((c) => c.id === input.id);
-      if (idx !== -1) {
-        const existing = this._categories[idx];
-        const oldName = existing.name;
-        const updated: ServiceCategoryItem = {
-          ...existing,
-          name,
-          slug,
-          description: input.description ?? existing.description,
-          status: input.status ?? existing.status,
-          order_index: typeof input.order_index === "number" ? input.order_index : existing.order_index,
-          updated_at: now,
-        };
-        this._categories[idx] = updated;
+      existingIdx = this._categories.findIndex((c) => c.id === input.id);
+    }
+    if (existingIdx === -1) {
+      // Try match by exact name or slug
+      existingIdx = this._categories.findIndex(
+        (c) => c.name.toLowerCase() === name.toLowerCase() || c.slug === slug
+      );
+    }
 
-        // Cascade rename across services if category name changed
-        if (oldName !== name) {
-          this._services = this._services.map((s) => {
-            if (s.category === oldName) {
-              return { ...s, category: name, updated_at: now };
-            }
-            return s;
-          });
-        }
+    if (existingIdx !== -1) {
+      const existing = this._categories[existingIdx];
+      const oldName = existing.name;
+      const updated: ServiceCategoryItem = {
+        ...existing,
+        id: input.id || existing.id,
+        name,
+        slug,
+        description: input.description !== undefined ? input.description : existing.description,
+        status: input.status ?? existing.status,
+        order_index: typeof input.order_index === "number" ? input.order_index : existing.order_index,
+        updated_at: now,
+      };
+      this._categories[existingIdx] = updated;
 
-        return updated;
+      // Cascade rename across services if category name changed
+      if (oldName && oldName.toLowerCase() !== name.toLowerCase()) {
+        this._services = this._services.map((s) => {
+          if (s.category.toLowerCase() === oldName.toLowerCase()) {
+            return { ...s, category: name, updated_at: now };
+          }
+          return s;
+        });
       }
+
+      this.saveToLocalStorage();
+      return updated;
     }
 
     const newCategory: ServiceCategoryItem = {
-      id: `scat-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      id: input.id || `scat-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
       name,
       slug,
       description: input.description || "",
@@ -1675,13 +1730,18 @@ class MemoryServicesStore {
     };
 
     this._categories.push(newCategory);
+    this.saveToLocalStorage();
     return newCategory;
   }
 
   deleteCategory(id: string): boolean {
     const initLen = this._categories.length;
-    this._categories = this._categories.filter((c) => c.id !== id);
-    return this._categories.length < initLen;
+    this._categories = this._categories.filter((c) => c.id !== id && c.name.toLowerCase() !== id.toLowerCase());
+    const deleted = this._categories.length < initLen;
+    if (deleted) {
+      this.saveToLocalStorage();
+    }
+    return deleted;
   }
 
   getPublicPayload(): PublicServicesPayload {

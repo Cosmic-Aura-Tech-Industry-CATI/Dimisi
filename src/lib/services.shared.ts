@@ -112,6 +112,8 @@ export interface ServiceCategoryItem {
   description?: string | undefined;
   status: "active" | "inactive";
   order_index: number;
+  total_service_count?: number | undefined;
+  active_service_count?: number | undefined;
   created_at?: string | undefined;
   updated_at?: string | undefined;
 }

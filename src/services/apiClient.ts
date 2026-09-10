@@ -62,6 +62,10 @@ export async function apiRequest<T = any>(
     defaultHeaders["Authorization"] = `Bearer ${authToken}`;
   }
 
+  if (typeof FormData !== "undefined" && rest.body instanceof FormData) {
+    delete defaultHeaders["Content-Type"];
+  }
+
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -92,13 +96,13 @@ export async function apiRequest<T = any>(
 
       if (!errorMessage) {
         if (response.status === 401) {
-          errorMessage = "Invalid administrator credentials.";
+          errorMessage = "Unauthorized access. Please check your credentials.";
         } else if (response.status === 403) {
-          errorMessage = "You do not have permission to access the control room.";
+          errorMessage = "You do not have permission to perform this action.";
         } else if (response.status === 404) {
-          errorMessage = "The requested authentication endpoint was not found.";
+          errorMessage = "The requested API endpoint was not found.";
         } else if (response.status >= 500) {
-          errorMessage = "Authentication service is temporarily unavailable.";
+          errorMessage = "Backend server is temporarily unavailable or returned an internal error.";
         } else {
           errorMessage = `Request failed with status ${response.status}`;
         }
@@ -116,12 +120,12 @@ export async function apiRequest<T = any>(
     }
 
     if (err instanceof Error && err.name === "AbortError") {
-      throw new ApiError("Authentication request timed out. Please try again.", 408);
+      throw new ApiError("Request timed out. Please try again.", 408);
     }
 
     // Network error (backend down, connection refused, CORS failure)
     throw new ApiError(
-      "Unable to reach the authentication service. Please verify the backend is running.",
+      `Unable to reach the backend service (${API_BASE_URL}). Please ensure the backend server is running.`,
       0,
     );
   }
