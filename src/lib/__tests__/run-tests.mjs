@@ -7,12 +7,12 @@ import {
   slugify,
   sanitizeText,
   NAME_MAX,
-} from "../reviews.shared.js";
+} from "../reviews.shared.ts";
 import {
   issueCaptcha,
   verifyCaptcha,
   escapeHtml,
-} from "../reviews.server.js";
+} from "../reviews.data.ts";
 
 test("Customer Review Validation", async (t) => {
   await t.test("fails on empty or short name", () => {

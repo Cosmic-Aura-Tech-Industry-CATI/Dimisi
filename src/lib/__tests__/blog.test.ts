@@ -2,11 +2,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   slugifyBlog,
+  slugifyBlogCategory,
   validateBlogPostInput,
+  validateBlogCategoryInput,
   type BlogPostInput,
   type BlogPostItem,
+  type BlogCategoryInput,
 } from "../blog.shared";
-import { blogStore } from "../blog.server";
+import { blogStore } from "../blog.data";
 
 test("Blog System - slugifyBlog helper produces clean URL-friendly slugs", () => {
   assert.equal(
@@ -18,6 +21,19 @@ test("Blog System - slugifyBlog helper produces clean URL-friendly slugs", () =>
     "shipping-webgl-60fps-shaders"
   );
   assert.equal(slugifyBlog("AI & Cloud Economics @ 2026"), "ai-cloud-economics-2026");
+});
+
+test("Blog System - slugifyBlogCategory produces clean category slugs", () => {
+  assert.equal(slugifyBlogCategory("AI & Autonomy"), "ai-autonomy");
+  assert.equal(slugifyBlogCategory("Cloud & Infrastructure"), "cloud-infrastructure");
+  assert.equal(slugifyBlogCategory("  Full-Stack & Web 3.0  "), "full-stack-web-30");
+});
+
+test("Blog System - validateBlogCategoryInput validates category name length", () => {
+  assert.equal(validateBlogCategoryInput({ name: "" }).valid, false);
+  assert.equal(validateBlogCategoryInput({ name: "A" }).valid, false);
+  assert.equal(validateBlogCategoryInput({ name: "AI" }).valid, true);
+  assert.equal(validateBlogCategoryInput({ name: "Cybersecurity & Cryptography" }).valid, true);
 });
 
 test("Blog System - validateBlogPostInput validates title, category, excerpt, content, and cover", () => {
@@ -166,6 +182,44 @@ test("Blog System - Full CRUD operations with metadata persistence", () => {
   const deleted = blogStore.deletePost(created.id);
   assert.equal(deleted, true);
   assert.equal(blogStore.getPostById(created.id), null);
+});
+
+test("Blog System - Category CRUD and post count calculation", () => {
+  // 1. Initial categories
+  const categories = blogStore.getCategoryItems();
+  assert.ok(categories.length >= 5, "Expected at least 5 default categories");
+  const aiCat = categories.find((c) => c.name === "AI");
+  assert.ok(aiCat, "Expected AI category to exist");
+
+  // Post count
+  const aiCount = blogStore.getCategoryPostCount("AI");
+  assert.ok(aiCount >= 2, "Expected at least 2 AI posts");
+
+  // 2. Create Category
+  const createdCat = blogStore.saveCategory({
+    name: "Cybersecurity & Web3",
+    slug: "cybersecurity-web3",
+    description: "Zero-trust architectures, cryptography and protocol security.",
+    status: "active",
+  });
+  assert.ok(createdCat.id);
+  assert.equal(createdCat.name, "Cybersecurity & Web3");
+  assert.equal(createdCat.slug, "cybersecurity-web3");
+
+  // 3. Edit Category
+  const updatedCat = blogStore.saveCategory({
+    id: createdCat.id,
+    name: "Cybersecurity & Zero Trust",
+    slug: "cybersecurity-zero-trust",
+    description: "Updated description for zero-trust security.",
+    status: "active",
+  });
+  assert.equal(updatedCat.name, "Cybersecurity & Zero Trust");
+
+  // 4. Delete Category
+  const delRes = blogStore.deleteCategory(createdCat.id);
+  assert.equal(delRes.success, true);
+  assert.equal(delRes.postCount, 0);
 });
 
 test("Blog System - updateConfig modifies notice banner and hero metadata", () => {

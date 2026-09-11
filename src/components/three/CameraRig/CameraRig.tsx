@@ -1,3 +1,4 @@
+import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import type { PointerRef } from "@/hooks/usePointer";
@@ -9,6 +10,8 @@ interface CameraRigProps {
 
 /** Scroll = movie timeline. Camera dollies, orbits and tilts through five chapters. */
 export function CameraRig({ pointer, scrollRef }: CameraRigProps) {
+  const targetPos = useRef(new THREE.Vector3(0, 0, 7));
+
   useFrame((state) => {
     const s = scrollRef.current ?? 0;
     const p = pointer.current ?? { x: 0, y: 0 };
@@ -20,7 +23,8 @@ export function CameraRig({ pointer, scrollRef }: CameraRigProps) {
     const targetY = Math.cos(s * Math.PI * 1.4) * 0.5 - p.y * 0.35;
     const targetZ = 7;
 
-    state.camera.position.lerp(new THREE.Vector3(targetX, targetY, targetZ), 0.05);
+    targetPos.current.set(targetX, targetY, targetZ);
+    state.camera.position.lerp(targetPos.current, 0.05);
     state.camera.lookAt(p.x * 0.35, -p.y * 0.25 + Math.sin(t * 0.2) * 0.05, -20);
   });
 

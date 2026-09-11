@@ -5,7 +5,7 @@ import {
   validateProjectInput,
   type ProjectInput,
 } from "../work.shared";
-import { workStore } from "../work.server";
+import { workStore } from "../work.data";
 
 test("Work & Products System - Slugification", async (t) => {
   await t.test("creates clean URL slugs from project titles", () => {

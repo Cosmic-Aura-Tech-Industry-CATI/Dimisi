@@ -1,5 +1,4 @@
 import { useState, useTransition } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import {
   Star,
   CheckCircle,
@@ -49,11 +48,11 @@ export function AdminReviews({
   reviews: AdminReview[];
   onRefresh: () => void;
 }) {
-  const changeStatus = useServerFn(updateReviewStatus);
-  const editContent = useServerFn(updateReviewContent);
-  const setFeatured = useServerFn(toggleReviewFeatured);
-  const setVerified = useServerFn(toggleReviewVerified);
-  const removeReview = useServerFn(deleteReview);
+  const changeStatus = updateReviewStatus;
+  const editContent = updateReviewContent;
+  const setFeatured = toggleReviewFeatured;
+  const setVerified = toggleReviewVerified;
+  const removeReview = deleteReview;
 
   const [statusTab, setStatusTab] = useState<"all" | ReviewStatus>("all");
   const [reviewerTypeFilter, setReviewerTypeFilter] = useState<"all" | "client" | "employee">("all");

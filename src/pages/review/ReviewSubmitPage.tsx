@@ -1,6 +1,5 @@
 import { useEffect, useState, useTransition } from "react";
 import { Link } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import {
   Star,
   Upload,
@@ -47,9 +46,9 @@ export function ReviewSubmitPage({
   campaignSlug?: string;
   isScan?: boolean;
 }) {
-  const loadCampaign = useServerFn(getReviewCampaign);
-  const loadCaptcha = useServerFn(getReviewCaptcha);
-  const sendReview = useServerFn(submitReview);
+  const loadCampaign = getReviewCampaign;
+  const loadCaptcha = getReviewCaptcha;
+  const sendReview = submitReview;
 
   const [campaign, setCampaign] = useState<{
     id: string;

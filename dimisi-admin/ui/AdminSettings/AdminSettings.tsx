@@ -1,5 +1,4 @@
 import { useState, useTransition } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { Bell, Save, Check, Loader2, Mail } from "lucide-react";
 import type { ReviewSettings } from "@/lib/reviews.shared";
 import { updateReviewSettings } from "@/lib/reviews.functions";
@@ -12,7 +11,7 @@ export function AdminSettings({
   settings: ReviewSettings;
   onRefresh: () => void;
 }) {
-  const saveSettings = useServerFn(updateReviewSettings);
+  const saveSettings = updateReviewSettings;
 
   const [notifyOnSubmit, setNotifyOnSubmit] = useState(settings.notify_on_submit);
   const [notifyOnApprove, setNotifyOnApprove] = useState(settings.notify_on_approve);

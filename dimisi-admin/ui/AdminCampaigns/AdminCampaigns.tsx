@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState, useTransition } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import QRCode from "qrcode";
 import {
   QrCode,
@@ -39,9 +38,9 @@ export function AdminCampaigns({
   campaigns: ReviewCampaign[];
   onRefresh: () => void;
 }) {
-  const addCampaign = useServerFn(createCampaign);
-  const editCampaign = useServerFn(updateCampaign);
-  const removeCampaign = useServerFn(deleteCampaign);
+  const addCampaign = createCampaign;
+  const editCampaign = updateCampaign;
+  const removeCampaign = deleteCampaign;
 
   // Creation State
   const [isCreating, setIsCreating] = useState(false);

@@ -1,8 +1,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { ShieldAlert, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import { logoutAdmin } from "@/services/adminAuth.service";
 import { AdminBackdrop } from "../AdminBackdrop/AdminBackdrop";
 import { AdminLogin } from "../AdminLogin/AdminLogin";
 import { AdminShell, type AdminTab } from "../AdminShell/AdminShell";
@@ -18,12 +18,12 @@ import { AdminEvents } from "../AdminEvents/AdminEvents";
 import { AdminCampaigns } from "../AdminCampaigns/AdminCampaigns";
 import { AdminReports } from "../AdminReports/AdminReports";
 import { AdminAnalytics } from "../AdminAnalytics/AdminAnalytics";
+import { AdminLogs } from "../AdminLogs/AdminLogs";
 import { AdminSettings } from "../AdminSettings/AdminSettings";
 import { AdminLeads } from "../AdminLeads/AdminLeads";
 import { canAccessTab, getRoleMeta, type AdminRole } from "../../lib/rbac.shared";
 import {
   getAdminOverview,
-  updateAdminProfile,
   type AdminOverview,
 } from "../../server/admin.functions";
 import {
@@ -45,9 +45,9 @@ import {
 import {
   getAdminBlogData,
 } from "@/lib/blog.functions";
-import type { CompanyEvent, EventGalleryItem } from "@/lib/events.shared";
-import type { CompanyService, IndustrySector } from "@/lib/services.shared";
-import type { ProjectItem } from "@/lib/work.shared";
+import type { CompanyEvent, EventGalleryItem, EventCategoryItem } from "@/lib/events.shared";
+import type { CompanyService, IndustrySector, ServiceCategoryItem } from "@/lib/services.shared";
+import type { ProjectItem, WorkCategoryItem } from "@/lib/work.shared";
 import type {
   JobOpening,
   HiringProcessStep,
@@ -55,7 +55,7 @@ import type {
   CareersHeroConfig,
   CareersClosingCtaConfig,
 } from "@/lib/careers.shared";
-import type { BlogPostItem, BlogConfig } from "@/lib/blog.shared";
+import type { BlogPostItem, BlogConfig, BlogCategoryItem } from "@/lib/blog.shared";
 import styles from "../styles/admin.module.css";
 
 type Tab = AdminTab;
@@ -64,36 +64,57 @@ type Tab = AdminTab;
 export function AdminPanel() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
-  const load = useServerFn(getAdminOverview);
-  const loadReviewsData = useServerFn(getAdminReviewsData);
-  const loadEventsData = useServerFn(getAdminEventsData);
-  const loadServicesData = useServerFn(getAdminServicesData);
-  const loadWorkData = useServerFn(getAdminWorkData);
-  const loadCareersData = useServerFn(getAdminCareersData);
-  const loadBlogData = useServerFn(getAdminBlogData);
-  const saveProfile = useServerFn(updateAdminProfile);
+  const load = getAdminOverview;
+  const loadReviewsData = getAdminReviewsData;
+  const loadEventsData = getAdminEventsData;
+  const loadServicesData = getAdminServicesData;
+  const loadWorkData = getAdminWorkData;
+  const loadCareersData = getAdminCareersData;
+  const loadBlogData = getAdminBlogData;
 
   const [data, setData] = useState<AdminOverview | null>(null);
   const [reviewsData, setReviewsData] = useState<AdminDashboardData | null>(null);
-  const [eventsData, setEventsData] = useState<{ events: CompanyEvent[]; gallery: EventGalleryItem[] }>({
+  const [eventsData, setEventsData] = useState<{
+    events: CompanyEvent[];
+    gallery: EventGalleryItem[];
+    categoryItems?: EventCategoryItem[];
+    categoryCounts?: Record<string, number>;
+  }>({
     events: [],
     gallery: [],
+    categoryItems: [],
+    categoryCounts: {},
   });
-  const [servicesData, setServicesData] = useState<{ services: CompanyService[]; industries: IndustrySector[] }>({
+  const [servicesData, setServicesData] = useState<{
+    services: CompanyService[];
+    industries: IndustrySector[];
+    categoryItems?: ServiceCategoryItem[];
+    categoryCounts?: Record<string, number>;
+  }>({
     services: [],
     industries: [],
+    categoryItems: [],
+    categoryCounts: {},
   });
-  const [workData, setWorkData] = useState<{ projects: ProjectItem[] }>({
+  const [workData, setWorkData] = useState<{
+    projects: ProjectItem[];
+    categoryItems?: WorkCategoryItem[];
+    categoryCounts?: Record<string, number>;
+  }>({
     projects: [],
+    categoryItems: [],
+    categoryCounts: {},
   });
   const [careersData, setCareersData] = useState<{
     jobs: JobOpening[];
+    applications?: JobApplicationItem[];
     hiring_steps: HiringProcessStep[];
     benefits: CultureBenefit[];
     hero: CareersHeroConfig;
     closing_cta: CareersClosingCtaConfig;
   }>({
     jobs: [],
+    applications: [],
     hiring_steps: [],
     benefits: [],
     hero: {
@@ -101,20 +122,21 @@ export function AdminPanel() {
       heading: "Build the Future With Us",
       subline: "Join a curious, innovation-focused team where your work ships and your ideas matter.",
       cta_text: "Apply Now",
-      cta_link: "https://www.thekalesh.com/careers",
+      cta_link: "#open-positions",
       illustration_caption: "Bhootdev Careers",
     },
     closing_cta: {
       heading: "Ready to Join Us?",
       subline: "Send us your details and tell us what you'd love to work on.",
       cta_text: "Apply Now",
-      cta_link: "https://www.thekalesh.com/careers",
+      cta_link: "#open-positions",
     },
   });
   const [blogData, setBlogData] = useState<{
     posts: BlogPostItem[];
     config: BlogConfig;
     categories: string[];
+    categoryItems?: BlogCategoryItem[];
   }>({
     posts: [],
     config: {
@@ -126,10 +148,19 @@ export function AdminPanel() {
       under_development_notice_text: "Blog section under development. Please visit again after some time.",
     },
     categories: ["All Posts", "Web", "Mobile", "AI", "Cloud", "Startups", "Technology Trends"],
+    categoryItems: [],
   });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<Tab>("overview");
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlTab = params.get("tab") as Tab;
+      if (urlTab) return urlTab;
+      if (window.location.pathname.endsWith("/logs")) return "logs";
+    }
+    return "overview";
+  });
 
   const refreshReviews = useCallback(() => {
     loadReviewsData()
@@ -183,7 +214,7 @@ export function AdminPanel() {
     setBusy(true);
     setError(null);
 
-    Promise.all([
+    Promise.allSettled([
       load(),
       loadReviewsData(),
       loadEventsData(),
@@ -194,17 +225,17 @@ export function AdminPanel() {
     ])
       .then(([resOverview, resReviews, resEvents, resServices, resWork, resCareers, resBlog]) => {
         if (active) {
-          setData(resOverview);
-          setReviewsData(resReviews);
-          setEventsData(resEvents);
-          setServicesData(resServices);
-          setWorkData(resWork);
-          setCareersData(resCareers);
-          setBlogData(resBlog);
+          if (resOverview.status === "fulfilled") setData(resOverview.value);
+          if (resReviews.status === "fulfilled") setReviewsData(resReviews.value);
+          if (resEvents.status === "fulfilled") setEventsData(resEvents.value);
+          if (resServices.status === "fulfilled") setServicesData(resServices.value);
+          if (resWork.status === "fulfilled") setWorkData(resWork.value);
+          if (resCareers.status === "fulfilled") setCareersData(resCareers.value);
+          if (resBlog.status === "fulfilled") setBlogData(resBlog.value);
         }
       })
       .catch((err: unknown) => {
-        if (active) setError(err instanceof Error ? err.message : "Could not load admin data.");
+        console.warn("Admin panel non-fatal data fetch warning:", err);
       })
       .finally(() => {
         if (active) setBusy(false);
@@ -226,8 +257,7 @@ export function AdminPanel() {
 
   async function signOut() {
     try {
-      localStorage.removeItem("dimisi_admin_session");
-      window.dispatchEvent(new Event("dimisi-auth-change"));
+      logoutAdmin();
     } catch {}
     void navigate({ to: "/", replace: true });
   }
@@ -337,13 +367,6 @@ export function AdminPanel() {
             designation={self?.designation ?? null}
             role={userRole}
             memberSince={self?.created_at}
-            onSave={async ({ fullName, designation }) => {
-              const res = await saveProfile({
-                data: { userId: data.selfId, fullName, designation },
-              });
-              setData((prev) => (prev ? { ...prev, admins: res.admins } : prev));
-              return res.message;
-            }}
           />
         }
       >
@@ -397,6 +420,8 @@ export function AdminPanel() {
               <AdminServices
                 services={servicesData.services}
                 industries={servicesData.industries}
+                categoryItems={servicesData.categoryItems}
+                categoryCounts={servicesData.categoryCounts}
                 onRefresh={refreshServices}
               />
             )}
@@ -405,6 +430,8 @@ export function AdminPanel() {
             {tab === "work" && (
               <AdminWork
                 projects={workData.projects}
+                categoryItems={workData.categoryItems}
+                categoryCounts={workData.categoryCounts}
                 onRefresh={refreshWork}
               />
             )}
@@ -413,6 +440,7 @@ export function AdminPanel() {
             {tab === "careers" && (
               <AdminCareers
                 jobs={careersData.jobs}
+                applications={careersData.applications || []}
                 hiringSteps={careersData.hiring_steps}
                 benefits={careersData.benefits}
                 hero={careersData.hero}
@@ -427,6 +455,7 @@ export function AdminPanel() {
                 posts={blogData.posts}
                 config={blogData.config}
                 categories={blogData.categories}
+                categoryItems={blogData.categoryItems}
                 onRefresh={refreshBlog}
               />
             )}
@@ -436,6 +465,8 @@ export function AdminPanel() {
               <AdminEvents
                 events={eventsData.events}
                 gallery={eventsData.gallery}
+                categoryItems={eventsData.categoryItems}
+                categoryCounts={eventsData.categoryCounts}
                 onRefresh={refreshEvents}
               />
             )}
@@ -458,6 +489,11 @@ export function AdminPanel() {
             {/* ANALYTICS TAB */}
             {tab === "analytics" && (
               <AdminAnalytics data={reviewsData} />
+            )}
+
+            {/* ADMIN LOGS TAB */}
+            {tab === "logs" && (
+              <AdminLogs currentUserRole={userRole} />
             )}
 
             {/* SETTINGS TAB */}

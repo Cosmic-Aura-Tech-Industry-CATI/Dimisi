@@ -150,16 +150,21 @@ export type ReviewSettings = {
 
 export type ReviewStats = {
   total: number;
+  totalReviews: number;
   average: number;
+  averageRating: number;
   distribution: Record<1 | 2 | 3 | 4 | 5, number>;
-  clientTotal?: number;
-  clientAverage?: number;
-  employeeTotal?: number;
-  employeeAverage?: number;
-  pendingCount?: number;
-  approvedCount?: number;
-  rejectedCount?: number;
-  archivedCount?: number;
+  clientTotal: number;
+  clientAverage: number;
+  employeeTotal: number;
+  employeeAverage: number;
+  pendingCount: number;
+  approvedCount: number;
+  rejectedCount: number;
+  archivedCount: number;
+  reviewsThisMonth: number;
+  overallConversionRate: number;
+  openReportsCount: number;
 };
 
 export type ReviewInput = {
@@ -225,18 +230,42 @@ export function slugify(value: string): string {
     .slice(0, 60);
 }
 
-export function computeStats(rows: { rating: number; reviewer_type?: ReviewType }[]): ReviewStats {
+export function computeStats(
+  rows: {
+    rating: number;
+    reviewer_type?: ReviewType;
+    status?: ReviewStatus;
+    created_at?: string;
+    submitted_at?: string;
+    date?: string;
+  }[],
+  campaigns?: { visit_count?: number; review_count?: number }[],
+  reports?: { status?: string }[],
+): ReviewStats {
   const distribution: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   let sum = 0;
   let clientSum = 0;
   let clientCount = 0;
   let employeeSum = 0;
   let employeeCount = 0;
+  let pendingCount = 0;
+  let approvedCount = 0;
+  let rejectedCount = 0;
+  let archivedCount = 0;
+  let reviewsThisMonth = 0;
+
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
 
   for (const r of rows) {
     const k = Math.min(5, Math.max(1, Math.round(r.rating))) as 1 | 2 | 3 | 4 | 5;
     distribution[k] = (distribution[k] || 0) + 1;
     sum += r.rating;
+
+    const status = r.status || "approved";
+    if (status === "pending") pendingCount += 1;
+    else if (status === "rejected") rejectedCount += 1;
+    else if (status === "archived") archivedCount += 1;
+    else approvedCount += 1;
 
     if (r.reviewer_type === "employee") {
       employeeSum += r.rating;
@@ -245,17 +274,47 @@ export function computeStats(rows: { rating: number; reviewer_type?: ReviewType 
       clientSum += r.rating;
       clientCount += 1;
     }
+
+    const dateStr = r.created_at || r.submitted_at || r.date;
+    if (dateStr) {
+      const ts = new Date(dateStr).getTime();
+      if (!isNaN(ts) && ts >= thirtyDaysAgo) {
+        reviewsThisMonth += 1;
+      }
+    }
   }
 
   const total = rows.length;
+  const avg = total ? Math.round((sum / total) * 10) / 10 : 5.0;
+
+  let totalVisits = 0;
+  let totalSubmissions = 0;
+  if (campaigns && campaigns.length > 0) {
+    for (const c of campaigns) {
+      totalVisits += c.visit_count || 0;
+      totalSubmissions += c.review_count || 0;
+    }
+  }
+  const overallConversionRate = totalVisits > 0 ? Math.round((totalSubmissions / totalVisits) * 1000) / 10 : 0;
+  const openReportsCount = reports ? reports.filter((rep) => rep.status === "open").length : 0;
+
   return {
     total,
-    average: total ? Math.round((sum / total) * 10) / 10 : 5.0,
+    totalReviews: total,
+    average: avg,
+    averageRating: avg,
     distribution,
     clientTotal: clientCount,
     clientAverage: clientCount ? Math.round((clientSum / clientCount) * 10) / 10 : 5.0,
     employeeTotal: employeeCount,
     employeeAverage: employeeCount ? Math.round((employeeSum / employeeCount) * 10) / 10 : 5.0,
+    pendingCount,
+    approvedCount: approvedCount || total,
+    rejectedCount,
+    archivedCount,
+    reviewsThisMonth,
+    overallConversionRate,
+    openReportsCount,
   };
 }
 

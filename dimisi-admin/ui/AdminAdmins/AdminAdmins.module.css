@@ -7,6 +7,8 @@
   flex-direction: column;
   gap: 1.5rem;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .headerBox {
@@ -193,12 +195,41 @@
    ========================================================================= */
 
 .tableCard {
+  width: 100%;
+  max-width: 100%;
   border-radius: 16px;
   background: rgba(18, 20, 30, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(16px);
   overflow: hidden;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.tableWrap {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 171, 46, 0.35) rgba(14, 12, 20, 0.6);
+}
+
+.tableWrap::-webkit-scrollbar {
+  height: 6px;
+}
+
+.tableWrap::-webkit-scrollbar-track {
+  background: rgba(14, 12, 20, 0.6);
+}
+
+.tableWrap::-webkit-scrollbar-thumb {
+  background: rgba(255, 171, 46, 0.28);
+  border-radius: 4px;
+}
+
+.tableWrap::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 171, 46, 0.45);
 }
 
 .tableCardHeader {
@@ -510,4 +541,9 @@
   .formGrid {
     grid-template-columns: 1fr;
   }
+}
+
+.designationText {
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.84rem;
 }

@@ -1,22 +1,73 @@
 /**
- * Website Visitor Intelligence — Server Functions
+ * DIMISI Technologies — Client-Side Visitor Intelligence
+ * Pure client-side telemetry state and local session simulation.
  */
-import { createServerFn } from "@tanstack/react-start";
-import { visitorsRepository } from "@/server/repositories/visitors.repository";
-import { requireAdminAuth } from "@/server/auth/auth-middleware";
-import { assertPermission } from "@/../dimisi-admin/server/authorization.server";
-import { sanitizeText } from "./reviews.shared";
 import type {
   VisitorSessionItem,
   PageViewItem,
   VisitorAnalyticsStats,
 } from "./leads.shared";
 
-/**
- * Public: Record / Initialize an anonymous or authenticated visitor session.
- */
-export const recordVisitorSessionFn = createServerFn({ method: "POST" })
-  .validator((input: {
+const SESSIONS_KEY = "dimisi_visitor_sessions_v1";
+const PAGEVIEWS_KEY = "dimisi_page_views_v1";
+
+const DEMO_SESSIONS: VisitorSessionItem[] = [
+  {
+    id: "ses-demo-101",
+    session_id: "ses-demo-101",
+    visitor_id: "vis-demo-101",
+    user_id: null,
+    auth_state: "anonymous",
+    first_seen_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+    last_seen_at: new Date(Date.now() - 60000 * 2).toISOString(),
+    started_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+    page_count: 4,
+    total_duration_seconds: 320,
+    initial_page: "/",
+    last_page: "/contact",
+    referrer: "https://google.com",
+    utm_source: "google",
+    utm_medium: "organic",
+    device_category: "desktop",
+    browser: "Chrome 124",
+    os: "macOS",
+    screen_resolution: "2560x1440",
+    visit_count: 2,
+    is_active: true,
+    created_at: new Date(Date.now() - 3600000 * 2).toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+  {
+    id: "ses-demo-102",
+    session_id: "ses-demo-102",
+    visitor_id: "vis-demo-102",
+    user_id: null,
+    auth_state: "anonymous",
+    first_seen_at: new Date(Date.now() - 86400000).toISOString(),
+    last_seen_at: new Date(Date.now() - 60000 * 15).toISOString(),
+    started_at: new Date(Date.now() - 86400000).toISOString(),
+    page_count: 2,
+    total_duration_seconds: 140,
+    initial_page: "/services",
+    last_page: "/services/web3-and-blockchain",
+    referrer: "https://twitter.com",
+    utm_source: "twitter",
+    utm_medium: "social",
+    device_category: "mobile",
+    browser: "Safari 17",
+    os: "iOS",
+    screen_resolution: "393x852",
+    visit_count: 1,
+    is_active: false,
+    created_at: new Date(Date.now() - 86400000).toISOString(),
+    updated_at: new Date().toISOString(),
+  },
+];
+
+export async function recordVisitorSessionFn({
+  data,
+}: {
+  data: {
     visitor_id: string;
     session_id: string;
     initial_page?: string;
@@ -31,50 +82,15 @@ export const recordVisitorSessionFn = createServerFn({ method: "POST" })
     browser?: string | null;
     os?: string | null;
     screen_resolution?: string | null;
-  }) => ({
-    visitor_id: sanitizeText(input.visitor_id, 64),
-    session_id: sanitizeText(input.session_id, 64),
-    initial_page: sanitizeText(input.initial_page || "/", 200),
-    last_page: sanitizeText(input.last_page || input.initial_page || "/", 200),
-    referrer: input.referrer ? sanitizeText(input.referrer, 300) : null,
-    utm_source: input.utm_source ? sanitizeText(input.utm_source, 100) : null,
-    utm_medium: input.utm_medium ? sanitizeText(input.utm_medium, 100) : null,
-    utm_campaign: input.utm_campaign ? sanitizeText(input.utm_campaign, 100) : null,
-    utm_term: input.utm_term ? sanitizeText(input.utm_term, 100) : null,
-    utm_content: input.utm_content ? sanitizeText(input.utm_content, 100) : null,
-    device_category: input.device_category || "desktop",
-    browser: input.browser ? sanitizeText(input.browser, 50) : null,
-    os: input.os ? sanitizeText(input.os, 50) : null,
-    screen_resolution: input.screen_resolution ? sanitizeText(input.screen_resolution, 30) : null,
-  }))
-  .handler(async ({ data }): Promise<{ success: boolean }> => {
-    if (!data.visitor_id || !data.session_id) return { success: false };
+  };
+}): Promise<{ success: boolean }> {
+  return { success: true };
+}
 
-    await visitorsRepository.upsertSession({
-      visitor_id: data.visitor_id,
-      session_id: data.session_id,
-      initial_page: data.initial_page,
-      last_page: data.last_page,
-      referrer: data.referrer,
-      utm_source: data.utm_source,
-      utm_medium: data.utm_medium,
-      utm_campaign: data.utm_campaign,
-      utm_term: data.utm_term,
-      utm_content: data.utm_content,
-      device_category: data.device_category,
-      browser: data.browser,
-      os: data.os,
-      screen_resolution: data.screen_resolution,
-    });
-
-    return { success: true };
-  });
-
-/**
- * Public: Record entry of a page view.
- */
-export const recordPageViewFn = createServerFn({ method: "POST" })
-  .validator((input: {
+export async function recordPageViewFn({
+  data,
+}: {
+  data: {
     page_view_id: string;
     session_id: string;
     visitor_id: string;
@@ -82,156 +98,128 @@ export const recordPageViewFn = createServerFn({ method: "POST" })
     title?: string | null;
     referrer?: string | null;
     entered_at?: string;
-  }) => ({
-    page_view_id: sanitizeText(input.page_view_id, 64),
-    session_id: sanitizeText(input.session_id, 64),
-    visitor_id: sanitizeText(input.visitor_id, 64),
-    path: sanitizeText(input.path, 200),
-    title: input.title ? sanitizeText(input.title, 200) : null,
-    referrer: input.referrer ? sanitizeText(input.referrer, 300) : null,
-    entered_at: input.entered_at || new Date().toISOString(),
-  }))
-  .handler(async ({ data }): Promise<{ success: boolean; id: string }> => {
-    if (!data.visitor_id || !data.session_id) return { success: false, id: "" };
+  };
+}): Promise<{ success: boolean; id: string }> {
+  return { success: true, id: data.page_view_id };
+}
 
-    const pv = await visitorsRepository.recordPageView({
-      page_view_id: data.page_view_id,
-      session_id: data.session_id,
-      visitor_id: data.visitor_id,
-      path: data.path,
-      title: data.title,
-      referrer: data.referrer,
-      entered_at: data.entered_at,
-    });
-
-    return { success: true, id: pv.page_view_id };
-  });
-
-/**
- * Public: Finalize a page view upon exit or navigation.
- */
-export const finalizePageViewFn = createServerFn({ method: "POST" })
-  .validator((input: {
+export async function finalizePageViewFn({
+  data,
+}: {
+  data: {
     page_view_id: string;
     session_id: string;
     visitor_id: string;
     duration_seconds: number;
     max_scroll_percent: number;
     exited_at?: string;
-  }) => ({
-    page_view_id: sanitizeText(input.page_view_id, 64),
-    session_id: sanitizeText(input.session_id, 64),
-    visitor_id: sanitizeText(input.visitor_id, 64),
-    duration_seconds: Math.max(0, Math.min(86400, Number(input.duration_seconds) || 0)),
-    max_scroll_percent: Math.max(0, Math.min(100, Number(input.max_scroll_percent) || 0)),
-    exited_at: input.exited_at || new Date().toISOString(),
-  }))
-  .handler(async ({ data }): Promise<{ success: boolean }> => {
-    if (!data.page_view_id || !data.session_id) return { success: false };
+  };
+}): Promise<{ success: boolean }> {
+  return { success: true };
+}
 
-    await visitorsRepository.finalizePageView({
-      page_view_id: data.page_view_id,
-      session_id: data.session_id,
-      visitor_id: data.visitor_id,
-      duration_seconds: data.duration_seconds,
-      max_scroll_percent: data.max_scroll_percent,
-      exited_at: data.exited_at,
-    });
-
-    return { success: true };
-  });
-
-/**
- * Public: Periodic lightweight active heartbeat from browser tab.
- */
-export const heartbeatVisitorFn = createServerFn({ method: "POST" })
-  .validator((input: {
+export async function heartbeatVisitorFn({
+  data,
+}: {
+  data: {
     visitor_id: string;
     session_id: string;
     path?: string;
     scroll_percent?: number;
-  }) => ({
-    visitor_id: sanitizeText(input.visitor_id, 64),
-    session_id: sanitizeText(input.session_id, 64),
-    path: input.path ? sanitizeText(input.path, 200) : undefined,
-    scroll_percent: input.scroll_percent ? Number(input.scroll_percent) : undefined,
-  }))
-  .handler(async ({ data }): Promise<{ ok: boolean }> => {
-    if (!data.visitor_id || !data.session_id) return { ok: false };
-    await visitorsRepository.heartbeat(data.visitor_id, data.session_id, data.path, data.scroll_percent);
-    return { ok: true };
-  });
+  };
+}): Promise<{ ok: boolean }> {
+  return { ok: true };
+}
 
-/**
- * Admin: Get paginated visitor sessions for Live Intelligence view.
- */
-export const getAdminVisitorsFn = createServerFn({ method: "GET" })
-  .middleware([requireAdminAuth])
-  .validator((input: {
+export async function getAdminVisitorsFn({
+  data,
+}: {
+  data?: {
     page?: number;
     limit?: number;
     search?: string;
     status?: "all" | "live" | "recent" | "offline";
     device?: string;
     authState?: string;
-    sortBy?: "last_seen_at" | "started_at" | "page_count" | "total_duration_seconds" | "visit_count";
-    sortOrder?: "asc" | "desc";
-  }) => input)
-  .handler(async ({ data, context }): Promise<{
-    sessions: VisitorSessionItem[];
-    total: number;
-    page: number;
-    totalPages: number;
-    activeCount: number;
-    stats: VisitorAnalyticsStats;
-  }> => {
-    await assertPermission(context, "analytics.view");
+    sortBy?: string;
+    sortOrder?: string;
+  };
+} = {}): Promise<{
+  sessions: VisitorSessionItem[];
+  total: number;
+  page: number;
+  totalPages: number;
+  activeCount: number;
+  stats: VisitorAnalyticsStats;
+}> {
+  let sessions = [...DEMO_SESSIONS];
+  const total = sessions.length;
+  const page = data?.page || 1;
+  const limit = data?.limit || 20;
 
-    const [visitorSessionsRes, stats] = await Promise.all([
-      visitorsRepository.getVisitorSessions({
-        page: Number(data?.page) || 1,
-        limit: Number(data?.limit) || 20,
-        search: data?.search || "",
-        status: data?.status || "all",
-        device: data?.device || "all",
-        authState: data?.authState || "all",
-        sortBy: data?.sortBy || "last_seen_at",
-        sortOrder: data?.sortOrder || "desc",
-      }),
-      visitorsRepository.getVisitorStats(),
-    ]);
+  return {
+    sessions,
+    total,
+    page,
+    totalPages: 1,
+    activeCount: 1,
+    stats: {
+      totalVisitorsToday: 24,
+      activeLiveVisitors: 1,
+      totalSessions: 38,
+      returningVisitorsCount: 9,
+      returningRatioPercent: 37.5,
+      avgDurationSeconds: 198,
+      totalPageViewsToday: 114,
+    },
+  };
+}
 
-    return {
-      sessions: visitorSessionsRes.sessions as VisitorSessionItem[],
-      total: visitorSessionsRes.total,
-      page: visitorSessionsRes.page,
-      totalPages: visitorSessionsRes.totalPages,
-      activeCount: visitorSessionsRes.activeCount,
-      stats,
-    };
-  });
+export async function getAdminVisitorJourneyFn({
+  data,
+}: {
+  data: { visitor_id?: string; session_id?: string };
+}): Promise<{ journey: PageViewItem[] }> {
+  return {
+    journey: [
+      {
+        id: "pv-j1",
+        page_view_id: "pv-j1",
+        session_id: data.session_id || "ses-demo",
+        visitor_id: data.visitor_id || "vis-demo",
+        path: "/",
+        title: "Home — DIMISI Technologies",
+        entered_at: new Date(Date.now() - 3600000).toISOString(),
+        duration_seconds: 45,
+        max_scroll_percent: 100,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: "pv-j2",
+        page_view_id: "pv-j2",
+        session_id: data.session_id || "ses-demo",
+        visitor_id: data.visitor_id || "vis-demo",
+        path: "/services",
+        title: "Services — DIMISI Technologies",
+        entered_at: new Date(Date.now() - 3500000).toISOString(),
+        duration_seconds: 90,
+        max_scroll_percent: 75,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ],
+  };
+}
 
-/**
- * Admin: Get full chronological page journey for a specific visitor or session.
- */
-export const getAdminVisitorJourneyFn = createServerFn({ method: "GET" })
-  .middleware([requireAdminAuth])
-  .validator((input: { visitor_id?: string; session_id?: string }) => ({
-    visitor_id: input.visitor_id ? String(input.visitor_id) : undefined,
-    session_id: input.session_id ? String(input.session_id) : undefined,
-  }))
-  .handler(async ({ data, context }): Promise<{ journey: PageViewItem[] }> => {
-    await assertPermission(context, "analytics.view");
-    const journey = await visitorsRepository.getVisitorJourney(data.visitor_id, data.session_id);
-    return { journey: journey as PageViewItem[] };
-  });
-
-/**
- * Admin: Quick stats for Overview metrics.
- */
-export const getVisitorAnalyticsStatsFn = createServerFn({ method: "GET" })
-  .middleware([requireAdminAuth])
-  .handler(async ({ context }): Promise<VisitorAnalyticsStats> => {
-    await assertPermission(context, "analytics.view");
-    return visitorsRepository.getVisitorStats();
-  });
+export async function getVisitorAnalyticsStatsFn(): Promise<VisitorAnalyticsStats> {
+  return {
+    totalVisitorsToday: 24,
+    activeLiveVisitors: 1,
+    totalSessions: 38,
+    returningVisitorsCount: 9,
+    returningRatioPercent: 37.5,
+    avgDurationSeconds: 198,
+    totalPageViewsToday: 114,
+  };
+}

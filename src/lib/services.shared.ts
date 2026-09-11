@@ -105,9 +105,33 @@ export interface IndustryInput {
   order_index?: number | null | undefined;
 }
 
+export interface ServiceCategoryItem {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | undefined;
+  status: "active" | "inactive";
+  order_index: number;
+  total_service_count?: number | undefined;
+  active_service_count?: number | undefined;
+  created_at?: string | undefined;
+  updated_at?: string | undefined;
+}
+
+export interface ServiceCategoryInput {
+  id?: string | undefined;
+  name: string;
+  slug?: string | undefined;
+  description?: string | undefined;
+  status?: "active" | "inactive" | undefined;
+  order_index?: number | undefined;
+}
+
 export interface PublicServicesPayload {
   services: CompanyService[];
   industries: IndustrySector[];
+  categories?: string[] | undefined;
+  categoryItems?: ServiceCategoryItem[] | undefined;
   stats: {
     totalServices: number;
     totalIndustries: number;
@@ -123,6 +147,74 @@ export function slugifyService(title: string): string {
     .replace(/[^\w\s-]/g, "")
     .replace(/[\s_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+export function slugifyServiceCategory(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function validateServiceCategoryInput(input: Partial<ServiceCategoryInput>): {
+  valid: boolean;
+  error?: string;
+  field?: string;
+} {
+  const name = input.name?.trim() || "";
+  if (name.length < 5) {
+    return { valid: false, error: "Category name must be at least 5 characters long (5-50 characters).", field: "name" };
+  }
+  if (name.length > 50) {
+    return { valid: false, error: "Category name cannot exceed 50 characters.", field: "name" };
+  }
+  if (input.description && input.description.trim().length > 0) {
+    const desc = input.description.trim();
+    if (desc.length < 5) {
+      return { valid: false, error: "Description must be at least 5 characters long.", field: "description" };
+    }
+    if (desc.length > 200) {
+      return { valid: false, error: "Description cannot exceed 200 characters.", field: "description" };
+    }
+  }
+  if (input.order_index !== undefined && input.order_index !== null) {
+    const num = Number(input.order_index);
+    if (!Number.isInteger(num) || num < 1 || num > 10000) {
+      return { valid: false, error: "Display order must be a whole number between 1 and 10000.", field: "order_index" };
+    }
+  }
+  return { valid: true };
+}
+
+export function validateIndustryInput(input: Partial<IndustryInput>): {
+  valid: boolean;
+  error?: string;
+  field?: string;
+} {
+  const name = input.name?.trim() || "";
+  const tagline = input.tagline?.trim() || "";
+  const description = input.description?.trim() || "";
+  const badge = input.badge?.trim() || "";
+  const imageUrl = input.image_url?.trim() || "";
+
+  if (name.length < 2) {
+    return { valid: false, error: "Industry name must be at least 2 characters long.", field: "name" };
+  }
+  if (tagline.length < 5) {
+    return { valid: false, error: "Tagline must be at least 5 characters long.", field: "tagline" };
+  }
+  if (description.length < 10) {
+    return { valid: false, error: "Description must be at least 10 characters long.", field: "description" };
+  }
+  if (badge.length < 2) {
+    return { valid: false, error: "Industry badge label is required.", field: "badge" };
+  }
+  if (!imageUrl) {
+    return { valid: false, error: "Industry image URL is required.", field: "image_url" };
+  }
+  return { valid: true };
 }
 
 export function validateServiceInput(input: ServiceInput): { valid: boolean; error?: string; field?: string } {

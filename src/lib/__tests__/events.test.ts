@@ -5,7 +5,7 @@ import {
   validateEvent,
   type EventInput,
 } from "../events.shared";
-import { eventsStore } from "../events.server";
+import { eventsStore } from "../events.data";
 
 test("Events System - Slugification", async (t) => {
   await t.test("creates clean URL slugs from event titles", () => {

@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { Eye, EyeOff, Lock, ShieldCheck } from "lucide-react";
-import { loginAdminFn } from "../../server/admin.functions";
+import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { loginAdmin } from "@/services/adminAuth.service";
+import { ApiError } from "@/services/apiClient";
 import styles from "../styles/admin.module.css";
 
-/** Secure sign-in gate for the DIMISI admin panel with Super Admin credentials support. */
+/** Secure sign-in gate for the DIMISI admin panel with Express backend authentication. */
 export function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -19,29 +20,37 @@ export function AdminLogin() {
     const cleanEmail = email.trim().toLowerCase();
     const cleanPassword = password.trim();
 
-    try {
-      const res = await loginAdminFn({
-        data: {
-          email: cleanEmail,
-          password: cleanPassword,
-        },
-      });
+    if (!cleanEmail || !cleanPassword) {
+      setError("Please provide both administrator email and password.");
+      setBusy(false);
+      return;
+    }
 
-      if (res?.success && res.user) {
-        localStorage.setItem(
-          "dimisi_admin_session",
-          JSON.stringify({
-            user: res.user,
-            token: res.token,
-            expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
-          }),
-        );
-        window.dispatchEvent(new Event("dimisi-auth-change"));
-      } else {
-        setError("Invalid email or password.");
-      }
+    try {
+      await loginAdmin({
+        email: cleanEmail,
+        password: cleanPassword,
+      });
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Authentication failed.");
+      if (err instanceof ApiError) {
+        if (err.status === 401) {
+          setError("Invalid administrator credentials.");
+        } else if (err.status === 403) {
+          setError(err.message || "You do not have permission to access the control room.");
+        } else if (err.status === 408) {
+          setError("Authentication request timed out. Please try again.");
+        } else if (err.status === 0) {
+          setError("Unable to reach the authentication service. Please verify the backend is running.");
+        } else if (err.status >= 500) {
+          setError("Authentication service is temporarily unavailable.");
+        } else {
+          setError(err.message || "Authentication failed.");
+        }
+      } else if (err instanceof Error) {
+        setError(err.message || "Session could not be established.");
+      } else {
+        setError("Unexpected authentication error. Please try again.");
+      }
     } finally {
       setBusy(false);
     }

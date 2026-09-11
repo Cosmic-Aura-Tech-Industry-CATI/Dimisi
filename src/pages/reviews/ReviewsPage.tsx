@@ -1,6 +1,5 @@
 import { useEffect, useState, useTransition } from "react";
 import { Link } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import {
   Star,
   CheckCircle,
@@ -27,8 +26,8 @@ import { getPublicReviews, reportReview } from "@/lib/reviews.functions";
 import styles from "./ReviewsPage.module.css";
 
 export function ReviewsPage() {
-  const loadReviews = useServerFn(getPublicReviews);
-  const sendReport = useServerFn(reportReview);
+  const loadReviews = getPublicReviews;
+  const sendReport = reportReview;
 
   const [reviews, setReviews] = useState<PublicReview[]>([]);
   const [featured, setFeatured] = useState<PublicReview[]>([]);
@@ -81,16 +80,28 @@ export function ReviewsPage() {
     })
       .then((res) => {
         if (!active) return;
+        const incomingReviews = Array.isArray(res?.reviews) ? res.reviews : [];
         if (page === 0) {
-          setReviews(res.reviews);
+          setReviews(incomingReviews);
         } else {
-          setReviews((prev) => [...prev, ...res.reviews]);
+          setReviews((prev) => [...(Array.isArray(prev) ? prev : []), ...incomingReviews]);
         }
-        setFeatured(res.featured);
-        setStats(res.stats);
-        setServices(res.services);
-        setTotalApproved(res.totalApproved);
-        setHasMore(res.hasMore);
+        setFeatured(Array.isArray(res?.featured) ? res.featured : []);
+        if (res?.stats) {
+          setStats(res.stats);
+        }
+        setServices(Array.isArray(res?.services) ? res.services : []);
+        setTotalApproved(
+          typeof res?.totalApproved === "number" ? res.totalApproved : res?.total ?? 0,
+        );
+        setHasMore(Boolean(res?.hasMore));
+      })
+      .catch((err) => {
+        console.error("Failed to load reviews:", err);
+        if (active) {
+          if (page === 0) setReviews([]);
+          setFeatured([]);
+        }
       })
       .finally(() => {
         if (active) setIsLoading(false);
@@ -145,20 +156,20 @@ export function ReviewsPage() {
       bestRating: "5",
       worstRating: "1",
     },
-    review: reviews.slice(0, 10).map((r) => ({
+    review: (Array.isArray(reviews) ? reviews : []).slice(0, 10).map((r) => ({
       "@type": "Review",
       author: {
         "@type": "Person",
-        name: r.customer_name,
+        name: r.customer_name || "Anonymous",
       },
       reviewRating: {
         "@type": "Rating",
-        ratingValue: r.rating,
+        ratingValue: r.rating || 5,
         bestRating: "5",
         worstRating: "1",
       },
-      reviewBody: r.review_text,
-      datePublished: r.published_at,
+      reviewBody: r.review_text || "",
+      datePublished: r.published_at || new Date().toISOString(),
     })),
   };
 
@@ -376,7 +387,7 @@ export function ReviewsPage() {
         </div>
 
         {/* Featured Reviews Spotlight (When on All Reviews & no filters) */}
-        {!ratingFilter && !serviceFilter && !searchQuery && typeFilter === "all" && featured.length > 0 ? (
+        {!ratingFilter && !serviceFilter && !searchQuery && typeFilter === "all" && (featured?.length ?? 0) > 0 ? (
           <div className={styles.featuredSection}>
             <div className={styles.featuredHeader}>
               <h3 className={styles.featuredHeading}>
@@ -466,7 +477,7 @@ export function ReviewsPage() {
         ) : null}
 
         {/* 05 — REVIEWS GRID / SKELETON / EMPTY STATES */}
-        {isLoading && reviews.length === 0 ? (
+        {isLoading && (reviews?.length ?? 0) === 0 ? (
           <div className={styles.reviewsGrid}>
             {[1, 2, 3, 4, 5, 6].map((sk) => (
               <div key={sk} className={[styles.reviewCard, styles.skeletonCard].join(" ")}>
@@ -485,7 +496,7 @@ export function ReviewsPage() {
               </div>
             ))}
           </div>
-        ) : reviews.length === 0 ? (
+        ) : (reviews?.length ?? 0) === 0 ? (
           <div className={styles.emptyState}>
             <CheckCircle size={44} color="#ffab2e" style={{ margin: "0 auto" }} />
             <h3 className={styles.emptyTitle}>

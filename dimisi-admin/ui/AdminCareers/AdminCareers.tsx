@@ -1,5 +1,4 @@
-import { useState, useTransition } from "react";
-import { useServerFn } from "@tanstack/react-start";
+import { useState, useTransition, useRef, useEffect, useMemo } from "react";
 import {
   Briefcase,
   Plus,
@@ -13,18 +12,21 @@ import {
   MapPin,
   Clock,
   Sparkles,
-  Layers,
   X,
   UserCheck,
-  Send,
   Save,
   Globe,
-  Heart,
-  BookOpen,
-  Sun,
-  Laptop,
-  Shield,
-  Settings,
+  FileText,
+  Search,
+  Download,
+  Users,
+  Mail,
+  Phone,
+  Filter,
+  User,
+  AlertCircle,
+  Calendar,
+  Layers,
 } from "lucide-react";
 import {
   type JobOpening,
@@ -32,10 +34,13 @@ import {
   type JobType,
   type WorkplaceType,
   type JobStatus,
+  type JobApplicationItem,
+  type ApplicationStatus,
   type HiringProcessStep,
   type CultureBenefit,
   type CareersHeroConfig,
   type CareersClosingCtaConfig,
+  APPLICATION_STATUS_META,
   slugifyJob,
 } from "@/lib/careers.shared";
 import {
@@ -44,11 +49,14 @@ import {
   saveHiringStepsFn,
   saveBenefitsFn,
   saveCareersHeroFn,
+  updateApplicationStatusFn,
+  deleteApplicationFn,
 } from "@/lib/careers.functions";
 import styles from "./AdminCareers.module.css";
 
 interface AdminCareersProps {
   jobs: JobOpening[];
+  applications?: JobApplicationItem[];
   hiringSteps: HiringProcessStep[];
   benefits: CultureBenefit[];
   hero: CareersHeroConfig;
@@ -56,8 +64,30 @@ interface AdminCareersProps {
   onRefresh: () => void;
 }
 
+function formatDate(dateStr: string): string {
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString("en-US", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return dateStr;
+  }
+}
+
+function formatFileSize(bytes: number): string {
+  if (!bytes) return "0 B";
+  const k = 1024;
+  const sizes = ["B", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+}
+
 export function AdminCareers({
   jobs,
+  applications = [],
   hiringSteps,
   benefits,
   hero,
@@ -65,16 +95,142 @@ export function AdminCareers({
   onRefresh,
 }: AdminCareersProps) {
   const [isPending, startTransition] = useTransition();
-  const saveJob = useServerFn(saveJobFn);
-  const deleteJob = useServerFn(deleteJobFn);
-  const saveSteps = useServerFn(saveHiringStepsFn);
-  const saveBenefitsList = useServerFn(saveBenefitsFn);
-  const saveHeroSettings = useServerFn(saveCareersHeroFn);
+  const saveJob = saveJobFn;
+  const deleteJob = deleteJobFn;
+  const saveSteps = saveHiringStepsFn;
+  const saveBenefitsList = saveBenefitsFn;
+  const saveHeroSettings = saveCareersHeroFn;
 
   // Active sub-section
-  const [activeSection, setActiveSection] = useState<"jobs" | "steps" | "benefits" | "hero">("jobs");
+  const [activeSection, setActiveSection] = useState<
+    "applications" | "jobs" | "steps" | "benefits" | "hero"
+  >("applications");
 
-  // Job Modal State
+  // --- APPLICATIONS STATE ---
+  const [appSearch, setAppSearch] = useState("");
+  const [appStatusFilter, setAppStatusFilter] = useState<"all" | ApplicationStatus>("all");
+  const [appPositionFilter, setAppPositionFilter] = useState<string>("all");
+  const [selectedApplication, setSelectedApplication] = useState<JobApplicationItem | null>(null);
+  const [selectedResume, setSelectedResume] = useState<JobApplicationItem | null>(null);
+  const [appNotesText, setAppNotesText] = useState("");
+  const [appNotesSuccess, setAppNotesSuccess] = useState<string | null>(null);
+
+  // Synchronize notes when selectedApplication changes
+  useEffect(() => {
+    if (selectedApplication) {
+      setAppNotesText(selectedApplication.notes || "");
+      setAppNotesSuccess(null);
+    }
+  }, [selectedApplication]);
+
+  // Unique job titles for filtering
+  const uniqueJobPositions = useMemo(() => {
+    const set = new Set<string>();
+    applications.forEach((a) => set.add(a.job_title));
+    jobs.forEach((j) => set.add(j.title));
+    return Array.from(set);
+  }, [applications, jobs]);
+
+  // Filtered applications
+  const filteredApplications = useMemo(() => {
+    return applications.filter((app) => {
+      const matchSearch =
+        app.full_name.toLowerCase().includes(appSearch.toLowerCase()) ||
+        app.email.toLowerCase().includes(appSearch.toLowerCase()) ||
+        app.job_title.toLowerCase().includes(appSearch.toLowerCase()) ||
+        app.location.toLowerCase().includes(appSearch.toLowerCase());
+
+      const matchStatus =
+        appStatusFilter === "all" || app.status === appStatusFilter;
+
+      const matchPosition =
+        appPositionFilter === "all" ||
+        app.job_title.toLowerCase() === appPositionFilter.toLowerCase();
+
+      return matchSearch && matchStatus && matchPosition;
+    });
+  }, [applications, appSearch, appStatusFilter, appPositionFilter]);
+
+  // Status Metrics
+  const statusCounts = useMemo(() => {
+    const counts: Record<string, number> = {
+      total: applications.length,
+      new: 0,
+      reviewing: 0,
+      shortlisted: 0,
+      interview: 0,
+      rejected: 0,
+      hired: 0,
+    };
+    applications.forEach((a) => {
+      if (counts[a.status] !== undefined) {
+        counts[a.status]++;
+      }
+    });
+    return counts;
+  }, [applications]);
+
+  // Handle Application Actions
+  const handleStatusChange = (id: string, nextStatus: ApplicationStatus) => {
+    startTransition(async () => {
+      await updateApplicationStatusFn({
+        data: { id, status: nextStatus },
+      });
+      if (selectedApplication && selectedApplication.id === id) {
+        setSelectedApplication({ ...selectedApplication, status: nextStatus });
+      }
+      onRefresh();
+    });
+  };
+
+  const handleSaveNotes = (id: string) => {
+    if (!selectedApplication) return;
+    startTransition(async () => {
+      const res = await updateApplicationStatusFn({
+        data: {
+          id,
+          status: selectedApplication.status,
+          notes: appNotesText,
+        },
+      });
+      if (res.success && res.application) {
+        setSelectedApplication(res.application);
+        setAppNotesSuccess("Notes saved successfully!");
+        setTimeout(() => setAppNotesSuccess(null), 3000);
+        onRefresh();
+      }
+    });
+  };
+
+  const handleDeleteApplication = (id: string, candidateName: string) => {
+    if (window.confirm(`Are you sure you want to delete application from "${candidateName}"?`)) {
+      startTransition(async () => {
+        await deleteApplicationFn({ data: { id } });
+        if (selectedApplication?.id === id) {
+          setSelectedApplication(null);
+        }
+        if (selectedResume?.id === id) {
+          setSelectedResume(null);
+        }
+        onRefresh();
+      });
+    }
+  };
+
+  const handleDownloadResume = (app: JobApplicationItem) => {
+    if (!app.resume_data_url) {
+      alert("Resume data is not available for this record.");
+      return;
+    }
+    const link = document.createElement("a");
+    link.href = app.resume_data_url;
+    link.download = app.resume_name || `${app.full_name.replace(/\s+/g, "_")}_Resume.pdf`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  // --- JOB MODAL STATE ---
   const [showJobModal, setShowJobModal] = useState(false);
   const [editingJob, setEditingJob] = useState<JobOpening | null>(null);
   const [modalTab, setModalTab] = useState<"basic" | "details" | "requirements">("basic");
@@ -93,11 +249,22 @@ export function AdminCareers({
   const [newReq, setNewReq] = useState("");
   const [jobBenefits, setJobBenefits] = useState<string[]>([]);
   const [newJobBenefit, setNewJobBenefit] = useState("");
-  const [applyUrl, setApplyUrl] = useState("https://www.thekalesh.com/careers");
+  const [applyUrl, setApplyUrl] = useState("");
   const [orderIndex, setOrderIndex] = useState(1);
   const [isFeatured, setIsFeatured] = useState(false);
   const [status, setStatus] = useState<JobStatus>("open");
   const [formError, setFormError] = useState<string | null>(null);
+  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  useEffect(() => {
+    if (showJobModal && modalTab && tabRefs.current[modalTab]) {
+      tabRefs.current[modalTab]?.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "nearest",
+      });
+    }
+  }, [modalTab, showJobModal]);
 
   // Editable Steps State
   const [stepsList, setStepsList] = useState<HiringProcessStep[]>(hiringSteps);
@@ -125,7 +292,7 @@ export function AdminCareers({
     setResponsibilities(["Architect scalable backend workflows.", "Collaborate with UI/UX designers."]);
     setRequirements(["2+ years with TypeScript & React/Node.", "Passion for clean modular architecture."]);
     setJobBenefits(["Competitive compensation & bonuses.", "Flexible remote working hours."]);
-    setApplyUrl("https://www.thekalesh.com/careers");
+    setApplyUrl("");
     setOrderIndex(jobs.length + 1);
     setIsFeatured(false);
     setStatus("open");
@@ -300,12 +467,22 @@ export function AdminCareers({
         <div>
           <h2 className={styles.title}>Careers &amp; Recruitment Management</h2>
           <p className={styles.subtitle}>
-            Manage open positions, 5-step hiring workflow, culture &amp; benefits, and direct application CTAs.
+            Review candidate applications, manage open roles, 5-step hiring workflow, and culture perks.
           </p>
         </div>
 
         <div className={styles.actions}>
           <div className={styles.navTabs}>
+            <button
+              type="button"
+              className={[
+                styles.navTabBtn,
+                activeSection === "applications" ? styles.navTabBtnActive : "",
+              ].join(" ")}
+              onClick={() => setActiveSection("applications")}
+            >
+              Applications ({applications.length})
+            </button>
             <button
               type="button"
               className={[
@@ -357,6 +534,631 @@ export function AdminCareers({
         </div>
       </div>
 
+      {/* SUB-SECTION 0: APPLICATIONS MANAGEMENT */}
+      {activeSection === "applications" && (
+        <div className={styles.applicationsWrapper}>
+          {/* Status Metrics Bar */}
+          <div className={styles.appMetricsRow}>
+            <div className={styles.appMetricCard}>
+              <span className={styles.appMetricLabel}>Total Applications</span>
+              <span className={styles.appMetricVal}>{statusCounts.total}</span>
+            </div>
+            <div className={styles.appMetricCard}>
+              <span className={styles.appMetricLabel}>New Submissions</span>
+              <span className={[styles.appMetricVal, styles.valNew].join(" ")}>
+                {statusCounts.new}
+              </span>
+            </div>
+            <div className={styles.appMetricCard}>
+              <span className={styles.appMetricLabel}>Under Review</span>
+              <span className={[styles.appMetricVal, styles.valReviewing].join(" ")}>
+                {statusCounts.reviewing}
+              </span>
+            </div>
+            <div className={styles.appMetricCard}>
+              <span className={styles.appMetricLabel}>Shortlisted</span>
+              <span className={[styles.appMetricVal, styles.valShortlisted].join(" ")}>
+                {statusCounts.shortlisted}
+              </span>
+            </div>
+            <div className={styles.appMetricCard}>
+              <span className={styles.appMetricLabel}>Interview Round</span>
+              <span className={[styles.appMetricVal, styles.valInterview].join(" ")}>
+                {statusCounts.interview}
+              </span>
+            </div>
+            <div className={styles.appMetricCard}>
+              <span className={styles.appMetricLabel}>Hired</span>
+              <span className={[styles.appMetricVal, styles.valHired].join(" ")}>
+                {statusCounts.hired}
+              </span>
+            </div>
+          </div>
+
+          {/* Search & Filter Toolbar */}
+          <div className={styles.appFilterToolbar}>
+            <div className={styles.appSearchBox}>
+              <Search size={16} className={styles.appSearchIcon} />
+              <input
+                type="text"
+                value={appSearch}
+                onChange={(e) => setAppSearch(e.target.value)}
+                placeholder="Search by candidate name, email, role, or location..."
+                className={styles.appSearchInput}
+              />
+              {appSearch && (
+                <button
+                  type="button"
+                  onClick={() => setAppSearch("")}
+                  className={styles.appClearSearch}
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            <div className={styles.appFiltersRow}>
+              {/* Status Filter Pills */}
+              <div className={styles.appStatusPills}>
+                {(
+                  ["all", "new", "reviewing", "shortlisted", "interview", "rejected", "hired"] as const
+                ).map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    className={[
+                      styles.appStatusPill,
+                      appStatusFilter === st ? styles.appStatusPillActive : "",
+                    ].join(" ")}
+                    onClick={() => setAppStatusFilter(st)}
+                  >
+                    {st === "all" ? "All Statuses" : st.charAt(0).toUpperCase() + st.slice(1)}
+                  </button>
+                ))}
+              </div>
+
+              {/* Role Position Dropdown */}
+              {uniqueJobPositions.length > 0 && (
+                <div className={styles.appPosFilterBox}>
+                  <Filter size={14} className={styles.filterIcon} />
+                  <select
+                    value={appPositionFilter}
+                    onChange={(e) => setAppPositionFilter(e.target.value)}
+                    className={styles.appPosSelect}
+                  >
+                    <option value="all">All Job Positions</option>
+                    {uniqueJobPositions.map((pos) => (
+                      <option key={pos} value={pos}>
+                        {pos}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Applications Data Table */}
+          <div className={styles.tableCard}>
+            {filteredApplications.length === 0 ? (
+              <div className={styles.emptyTableState}>
+                <Users size={36} className={styles.emptyIcon} />
+                <h4 className={styles.emptyTitle}>No Applications Yet</h4>
+                <p className={styles.emptySub}>
+                  {applications.length === 0
+                    ? "Applications submitted through the DIMISI Career page will appear here."
+                    : "No applications match your search or filter criteria. Try resetting filters."}
+                </p>
+                {(appSearch || appStatusFilter !== "all" || appPositionFilter !== "all") && (
+                  <button
+                    type="button"
+                    className={styles.resetFiltersBtn}
+                    onClick={() => {
+                      setAppSearch("");
+                      setAppStatusFilter("all");
+                      setAppPositionFilter("all");
+                    }}
+                  >
+                    Reset Search &amp; Filters
+                  </button>
+                )}
+              </div>
+            ) : (
+              <table className={styles.table}>
+                <thead>
+                  <tr>
+                    <th>Applicant</th>
+                    <th>Job Position</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Location</th>
+                    <th>Resume</th>
+                    <th>Applied On</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredApplications.map((app) => {
+                    const statusMeta =
+                      APPLICATION_STATUS_META[app.status] || APPLICATION_STATUS_META.new;
+                    return (
+                      <tr key={app.id}>
+                        <td>
+                          <div className={styles.applicantCol}>
+                            <div className={styles.applicantAvatar}>
+                              {app.full_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className={styles.applicantInfo}>
+                              <span className={styles.applicantName}>{app.full_name}</span>
+                              <span className={styles.applicantSubEmail}>{app.email}</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td>
+                          <div className={styles.posCell}>
+                            <span className={styles.posTitle}>{app.job_title}</span>
+                            <span className={styles.posDept}>{app.job_department}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <a href={`mailto:${app.email}`} className={styles.contactLink}>
+                            <Mail size={13} />
+                            <span>{app.email}</span>
+                          </a>
+                        </td>
+                        <td>
+                          <a href={`tel:${app.phone}`} className={styles.contactLink}>
+                            <Phone size={13} />
+                            <span>{app.phone}</span>
+                          </a>
+                        </td>
+                        <td>
+                          <div className={styles.locCell}>
+                            <MapPin size={13} className={styles.locPin} />
+                            <span>{app.location}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <button
+                            type="button"
+                            className={styles.resumeActionBtn}
+                            onClick={() => setSelectedResume(app)}
+                            title="Preview Resume"
+                          >
+                            <FileText size={13} />
+                            <span>View Resume</span>
+                          </button>
+                        </td>
+                        <td>
+                          <div className={styles.dateCell}>
+                            <Calendar size={12} className={styles.calIcon} />
+                            <span>{formatDate(app.applied_at)}</span>
+                          </div>
+                        </td>
+                        <td>
+                          <select
+                            value={app.status}
+                            onChange={(e) =>
+                              handleStatusChange(app.id, e.target.value as ApplicationStatus)
+                            }
+                            className={styles.statusDropdown}
+                            style={{
+                              color: statusMeta.color,
+                              background: statusMeta.bg,
+                              borderColor: statusMeta.border,
+                            }}
+                          >
+                            <option value="new">New</option>
+                            <option value="reviewing">Reviewing</option>
+                            <option value="shortlisted">Shortlisted</option>
+                            <option value="interview">Interview</option>
+                            <option value="rejected">Rejected</option>
+                            <option value="hired">Hired</option>
+                          </select>
+                        </td>
+                        <td>
+                          <div className={styles.rowActions}>
+                            <button
+                              type="button"
+                              className={styles.viewDetailsIconBtn}
+                              onClick={() => setSelectedApplication(app)}
+                              title="View Full Application Details"
+                            >
+                              <Eye size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.downloadIconBtn}
+                              onClick={() => handleDownloadResume(app)}
+                              title="Download Resume File"
+                            >
+                              <Download size={15} />
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.delBtn}
+                              onClick={() => handleDeleteApplication(app.id, app.full_name)}
+                              title="Delete Application"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            )}
+          </div>
+
+          {/* APPLICATION DETAILS MODAL */}
+          {selectedApplication && (
+            <div
+              className={styles.modalBackdrop}
+              role="dialog"
+              aria-modal="true"
+              onClick={() => setSelectedApplication(null)}
+            >
+              <div
+                className={styles.appDetailsModal}
+                onClick={(e) => e.stopPropagation()}
+              >
+                {/* Modal Header */}
+                <div className={styles.appModalHeader}>
+                  <div className={styles.appModalHeaderLeft}>
+                    <div className={styles.appModalBadgeRow}>
+                      <span className={styles.appModalTag}>APPLICATION DOSSIER</span>
+                      <span className={styles.appModalJobBadge}>
+                        {selectedApplication.job_title}
+                      </span>
+                      <span className={styles.appModalDeptBadge}>
+                        {selectedApplication.job_department}
+                      </span>
+                    </div>
+                    <h3 className={styles.appModalCandidateName}>
+                      {selectedApplication.full_name}
+                    </h3>
+                  </div>
+
+                  <div className={styles.appModalHeaderRight}>
+                    <div className={styles.appModalStatusBox}>
+                      <label>Status:</label>
+                      <select
+                        value={selectedApplication.status}
+                        onChange={(e) =>
+                          handleStatusChange(
+                            selectedApplication.id,
+                            e.target.value as ApplicationStatus
+                          )
+                        }
+                        className={styles.statusDropdownModal}
+                      >
+                        <option value="new">New</option>
+                        <option value="reviewing">Reviewing</option>
+                        <option value="shortlisted">Shortlisted</option>
+                        <option value="interview">Interview</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="hired">Hired</option>
+                      </select>
+                    </div>
+
+                    <button
+                      type="button"
+                      className={styles.modalClose}
+                      onClick={() => setSelectedApplication(null)}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Modal Body */}
+                <div className={styles.appModalBody}>
+                  {/* Section 1: Candidate Overview */}
+                  <div className={styles.appDetailSection}>
+                    <h4 className={styles.appDetailSectionTitle}>APPLICANT INFORMATION</h4>
+                    <div className={styles.appInfoGrid}>
+                      <div className={styles.appInfoItem}>
+                        <span className={styles.appInfoLabel}>Full Name</span>
+                        <span className={styles.appInfoVal}>{selectedApplication.full_name}</span>
+                      </div>
+                      <div className={styles.appInfoItem}>
+                        <span className={styles.appInfoLabel}>Email Address</span>
+                        <a
+                          href={`mailto:${selectedApplication.email}`}
+                          className={styles.appInfoLink}
+                        >
+                          <Mail size={13} />
+                          <span>{selectedApplication.email}</span>
+                        </a>
+                      </div>
+                      <div className={styles.appInfoItem}>
+                        <span className={styles.appInfoLabel}>Phone Number</span>
+                        <a
+                          href={`tel:${selectedApplication.phone}`}
+                          className={styles.appInfoLink}
+                        >
+                          <Phone size={13} />
+                          <span>{selectedApplication.phone}</span>
+                        </a>
+                      </div>
+                      <div className={styles.appInfoItem}>
+                        <span className={styles.appInfoLabel}>Current Location</span>
+                        <span className={styles.appInfoVal}>
+                          <MapPin size={13} className={styles.inlinePin} />
+                          {selectedApplication.location}
+                        </span>
+                      </div>
+                      <div className={styles.appInfoItem}>
+                        <span className={styles.appInfoLabel}>Applied Position</span>
+                        <span className={styles.appInfoVal}>{selectedApplication.job_title}</span>
+                      </div>
+                      <div className={styles.appInfoItem}>
+                        <span className={styles.appInfoLabel}>Submission Date</span>
+                        <span className={styles.appInfoVal}>
+                          {formatDate(selectedApplication.applied_at)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 2: Professional Links */}
+                  <div className={styles.appDetailSection}>
+                    <h4 className={styles.appDetailSectionTitle}>PROFESSIONAL LINKS &amp; PROFILES</h4>
+                    <div className={styles.appLinksGrid}>
+                      <div className={styles.appLinkCard}>
+                        <span className={styles.appLinkLabel}>Portfolio / Live Website</span>
+                        {selectedApplication.portfolio_url ? (
+                          <a
+                            href={selectedApplication.portfolio_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={styles.appExternalLink}
+                          >
+                            <span>{selectedApplication.portfolio_url}</span>
+                            <ExternalLink size={12} />
+                          </a>
+                        ) : (
+                          <span className={styles.appNoneText}>Not provided</span>
+                        )}
+                      </div>
+
+                      <div className={styles.appLinkCard}>
+                        <span className={styles.appLinkLabel}>LinkedIn Profile</span>
+                        {selectedApplication.linkedin_url ? (
+                          <a
+                            href={selectedApplication.linkedin_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={styles.appExternalLink}
+                          >
+                            <span>{selectedApplication.linkedin_url}</span>
+                            <ExternalLink size={12} />
+                          </a>
+                        ) : (
+                          <span className={styles.appNoneText}>Not provided</span>
+                        )}
+                      </div>
+
+                      <div className={styles.appLinkCard}>
+                        <span className={styles.appLinkLabel}>GitHub / Behance</span>
+                        {selectedApplication.github_url ? (
+                          <a
+                            href={selectedApplication.github_url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className={styles.appExternalLink}
+                          >
+                            <span>{selectedApplication.github_url}</span>
+                            <ExternalLink size={12} />
+                          </a>
+                        ) : (
+                          <span className={styles.appNoneText}>Not provided</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 3: Cover Letter & Additional Notes */}
+                  <div className={styles.appDetailSection}>
+                    <h4 className={styles.appDetailSectionTitle}>APPLICATION STATEMENTS</h4>
+                    <div className={styles.appStatementCard}>
+                      <span className={styles.appStatementLabel}>
+                        Cover Note / Why join DIMISI?
+                      </span>
+                      <p className={styles.appStatementText}>
+                        {selectedApplication.cover_letter || "No cover note provided."}
+                      </p>
+                    </div>
+
+                    {selectedApplication.additional_info && (
+                      <div className={styles.appStatementCard}>
+                        <span className={styles.appStatementLabel}>Additional Information</span>
+                        <p className={styles.appStatementText}>
+                          {selectedApplication.additional_info}
+                        </p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Section 4: Resume File Box */}
+                  <div className={styles.appDetailSection}>
+                    <h4 className={styles.appDetailSectionTitle}>SUBMITTED RESUME</h4>
+                    <div className={styles.resumeDisplayCard}>
+                      <div className={styles.resumeDisplayLeft}>
+                        <div className={styles.resumeFileIconCircle}>
+                          <FileText size={22} />
+                        </div>
+                        <div className={styles.resumeFileInfo}>
+                          <div className={styles.resumeFileName}>
+                            {selectedApplication.resume_name}
+                          </div>
+                          <div className={styles.resumeFileMeta}>
+                            <span className={styles.formatPill}>
+                              {selectedApplication.resume_name.split(".").pop()?.toUpperCase() || "PDF"}
+                            </span>
+                            <span>•</span>
+                            <span>{formatFileSize(selectedApplication.resume_size)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={styles.resumeDisplayActions}>
+                        <button
+                          type="button"
+                          className={styles.previewResumeBtn}
+                          onClick={() => setSelectedResume(selectedApplication)}
+                        >
+                          <Eye size={14} />
+                          <span>Preview Resume</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.downloadResumeBtn}
+                          onClick={() => handleDownloadResume(selectedApplication)}
+                        >
+                          <Download size={14} />
+                          <span>Download</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 5: Internal Admin Notes */}
+                  <div className={styles.appDetailSection}>
+                    <div className={styles.notesSectionHeader}>
+                      <h4 className={styles.appDetailSectionTitle}>INTERNAL RECRUITMENT NOTES</h4>
+                      {appNotesSuccess && (
+                        <span className={styles.notesSuccessBadge}>{appNotesSuccess}</span>
+                      )}
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={appNotesText}
+                      onChange={(e) => setAppNotesText(e.target.value)}
+                      placeholder="Add interviewer notes, technical screening feedback, or salary expectations..."
+                      className={styles.notesTextarea}
+                    />
+                    <div className={styles.notesActionRow}>
+                      <button
+                        type="button"
+                        className={styles.saveNotesBtn}
+                        onClick={() => handleSaveNotes(selectedApplication.id)}
+                        disabled={isPending}
+                      >
+                        <Save size={14} />
+                        <span>Save Notes</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Modal Footer */}
+                <div className={styles.appModalFooter}>
+                  <button
+                    type="button"
+                    className={styles.cancelBtn}
+                    onClick={() => setSelectedApplication(null)}
+                  >
+                    Close Dossier
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.downloadModalActionBtn}
+                    onClick={() => handleDownloadResume(selectedApplication)}
+                  >
+                    <Download size={15} />
+                    <span>Download Full Resume</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* RESUME PREVIEW MODAL */}
+          {selectedResume && (
+            <div
+              className={styles.modalBackdrop}
+              role="dialog"
+              aria-modal="true"
+              onClick={() => setSelectedResume(null)}
+            >
+              <div
+                className={styles.resumePreviewModal}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={styles.resumePreviewHeader}>
+                  <div className={styles.resumeHeaderTitleCol}>
+                    <div className={styles.resumeHeaderBadgeRow}>
+                      <span className={styles.previewTag}>RESUME VIEWER</span>
+                      <span className={styles.previewCandidateTag}>
+                        {selectedResume.full_name}
+                      </span>
+                    </div>
+                    <h3 className={styles.previewTitleText}>{selectedResume.resume_name}</h3>
+                  </div>
+
+                  <div className={styles.resumeHeaderActions}>
+                    <button
+                      type="button"
+                      className={styles.downloadResumeBtn}
+                      onClick={() => handleDownloadResume(selectedResume)}
+                    >
+                      <Download size={14} />
+                      <span>Download</span>
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.modalClose}
+                      onClick={() => setSelectedResume(null)}
+                    >
+                      <X size={18} />
+                    </button>
+                  </div>
+                </div>
+
+                <div className={styles.resumePreviewBody}>
+                  {selectedResume.resume_data_url ? (
+                    selectedResume.resume_name.toLowerCase().endsWith(".pdf") ||
+                    selectedResume.resume_type.includes("pdf") ? (
+                      <iframe
+                        src={selectedResume.resume_data_url}
+                        title={`Resume Preview - ${selectedResume.full_name}`}
+                        className={styles.pdfIframe}
+                      />
+                    ) : (
+                      <div className={styles.docPreviewNotice}>
+                        <FileText size={48} className={styles.docNoticeIcon} />
+                        <h4>Word Document (.DOC / .DOCX)</h4>
+                        <p>
+                          Direct browser preview for Word documents is not natively rendered by standard iframe engines. Click the download button below to inspect the document locally.
+                        </p>
+                        <button
+                          type="button"
+                          className={styles.docDownloadBtn}
+                          onClick={() => handleDownloadResume(selectedResume)}
+                        >
+                          <Download size={16} />
+                          <span>Download {selectedResume.resume_name}</span>
+                        </button>
+                      </div>
+                    )
+                  ) : (
+                    <div className={styles.docPreviewNotice}>
+                      <AlertCircle size={36} className={styles.docNoticeIcon} />
+                      <h4>No File Data</h4>
+                      <p>Resume file data is not available for this record.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* SUB-SECTION 1: JOBS TABLE */}
       {activeSection === "jobs" && (
         <div className={styles.tableCard}>
@@ -368,7 +1170,6 @@ export function AdminCareers({
                 <th>Department</th>
                 <th>Type</th>
                 <th>Location</th>
-                <th>Apply URL</th>
                 <th>Status</th>
                 <th>Actions</th>
               </tr>
@@ -391,17 +1192,6 @@ export function AdminCareers({
                   </td>
                   <td>
                     <span className={styles.locText}>{j.location}</span>
-                  </td>
-                  <td>
-                    <a
-                      href={j.apply_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className={styles.applyLinkA}
-                    >
-                      <span>Apply Link</span>
-                      <ExternalLink size={11} />
-                    </a>
                   </td>
                   <td>
                     <div className={styles.statusCell}>
@@ -588,7 +1378,7 @@ export function AdminCareers({
           <div className={styles.editorHeader}>
             <div>
               <h3 className={styles.editorTitle}>Hero &amp; Closing CTA Settings</h3>
-              <p className={styles.editorSub}>Manage headings, sublines, Bhootdev Careers caption, and global apply link.</p>
+              <p className={styles.editorSub}>Manage headings, sublines, Bhootdev Careers caption, and global apply links.</p>
             </div>
             {settingsSuccess && <span className={styles.successBadge}>Saved Successfully!</span>}
           </div>
@@ -640,7 +1430,7 @@ export function AdminCareers({
                 <div className={styles.formGroup}>
                   <label>Global Apply Link URL</label>
                   <input
-                    type="url"
+                    type="text"
                     required
                     value={heroCtaLink}
                     onChange={(e) => setHeroCtaLink(e.target.value)}
@@ -701,7 +1491,7 @@ export function AdminCareers({
             </div>
 
             {/* Modal Tabs */}
-            <div className={styles.modalTabsBar}>
+            <div className={styles.modalTabsBar} role="tablist" aria-label="Job Form Steps" data-lenis-prevent>
               {[
                 { id: "basic", label: "1. Basic Info & Setup" },
                 { id: "details", label: "2. Summary & Responsibilities" },
@@ -709,6 +1499,11 @@ export function AdminCareers({
               ].map((t) => (
                 <button
                   key={t.id}
+                  ref={(el) => {
+                    tabRefs.current[t.id] = el;
+                  }}
+                  role="tab"
+                  aria-selected={modalTab === t.id}
                   type="button"
                   className={[
                     styles.modalTabBtn,
@@ -815,17 +1610,6 @@ export function AdminCareers({
                         onChange={(e) => setOrderIndex(Number(e.target.value))}
                       />
                     </div>
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Application Link URL *</label>
-                    <input
-                      type="url"
-                      required
-                      value={applyUrl}
-                      onChange={(e) => setApplyUrl(e.target.value)}
-                      placeholder="https://www.thekalesh.com/careers"
-                    />
                   </div>
 
                   <div className={styles.toggleRow}>

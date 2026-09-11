@@ -3,9 +3,10 @@ import Lenis from "lenis";
 import { getPerfProfile } from "@/lib/perf";
 
 /** Momentum-based scroll used as the "timeline scrubber" for the whole site. */
-export function useSmoothScroll(): void {
+export function useSmoothScroll(disabled = false): void {
   useEffect(() => {
-    if (typeof window === "undefined") return;
+    if (typeof window === "undefined" || disabled) return;
+    if (window.location.pathname.startsWith("/dimisi-admin")) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) return;
 

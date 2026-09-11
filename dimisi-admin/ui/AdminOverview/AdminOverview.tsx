@@ -73,12 +73,12 @@ export function AdminOverview({
   const displayName = currentUser.fullName || currentUser.email?.split("@")[0] || "Administrator";
 
   // Pending moderation checks
-  const pendingReviews = reviewsData.reviews.filter((r) => r.status === "pending");
-  const openReportsCount = reviewsData.stats.openReportsCount;
+  const pendingReviews = reviewsData?.reviews ? reviewsData.reviews.filter((r) => r.status === "pending") : [];
+  const openReportsCount = reviewsData?.stats?.openReportsCount ?? (reviewsData?.reports ? reviewsData.reports.filter((r) => r.status === "open").length : 0);
 
   // Active admin roles breakdown
-  const superAdminCount = overviewData.admins.filter((a) => a.role === "super_admin").length;
-  const adminCount = overviewData.admins.filter((a) => a.role === "admin" || !a.role).length;
+  const superAdminCount = overviewData?.admins ? overviewData.admins.filter((a) => a.role === "super_admin").length : 0;
+  const adminCount = overviewData?.admins ? overviewData.admins.filter((a) => a.role === "admin" || !a.role).length : 0;
 
   return (
     <div className={styles.wrap}>
@@ -211,14 +211,16 @@ export function AdminOverview({
                 <Star size={20} />
               </div>
               <span style={{ fontSize: "0.72rem", color: "#34d399", fontFamily: "var(--dm-font-mono, monospace)", fontWeight: 700 }}>
-                {reviewsData.stats.approvedCount} APPROVED
+                {reviewsData?.stats?.approvedCount ?? (reviewsData?.reviews ? reviewsData.reviews.filter((r) => r.status === "approved").length : 0)} APPROVED
               </span>
             </div>
-            <div className={styles.kpiValue}>{reviewsData.stats.averageRating.toFixed(1)} ★</div>
+            <div className={styles.kpiValue}>
+              {Number(reviewsData?.stats?.averageRating ?? reviewsData?.stats?.average ?? 0).toFixed(1)} ★
+            </div>
             <div className={styles.kpiLabel}>Client Rating Average</div>
           </div>
           <div className={styles.kpiSub}>
-            <span>{reviewsData.reviews.length} total reviews collected</span>
+            <span>{reviewsData?.reviews?.length ?? 0} total reviews collected</span>
             <button type="button" className={styles.kpiLink} onClick={() => onTab("reviews")}>
               <span>Reviews</span>
               <ArrowRight size={13} />
