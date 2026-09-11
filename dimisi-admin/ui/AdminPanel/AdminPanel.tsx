@@ -107,12 +107,14 @@ export function AdminPanel() {
   });
   const [careersData, setCareersData] = useState<{
     jobs: JobOpening[];
+    applications?: JobApplicationItem[];
     hiring_steps: HiringProcessStep[];
     benefits: CultureBenefit[];
     hero: CareersHeroConfig;
     closing_cta: CareersClosingCtaConfig;
   }>({
     jobs: [],
+    applications: [],
     hiring_steps: [],
     benefits: [],
     hero: {
@@ -120,14 +122,14 @@ export function AdminPanel() {
       heading: "Build the Future With Us",
       subline: "Join a curious, innovation-focused team where your work ships and your ideas matter.",
       cta_text: "Apply Now",
-      cta_link: "https://www.thekalesh.com/careers",
+      cta_link: "#open-positions",
       illustration_caption: "Bhootdev Careers",
     },
     closing_cta: {
       heading: "Ready to Join Us?",
       subline: "Send us your details and tell us what you'd love to work on.",
       cta_text: "Apply Now",
-      cta_link: "https://www.thekalesh.com/careers",
+      cta_link: "#open-positions",
     },
   });
   const [blogData, setBlogData] = useState<{
@@ -438,6 +440,7 @@ export function AdminPanel() {
             {tab === "careers" && (
               <AdminCareers
                 jobs={careersData.jobs}
+                applications={careersData.applications || []}
                 hiringSteps={careersData.hiring_steps}
                 benefits={careersData.benefits}
                 hero={careersData.hero}

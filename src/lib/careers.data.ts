@@ -6,6 +6,9 @@
 import {
   type JobOpening,
   type JobInput,
+  type JobApplicationItem,
+  type JobApplicationInput,
+  type ApplicationStatus,
   type HiringProcessStep,
   type CultureBenefit,
   type CareersHeroConfig,
@@ -13,6 +16,7 @@ import {
   type PublicCareersPayload,
   slugifyJob,
   validateJobInput,
+  validateJobApplicationInput,
 } from "./careers.shared";
 
 const INITIAL_HERO: CareersHeroConfig = {
@@ -20,7 +24,7 @@ const INITIAL_HERO: CareersHeroConfig = {
   heading: "Build the Future With Us",
   subline: "Join a curious, innovation-focused team where your work ships and your ideas matter.",
   cta_text: "Apply Now",
-  cta_link: "https://www.thekalesh.com/careers",
+  cta_link: "#open-positions",
   illustration_caption: "Bhootdev Careers",
 };
 
@@ -28,7 +32,7 @@ const INITIAL_CLOSING_CTA: CareersClosingCtaConfig = {
   heading: "Ready to Join Us?",
   subline: "Send us your details and tell us what you'd love to work on.",
   cta_text: "Apply Now",
-  cta_link: "https://www.thekalesh.com/careers",
+  cta_link: "#open-positions",
 };
 
 const INITIAL_HIRING_STEPS: HiringProcessStep[] = [
@@ -132,7 +136,7 @@ const INITIAL_JOBS: JobOpening[] = [
       "Fast-track conversion to full-time Associate Content Strategist.",
       "Flexible working hours and 100% remote flexibility.",
     ],
-    apply_url: "https://www.thekalesh.com/careers",
+    apply_url: "",
     order_index: 1,
     is_featured: true,
     status: "open",
@@ -167,7 +171,7 @@ const INITIAL_JOBS: JobOpening[] = [
       "Full ownership of visual campaigns featured on high-traffic websites.",
       "Potential pre-placement offer (PPO) based on internship performance.",
     ],
-    apply_url: "https://www.thekalesh.com/careers",
+    apply_url: "",
     order_index: 2,
     is_featured: true,
     status: "open",
@@ -176,8 +180,56 @@ const INITIAL_JOBS: JobOpening[] = [
   },
 ];
 
+const INITIAL_APPLICATIONS: JobApplicationItem[] = [
+  {
+    id: "app-101",
+    job_id: "job-graphic-designer-intern",
+    job_title: "Graphic Designer Intern",
+    job_department: "Design & Creative",
+    full_name: "Aarav Sharma",
+    email: "aarav.sharma.design@gmail.com",
+    phone: "+91 98765 43210",
+    location: "Noida, Uttar Pradesh",
+    portfolio_url: "https://behance.net/aaravsharma-design",
+    linkedin_url: "https://linkedin.com/in/aarav-sharma-ux",
+    github_url: "https://github.com/aarav-designs",
+    cover_letter: "I specialize in obsidian dark-mode interface mockups, 3D visual assets, and high-conversion social creatives. I have worked extensively with Figma, Blender, and modern vector design systems.",
+    additional_info: "Available to start immediately for a full-time or remote internship.",
+    resume_name: "Aarav_Sharma_Design_Resume.pdf",
+    resume_size: 2450000,
+    resume_type: "application/pdf",
+    resume_data_url: "data:application/pdf;base64,JVBERi0xLjQKJcTl8uXrp/Og0MTGCjEgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBSCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9UeXBlIC9QYWdlcwovS2lkcyBbMyAwIFJdCi9Db3VudCAxIAo+PgplbmRvYmoKMyAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDIgMCBSCi9NZWRpYUJveCBbMCAwIDYxMiA3OTJdCj4+CmVuZG9iago0IDAgb2JqCjw8Ci9MZW5ndGggMTIKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgoyMCA3NTAgVGRKCihoaXJpbmcgZGVtbyByZXN1bWUpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDUKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDE4IDAwMDAwIG4gCjAwMDAwMDAwNjcgMDAwMDAgbiAKMDAwMDAwMDExNCAwMDAwMCBuIAowMDAwMDAwMTcwIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNQovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKMjI0CiUlRU9GCg==",
+    status: "new",
+    applied_at: "2026-09-11T10:30:00.000Z",
+    notes: "Strong portfolio in Figma and dark cyberpunk aesthetics. Shortlisted for screening call.",
+  },
+  {
+    id: "app-102",
+    job_id: "job-content-writer-intern",
+    job_title: "Content Writer Intern",
+    job_department: "Content & Editorial",
+    full_name: "Priya Nair",
+    email: "priya.nair.writer@outlook.com",
+    phone: "+91 91234 56789",
+    location: "Bengaluru / Remote",
+    portfolio_url: "https://medium.com/@priya.nair.tech",
+    linkedin_url: "https://linkedin.com/in/priya-nair-editorial",
+    github_url: "",
+    cover_letter: "I write technical long-form articles, developer case studies, and engaging community copy. Passionate about AI agents and distributed cloud architecture.",
+    additional_info: "Can commit 35+ hours weekly with flexible hours.",
+    resume_name: "Priya_Nair_Content_CV.pdf",
+    resume_size: 1820000,
+    resume_type: "application/pdf",
+    resume_data_url: "data:application/pdf;base64,JVBERi0xLjQKJcTl8uXrp/Og0MTGCjEgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBSCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9UeXBlIC9QYWdlcwovS2lkcyBbMyAwIFJdCi9Db3VudCAxIAo+PgplbmRvYmoKMyAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDIgMCBSCi9NZWRpYUJveCBbMCAwIDYxMiA3OTJdCj4+CmVuZG9iago0IDAgb2JqCjw8Ci9MZW5ndGggMTIKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgoyMCA3NTAgVGRKCihoaXJpbmcgZGVtbyByZXN1bWUpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDUKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDE4IDAwMDAwIG4gCjAwMDAwMDAwNjcgMDAwMDAgbiAKMDAwMDAwMDExNCAwMDAwMCBuIAowMDAwMDAwMTcwIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNQovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKMjI0CiUlRU9GCg==",
+    status: "reviewing",
+    applied_at: "2026-09-10T14:15:00.000Z",
+    notes: "Great sample work in technical editorial. Scheduled for interview round.",
+  },
+];
+
 class MemoryCareersStore {
   private jobs: Map<string, JobOpening> = new Map();
+  private applications: Map<string, JobApplicationItem> = new Map();
   private hiringSteps: HiringProcessStep[] = [...INITIAL_HIRING_STEPS];
   private benefits: CultureBenefit[] = [...INITIAL_BENEFITS];
   private hero: CareersHeroConfig = { ...INITIAL_HERO };
@@ -185,6 +237,7 @@ class MemoryCareersStore {
 
   constructor() {
     INITIAL_JOBS.forEach((j) => this.jobs.set(j.id, { ...j }));
+    INITIAL_APPLICATIONS.forEach((a) => this.applications.set(a.id, { ...a }));
   }
 
   public getPublicPayload(): PublicCareersPayload {
@@ -251,7 +304,7 @@ class MemoryCareersStore {
       responsibilities: input.responsibilities || (existing ? existing.responsibilities : []),
       requirements: input.requirements || (existing ? existing.requirements : []),
       benefits: input.benefits || (existing ? existing.benefits : []),
-      apply_url: input.apply_url?.trim() || "https://www.thekalesh.com/careers",
+      apply_url: input.apply_url?.trim() || "",
       order_index: input.order_index ?? (existing ? existing.order_index : this.jobs.size + 1),
       is_featured: input.is_featured ?? (existing ? existing.is_featured : false),
       status: input.status ?? (existing ? existing.status : "open"),
@@ -267,6 +320,76 @@ class MemoryCareersStore {
     return this.jobs.delete(id);
   }
 
+  // --- JOB APPLICATIONS ---
+  public submitApplication(input: JobApplicationInput): JobApplicationItem {
+    const validation = validateJobApplicationInput(input);
+    if (!validation.valid) {
+      const firstError = Object.values(validation.errors)[0] || "Invalid application input.";
+      throw new Error(firstError);
+    }
+
+    const now = new Date().toISOString();
+    const id = `app-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+
+    const application: JobApplicationItem = {
+      id,
+      job_id: input.job_id || "general",
+      job_title: input.job_title.trim(),
+      job_department: input.job_department?.trim() || "General",
+      full_name: input.full_name.trim(),
+      email: input.email.trim().toLowerCase(),
+      phone: input.phone.trim(),
+      location: input.location.trim(),
+      portfolio_url: input.portfolio_url?.trim() || undefined,
+      linkedin_url: input.linkedin_url?.trim() || undefined,
+      github_url: input.github_url?.trim() || undefined,
+      cover_letter: input.cover_letter?.trim() || undefined,
+      additional_info: input.additional_info?.trim() || undefined,
+      resume_name: input.resume_name,
+      resume_size: input.resume_size,
+      resume_type: input.resume_type,
+      resume_data_url: input.resume_data_url,
+      status: "new",
+      applied_at: now,
+    };
+
+    this.applications.set(id, application);
+    return application;
+  }
+
+  public getAllApplications(): JobApplicationItem[] {
+    return Array.from(this.applications.values()).sort(
+      (a, b) => new Date(b.applied_at).getTime() - new Date(a.applied_at).getTime()
+    );
+  }
+
+  public getApplicationById(id: string): JobApplicationItem | null {
+    return this.applications.get(id) || null;
+  }
+
+  public updateApplicationStatus(
+    id: string,
+    status: ApplicationStatus,
+    notes?: string
+  ): JobApplicationItem | null {
+    const app = this.applications.get(id);
+    if (!app) return null;
+
+    const updated: JobApplicationItem = {
+      ...app,
+      status,
+      notes: notes !== undefined ? notes : app.notes,
+    };
+
+    this.applications.set(id, updated);
+    return updated;
+  }
+
+  public deleteApplication(id: string): boolean {
+    return this.applications.delete(id);
+  }
+
+  // --- RECRUITMENT STEPS & BENEFITS ---
   public updateHiringSteps(steps: HiringProcessStep[]): HiringProcessStep[] {
     this.hiringSteps = [...steps];
     return this.hiringSteps;

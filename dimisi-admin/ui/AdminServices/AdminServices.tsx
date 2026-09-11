@@ -27,6 +27,7 @@ import {
   X,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   UploadCloud,
   FileCheck,
   AlertCircle,
@@ -93,6 +94,13 @@ const MODAL_STEPS: { id: ServiceModalTab; label: string; num: string }[] = [
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
 
+function formatFileSize(bytes: number): string {
+  if (!bytes || bytes <= 0) return "0 B";
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 export function AdminServices({
   services,
   industries,
@@ -108,8 +116,10 @@ export function AdminServices({
 
   // Active Section: Services list vs Industries list
   const [activeSection, setActiveSection] = useState<"services" | "industries">("services");
-  const [categoryFilter, setCategoryFilter] = useState<string>("All");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
+  const [isCatDropdownOpen, setIsCatDropdownOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const catDropdownRef = useRef<HTMLDivElement>(null);
 
   // Dynamic Categories State
   const [categoryList, setCategoryList] = useState<ServiceCategoryItem[]>(() => {
@@ -141,6 +151,30 @@ export function AdminServices({
     }
   }, [initialCategoryItems]);
 
+  // Click outside and Escape key handler for Category Popover Dropdown
+  useEffect(() => {
+    const handlePointerDownOutside = (e: MouseEvent | TouchEvent) => {
+      if (catDropdownRef.current && !catDropdownRef.current.contains(e.target as Node)) {
+        setIsCatDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsCatDropdownOpen(false);
+      }
+    };
+    if (isCatDropdownOpen) {
+      document.addEventListener("mousedown", handlePointerDownOutside);
+      document.addEventListener("touchstart", handlePointerDownOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDownOutside);
+      document.removeEventListener("touchstart", handlePointerDownOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isCatDropdownOpen]);
+
   // Compute category service counts dynamically
   const categoryServiceCounts = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -154,30 +188,76 @@ export function AdminServices({
     return counts;
   }, [services]);
 
-  // Active category items for filter pills & service selector
+  // Active category items for dropdown selector
   const activeCategories = useMemo(() => {
     return categoryList
       .filter((c) => c.status === "active")
       .sort((a, b) => a.order_index - b.order_index);
   }, [categoryList]);
 
+  // Currently selected category item (if any)
+  const selectedCategoryItem = useMemo(() => {
+    if (selectedCategoryId === "all") return null;
+    return (
+      categoryList.find(
+        (c) => c.id === selectedCategoryId || (c as any)._id === selectedCategoryId,
+      ) || null
+    );
+  }, [selectedCategoryId, categoryList]);
+
+  // Dropdown trigger display label
+  const dropdownTriggerLabel = useMemo(() => {
+    if (!selectedCategoryItem) {
+      return `All Categories (${categoryList.length})`;
+    }
+    return selectedCategoryItem.name;
+  }, [selectedCategoryItem, categoryList.length]);
+
   // Filtered Services List
   const filteredServices = useMemo(() => {
+    const selectedCat =
+      selectedCategoryId !== "all"
+        ? categoryList.find(
+            (c) => c.id === selectedCategoryId || (c as any)._id === selectedCategoryId,
+          )
+        : null;
+
     return services.filter((s) => {
-      if (categoryFilter !== "All") {
-        const catLower = categoryFilter.toLowerCase();
-        const srvCatLower = s.category.toLowerCase();
-        if (srvCatLower !== catLower && !srvCatLower.includes(catLower)) {
+      // 1. Category Filter
+      if (selectedCategoryId !== "all") {
+        const rawCat = s.category;
+        const resolvedCatName = resolveCategoryName(rawCat, categoryList).toLowerCase();
+        const selectedCatName = (selectedCat?.name || "").toLowerCase();
+        const selectedCatSlug = (selectedCat?.slug || "").toLowerCase();
+        const targetId = selectedCat?.id || selectedCategoryId;
+
+        const matchesId =
+          rawCat === targetId ||
+          (typeof rawCat === "object" && (rawCat as any)?._id === targetId);
+
+        const matchesName =
+          typeof rawCat === "string" && rawCat.toLowerCase() === selectedCatName;
+
+        const matchesSlug =
+          typeof rawCat === "string" && rawCat.toLowerCase() === selectedCatSlug;
+
+        const matchesResolved = resolvedCatName === selectedCatName;
+
+        if (!matchesId && !matchesName && !matchesSlug && !matchesResolved) {
           return false;
         }
       }
+
+      // 2. Search Query Filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const matchTitle = s.title.toLowerCase().includes(q);
         const matchSlug = s.slug.toLowerCase().includes(q);
         const matchTagline = (s.tagline || "").toLowerCase().includes(q);
         const matchSummary = (s.summary || "").toLowerCase().includes(q);
-        const matchCat = (s.category || "").toLowerCase().includes(q);
+        const matchCat =
+          (s.category || "").toLowerCase().includes(q) ||
+          resolveCategoryName(s.category, categoryList).toLowerCase().includes(q);
         const matchTech = (s.tech_stack || []).some((t) => t.toLowerCase().includes(q));
         const matchFeatures = (s.features || []).some((f) => f.toLowerCase().includes(q));
         if (
@@ -194,7 +274,7 @@ export function AdminServices({
       }
       return true;
     });
-  }, [services, categoryFilter, searchQuery]);
+  }, [services, selectedCategoryId, categoryList, searchQuery]);
 
   // Filtered Industries List
   const filteredIndustries = useMemo(() => {
@@ -282,6 +362,10 @@ export function AdminServices({
 
   // Gallery Images State
   const [relatedImages, setRelatedImages] = useState<ServiceGalleryImage[]>([]);
+  const [galleryUrlInput, setGalleryUrlInput] = useState<string>("");
+  const [galleryError, setGalleryError] = useState<string | null>(null);
+  const [replacingGalleryIndex, setReplacingGalleryIndex] = useState<number | null>(null);
+  const galleryFileInputRef = useRef<HTMLInputElement>(null);
 
   // 4-Point Architecture Overview State
   const [whatIsIt, setWhatIsIt] = useState("");
@@ -592,6 +676,9 @@ export function AdminServices({
     setUploadProgress(0);
     setIsUploadingImage(false);
     setRelatedImages([]);
+    setGalleryUrlInput("");
+    setGalleryError(null);
+    setReplacingGalleryIndex(null);
     setWhatIsIt("");
     setWhoIsFor("");
     setProblemSolved("");
@@ -653,6 +740,9 @@ export function AdminServices({
     setUploadProgress(0);
     setIsUploadingImage(false);
     setRelatedImages(srv.related_images || []);
+    setGalleryUrlInput("");
+    setGalleryError(null);
+    setReplacingGalleryIndex(null);
     setWhatIsIt(srv.what_is_it);
     setWhoIsFor(srv.who_is_for);
     setProblemSolved(srv.problem_solved);
@@ -671,15 +761,15 @@ export function AdminServices({
     setShowServiceModal(true);
   };
 
-  // Image Processing & Drag-Drop
+  // Primary Hero Image Processing & Drag-Drop
   const handleFileProcess = (file: File) => {
     setImageError(null);
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      setImageError("Unsupported image format. Use JPG, PNG, JPEG, or WEBP.");
+      setImageError("Unsupported image format. Please upload JPG, JPEG, PNG, or WEBP.");
       return;
     }
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      setImageError("Image is too large. Maximum allowed size is 10 MB.");
+      setImageError("Image size exceeds the 10 MB limit. Please choose a smaller image.");
       return;
     }
 
@@ -700,6 +790,86 @@ export function AdminServices({
       setIsUploadingImage(false);
     };
     reader.readAsDataURL(file);
+  };
+
+  // Secondary Gallery Image File Process
+  const handleGalleryFileProcess = (file: File) => {
+    setGalleryError(null);
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+      setGalleryError("Unsupported image format. Please upload JPG, JPEG, PNG, or WEBP.");
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE_BYTES) {
+      setGalleryError("Image size exceeds the 10 MB limit. Please choose a smaller image.");
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const dataUrl = e.target?.result as string;
+      if (replacingGalleryIndex !== null) {
+        setRelatedImages((prev) => {
+          const copy = [...prev];
+          if (copy[replacingGalleryIndex]) {
+            copy[replacingGalleryIndex] = {
+              ...copy[replacingGalleryIndex],
+              url: dataUrl,
+              alt: file.name,
+            };
+          }
+          return copy;
+        });
+        setReplacingGalleryIndex(null);
+      } else {
+        if (relatedImages.length >= 3) {
+          setGalleryError("Maximum 3 gallery images allowed.");
+          return;
+        }
+        setRelatedImages((prev) => [
+          ...prev,
+          {
+            url: dataUrl,
+            caption: `Feature workflow preview ${prev.length + 1}`,
+            alt: file.name,
+          },
+        ]);
+      }
+    };
+    reader.onerror = () => {
+      setGalleryError("Failed to read gallery image file. Please try again.");
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleGalleryFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      handleGalleryFileProcess(e.target.files[0]);
+    }
+    if (e.target) {
+      e.target.value = "";
+    }
+  };
+
+  const handleAddGalleryUrl = () => {
+    setGalleryError(null);
+    const cleanUrl = galleryUrlInput.trim();
+    if (!cleanUrl) {
+      setGalleryError("Please enter a valid image URL.");
+      return;
+    }
+    if (relatedImages.length >= 3) {
+      setGalleryError("Maximum 3 gallery images allowed.");
+      return;
+    }
+    setRelatedImages((prev) => [
+      ...prev,
+      {
+        url: cleanUrl,
+        caption: "High-performance architecture workflow preview.",
+        alt: "Service Architecture",
+      },
+    ]);
+    setGalleryUrlInput("");
   };
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -993,62 +1163,138 @@ export function AdminServices({
       {/* SECTION 1: SERVICES TABLE & FILTERS */}
       {activeSection === "services" && (
         <>
-          {/* Dynamic Filters & Search Control Bar */}
+          {/* Dynamic Filters & Search Control Bar (Search left, Category Dropdown right) */}
           <div className={styles.filtersBar}>
-            {/* Category Filter Pills */}
-            <div className={styles.catPillsScroll}>
+            {/* Search Control */}
+            <div className={styles.searchBox}>
+              <Search size={14} className={styles.searchIcon} />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search services by title, slug, summary, or tech..."
+                className={styles.searchInput}
+              />
+              {searchQuery && (
+                <button
+                  type="button"
+                  className={styles.searchClearBtn}
+                  onClick={() => setSearchQuery("")}
+                  title="Clear search"
+                >
+                  <X size={14} />
+                </button>
+              )}
+            </div>
+
+            {/* Category Filter Dropdown (Right of Search) */}
+            <div className={styles.catDropdownWrapper} ref={catDropdownRef}>
               <button
                 type="button"
                 className={[
-                  styles.catPill,
-                  categoryFilter === "All" ? styles.catPillActive : "",
+                  styles.catDropdownTrigger,
+                  selectedCategoryId !== "all" || isCatDropdownOpen
+                    ? styles.catDropdownTriggerActive
+                    : "",
                 ].join(" ")}
-                onClick={() => setCategoryFilter("All")}
+                onClick={() => setIsCatDropdownOpen((prev) => !prev)}
+                aria-expanded={isCatDropdownOpen}
+                aria-haspopup="listbox"
+                aria-label="Filter services by category"
               >
-                All Categories ({categoryList.length})
-              </button>
-              {activeCategories.map((c) => {
-                const count = categoryServiceCounts[c.name.toLowerCase()] || 0;
-                const isActivePill = categoryFilter.toLowerCase() === c.name.toLowerCase();
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={[
-                      styles.catPill,
-                      isActivePill ? styles.catPillActive : "",
-                    ].join(" ")}
-                    onClick={() => setCategoryFilter(c.name)}
-                  >
-                    <span>{c.name}</span>
-                    <span className={styles.catPillCount}>({count})</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Search Control */}
-            <div className={styles.secondaryFiltersRow}>
-              <div className={styles.searchBox}>
-                <Search size={14} className={styles.searchIcon} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search services by title, slug, summary, or tech..."
-                  className={styles.searchInput}
+                <div className={styles.catDropdownTriggerLeft}>
+                  {selectedCategoryId !== "all" ? (
+                    <Tag size={13} className={styles.dropdownIcon} />
+                  ) : (
+                    <SlidersHorizontal size={13} className={styles.dropdownIcon} />
+                  )}
+                  <span className={styles.catDropdownTriggerText}>
+                    {dropdownTriggerLabel}
+                  </span>
+                </div>
+                <ChevronDown
+                  size={14}
+                  className={[
+                    styles.catDropdownChevron,
+                    isCatDropdownOpen ? styles.catDropdownChevronOpen : "",
+                  ].join(" ")}
                 />
-                {searchQuery && (
+              </button>
+
+              {isCatDropdownOpen && (
+                <div className={styles.catDropdownMenu} role="listbox" tabIndex={-1}>
+                  {/* Option: All Categories */}
                   <button
                     type="button"
-                    className={styles.searchClearBtn}
-                    onClick={() => setSearchQuery("")}
-                    title="Clear search"
+                    role="option"
+                    aria-selected={selectedCategoryId === "all"}
+                    className={[
+                      styles.catDropdownItem,
+                      selectedCategoryId === "all" ? styles.catDropdownItemActive : "",
+                    ].join(" ")}
+                    onClick={() => {
+                      setSelectedCategoryId("all");
+                      setIsCatDropdownOpen(false);
+                    }}
                   >
-                    <X size={14} />
+                    <div className={styles.catDropdownItemLeft}>
+                      {selectedCategoryId === "all" ? (
+                        <Check size={14} className={styles.catDropdownCheck} />
+                      ) : (
+                        <span className={styles.catDropdownCheckPlaceholder} />
+                      )}
+                      <span>All Categories</span>
+                    </div>
+                    <span className={styles.catDropdownItemCount}>
+                      ({categoryList.length})
+                    </span>
                   </button>
-                )}
-              </div>
+
+                  <div className={styles.catDropdownDivider} />
+
+                  {/* Dynamic Category List */}
+                  {activeCategories.map((c) => {
+                    const count =
+                      categoryServiceCounts[c.name.toLowerCase()] || 0;
+                    const isSelected =
+                      selectedCategoryId === c.id ||
+                      selectedCategoryId === (c as any)._id;
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        className={[
+                          styles.catDropdownItem,
+                          isSelected ? styles.catDropdownItemActive : "",
+                        ].join(" ")}
+                        onClick={() => {
+                          setSelectedCategoryId(c.id);
+                          setIsCatDropdownOpen(false);
+                        }}
+                      >
+                        <div className={styles.catDropdownItemLeft}>
+                          {isSelected ? (
+                            <Check
+                              size={14}
+                              className={styles.catDropdownCheck}
+                            />
+                          ) : (
+                            <span
+                              className={styles.catDropdownCheckPlaceholder}
+                            />
+                          )}
+                          <span title={c.name}>{c.name}</span>
+                        </div>
+                        <span className={styles.catDropdownItemCount}>
+                          ({count})
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1058,12 +1304,11 @@ export function AdminServices({
               <table className={styles.table}>
                 <colgroup>
                   <col style={{ width: "60px" }} />
-                  <col style={{ width: "90px" }} />
-                  <col style={{ width: "320px" }} />
-                  <col style={{ width: "180px" }} />
-                  <col style={{ width: "180px" }} />
-                  <col style={{ width: "130px" }} />
-                  <col style={{ width: "100px" }} />
+                  <col style={{ width: "85px" }} />
+                  <col style={{ width: "380px" }} />
+                  <col style={{ width: "220px" }} />
+                  <col style={{ width: "140px" }} />
+                  <col style={{ width: "110px" }} />
                   <col style={{ width: "120px" }} />
                 </colgroup>
                 <thead>
@@ -1072,7 +1317,6 @@ export function AdminServices({
                     <th>Visual</th>
                     <th>Service Name &amp; Tagline</th>
                     <th>Category</th>
-                    <th>Slug</th>
                     <th>Deliverables</th>
                     <th>Status</th>
                     <th style={{ textAlign: "right" }}>Actions</th>
@@ -1081,23 +1325,23 @@ export function AdminServices({
                 <tbody>
                   {filteredServices.length === 0 ? (
                     <tr>
-                      <td colSpan={8}>
+                      <td colSpan={7}>
                         <div className={styles.emptyTableCard}>
                           <div className={styles.emptyState}>
                             <Layers size={32} className={styles.emptyIcon} />
                             <h4 className={styles.emptyTitle}>No matching services found</h4>
                             <p className={styles.emptySub}>
-                              {searchQuery || categoryFilter !== "All"
+                              {searchQuery || selectedCategoryId !== "all"
                                 ? "Try adjusting your search query or category filter."
                                 : "Click 'Add New Service' to create your first dynamic service page."}
                             </p>
-                            {(searchQuery || categoryFilter !== "All") && (
+                            {(searchQuery || selectedCategoryId !== "all") && (
                               <button
                                 type="button"
                                 className={styles.clearFilterBtn}
                                 onClick={() => {
                                   setSearchQuery("");
-                                  setCategoryFilter("All");
+                                  setSelectedCategoryId("all");
                                 }}
                               >
                                 Clear Filters
@@ -1133,11 +1377,6 @@ export function AdminServices({
                             <span className={styles.categoryBadge} title={resolvedCat}>
                               {resolvedCat}
                             </span>
-                          </td>
-                          <td>
-                            <code className={styles.slugCode} title={`/services/${srv.slug}`}>
-                              /services/{srv.slug}
-                            </code>
                           </td>
                         <td>
                           <span className={styles.featCount}>
@@ -1928,42 +2167,29 @@ export function AdminServices({
                 {/* STEP 1: OVERVIEW & CORE INFO */}
                 {modalTab === "overview" && (
                   <div className={styles.tabPane}>
-                    <div className={styles.formGrid2}>
-                      <div className={styles.formGroup}>
-                        <label>Service Title *</label>
-                        <input
-                          type="text"
-                          required
-                          value={title}
-                          className={fieldErrors.title ? styles.inputError : ""}
-                          onChange={(e) => {
-                            setTitle(e.target.value);
-                            if (fieldErrors.title) {
-                              setFieldErrors((prev) => {
-                                const copy = { ...prev };
-                                delete copy.title;
-                                return copy;
-                              });
-                            }
-                            if (!editingService) setSlug(slugifyService(e.target.value));
-                          }}
-                          placeholder="e.g. Artificial Intelligence & Multi-Agent Systems"
-                        />
-                        {fieldErrors.title && (
-                          <span className={styles.fieldErrorText}>{fieldErrors.title}</span>
-                        )}
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label>URL Slug *</label>
-                        <input
-                          type="text"
-                          required
-                          value={slug}
-                          onChange={(e) => setSlug(e.target.value)}
-                          placeholder="e.g. ai"
-                        />
-                      </div>
+                    <div className={styles.formGroup}>
+                      <label>Service Title *</label>
+                      <input
+                        type="text"
+                        required
+                        value={title}
+                        className={fieldErrors.title ? styles.inputError : ""}
+                        onChange={(e) => {
+                          setTitle(e.target.value);
+                          if (fieldErrors.title) {
+                            setFieldErrors((prev) => {
+                              const copy = { ...prev };
+                              delete copy.title;
+                              return copy;
+                            });
+                          }
+                          if (!editingService) setSlug(slugifyService(e.target.value));
+                        }}
+                        placeholder="e.g. Artificial Intelligence & Multi-Agent Systems"
+                      />
+                      {fieldErrors.title && (
+                        <span className={styles.fieldErrorText}>{fieldErrors.title}</span>
+                      )}
                     </div>
 
                     <div className={styles.formGrid2}>
@@ -2136,9 +2362,11 @@ export function AdminServices({
                         </h4>
                         <span className={styles.uploadBadge}>Hero Visual</span>
                       </div>
-                      <p className={styles.uploadInstruction}>
-                        Upload a high-resolution hero photo (Max 10MB; JPG, PNG, WEBP).
-                      </p>
+                      <div className={styles.imageSpecChips}>
+                        <span className={styles.specChip}>Recommended: 1920 × 1080 px · 16:9</span>
+                        <span className={styles.specChip}>Formats: JPG, JPEG, PNG, WEBP</span>
+                        <span className={styles.specChip}>Maximum size: 10 MB</span>
+                      </div>
 
                       <div
                         className={[
@@ -2171,7 +2399,9 @@ export function AdminServices({
                             <div className={styles.previewMetaRow}>
                               <span className={styles.fileInfoBadge}>
                                 <FileCheck size={14} className={styles.checkIcon} />
-                                <span>{imageFile ? imageFile.name : "Hero Image Ready"}</span>
+                                <span>
+                                  {imageFile ? `${imageFile.name} (${formatFileSize(imageFile.size)})` : "Hero Image Ready"}
+                                </span>
                               </span>
                               <div className={styles.previewActions}>
                                 <button
@@ -2246,64 +2476,137 @@ export function AdminServices({
 
                     {/* Secondary Showcase Gallery */}
                     <div className={styles.gallerySectionBox}>
+                      <input
+                        type="file"
+                        ref={galleryFileInputRef}
+                        style={{ display: "none" }}
+                        accept="image/jpeg,image/png,image/jpg,image/webp"
+                        onChange={handleGalleryFileInputChange}
+                      />
+
                       <h4 className={styles.uploadSectionTitle}>
                         <Layers size={16} />
                         <span>Secondary Gallery Showcase (Up to 3 Images)</span>
                       </h4>
 
-                      <div className={styles.relatedImgsGrid}>
-                        {relatedImages.map((img, idx) => (
-                          <div key={idx} className={styles.relatedImgCard}>
-                            <img src={img.url} alt={img.alt || `Gallery ${idx + 1}`} className={styles.relatedImgThumb} />
-                            <input
-                              type="text"
-                              value={img.caption || ""}
-                              onChange={(e) => {
-                                const copy = [...relatedImages];
-                                copy[idx] = { ...copy[idx], caption: e.target.value };
-                                setRelatedImages(copy);
-                              }}
-                              placeholder="Caption description..."
-                              className={styles.captionInput}
-                            />
-                            <button
-                              type="button"
-                              className={styles.removeStepBtn}
-                              onClick={() => setRelatedImages(relatedImages.filter((_, i) => i !== idx))}
-                            >
-                              <Trash2 size={12} /> Remove
-                            </button>
-                          </div>
-                        ))}
+                      <div className={styles.imageSpecChips}>
+                        <span className={styles.specChip}>Recommended: 1600 × 900 px · 16:9</span>
+                        <span className={styles.specChip}>Formats: JPG, JPEG, PNG, WEBP</span>
+                        <span className={styles.specChip}>Maximum size: 10 MB</span>
                       </div>
 
+                      {galleryError && (
+                        <div className={styles.errorAlert} style={{ margin: "0.25rem 0" }}>
+                          <AlertCircle size={14} />
+                          <span>{galleryError}</span>
+                        </div>
+                      )}
+
+                      {relatedImages.length > 0 && (
+                        <div className={styles.relatedImgsGrid}>
+                          {relatedImages.map((img, idx) => (
+                            <div key={idx} className={styles.relatedImgCard}>
+                              <div className={styles.relatedImgCardHeader}>
+                                <span className={styles.relatedImgBadge}>Image #{idx + 1}</span>
+                                <div className={styles.relatedImgActions}>
+                                  <button
+                                    type="button"
+                                    className={styles.galleryReplaceBtn}
+                                    title="Replace Image"
+                                    onClick={() => {
+                                      setReplacingGalleryIndex(idx);
+                                      galleryFileInputRef.current?.click();
+                                    }}
+                                  >
+                                    <UploadCloud size={12} /> Replace
+                                  </button>
+                                  <button
+                                    type="button"
+                                    className={styles.removeStepBtn}
+                                    title="Remove Image"
+                                    onClick={() => {
+                                      setRelatedImages(relatedImages.filter((_, i) => i !== idx));
+                                      setGalleryError(null);
+                                    }}
+                                  >
+                                    <Trash2 size={12} /> Remove
+                                  </button>
+                                </div>
+                              </div>
+                              <img
+                                src={img.url}
+                                alt={img.alt || `Gallery preview ${idx + 1}`}
+                                className={styles.relatedImgThumb}
+                              />
+                              <input
+                                type="text"
+                                value={img.caption || ""}
+                                onChange={(e) => {
+                                  const copy = [...relatedImages];
+                                  copy[idx] = { ...copy[idx], caption: e.target.value };
+                                  setRelatedImages(copy);
+                                }}
+                                placeholder="Caption description..."
+                                className={styles.captionInput}
+                              />
+                              <input
+                                type="text"
+                                value={img.alt || ""}
+                                onChange={(e) => {
+                                  const copy = [...relatedImages];
+                                  copy[idx] = { ...copy[idx], alt: e.target.value };
+                                  setRelatedImages(copy);
+                                }}
+                                placeholder="Alt description text..."
+                                className={styles.captionInput}
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
                       {relatedImages.length < 3 && (
-                        <div className={styles.addInputRow} style={{ marginTop: "0.5rem" }}>
-                          <input
-                            type="url"
-                            id="newGalleryUrl"
-                            placeholder="Add gallery image URL (https://images.unsplash.com/...)"
-                          />
-                          <button
-                            type="button"
-                            className={styles.smallAddBtn}
-                            onClick={() => {
-                              const el = document.getElementById("newGalleryUrl") as HTMLInputElement;
-                              if (el && el.value.trim()) {
-                                setRelatedImages([
-                                  ...relatedImages,
-                                  {
-                                    url: el.value.trim(),
-                                    caption: "High-performance architecture workflow preview.",
-                                    alt: "Service Architecture",
-                                  },
-                                ]);
-                                el.value = "";
-                              }
-                            }}
-                          >
-                            Add Gallery Image
-                          </button>
+                        <div className={styles.galleryAddBox}>
+                          <div className={styles.galleryAddOptions}>
+                            <div className={styles.galleryAddUrlRow}>
+                              <input
+                                type="url"
+                                value={galleryUrlInput}
+                                onChange={(e) => {
+                                  setGalleryUrlInput(e.target.value);
+                                  setGalleryError(null);
+                                }}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    handleAddGalleryUrl();
+                                  }
+                                }}
+                                placeholder="Add image URL (https://images.unsplash.com/...)"
+                                className={styles.galleryUrlInputField}
+                              />
+                              <button
+                                type="button"
+                                className={styles.smallAddBtn}
+                                onClick={handleAddGalleryUrl}
+                              >
+                                + Add URL
+                              </button>
+                            </div>
+                            <div className={styles.galleryOrDivider}>OR</div>
+                            <div className={styles.galleryUploadBtnWrap}>
+                              <button
+                                type="button"
+                                className={styles.galleryUploadBtn}
+                                onClick={() => {
+                                  setReplacingGalleryIndex(null);
+                                  galleryFileInputRef.current?.click();
+                                }}
+                              >
+                                <UploadCloud size={14} /> Upload from Device
+                              </button>
+                            </div>
+                          </div>
                         </div>
                       )}
                     </div>
