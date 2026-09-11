@@ -206,11 +206,8 @@
 .tableWrap {
   width: 100%;
   max-width: 100%;
-  max-height: min(72vh, 660px);
-  min-height: 380px;
   overflow-x: auto;
-  overflow-y: auto;
-  overscroll-behavior: contain;
+  overflow-y: visible;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: thin;
   scrollbar-color: rgba(255, 171, 46, 0.35) rgba(10, 8, 14, 0.8);

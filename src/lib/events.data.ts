@@ -5,8 +5,78 @@ import {
   type EventInput,
   type GalleryItemInput,
   type PublicEventsPayload,
+  type EventCategoryItem,
+  type EventCategoryInput,
   slugifyEvent,
+  slugifyEventCategory,
+  validateEventCategoryInput,
 } from "./events.shared";
+
+export const INITIAL_EVENT_CATEGORIES: EventCategoryItem[] = [
+  {
+    id: "cat-launch",
+    name: "Product Launch",
+    slug: "product-launch",
+    description: "Flagship platform releases, public keynotes & hardware unveils",
+    status: "active",
+    order_index: 1,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-summit",
+    name: "Tech Summit",
+    slug: "tech-summit",
+    description: "Technical conferences, architecture deep dives & sovereign AI summits",
+    status: "active",
+    order_index: 2,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-hackathon",
+    name: "Hackathon",
+    slug: "hackathon",
+    description: "48-hour build sprints, open innovation & builder showdowns",
+    status: "active",
+    order_index: 3,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-retreat",
+    name: "Team Retreat",
+    slug: "team-retreat",
+    description: "Company convergences, roadmap expeditions & culture alignment",
+    status: "active",
+    order_index: 4,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-opensource",
+    name: "Open Source & AI",
+    slug: "open-source-ai",
+    description: "Model architecture workshops, kernel optimizations & community tools",
+    status: "active",
+    order_index: 5,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-workshop",
+    name: "Workshop",
+    slug: "workshop",
+    description: "Hands-on engineering masterclasses & live coding sessions",
+    status: "active",
+    order_index: 6,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-community",
+    name: "Community & Campus",
+    slug: "community-campus",
+    description: "University hackathons, student chapters & developer meetups",
+    status: "active",
+    order_index: 7,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+];
 
 // High-fidelity curated seed events and gallery items for instant out-of-the-box immersion
 const SEED_EVENTS: CompanyEvent[] = [
@@ -256,6 +326,88 @@ const SEED_GALLERY: EventGalleryItem[] = [
 class MemoryEventsStore {
   events: CompanyEvent[] = [...SEED_EVENTS];
   gallery: EventGalleryItem[] = [...SEED_GALLERY];
+  categoryItems: Map<string, EventCategoryItem> = new Map(
+    INITIAL_EVENT_CATEGORIES.map((c) => [c.id, { ...c }]),
+  );
+
+  public getCategoryItems(): EventCategoryItem[] {
+    return Array.from(this.categoryItems.values()).sort((a, b) => a.order_index - b.order_index);
+  }
+
+  public getActiveCategories(): EventCategoryItem[] {
+    return this.getCategoryItems().filter((c) => c.status === "active");
+  }
+
+  public getCategoryNames(): string[] {
+    const list = this.getActiveCategories().map((c) => c.name);
+    return ["All", ...list];
+  }
+
+  public getCategoryEventCounts(): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const ev of this.events) {
+      const cat = ev.category?.trim();
+      if (cat) {
+        counts[cat] = (counts[cat] || 0) + 1;
+        counts[cat.toLowerCase()] = (counts[cat.toLowerCase()] || 0) + 1;
+      }
+    }
+    return counts;
+  }
+
+  public getCategoryEventCount(categoryName: string): number {
+    const clean = categoryName.trim().toLowerCase();
+    return this.events.filter((e) => e.category.trim().toLowerCase() === clean).length;
+  }
+
+  public saveCategory(input: EventCategoryInput): EventCategoryItem {
+    const validation = validateEventCategoryInput(input);
+    if (!validation.valid) {
+      throw new Error(validation.error || "Invalid category input.");
+    }
+
+    const now = new Date().toISOString();
+    const id = input.id || `cat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const slug = input.slug?.trim() || slugifyEventCategory(input.name);
+    const existing = this.categoryItems.get(id);
+
+    const oldName = existing?.name;
+    const newName = input.name.trim();
+
+    const item: EventCategoryItem = {
+      id,
+      name: newName,
+      slug,
+      description: input.description?.trim() || (existing ? existing.description : undefined),
+      status: input.status ?? (existing ? existing.status : "active"),
+      order_index: input.order_index ?? (existing ? existing.order_index : this.categoryItems.size + 1),
+      created_at: existing?.created_at || now,
+      updated_at: now,
+    };
+
+    this.categoryItems.set(id, item);
+
+    // If renamed, update events that used old category name
+    if (oldName && oldName.toLowerCase() !== newName.toLowerCase()) {
+      for (const ev of this.events) {
+        if (ev.category.toLowerCase() === oldName.toLowerCase()) {
+          ev.category = newName;
+          ev.updated_at = now;
+        }
+      }
+    }
+
+    return item;
+  }
+
+  public deleteCategory(id: string): { success: boolean; eventCount: number; category?: EventCategoryItem } {
+    const cat = this.categoryItems.get(id);
+    if (!cat) return { success: false, eventCount: 0 };
+
+    const eventCount = this.getCategoryEventCount(cat.name);
+    this.categoryItems.delete(id);
+    return { success: true, eventCount, category: cat };
+  }
 
   getPublicPayload(): PublicEventsPayload {
     // Sort events: featured first, then upcoming, ongoing, then completed, then newest
@@ -274,7 +426,8 @@ class MemoryEventsStore {
     const completedCount = this.events.filter((e) => e.status === "completed").length;
     const attendeesServed = this.events.reduce((acc, e) => acc + (e.attendees_count || 0), 0);
 
-    const categories = Array.from(new Set(this.events.map((e) => e.category)));
+    const categories = this.getCategoryNames();
+    const categoryItems = this.getCategoryItems();
 
     return {
       events: sorted,
@@ -290,6 +443,7 @@ class MemoryEventsStore {
         attendeesServed,
       },
       categories,
+      categoryItems,
     };
   }
 
@@ -416,4 +570,9 @@ class MemoryEventsStore {
   }
 }
 
-export const eventsStore = new MemoryEventsStore();
+// Global persistent instance on server / runtime
+const globalForEvents = globalThis as unknown as { __dimisi_events_store__?: MemoryEventsStore };
+export const eventsStore = globalForEvents.__dimisi_events_store__ || new MemoryEventsStore();
+if (process.env.NODE_ENV !== "production") {
+  globalForEvents.__dimisi_events_store__ = eventsStore;
+}

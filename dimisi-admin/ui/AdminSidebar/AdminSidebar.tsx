@@ -88,7 +88,7 @@ export function AdminSidebar({
           <span className={styles.brandMark}>DM</span>
           <span className={styles.brandText}>DIMISI Admin</span>
         </div>
-        <nav className={styles.nav}>
+        <nav className={styles.nav} data-lenis-prevent>
           {visibleNav.map((item) => {
             const badge =
               item.badgeKey === "pendingReviews"

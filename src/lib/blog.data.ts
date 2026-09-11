@@ -6,10 +6,14 @@
 import {
   type BlogPostItem,
   type BlogPostInput,
+  type BlogCategoryItem,
+  type BlogCategoryInput,
   type BlogConfig,
   type PublicBlogPayload,
   slugifyBlog,
+  slugifyBlogCategory,
   validateBlogPostInput,
+  validateBlogCategoryInput,
 } from "./blog.shared";
 
 const INITIAL_BLOG_CONFIG: BlogConfig = {
@@ -21,14 +25,61 @@ const INITIAL_BLOG_CONFIG: BlogConfig = {
   under_development_notice_text: "Blog section under development. Please visit again after some time.",
 };
 
-const DEFAULT_CATEGORIES = [
-  "All Posts",
-  "Web",
-  "Mobile",
-  "AI",
-  "Cloud",
-  "Startups",
-  "Technology Trends",
+const INITIAL_CATEGORIES: BlogCategoryItem[] = [
+  {
+    id: "cat-ai",
+    name: "AI",
+    slug: "ai",
+    description: "Artificial Intelligence, Neural Perception, Multi-Agent Swarms & Applied ML",
+    status: "active",
+    order_index: 1,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-cloud",
+    name: "Cloud",
+    slug: "cloud",
+    description: "Cloud Architecture, GPU Economics, DevOps & Distributed Infrastructure",
+    status: "active",
+    order_index: 2,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-web",
+    name: "Web",
+    slug: "web",
+    description: "Modern Frontend, WebGL Shaders, Micro-Frontends & High Performance",
+    status: "active",
+    order_index: 3,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-mobile",
+    name: "Mobile",
+    slug: "mobile",
+    description: "Cross-Platform Mobile Engineering, Edge Inference & Native Architectures",
+    status: "active",
+    order_index: 4,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-startups",
+    name: "Startups",
+    slug: "startups",
+    description: "Lean Product Principles, Fast 14-Day MVP Velocity & Founder Strategy",
+    status: "active",
+    order_index: 5,
+    created_at: "2026-08-01T00:00:00Z",
+  },
+  {
+    id: "cat-trends",
+    name: "Technology Trends",
+    slug: "technology-trends",
+    description: "Emerging Paradigms, Hardware Accelerators, Robotics & Future Tech",
+    status: "active",
+    order_index: 6,
+    created_at: "2026-08-01T00:00:00Z",
+  },
 ];
 
 const INITIAL_POSTS: BlogPostItem[] = [
@@ -206,10 +257,93 @@ When launching an early-stage product, building for 10 million concurrent users 
 class MemoryBlogStore {
   private posts: Map<string, BlogPostItem> = new Map();
   private config: BlogConfig = { ...INITIAL_BLOG_CONFIG };
-  private categories: string[] = [...DEFAULT_CATEGORIES];
+  private categoryItems: Map<string, BlogCategoryItem> = new Map();
 
   constructor() {
     INITIAL_POSTS.forEach((p) => this.posts.set(p.id, { ...p }));
+    INITIAL_CATEGORIES.forEach((c) => this.categoryItems.set(c.id, { ...c }));
+  }
+
+  public getCategoryItems(): BlogCategoryItem[] {
+    return Array.from(this.categoryItems.values()).sort((a, b) => a.order_index - b.order_index);
+  }
+
+  public getActiveCategories(): BlogCategoryItem[] {
+    return this.getCategoryItems().filter((c) => c.status === "active");
+  }
+
+  public getCategoryNames(): string[] {
+    const active = this.getActiveCategories().map((c) => c.name);
+    return ["All Posts", ...active];
+  }
+
+  public getCategoryPostCounts(): Record<string, number> {
+    const counts: Record<string, number> = {};
+    for (const p of this.posts.values()) {
+      const cat = p.category.trim();
+      counts[cat] = (counts[cat] || 0) + 1;
+      counts[cat.toLowerCase()] = (counts[cat.toLowerCase()] || 0) + 1;
+    }
+    return counts;
+  }
+
+  public getCategoryPostCount(categoryName: string): number {
+    let count = 0;
+    const target = categoryName.trim().toLowerCase();
+    for (const p of this.posts.values()) {
+      if (p.category.trim().toLowerCase() === target) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  public saveCategory(input: BlogCategoryInput): BlogCategoryItem {
+    const validation = validateBlogCategoryInput(input);
+    if (!validation.valid) {
+      throw new Error(validation.error || "Invalid category input.");
+    }
+
+    const now = new Date().toISOString();
+    const id = input.id || `cat-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+    const slug = input.slug?.trim() || slugifyBlogCategory(input.name);
+    const existing = this.categoryItems.get(id);
+
+    const oldName = existing?.name;
+    const newName = input.name.trim();
+
+    const item: BlogCategoryItem = {
+      id,
+      name: newName,
+      slug,
+      description: input.description?.trim() || (existing ? existing.description : undefined),
+      status: input.status ?? (existing ? existing.status : "active"),
+      order_index: input.order_index ?? (existing ? existing.order_index : this.categoryItems.size + 1),
+      created_at: existing?.created_at || now,
+      updated_at: now,
+    };
+
+    this.categoryItems.set(id, item);
+
+    // If renamed, update posts that used old category name
+    if (oldName && oldName.toLowerCase() !== newName.toLowerCase()) {
+      for (const [pId, p] of this.posts.entries()) {
+        if (p.category.toLowerCase() === oldName.toLowerCase()) {
+          this.posts.set(pId, { ...p, category: newName, updated_at: now });
+        }
+      }
+    }
+
+    return item;
+  }
+
+  public deleteCategory(id: string): { success: boolean; postCount: number; category?: BlogCategoryItem } {
+    const cat = this.categoryItems.get(id);
+    if (!cat) return { success: false, postCount: 0 };
+
+    const postCount = this.getCategoryPostCount(cat.name);
+    this.categoryItems.delete(id);
+    return { success: true, postCount, category: cat };
   }
 
   public getPublicPayload(): PublicBlogPayload {
@@ -218,15 +352,18 @@ class MemoryBlogStore {
       .sort((a, b) => a.order_index - b.order_index);
 
     const featured = list.find((p) => p.is_featured) || (list.length > 0 ? list[0] : null);
+    const catNames = this.getCategoryNames();
+    const catItems = this.getCategoryItems();
 
     return {
       config: { ...this.config },
       featured_post: featured ? { ...featured } : null,
       posts: list,
-      categories: [...this.categories],
+      categories: catNames,
+      categoryItems: catItems,
       stats: {
         totalPosts: list.length,
-        totalCategories: this.categories.length - 1, // minus 'All Posts'
+        totalCategories: catNames.length - 1, // minus 'All Posts'
         avgReadingTime: "8 min",
         latestPublishedDate: list.length > 0 ? list[0].published_at : new Date().toISOString(),
       },
@@ -294,7 +431,7 @@ class MemoryBlogStore {
       updated_at: now,
     };
 
-    // If marked as featured, optionally unfeature other posts
+    // If marked as featured, unfeature other posts
     if (item.is_featured) {
       for (const p of this.posts.values()) {
         if (p.id !== id && p.is_featured) {
@@ -317,8 +454,32 @@ class MemoryBlogStore {
   }
 
   public updateCategories(categories: string[]): string[] {
-    this.categories = [...categories];
-    return this.categories;
+    // Sync provided string names as category items
+    const existingItems = Array.from(this.categoryItems.values());
+    const existingByName = new Map(existingItems.map((c) => [c.name.toLowerCase(), c]));
+    
+    categories.forEach((name, idx) => {
+      if (name === "All Posts") return;
+      const lower = name.toLowerCase();
+      if (existingByName.has(lower)) {
+        const item = existingByName.get(lower)!;
+        item.order_index = idx + 1;
+        item.status = "active";
+        this.categoryItems.set(item.id, item);
+      } else {
+        const id = `cat-${Date.now()}-${idx}`;
+        this.categoryItems.set(id, {
+          id,
+          name,
+          slug: slugifyBlogCategory(name),
+          status: "active",
+          order_index: idx + 1,
+          created_at: new Date().toISOString(),
+        });
+      }
+    });
+
+    return this.getCategoryNames();
   }
 }
 

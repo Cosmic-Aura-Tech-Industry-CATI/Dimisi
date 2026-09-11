@@ -15,9 +15,16 @@ export interface AdminLoginCredentials {
 export interface BackendLoginResponse {
   success: boolean;
   message: string;
-  data: {
-    token: string;
+  data?: {
+    token?: string;
+    accessToken?: string;
+    refreshToken?: string;
+    user?: any;
   };
+  token?: string;
+  accessToken?: string;
+  refreshToken?: string;
+  user?: any;
 }
 
 export interface AdminAuthSession {
@@ -70,28 +77,50 @@ export async function loginAdmin(
     }),
   });
 
-  const token = response?.data?.token;
-  if (!token) {
-    throw new Error("Authentication response did not contain a valid access token.");
+  if (!response || (!response.success && response.user === undefined && response.data?.user === undefined)) {
+    throw new Error(response?.message || "Unexpected authentication response.");
   }
 
-  // Decode JWT payload to extract user ID & expiration
-  const payload = decodeJwtPayload(token);
-  const userId = payload?.id || `admin-${Date.now()}`;
+  // Extract token if present in JSON payload; otherwise backend set HttpOnly cookies
+  const rawToken =
+    response?.data?.token ||
+    response?.data?.accessToken ||
+    response?.token ||
+    response?.accessToken ||
+    "cookie-session";
+
+  // Extract user details from backend response or decode JWT payload if available
+  const payload = rawToken !== "cookie-session" ? decodeJwtPayload(rawToken) : null;
+  const backendPanelUser = response?.user || response?.data?.user;
+  const backendBaseUser = backendPanelUser?.user;
+
+  const userId =
+    (typeof backendBaseUser === "object" ? backendBaseUser?._id : backendBaseUser) ||
+    backendPanelUser?._id ||
+    payload?.id ||
+    `admin-${Date.now()}`;
+
+  const userName =
+    (typeof backendBaseUser === "object" ? backendBaseUser?.name : null) ||
+    backendPanelUser?.name ||
+    cleanEmail.split("@")[0].replace(/[._-]/g, " ");
+
+  const adminRole = backendPanelUser?.role || "super_admin";
+
   const expiresAt = payload?.exp ? payload.exp * 1000 : Date.now() + 7 * 24 * 60 * 60 * 1000;
 
   const user: AuthUser = {
-    id: userId,
+    id: String(userId),
     email: cleanEmail,
     user_metadata: {
-      full_name: cleanEmail.split("@")[0].replace(/[._-]/g, " "),
-      admin_role: "super_admin",
+      full_name: userName,
+      admin_role: adminRole,
     },
   };
 
   // Save session to localStorage for persistent state across refreshes
   const sessionData: AdminAuthSession = {
-    token,
+    token: rawToken,
     user,
     expires_at: expiresAt,
   };
@@ -103,7 +132,7 @@ export async function loginAdmin(
 
   return {
     success: true,
-    token,
+    token: rawToken,
     user,
     expires_at: expiresAt,
   };
@@ -123,7 +152,7 @@ export function logoutAdmin(): void {
  * Retrieve current active admin session if not expired.
  */
 export function getStoredAdminSession(): AdminAuthSession | null {
-  if (typeof window !== "undefined") return null;
+  if (typeof window === "undefined") return null;
   try {
     const raw = localStorage.getItem(ADMIN_SESSION_KEY);
     if (!raw) return null;

@@ -6,12 +6,16 @@ import { careersStore } from "./careers.data";
 import {
   type JobOpening,
   type JobInput,
+  type JobApplicationItem,
+  type JobApplicationInput,
+  type ApplicationStatus,
   type HiringProcessStep,
   type CultureBenefit,
   type CareersHeroConfig,
   type CareersClosingCtaConfig,
   type PublicCareersPayload,
   validateJobInput,
+  validateJobApplicationInput,
 } from "./careers.shared";
 
 export async function getPublicCareersData(): Promise<PublicCareersPayload> {
@@ -29,6 +33,7 @@ export async function getJobBySlug({
 
 export async function getAdminCareersData(): Promise<{
   jobs: JobOpening[];
+  applications: JobApplicationItem[];
   hiring_steps: HiringProcessStep[];
   benefits: CultureBenefit[];
   hero: CareersHeroConfig;
@@ -37,14 +42,76 @@ export async function getAdminCareersData(): Promise<{
 }> {
   const payload = careersStore.getPublicPayload();
   const allJobs = careersStore.getAllJobs();
+  const allApplications = careersStore.getAllApplications();
   return {
     jobs: allJobs,
+    applications: allApplications,
     hiring_steps: payload.hiring_steps,
     benefits: payload.benefits,
     hero: payload.hero,
     closing_cta: payload.closing_cta,
     stats: payload.stats,
   };
+}
+
+export async function submitJobApplicationFn({
+  data,
+}: {
+  data: JobApplicationInput;
+}): Promise<{ success: boolean; application?: JobApplicationItem; error?: string }> {
+  try {
+    const validation = validateJobApplicationInput(data);
+    if (!validation.valid) {
+      const firstError = Object.values(validation.errors)[0] || "Validation failed.";
+      return { success: false, error: firstError };
+    }
+    const saved = careersStore.submitApplication(data);
+    return { success: true, application: saved };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to submit job application.",
+    };
+  }
+}
+
+export async function getAdminApplicationsFn(): Promise<JobApplicationItem[]> {
+  return careersStore.getAllApplications();
+}
+
+export async function updateApplicationStatusFn({
+  data,
+}: {
+  data: { id: string; status: ApplicationStatus; notes?: string };
+}): Promise<{ success: boolean; application?: JobApplicationItem; error?: string }> {
+  try {
+    if (!data?.id) return { success: false, error: "Application ID is required." };
+    const updated = careersStore.updateApplicationStatus(data.id, data.status, data.notes);
+    if (!updated) return { success: false, error: "Application not found." };
+    return { success: true, application: updated };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to update application status.",
+    };
+  }
+}
+
+export async function deleteApplicationFn({
+  data,
+}: {
+  data: { id: string };
+}): Promise<{ success: boolean; error?: string }> {
+  try {
+    if (!data?.id) return { success: false, error: "Application ID is required." };
+    const ok = careersStore.deleteApplication(data.id);
+    return { success: ok };
+  } catch (err) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : "Failed to delete application.",
+    };
+  }
 }
 
 export async function saveJobFn({

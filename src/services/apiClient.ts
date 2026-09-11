@@ -45,8 +45,25 @@ export async function apiRequest<T = any>(
     Accept: "application/json",
   };
 
-  if (token) {
-    defaultHeaders["Authorization"] = `Bearer ${token}`;
+  let authToken = token;
+  if (!authToken && typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("dimisi_admin_session");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed?.token && !parsed.token.includes("cookie")) {
+          authToken = parsed.token;
+        }
+      }
+    } catch {}
+  }
+
+  if (authToken && !authToken.includes("cookie")) {
+    defaultHeaders["Authorization"] = `Bearer ${authToken}`;
+  }
+
+  if (typeof FormData !== "undefined" && rest.body instanceof FormData) {
+    delete defaultHeaders["Content-Type"];
   }
 
   const controller = new AbortController();
@@ -74,9 +91,22 @@ export async function apiRequest<T = any>(
     }
 
     if (!response.ok) {
-      const errorMessage =
-        (data && typeof data === "object" && (data.message || data.error?.message || data.error)) ||
-        (response.status === 401 ? "Invalid email or password." : `Request failed with status ${response.status}`);
+      let errorMessage =
+        (data && typeof data === "object" && (data.message || data.error?.message || data.error)) || null;
+
+      if (!errorMessage) {
+        if (response.status === 401) {
+          errorMessage = "Unauthorized access. Please check your credentials.";
+        } else if (response.status === 403) {
+          errorMessage = "You do not have permission to perform this action.";
+        } else if (response.status === 404) {
+          errorMessage = "The requested API endpoint was not found.";
+        } else if (response.status >= 500) {
+          errorMessage = "Backend server is temporarily unavailable or returned an internal error.";
+        } else {
+          errorMessage = `Request failed with status ${response.status}`;
+        }
+      }
 
       throw new ApiError(errorMessage, response.status, data);
     }
@@ -90,12 +120,12 @@ export async function apiRequest<T = any>(
     }
 
     if (err instanceof Error && err.name === "AbortError") {
-      throw new ApiError("Request timed out. Please check your network or server status.", 408);
+      throw new ApiError("Request timed out. Please try again.", 408);
     }
 
     // Network error (backend down, connection refused, CORS failure)
     throw new ApiError(
-      "Unable to connect to the backend server. Please verify the server is running on " + API_BASE_URL,
+      `Unable to reach the backend service (${API_BASE_URL}). Please ensure the backend server is running.`,
       0,
     );
   }

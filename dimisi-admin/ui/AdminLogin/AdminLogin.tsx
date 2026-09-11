@@ -21,7 +21,7 @@ export function AdminLogin() {
     const cleanPassword = password.trim();
 
     if (!cleanEmail || !cleanPassword) {
-      setError("Please provide both email and password.");
+      setError("Please provide both administrator email and password.");
       setBusy(false);
       return;
     }
@@ -34,18 +34,22 @@ export function AdminLogin() {
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
-          setError("Invalid email or password.");
+          setError("Invalid administrator credentials.");
+        } else if (err.status === 403) {
+          setError(err.message || "You do not have permission to access the control room.");
+        } else if (err.status === 408) {
+          setError("Authentication request timed out. Please try again.");
         } else if (err.status === 0) {
-          setError("Unable to connect to the server. Please try again.");
+          setError("Unable to reach the authentication service. Please verify the backend is running.");
         } else if (err.status >= 500) {
-          setError("Something went wrong. Please try again.");
+          setError("Authentication service is temporarily unavailable.");
         } else {
           setError(err.message || "Authentication failed.");
         }
       } else if (err instanceof Error) {
-        setError(err.message);
+        setError(err.message || "Session could not be established.");
       } else {
-        setError("Authentication failed. Please try again.");
+        setError("Unexpected authentication error. Please try again.");
       }
     } finally {
       setBusy(false);

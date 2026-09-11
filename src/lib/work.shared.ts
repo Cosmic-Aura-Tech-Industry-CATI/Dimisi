@@ -63,8 +63,30 @@ export interface ProjectInput {
   is_active?: boolean | undefined;
 }
 
+export interface WorkCategoryItem {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | undefined;
+  status: "active" | "inactive";
+  order_index: number;
+  created_at?: string | undefined;
+  updated_at?: string | undefined;
+}
+
+export interface WorkCategoryInput {
+  id?: string | undefined;
+  name: string;
+  slug?: string | undefined;
+  description?: string | undefined;
+  status?: "active" | "inactive" | undefined;
+  order_index?: number | undefined;
+}
+
 export interface PublicWorkPayload {
   projects: ProjectItem[];
+  categories?: string[] | undefined;
+  categoryItems?: WorkCategoryItem[] | undefined;
   stats: {
     totalProjects: number;
     totalWork: number;
@@ -84,6 +106,33 @@ export function slugifyProject(title: string): string {
     .replace(/[^\w\s-]/g, "")
     .replace(/[\s_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Creates URL-safe slugs for work/product categories.
+ */
+export function slugifyWorkCategory(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Validates work category inputs.
+ */
+export function validateWorkCategoryInput(input: Partial<WorkCategoryInput>): {
+  valid: boolean;
+  error?: string;
+  field?: string;
+} {
+  const name = input.name?.trim() || "";
+  if (name.length < 2) {
+    return { valid: false, error: "Category name must be at least 2 characters long.", field: "name" };
+  }
+  return { valid: true };
 }
 
 /**
@@ -130,3 +179,4 @@ export function validateProjectInput(input: Partial<ProjectInput>): {
 
   return { valid: true };
 }
+

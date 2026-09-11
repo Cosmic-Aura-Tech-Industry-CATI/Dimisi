@@ -91,6 +91,26 @@ export interface GalleryItemInput {
   hue?: number | undefined;
 }
 
+export interface EventCategoryItem {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | undefined;
+  status: "active" | "inactive";
+  order_index: number;
+  created_at?: string | undefined;
+  updated_at?: string | undefined;
+}
+
+export interface EventCategoryInput {
+  id?: string | undefined;
+  name: string;
+  slug?: string | undefined;
+  description?: string | undefined;
+  status?: "active" | "inactive" | undefined;
+  order_index?: number | undefined;
+}
+
 export interface PublicEventsPayload {
   events: CompanyEvent[];
   featuredEvent: CompanyEvent | null;
@@ -103,6 +123,7 @@ export interface PublicEventsPayload {
     attendeesServed: number;
   };
   categories: string[];
+  categoryItems?: EventCategoryItem[] | undefined;
 }
 
 export function slugifyEvent(title: string): string {
@@ -112,6 +133,27 @@ export function slugifyEvent(title: string): string {
     .replace(/[^\w\s-]/g, "")
     .replace(/[\s_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+export function slugifyEventCategory(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+export function validateEventCategoryInput(input: Partial<EventCategoryInput>): {
+  valid: boolean;
+  error?: string;
+  field?: string;
+} {
+  const name = input.name?.trim() || "";
+  if (name.length < 2) {
+    return { valid: false, error: "Category name must be at least 2 characters long.", field: "name" };
+  }
+  return { valid: true };
 }
 
 export function validateEvent(input: EventInput): { valid: boolean; error?: string; field?: string } {
@@ -138,3 +180,4 @@ export function validateEvent(input: EventInput): { valid: boolean; error?: stri
   }
   return { valid: true };
 }
+

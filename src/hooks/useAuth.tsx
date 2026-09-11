@@ -34,11 +34,11 @@ export function useAuth() {
           if (parsed?.user && (!parsed.expires_at || parsed.expires_at > Date.now())) {
             setUser(parsed.user as AuthUser);
             setSession({
-              access_token: parsed.token || "mock-super-admin-token",
+              access_token: parsed.token || "cookie-session",
               token_type: "bearer",
               expires_in: 3600 * 24 * 7,
               expires_at: Math.floor((parsed.expires_at || Date.now() + 86400000 * 7) / 1000),
-              refresh_token: "mock-refresh",
+              refresh_token: "cookie-refresh",
               user: parsed.user as AuthUser,
             });
             setLoading(false);
@@ -62,12 +62,15 @@ export function useAuth() {
       if (!found) {
         setSession(null);
         setUser(null);
+        setLoading(false);
       }
     };
     window.addEventListener("dimisi-auth-change", onAuthChange);
+    window.addEventListener("storage", onAuthChange);
 
     return () => {
       window.removeEventListener("dimisi-auth-change", onAuthChange);
+      window.removeEventListener("storage", onAuthChange);
     };
   }, []);
 

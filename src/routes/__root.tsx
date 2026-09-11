@@ -170,7 +170,7 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isAdmin = pathname.startsWith("/dimisi-admin");
-  useSmoothScroll();
+  useSmoothScroll(isAdmin);
   // The cinematic intro plays on every page load / refresh, before the site appears.
   const [intro, setIntro] = useState(true);
   useEffect(() => {

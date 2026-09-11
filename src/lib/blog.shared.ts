@@ -57,6 +57,26 @@ export interface BlogPostInput {
   order_index?: number | undefined;
 }
 
+export interface BlogCategoryItem {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string | undefined;
+  status: "active" | "inactive";
+  order_index: number;
+  created_at?: string | undefined;
+  updated_at?: string | undefined;
+}
+
+export interface BlogCategoryInput {
+  id?: string | undefined;
+  name: string;
+  slug?: string | undefined;
+  description?: string | undefined;
+  status?: "active" | "inactive" | undefined;
+  order_index?: number | undefined;
+}
+
 export interface BlogConfig {
   hero_eyebrow: string;
   hero_heading: string;
@@ -71,6 +91,7 @@ export interface PublicBlogPayload {
   featured_post: BlogPostItem | null;
   posts: BlogPostItem[];
   categories: string[];
+  categoryItems?: BlogCategoryItem[] | undefined;
   stats: {
     totalPosts: number;
     totalCategories: number;
@@ -89,6 +110,33 @@ export function slugifyBlog(title: string): string {
     .replace(/[^\w\s-]/g, "")
     .replace(/[\s_-]+/g, "-")
     .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Creates URL-safe slugs for blog categories.
+ */
+export function slugifyBlogCategory(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Validates blog category input.
+ */
+export function validateBlogCategoryInput(input: Partial<BlogCategoryInput>): {
+  valid: boolean;
+  error?: string;
+  field?: string;
+} {
+  const name = input.name?.trim() || "";
+  if (name.length < 2) {
+    return { valid: false, error: "Category name must be at least 2 characters long.", field: "name" };
+  }
+  return { valid: true };
 }
 
 /**

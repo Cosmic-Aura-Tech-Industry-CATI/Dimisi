@@ -45,9 +45,9 @@ import {
 import {
   getAdminBlogData,
 } from "@/lib/blog.functions";
-import type { CompanyEvent, EventGalleryItem } from "@/lib/events.shared";
-import type { CompanyService, IndustrySector } from "@/lib/services.shared";
-import type { ProjectItem } from "@/lib/work.shared";
+import type { CompanyEvent, EventGalleryItem, EventCategoryItem } from "@/lib/events.shared";
+import type { CompanyService, IndustrySector, ServiceCategoryItem } from "@/lib/services.shared";
+import type { ProjectItem, WorkCategoryItem } from "@/lib/work.shared";
 import type {
   JobOpening,
   HiringProcessStep,
@@ -55,7 +55,7 @@ import type {
   CareersHeroConfig,
   CareersClosingCtaConfig,
 } from "@/lib/careers.shared";
-import type { BlogPostItem, BlogConfig } from "@/lib/blog.shared";
+import type { BlogPostItem, BlogConfig, BlogCategoryItem } from "@/lib/blog.shared";
 import styles from "../styles/admin.module.css";
 
 type Tab = AdminTab;
@@ -74,25 +74,47 @@ export function AdminPanel() {
 
   const [data, setData] = useState<AdminOverview | null>(null);
   const [reviewsData, setReviewsData] = useState<AdminDashboardData | null>(null);
-  const [eventsData, setEventsData] = useState<{ events: CompanyEvent[]; gallery: EventGalleryItem[] }>({
+  const [eventsData, setEventsData] = useState<{
+    events: CompanyEvent[];
+    gallery: EventGalleryItem[];
+    categoryItems?: EventCategoryItem[];
+    categoryCounts?: Record<string, number>;
+  }>({
     events: [],
     gallery: [],
+    categoryItems: [],
+    categoryCounts: {},
   });
-  const [servicesData, setServicesData] = useState<{ services: CompanyService[]; industries: IndustrySector[] }>({
+  const [servicesData, setServicesData] = useState<{
+    services: CompanyService[];
+    industries: IndustrySector[];
+    categoryItems?: ServiceCategoryItem[];
+    categoryCounts?: Record<string, number>;
+  }>({
     services: [],
     industries: [],
+    categoryItems: [],
+    categoryCounts: {},
   });
-  const [workData, setWorkData] = useState<{ projects: ProjectItem[] }>({
+  const [workData, setWorkData] = useState<{
+    projects: ProjectItem[];
+    categoryItems?: WorkCategoryItem[];
+    categoryCounts?: Record<string, number>;
+  }>({
     projects: [],
+    categoryItems: [],
+    categoryCounts: {},
   });
   const [careersData, setCareersData] = useState<{
     jobs: JobOpening[];
+    applications?: JobApplicationItem[];
     hiring_steps: HiringProcessStep[];
     benefits: CultureBenefit[];
     hero: CareersHeroConfig;
     closing_cta: CareersClosingCtaConfig;
   }>({
     jobs: [],
+    applications: [],
     hiring_steps: [],
     benefits: [],
     hero: {
@@ -100,20 +122,21 @@ export function AdminPanel() {
       heading: "Build the Future With Us",
       subline: "Join a curious, innovation-focused team where your work ships and your ideas matter.",
       cta_text: "Apply Now",
-      cta_link: "https://www.thekalesh.com/careers",
+      cta_link: "#open-positions",
       illustration_caption: "Bhootdev Careers",
     },
     closing_cta: {
       heading: "Ready to Join Us?",
       subline: "Send us your details and tell us what you'd love to work on.",
       cta_text: "Apply Now",
-      cta_link: "https://www.thekalesh.com/careers",
+      cta_link: "#open-positions",
     },
   });
   const [blogData, setBlogData] = useState<{
     posts: BlogPostItem[];
     config: BlogConfig;
     categories: string[];
+    categoryItems?: BlogCategoryItem[];
   }>({
     posts: [],
     config: {
@@ -125,6 +148,7 @@ export function AdminPanel() {
       under_development_notice_text: "Blog section under development. Please visit again after some time.",
     },
     categories: ["All Posts", "Web", "Mobile", "AI", "Cloud", "Startups", "Technology Trends"],
+    categoryItems: [],
   });
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -396,6 +420,8 @@ export function AdminPanel() {
               <AdminServices
                 services={servicesData.services}
                 industries={servicesData.industries}
+                categoryItems={servicesData.categoryItems}
+                categoryCounts={servicesData.categoryCounts}
                 onRefresh={refreshServices}
               />
             )}
@@ -404,6 +430,8 @@ export function AdminPanel() {
             {tab === "work" && (
               <AdminWork
                 projects={workData.projects}
+                categoryItems={workData.categoryItems}
+                categoryCounts={workData.categoryCounts}
                 onRefresh={refreshWork}
               />
             )}
@@ -412,6 +440,7 @@ export function AdminPanel() {
             {tab === "careers" && (
               <AdminCareers
                 jobs={careersData.jobs}
+                applications={careersData.applications || []}
                 hiringSteps={careersData.hiring_steps}
                 benefits={careersData.benefits}
                 hero={careersData.hero}
@@ -426,6 +455,7 @@ export function AdminPanel() {
                 posts={blogData.posts}
                 config={blogData.config}
                 categories={blogData.categories}
+                categoryItems={blogData.categoryItems}
                 onRefresh={refreshBlog}
               />
             )}
@@ -435,6 +465,8 @@ export function AdminPanel() {
               <AdminEvents
                 events={eventsData.events}
                 gallery={eventsData.gallery}
+                categoryItems={eventsData.categoryItems}
+                categoryCounts={eventsData.categoryCounts}
                 onRefresh={refreshEvents}
               />
             )}

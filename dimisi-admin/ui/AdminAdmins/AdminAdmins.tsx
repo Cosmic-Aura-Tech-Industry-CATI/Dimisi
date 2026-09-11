@@ -251,7 +251,7 @@ export function AdminAdmins({
           </h3>
         </div>
 
-        <div className={shared.tableWrap}>
+        <div className={styles.tableWrap}>
           <table className={shared.table}>
             <thead>
               <tr>
@@ -265,7 +265,14 @@ export function AdminAdmins({
               </tr>
             </thead>
             <tbody>
-              {(admins ?? []).map((a) => {
+              {(admins ?? []).length === 0 ? (
+                <tr>
+                  <td colSpan={7} style={{ textAlign: "center", padding: "2.5rem 1rem", color: "rgba(255,255,255,0.4)" }}>
+                    No administrators found. Use the form above to grant administrator access.
+                  </td>
+                </tr>
+              ) : (
+                (admins ?? []).map((a) => {
                 const isSelf = a.user_id === selfId;
                 const roleMeta = getRoleMeta(a.role);
                 const designationDisplay = a.designation ? a.designation : "Not set";
@@ -363,17 +370,17 @@ export function AdminAdmins({
                             ].join(" ")}
                             disabled={busy}
                             onClick={() => setDeleteModalTarget(a)}
-                            title="Delete Administrator"
+                            title="Revoke Administrator Access"
                           >
                             <Trash2 size={13} />
-                            <span>Delete</span>
+                            <span>Revoke</span>
                           </button>
                         </div>
                       )}
                     </td>
                   </tr>
                 );
-              })}
+              }))}
             </tbody>
           </table>
         </div>
@@ -463,7 +470,7 @@ export function AdminAdmins({
         </div>
       )}
 
-      {/* DELETE ADMINISTRATOR CONFIRMATION MODAL */}
+      {/* REVOKE ADMINISTRATOR ACCESS CONFIRMATION MODAL */}
       {deleteModalTarget && (
         <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
           <div className={styles.modalCard}>
@@ -472,9 +479,9 @@ export function AdminAdmins({
                 <Trash2 size={20} />
               </div>
               <div>
-                <h4 className={styles.modalTitle}>Delete Administrator Account?</h4>
+                <h4 className={styles.modalTitle}>Revoke Administrator Access?</h4>
                 <p className={styles.modalSub}>
-                  Permanently remove <strong>{deleteModalTarget.email}</strong> from DIMISI Admin.
+                  Deactivate administrative permissions for <strong>{deleteModalTarget.email}</strong>.
                 </p>
               </div>
               <button
@@ -488,8 +495,7 @@ export function AdminAdmins({
 
             <div className={styles.modalBody}>
               <p className={styles.deleteWarningText}>
-                This action is <strong>irreversible</strong>. The user will be permanently removed
-                from the system, profiles, and administrative access records.
+                To preserve system audit records, accounts are not permanently deleted from the database. Revoking access will <strong>deactivate</strong> this administrator, immediately blocking Control Room access.
               </p>
               <div className={styles.deleteUserSummary}>
                 <div>
@@ -514,7 +520,7 @@ export function AdminAdmins({
                 className={styles.confirmDeleteBtn}
                 onClick={executeDeleteAdmin}
               >
-                Delete Administrator
+                Revoke Access (Deactivate)
               </button>
             </div>
           </div>
