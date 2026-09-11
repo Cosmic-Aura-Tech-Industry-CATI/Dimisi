@@ -31,6 +31,7 @@ import {
   Layers,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   UploadCloud,
   FileCheck,
   AlertCircle,
@@ -99,7 +100,9 @@ export function AdminWork({
 
   const [activeTabFilter, setActiveTabFilter] = useState<"all" | ProjectType>("all");
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
+  const [isCatDropdownOpen, setIsCatDropdownOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
+  const catDropdownRef = useRef<HTMLDivElement>(null);
 
   // Dynamic Categories State
   const [categoryList, setCategoryList] = useState<WorkCategoryItem[]>(() => {
@@ -150,12 +153,21 @@ export function AdminWork({
     return counts;
   }, [projects]);
 
-  // Active category items for filter pills & project selector
+  // Active category items for filter selector
   const activeCategories = useMemo(() => {
     return categoryList
       .filter((c) => c.status === "active")
       .sort((a, b) => a.order_index - b.order_index);
   }, [categoryList]);
+
+  // Label for the category filter dropdown trigger
+  const dropdownTriggerLabel = useMemo(() => {
+    if (categoryFilter === "All") {
+      return `All Categories (${categoryList.length})`;
+    }
+    const count = categoryProjectCounts[categoryFilter.toLowerCase()] || 0;
+    return `${categoryFilter} (${count})`;
+  }, [categoryFilter, categoryList.length, categoryProjectCounts]);
 
   // Category Taxonomy Modal State
   const [showCatModal, setShowCatModal] = useState(false);
@@ -180,7 +192,6 @@ export function AdminWork({
 
   // Project Form State
   const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
   const [type, setType] = useState<ProjectType>("work");
   const [category, setCategory] = useState("Web Application");
   const [tagline, setTagline] = useState("");
@@ -196,6 +207,8 @@ export function AdminWork({
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [imageError, setImageError] = useState<string | null>(null);
+  const [coverAspectWarning, setCoverAspectWarning] = useState<string | null>(null);
+  const [galleryAspectWarning, setGalleryAspectWarning] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
@@ -213,6 +226,7 @@ export function AdminWork({
 
   // Gallery Images State
   const [galleryImages, setGalleryImages] = useState<ProjectGalleryImage[]>([]);
+  const [galleryUrlInput, setGalleryUrlInput] = useState("");
 
   // Metadata & Metrics State
   const [websiteUrl, setWebsiteUrl] = useState("");
@@ -253,6 +267,30 @@ export function AdminWork({
       window.removeEventListener("keydown", handleKeyDown);
     };
   }, [showModal, showCatModal]);
+
+  // Click outside and Escape key handler for Category Popover Dropdown
+  useEffect(() => {
+    const handlePointerDownOutside = (e: MouseEvent | TouchEvent) => {
+      if (catDropdownRef.current && !catDropdownRef.current.contains(e.target as Node)) {
+        setIsCatDropdownOpen(false);
+      }
+    };
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setIsCatDropdownOpen(false);
+      }
+    };
+    if (isCatDropdownOpen) {
+      document.addEventListener("mousedown", handlePointerDownOutside);
+      document.addEventListener("touchstart", handlePointerDownOutside);
+      document.addEventListener("keydown", handleKeyDown);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDownOutside);
+      document.removeEventListener("touchstart", handlePointerDownOutside);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isCatDropdownOpen]);
 
   const workCount = useMemo(() => projects.filter((p) => p.type === "work").length, [projects]);
   const productCount = useMemo(() => projects.filter((p) => p.type === "product").length, [projects]);
@@ -337,10 +375,17 @@ export function AdminWork({
     setCatFormError(null);
     setCatSuccessMsg(null);
 
+    const finalSlug =
+      (editingCatId
+        ? categoryList.find((c) => c.id === editingCatId)?.slug
+        : "") ||
+      catSlug.trim() ||
+      slugifyWorkCategory(catName);
+
     const input: WorkCategoryInput = {
       id: editingCatId || undefined,
       name: catName.trim(),
-      slug: catSlug.trim() || slugifyWorkCategory(catName),
+      slug: finalSlug,
       description: catDescription.trim() || undefined,
       status: catStatus,
       order_index: Number(catOrderIndex) || categoryList.length + 1,
@@ -431,7 +476,6 @@ export function AdminWork({
   const handleOpenCreate = (defaultType: ProjectType = "work") => {
     setEditingProject(null);
     setTitle("");
-    setSlug("");
     setType(defaultType);
     const defaultCat =
       activeCategories[0]?.name ||
@@ -446,17 +490,23 @@ export function AdminWork({
     setCoverFile(null);
     setCoverPreviewUrl("https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80");
     setImageError(null);
+    setCoverAspectWarning(null);
+    setGalleryAspectWarning(null);
     setUploadProgress(0);
     setIsUploadingImage(false);
     setGalleryImages([]);
+    setGalleryUrlInput("");
     setWebsiteUrl("");
     setClientName(defaultType === "work" ? "" : "DIMISI Labs");
     setTimeline("4 Weeks Sprint");
     setTechStack(["React", "TypeScript", "Node.js", "PostgreSQL"]);
+    setNewTech("");
     setMetrics([
       { label: "Performance Gain", value: "+120%" },
       { label: "Load Latency", value: "< 350ms" },
     ]);
+    setNewMetricLabel("");
+    setNewMetricValue("");
     setOrderIndex(projects.length + 1);
     setIsFeatured(false);
     setIsActive(true);
@@ -469,7 +519,6 @@ export function AdminWork({
   const handleOpenEdit = (p: ProjectItem) => {
     setEditingProject(p);
     setTitle(p.title);
-    setSlug(p.slug);
     setType(p.type);
     setCategory(p.category);
     setTagline(p.tagline || "");
@@ -481,14 +530,20 @@ export function AdminWork({
     setCoverFile(null);
     setCoverPreviewUrl(p.cover_image);
     setImageError(null);
+    setCoverAspectWarning(null);
+    setGalleryAspectWarning(null);
     setUploadProgress(0);
     setIsUploadingImage(false);
     setGalleryImages(p.gallery_images || []);
+    setGalleryUrlInput("");
     setWebsiteUrl(p.website_url || "");
     setClientName(p.client_name || "");
     setTimeline(p.timeline || "");
     setTechStack(p.tech_stack || []);
+    setNewTech("");
     setMetrics(p.metrics || []);
+    setNewMetricLabel("");
+    setNewMetricValue("");
     setOrderIndex(p.order_index);
     setIsFeatured(p.is_featured);
     setIsActive(p.is_active);
@@ -498,9 +553,31 @@ export function AdminWork({
     setShowModal(true);
   };
 
+  // Helper to inspect image dimensions & aspect ratio without blocking
+  const checkAspectRatio = useCallback((imgSrc: string, setWarning: (warn: string | null) => void) => {
+    if (typeof window === "undefined") return;
+    const img = new Image();
+    img.onload = () => {
+      if (img.naturalWidth && img.naturalHeight) {
+        const ratio = img.naturalWidth / img.naturalHeight;
+        // Standard 16:9 is ~1.777. Allow tolerance range [1.45, 2.1]
+        if (ratio < 1.45 || ratio > 2.1) {
+          setWarning("Recommended frame is 16:9 (1920 × 1080 px). Your image may be cropped or letterboxed depending on display.");
+        } else {
+          setWarning(null);
+        }
+      }
+    };
+    img.onerror = () => {
+      // Silently ignore if remote URL cannot be preloaded
+    };
+    img.src = imgSrc;
+  }, []);
+
   // Image Processing & Validation
   const processImageFile = useCallback((file: File) => {
     setImageError(null);
+    setCoverAspectWarning(null);
 
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
       setImageError("Unsupported image format. Please upload JPG, JPEG, PNG, or WEBP.");
@@ -521,6 +598,7 @@ export function AdminWork({
       const dataUrl = e.target?.result as string;
       setCoverPreviewUrl(dataUrl);
       setCoverImage(dataUrl);
+      checkAspectRatio(dataUrl, setCoverAspectWarning);
       setUploadProgress(100);
       setTimeout(() => setIsUploadingImage(false), 250);
     };
@@ -529,7 +607,7 @@ export function AdminWork({
       setIsUploadingImage(false);
     };
     reader.readAsDataURL(file);
-  }, []);
+  }, [checkAspectRatio]);
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -556,21 +634,68 @@ export function AdminWork({
   };
 
   const handleGalleryFileAdd = (e: ChangeEvent<HTMLInputElement>) => {
+    setImageError(null);
     if (e.target.files && e.target.files.length > 0) {
       Array.from(e.target.files).forEach((file) => {
-        if (ALLOWED_IMAGE_TYPES.includes(file.type) && file.size <= MAX_IMAGE_SIZE_BYTES) {
-          const reader = new FileReader();
-          reader.onload = (evt) => {
-            const dataUrl = evt.target?.result as string;
-            setGalleryImages((prev) => [
-              ...prev,
-              { url: dataUrl, caption: file.name.replace(/\.[^/.]+$/, "") },
-            ]);
-          };
-          reader.readAsDataURL(file);
+        if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
+          setImageError("Unsupported format in gallery photos. Please upload JPG, JPEG, PNG, or WEBP.");
+          return;
         }
+        if (file.size > MAX_IMAGE_SIZE_BYTES) {
+          setImageError("Gallery image exceeds maximum allowed size (10 MB).");
+          return;
+        }
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const dataUrl = evt.target?.result as string;
+          checkAspectRatio(dataUrl, setGalleryAspectWarning);
+          setGalleryImages((prev) => [
+            ...prev,
+            { url: dataUrl, caption: file.name.replace(/\.[^/.]+$/, "") },
+          ]);
+        };
+        reader.readAsDataURL(file);
       });
+      if (galleryFileInputRef.current) {
+        galleryFileInputRef.current.value = "";
+      }
     }
+  };
+
+  const handleAddGalleryUrl = () => {
+    const url = galleryUrlInput.trim();
+    if (!url) return;
+    if (!url.startsWith("http://") && !url.startsWith("https://") && !url.startsWith("data:image/")) {
+      setImageError("Please enter a valid image URL starting with https:// or http://");
+      return;
+    }
+    checkAspectRatio(url, setGalleryAspectWarning);
+    setGalleryImages((prev) => [
+      ...prev,
+      { url, caption: "Gallery Visual" },
+    ]);
+    setGalleryUrlInput("");
+    setImageError(null);
+  };
+
+  // Tech Stack & Metrics Adders
+  const handleAddTech = () => {
+    const trimmed = newTech.trim();
+    if (!trimmed) return;
+    const exists = techStack.some((t) => t.toLowerCase() === trimmed.toLowerCase());
+    if (!exists) {
+      setTechStack((prev) => [...prev, trimmed]);
+      setNewTech("");
+    }
+  };
+
+  const handleAddMetric = () => {
+    const val = newMetricValue.trim();
+    const lbl = newMetricLabel.trim();
+    if (!val || !lbl) return;
+    setMetrics((prev) => [...prev, { label: lbl, value: val }]);
+    setNewMetricValue("");
+    setNewMetricLabel("");
   };
 
   // Clipboard Paste Support (Ctrl + V)
@@ -597,6 +722,7 @@ export function AdminWork({
     setCoverFile(null);
     setCoverPreviewUrl(null);
     setCoverImage("");
+    setCoverAspectWarning(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -675,10 +801,14 @@ export function AdminWork({
     setFormError(null);
     setFieldErrors({});
 
+    const finalSlug =
+      (editingProject ? editingProject.slug : "") ||
+      slugifyProject(title);
+
     const input: ProjectInput = {
       id: editingProject?.id ?? undefined,
       title: title.trim(),
-      slug: slug.trim() || slugifyProject(title),
+      slug: finalSlug,
       type,
       category: category.trim(),
       tagline: tagline.trim() || overview.trim().slice(0, 80),
@@ -877,39 +1007,6 @@ export function AdminWork({
 
       {/* Dynamic Filters & Search Control Bar */}
       <div className={styles.filtersBar}>
-        {/* Dynamic Category Filter Pills */}
-        <div className={styles.catPillsScroll}>
-          <button
-            type="button"
-            className={[
-              styles.catPill,
-              categoryFilter === "All" ? styles.catPillActive : "",
-            ].join(" ")}
-            onClick={() => setCategoryFilter("All")}
-          >
-            All Categories ({categoryList.length})
-          </button>
-          {activeCategories.map((c) => {
-            const count = categoryProjectCounts[c.name.toLowerCase()] || 0;
-            const isActive = categoryFilter.toLowerCase() === c.name.toLowerCase();
-            return (
-              <button
-                key={c.id}
-                type="button"
-                className={[
-                  styles.catPill,
-                  isActive ? styles.catPillActive : "",
-                ].join(" ")}
-                onClick={() => setCategoryFilter(c.name)}
-              >
-                <span>{c.name}</span>
-                <span className={styles.catPillCount}>({count})</span>
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Search Control */}
         <div className={styles.secondaryFiltersRow}>
           <div className={styles.searchBox}>
             <Search size={14} className={styles.searchIcon} />
@@ -932,18 +1029,129 @@ export function AdminWork({
             )}
           </div>
 
-          {(categoryFilter !== "All" || searchQuery) && (
-            <button
-              type="button"
-              className={styles.resetFiltersBtn}
-              onClick={() => {
-                setCategoryFilter("All");
-                setSearchQuery("");
-              }}
-            >
-              Reset Filters
-            </button>
-          )}
+          <div className={styles.filterRightActions}>
+            {(categoryFilter !== "All" || searchQuery) && (
+              <button
+                type="button"
+                className={styles.resetFiltersBtn}
+                onClick={() => {
+                  setCategoryFilter("All");
+                  setSearchQuery("");
+                }}
+              >
+                Reset Filters
+              </button>
+            )}
+
+            {/* Category Filter Dropdown (Right of Search) */}
+            <div className={styles.catDropdownWrapper} ref={catDropdownRef}>
+              <button
+                type="button"
+                className={[
+                  styles.catDropdownTrigger,
+                  categoryFilter !== "All" || isCatDropdownOpen
+                    ? styles.catDropdownTriggerActive
+                    : "",
+                ].join(" ")}
+                onClick={() => setIsCatDropdownOpen((prev) => !prev)}
+                aria-expanded={isCatDropdownOpen}
+                aria-haspopup="listbox"
+                aria-label="Filter case studies by category"
+              >
+                <div className={styles.catDropdownTriggerLeft}>
+                  {categoryFilter !== "All" ? (
+                    <Tag size={13} className={styles.dropdownIcon} />
+                  ) : (
+                    <SlidersHorizontal size={13} className={styles.dropdownIcon} />
+                  )}
+                  <span className={styles.catDropdownTriggerText}>
+                    {dropdownTriggerLabel}
+                  </span>
+                </div>
+                <ChevronDown
+                  size={14}
+                  className={[
+                    styles.catDropdownChevron,
+                    isCatDropdownOpen ? styles.catDropdownChevronOpen : "",
+                  ].join(" ")}
+                />
+              </button>
+
+              {isCatDropdownOpen && (
+                <div className={styles.catDropdownMenu} role="listbox" tabIndex={-1}>
+                  {/* Option: All Categories */}
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={categoryFilter === "All"}
+                    className={[
+                      styles.catDropdownItem,
+                      categoryFilter === "All" ? styles.catDropdownItemActive : "",
+                    ].join(" ")}
+                    onClick={() => {
+                      setCategoryFilter("All");
+                      setIsCatDropdownOpen(false);
+                    }}
+                  >
+                    <div className={styles.catDropdownItemLeft}>
+                      {categoryFilter === "All" ? (
+                        <Check size={14} className={styles.catDropdownCheck} />
+                      ) : (
+                        <span className={styles.catDropdownCheckPlaceholder} />
+                      )}
+                      <span>All Categories</span>
+                    </div>
+                    <span className={styles.catDropdownItemCount}>
+                      ({categoryList.length})
+                    </span>
+                  </button>
+
+                  <div className={styles.catDropdownDivider} />
+
+                  {/* Dynamic Category List */}
+                  {activeCategories.map((c) => {
+                    const count =
+                      categoryProjectCounts[c.name.toLowerCase()] || 0;
+                    const isSelected =
+                      categoryFilter.toLowerCase() === c.name.toLowerCase();
+                    return (
+                      <button
+                        key={c.id}
+                        type="button"
+                        role="option"
+                        aria-selected={isSelected}
+                        className={[
+                          styles.catDropdownItem,
+                          isSelected ? styles.catDropdownItemActive : "",
+                        ].join(" ")}
+                        onClick={() => {
+                          setCategoryFilter(c.name);
+                          setIsCatDropdownOpen(false);
+                        }}
+                      >
+                        <div className={styles.catDropdownItemLeft}>
+                          {isSelected ? (
+                            <Check
+                              size={14}
+                              className={styles.catDropdownCheck}
+                            />
+                          ) : (
+                            <span
+                              className={styles.catDropdownCheckPlaceholder}
+                            />
+                          )}
+                          <span title={c.name}>{c.name}</span>
+                        </div>
+                        <span className={styles.catDropdownItemCount}>
+                          ({count})
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -956,7 +1164,6 @@ export function AdminWork({
             <col className={styles.colTitle} />
             <col className={styles.colType} />
             <col className={styles.colCategory} />
-            <col className={styles.colSlug} />
             <col className={styles.colStatus} />
             <col className={styles.colActions} />
           </colgroup>
@@ -967,7 +1174,6 @@ export function AdminWork({
               <th>Project Title</th>
               <th>Type</th>
               <th>Category</th>
-              <th>URL Slug / Live Link</th>
               <th className={styles.thCenter}>Status</th>
               <th className={styles.thRight}>Actions</th>
             </tr>
@@ -975,7 +1181,7 @@ export function AdminWork({
           <tbody>
             {filteredProjects.length === 0 ? (
               <tr>
-                <td colSpan={8} className={styles.emptyCell}>
+                <td colSpan={7} className={styles.emptyCell}>
                   <div className={styles.emptyState}>
                     <FolderGit2 size={36} className={styles.emptyIcon} />
                     <span className={styles.emptyTitle}>No projects or case studies found</span>
@@ -1065,27 +1271,6 @@ export function AdminWork({
                       <Tag size={11} className={styles.badgeTagIcon} />
                       <span>{p.category}</span>
                     </span>
-                  </td>
-                  <td>
-                    <div className={styles.slugCol}>
-                      <code className={styles.slugCode} title={`/work/${p.slug}`}>
-                        /work/{p.slug}
-                      </code>
-                      {p.website_url ? (
-                        <a
-                          href={p.website_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className={styles.extLinkA}
-                          title={`Open live site: ${p.website_url}`}
-                        >
-                          <Globe size={11} />
-                          <span>Live Site</span>
-                        </a>
-                      ) : (
-                        <span className={styles.noLiveLink}>—</span>
-                      )}
-                    </div>
                   </td>
                   <td className={styles.statusCellCol}>
                     <div className={styles.statusCell}>
@@ -1178,7 +1363,7 @@ export function AdminWork({
                 <div>
                   <h3 className={styles.modalTitle}>Work &amp; Product Categories Taxonomy</h3>
                   <p className={styles.modalSub}>
-                    Manage dynamic project categories, slugs, filter taxonomies, and active display states.
+                    Manage dynamic project categories, filter taxonomies, and active display states.
                   </p>
                 </div>
               </div>
@@ -1284,17 +1469,6 @@ export function AdminWork({
                   </div>
 
                   <div className={styles.formGroup}>
-                    <label>URL / Filter Slug *</label>
-                    <input
-                      type="text"
-                      required
-                      value={catSlug}
-                      onChange={(e) => setCatSlug(e.target.value)}
-                      placeholder="e.g. ai-autonomy"
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
                     <label>Short Description (Optional)</label>
                     <textarea
                       rows={2}
@@ -1360,7 +1534,7 @@ export function AdminWork({
                     <span className={styles.catCountBadge}>{categoryList.length}</span>
                   </h4>
                   <span className={styles.catListSub}>
-                    Active categories appear in the project filter pills and case study creation dropdown.
+                    Active categories appear in the project filter selector and case study creation dropdown.
                   </span>
                 </div>
 
@@ -1369,7 +1543,7 @@ export function AdminWork({
                     <thead>
                       <tr>
                         <th style={{ width: "50px" }}>Order</th>
-                        <th>Category &amp; Slug</th>
+                        <th>Category</th>
                         <th style={{ width: "90px" }}>Projects</th>
                         <th style={{ width: "95px" }}>Status</th>
                         <th style={{ width: "110px", textAlign: "right" }}>Actions</th>
@@ -1393,7 +1567,6 @@ export function AdminWork({
                               <td>
                                 <div className={styles.catItemMeta}>
                                   <span className={styles.catItemName}>{cat.name}</span>
-                                  <code className={styles.catItemSlug}>#{cat.slug}</code>
                                   {cat.description && (
                                     <span className={styles.catItemDesc}>
                                       {cat.description}
@@ -1532,42 +1705,28 @@ export function AdminWork({
                 {/* STEP 1: OVERVIEW & META */}
                 {modalTab === "overview" && (
                   <div className={styles.tabPane}>
-                    <div className={styles.formGrid2}>
-                      <div className={styles.formGroup}>
-                        <label>Project Title *</label>
-                        <input
-                          type="text"
-                          required
-                          value={title}
-                          className={fieldErrors.title ? styles.inputError : ""}
-                          onChange={(e) => {
-                            setTitle(e.target.value);
-                            if (fieldErrors.title) {
-                              setFieldErrors((prev) => {
-                                const copy = { ...prev };
-                                delete copy.title;
-                                return copy;
-                              });
-                            }
-                            if (!editingProject) setSlug(slugifyProject(e.target.value));
-                          }}
-                          placeholder="e.g. Rudra Tours & Travels"
-                        />
-                        {fieldErrors.title && (
-                          <span className={styles.fieldErrorText}>{fieldErrors.title}</span>
-                        )}
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label>URL Slug *</label>
-                        <input
-                          type="text"
-                          required
-                          value={slug}
-                          onChange={(e) => setSlug(e.target.value)}
-                          placeholder="e.g. rudra-tours-travels"
-                        />
-                      </div>
+                    <div className={styles.formGroup}>
+                      <label>Project Title *</label>
+                      <input
+                        type="text"
+                        required
+                        value={title}
+                        className={fieldErrors.title ? styles.inputError : ""}
+                        onChange={(e) => {
+                          setTitle(e.target.value);
+                          if (fieldErrors.title) {
+                            setFieldErrors((prev) => {
+                              const copy = { ...prev };
+                              delete copy.title;
+                              return copy;
+                            });
+                          }
+                        }}
+                        placeholder="e.g. Rudra Tours & Travels"
+                      />
+                      {fieldErrors.title && (
+                        <span className={styles.fieldErrorText}>{fieldErrors.title}</span>
+                      )}
                     </div>
 
                     <div className={styles.formGrid2}>
@@ -1804,8 +1963,47 @@ export function AdminWork({
                         <ImageIcon size={16} /> Primary Cover Showcase Image *
                       </h4>
                       <p className={styles.mediaSectionSub}>
-                        High-resolution hero visual displayed on cards and case study banner (Max 10MB; JPG, PNG, WEBP).
+                        High-resolution hero visual displayed on cards and case study banner.
                       </p>
+
+                      {/* Primary Cover Specifications Card */}
+                      <div className={styles.specCard}>
+                        <div className={styles.specHeader}>
+                          <span className={styles.specBadge}>PRIMARY COVER SPECIFICATIONS</span>
+                          <span className={styles.specHighlight}>
+                            <Sparkles size={14} style={{ color: "var(--dm-amber, #ffb300)" }} />
+                            Recommended: 1920 × 1080 px (16:9)
+                          </span>
+                        </div>
+                        <div className={styles.specGrid}>
+                          <div className={styles.specItem}>
+                            <span className={styles.specLabel}>Display Frame</span>
+                            <span className={styles.specVal}>16:9 Landscape</span>
+                          </div>
+                          <div className={styles.specItem}>
+                            <span className={styles.specLabel}>Resolution</span>
+                            <span className={styles.specVal}>
+                              1920 × 1080 px <span className={styles.specSubText}>(Min: 1280 × 720 px)</span>
+                            </span>
+                          </div>
+                          <div className={styles.specItem}>
+                            <span className={styles.specLabel}>Supported Formats</span>
+                            <span className={styles.specVal}>JPG, JPEG, PNG, WEBP</span>
+                          </div>
+                          <div className={styles.specItem}>
+                            <span className={styles.specLabel}>Max File Size</span>
+                            <span className={styles.specVal}>10 MB</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Aspect ratio non-blocking warning if detected */}
+                      {coverAspectWarning && (
+                        <div className={styles.aspectRatioWarning}>
+                          <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                          <span>{coverAspectWarning}</span>
+                        </div>
+                      )}
 
                       <div
                         className={[
@@ -1897,6 +2095,11 @@ export function AdminWork({
                           onChange={(e) => {
                             setCoverImage(e.target.value);
                             setCoverPreviewUrl(e.target.value);
+                            if (e.target.value) {
+                              checkAspectRatio(e.target.value, setCoverAspectWarning);
+                            } else {
+                              setCoverAspectWarning(null);
+                            }
                           }}
                           placeholder="https://images.unsplash.com/..."
                         />
@@ -1904,7 +2107,7 @@ export function AdminWork({
                     </div>
 
                     {/* Secondary Gallery Images */}
-                    <div className={styles.mediaSection} style={{ marginTop: "1.5rem" }}>
+                    <div className={styles.mediaSection} style={{ marginTop: "1.25rem" }}>
                       <div className={styles.galleryHeaderRow}>
                         <div>
                           <h4 className={styles.mediaSectionTitle}>
@@ -1914,13 +2117,67 @@ export function AdminWork({
                             Add additional product screenshots or interface views for the gallery slider.
                           </p>
                         </div>
+                      </div>
+
+                      {/* Gallery Recommended Specification Box */}
+                      <div className={styles.gallerySpecBox}>
+                        <div className={styles.gallerySpecTitleRow}>
+                          <span className={styles.specBadge}>GALLERY SPECIFICATIONS</span>
+                          <span className={styles.gallerySpecNote}>
+                            Use landscape 16:9 screenshots for consistent gallery presentation.
+                          </span>
+                        </div>
+                        <div className={styles.gallerySpecChips}>
+                          <span className={styles.gallerySpecChip}><strong>Frame:</strong> 16:9</span>
+                          <span className={styles.gallerySpecChip}><strong>Recommended:</strong> 1600 × 900 px</span>
+                          <span className={styles.gallerySpecChip}><strong>High-Res:</strong> 1920 × 1080 px</span>
+                          <span className={styles.gallerySpecChip}><strong>Formats:</strong> JPG, JPEG, PNG, WEBP</span>
+                          <span className={styles.gallerySpecChip}><strong>Max:</strong> 10 MB / image</span>
+                        </div>
+                      </div>
+
+                      {galleryAspectWarning && (
+                        <div className={styles.aspectRatioWarning}>
+                          <AlertTriangle size={15} style={{ flexShrink: 0 }} />
+                          <span>{galleryAspectWarning}</span>
+                        </div>
+                      )}
+
+                      {/* Gallery Dual Upload & URL Actions Row */}
+                      <div className={styles.galleryActionsRow}>
+                        <div className={styles.galleryUrlInputBox}>
+                          <input
+                            type="url"
+                            value={galleryUrlInput}
+                            onChange={(e) => setGalleryUrlInput(e.target.value)}
+                            placeholder="Enter direct image URL (https://...)"
+                            className={styles.galleryUrlInput}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleAddGalleryUrl();
+                              }
+                            }}
+                          />
+                          <button
+                            type="button"
+                            className={styles.addGalUrlBtn}
+                            onClick={handleAddGalleryUrl}
+                            title="Add Image URL to Gallery"
+                          >
+                            <Plus size={14} />
+                            <span>Add URL</span>
+                          </button>
+                        </div>
+
                         <button
                           type="button"
                           className={styles.addGalleryBtn}
                           onClick={() => galleryFileInputRef.current?.click()}
+                          title="Upload images from your device"
                         >
-                          <Plus size={14} />
-                          <span>Add Gallery Photos</span>
+                          <UploadCloud size={15} />
+                          <span>Upload from Device</span>
                         </button>
                         <input
                           type="file"
@@ -1961,27 +2218,35 @@ export function AdminWork({
                 {/* STEP 4: TECH STACK & METRICS */}
                 {modalTab === "tech_metrics" && (
                   <div className={styles.tabPane}>
-                    {/* Tech Stack Chips */}
+                    {/* A. Technologies & Architecture Stack */}
                     <div className={styles.techStackBox}>
                       <h4 className={styles.techStackTitle}>
                         <Code2 size={16} /> Technologies &amp; Architecture Stack
                       </h4>
                       <p className={styles.techStackSub}>
-                        Tag technologies used in this client solution (e.g. Next.js, FastAPI, PostgreSQL, WebSockets).
+                        Add technologies, frameworks, platforms, databases and tools used in this project.
                       </p>
 
                       <div className={styles.chipsContainer}>
-                        {techStack.map((tech, idx) => (
-                          <span key={idx} className={styles.techChip}>
-                            <span>{tech}</span>
-                            <button
-                              type="button"
-                              onClick={() => setTechStack((prev) => prev.filter((_, i) => i !== idx))}
-                            >
-                              <X size={12} />
-                            </button>
+                        {techStack.length === 0 ? (
+                          <span style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.4)" }}>
+                            No technologies added yet. Type below to add tools.
                           </span>
-                        ))}
+                        ) : (
+                          techStack.map((tech, idx) => (
+                            <span key={idx} className={styles.techChip}>
+                              <span>{tech}</span>
+                              <button
+                                type="button"
+                                onClick={() => setTechStack((prev) => prev.filter((_, i) => i !== idx))}
+                                title={`Remove ${tech}`}
+                                aria-label={`Remove ${tech}`}
+                              >
+                                <X size={12} />
+                              </button>
+                            </span>
+                          ))
+                        )}
                       </div>
 
                       <div className={styles.addTechRow}>
@@ -1992,82 +2257,94 @@ export function AdminWork({
                           onKeyDown={(e) => {
                             if (e.key === "Enter") {
                               e.preventDefault();
-                              if (newTech.trim() && !techStack.includes(newTech.trim())) {
-                                setTechStack([...techStack, newTech.trim()]);
-                                setNewTech("");
-                              }
+                              handleAddTech();
                             }
                           }}
-                          placeholder="Type tech name and press Enter..."
+                          placeholder="Enter technology name (e.g. Next.js, Redis, Docker)..."
                         />
                         <button
                           type="button"
                           className={styles.addChipBtn}
-                          onClick={() => {
-                            if (newTech.trim() && !techStack.includes(newTech.trim())) {
-                              setTechStack([...techStack, newTech.trim()]);
-                              setNewTech("");
-                            }
-                          }}
+                          onClick={handleAddTech}
+                          disabled={!newTech.trim()}
                         >
                           <Plus size={14} /> Add Tech
                         </button>
                       </div>
                     </div>
 
-                    {/* Key Metrics & ROI KPIs */}
-                    <div className={styles.metricsBox} style={{ marginTop: "1.5rem" }}>
+                    {/* B. Measurable Impact & Performance KPIs */}
+                    <div className={styles.metricsBox} style={{ marginTop: "1.25rem" }}>
                       <h4 className={styles.metricsTitle}>
                         <TrendingUp size={16} /> Measurable Impact &amp; Performance KPIs
                       </h4>
                       <p className={styles.metricsSub}>
-                        Highlight quantified outcomes (e.g. +140% Conversion, &lt; 350ms Latency, 99.99% Uptime).
+                        Highlight quantified outcomes such as performance improvement, conversion growth, latency reduction, uptime, etc.
                       </p>
 
-                      <div className={styles.metricsList}>
-                        {metrics.map((m, idx) => (
-                          <div key={idx} className={styles.metricItemRow}>
-                            <div className={styles.metricValueBadge}>{m.value}</div>
-                            <div className={styles.metricLabelText}>{m.label}</div>
-                            <button
-                              type="button"
-                              className={styles.delMetricBtn}
-                              onClick={() => setMetrics((prev) => prev.filter((_, i) => i !== idx))}
-                            >
-                              <Trash2 size={13} />
-                            </button>
-                          </div>
-                        ))}
-                      </div>
+                      {metrics.length > 0 && (
+                        <div className={styles.metricsList}>
+                          {metrics.map((m, idx) => (
+                            <div key={idx} className={styles.metricCard}>
+                              <div className={styles.metricCardLeft}>
+                                <span className={styles.metricValBadge}>{m.value}</span>
+                                <span className={styles.metricLabelBadge}>{m.label}</span>
+                              </div>
+                              <button
+                                type="button"
+                                className={styles.delMetricBtn}
+                                onClick={() => setMetrics((prev) => prev.filter((_, i) => i !== idx))}
+                                title="Delete KPI metric"
+                                aria-label={`Delete metric ${m.label}`}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
 
-                      <div className={styles.addMetricRow}>
-                        <input
-                          type="text"
-                          value={newMetricValue}
-                          onChange={(e) => setNewMetricValue(e.target.value)}
-                          placeholder="Value (e.g. +120%)"
-                          className={styles.metricValInput}
-                        />
-                        <input
-                          type="text"
-                          value={newMetricLabel}
-                          onChange={(e) => setNewMetricLabel(e.target.value)}
-                          placeholder="Label (e.g. Booking Velocity Increase)"
-                          className={styles.metricLabelInput}
-                        />
+                      {/* Add Metric Form Card */}
+                      <div className={styles.addMetricCard}>
+                        <div className={styles.addMetricInputs}>
+                          <div className={styles.metricInputGroup}>
+                            <label className={styles.metricSubLabel}>Value</label>
+                            <input
+                              type="text"
+                              value={newMetricValue}
+                              onChange={(e) => setNewMetricValue(e.target.value)}
+                              placeholder="e.g. +120%, < 350ms"
+                              className={styles.metricValInput}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleAddMetric();
+                                }
+                              }}
+                            />
+                          </div>
+                          <div className={styles.metricInputGroupFlex}>
+                            <label className={styles.metricSubLabel}>Label / Metric Description</label>
+                            <input
+                              type="text"
+                              value={newMetricLabel}
+                              onChange={(e) => setNewMetricLabel(e.target.value)}
+                              placeholder="e.g. Booking Velocity Increase"
+                              className={styles.metricLabelInput}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleAddMetric();
+                                }
+                              }}
+                            />
+                          </div>
+                        </div>
                         <button
                           type="button"
                           className={styles.addMetricBtn}
-                          onClick={() => {
-                            if (newMetricLabel.trim() && newMetricValue.trim()) {
-                              setMetrics([
-                                ...metrics,
-                                { label: newMetricLabel.trim(), value: newMetricValue.trim() },
-                              ]);
-                              setNewMetricLabel("");
-                              setNewMetricValue("");
-                            }
-                          }}
+                          onClick={handleAddMetric}
+                          disabled={!newMetricValue.trim() || !newMetricLabel.trim()}
                         >
                           <Plus size={14} /> Add Metric
                         </button>
@@ -2086,30 +2363,89 @@ export function AdminWork({
 
                       <div className={styles.summaryGrid}>
                         <div className={styles.summaryItem}>
-                          <span className={styles.summaryLabel}>Title:</span>
+                          <span className={styles.summaryLabel}>Project Title:</span>
                           <span className={styles.summaryValue}>{title || "—"}</span>
                         </div>
                         <div className={styles.summaryItem}>
-                          <span className={styles.summaryLabel}>Category:</span>
-                          <span className={styles.summaryValue}>{category || "—"}</span>
-                        </div>
-                        <div className={styles.summaryItem}>
-                          <span className={styles.summaryLabel}>Type:</span>
+                          <span className={styles.summaryLabel}>Category Type:</span>
                           <span className={styles.summaryValue}>
-                            {type === "work" ? "Our Work (Client)" : "Product (In-House)"}
+                            {type === "work" ? "Our Work (Client Solution)" : "Our Product (In-House Platform)"}
                           </span>
                         </div>
                         <div className={styles.summaryItem}>
-                          <span className={styles.summaryLabel}>URL Slug:</span>
-                          <code className={styles.summaryValue}>/work/{slug || "—"}</code>
+                          <span className={styles.summaryLabel}>Category Taxonomy:</span>
+                          <span className={styles.summaryValue}>{category || "—"}</span>
                         </div>
                         <div className={styles.summaryItem}>
                           <span className={styles.summaryLabel}>Client Name:</span>
                           <span className={styles.summaryValue}>{clientName || "—"}</span>
                         </div>
                         <div className={styles.summaryItem}>
-                          <span className={styles.summaryLabel}>Timeline:</span>
+                          <span className={styles.summaryLabel}>Tagline:</span>
+                          <span className={styles.summaryValue}>{tagline || "—"}</span>
+                        </div>
+                        <div className={styles.summaryItem}>
+                          <span className={styles.summaryLabel}>Project Timeline:</span>
                           <span className={styles.summaryValue}>{timeline || "—"}</span>
+                        </div>
+                        <div className={styles.summaryItem}>
+                          <span className={styles.summaryLabel}>External Live Website:</span>
+                          <span className={styles.summaryValue}>{websiteUrl || "—"}</span>
+                        </div>
+                        <div className={styles.summaryItem}>
+                          <span className={styles.summaryLabel}>Display Order:</span>
+                          <span className={styles.summaryValue}>#{orderIndex}</span>
+                        </div>
+                        <div className={styles.summaryItem}>
+                          <span className={styles.summaryLabel}>Cover Showcase Image:</span>
+                          <div className={styles.reviewSummaryMediaRow}>
+                            {coverPreviewUrl ? (
+                              <img
+                                src={coverPreviewUrl}
+                                alt="Cover Preview"
+                                className={styles.reviewCoverThumb}
+                              />
+                            ) : null}
+                            <span className={styles.summaryValue}>
+                              {coverPreviewUrl ? "Cover Image Attached" : "No Cover Image"}
+                            </span>
+                          </div>
+                        </div>
+                        <div className={styles.summaryItem}>
+                          <span className={styles.summaryLabel}>Screenshot Gallery:</span>
+                          <span className={styles.summaryValue}>
+                            {galleryImages.length > 0
+                              ? `${galleryImages.length} Image(s) Attached`
+                              : "No Gallery Images"}
+                          </span>
+                        </div>
+                        <div className={styles.summaryItem} style={{ gridColumn: "1 / -1" }}>
+                          <span className={styles.summaryLabel}>Technologies Stack:</span>
+                          <div className={styles.reviewSummaryChips}>
+                            {techStack.length > 0 ? (
+                              techStack.map((tech, idx) => (
+                                <span key={idx} className={styles.reviewTechChip}>
+                                  {tech}
+                                </span>
+                              ))
+                            ) : (
+                              <span className={styles.summaryValue}>None configured</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className={styles.summaryItem} style={{ gridColumn: "1 / -1" }}>
+                          <span className={styles.summaryLabel}>Measurable KPIs:</span>
+                          <div className={styles.reviewSummaryChips}>
+                            {metrics.length > 0 ? (
+                              metrics.map((m, idx) => (
+                                <span key={idx} className={styles.reviewMetricChip}>
+                                  {m.value} — {m.label}
+                                </span>
+                              ))
+                            ) : (
+                              <span className={styles.summaryValue}>None configured</span>
+                            )}
+                          </div>
                         </div>
                       </div>
 

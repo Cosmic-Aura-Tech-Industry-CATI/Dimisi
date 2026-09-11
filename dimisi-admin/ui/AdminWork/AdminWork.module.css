@@ -120,67 +120,13 @@
 
 .filtersBar {
   display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   background: rgba(18, 20, 30, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 14px;
   padding: 0.85rem 1rem;
-}
-
-.catPillsScroll {
-  display: flex;
-  align-items: center;
-  gap: 0.45rem;
-  overflow-x: auto;
-  padding-bottom: 2px;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 171, 46, 0.3) transparent;
-}
-
-.catPillsScroll::-webkit-scrollbar {
-  height: 3px;
-}
-
-.catPillsScroll::-webkit-scrollbar-thumb {
-  background: rgba(255, 171, 46, 0.3);
-  border-radius: 9999px;
-}
-
-.catPill {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-family: var(--font-mono, monospace);
-  font-size: 0.74rem;
-  font-weight: 600;
-  padding: 0.35rem 0.75rem;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.65);
-  cursor: pointer;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  flex-shrink: 0;
-}
-
-.catPill:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-}
-
-.catPillActive {
-  background: rgba(255, 122, 0, 0.15) !important;
-  color: var(--dm-amber, #ffb300) !important;
-  border-color: rgba(255, 122, 0, 0.4) !important;
-  box-shadow: 0 0 12px rgba(255, 122, 0, 0.15);
-}
-
-.catPillCount {
-  font-size: 0.68rem;
-  opacity: 0.7;
 }
 
 .secondaryFiltersRow {
@@ -188,7 +134,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  flex-wrap: wrap;
+  width: 100%;
 }
 
 .searchBox {
@@ -196,7 +142,7 @@
   display: flex;
   align-items: center;
   min-width: 260px;
-  max-width: 380px;
+  max-width: 480px;
   flex: 1;
 }
 
@@ -240,6 +186,13 @@
   color: #ffffff;
 }
 
+.filterRightActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-shrink: 0;
+}
+
 .resetFiltersBtn {
   padding: 0.4rem 0.85rem;
   border-radius: 8px;
@@ -249,12 +202,190 @@
   font-size: 0.76rem;
   font-weight: 600;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
 .resetFiltersBtn:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #ffffff;
+}
+
+/* Category Dropdown Popover */
+.catDropdownWrapper {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.catDropdownTrigger {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  height: 38px;
+  padding: 0 0.95rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.82rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  transition: all 0.2s ease;
+}
+
+.catDropdownTrigger:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+}
+
+.catDropdownTriggerActive {
+  background: rgba(255, 122, 0, 0.12) !important;
+  border-color: rgba(255, 122, 0, 0.45) !important;
+  color: var(--dm-amber, #ffb300) !important;
+  box-shadow: 0 0 14px rgba(255, 122, 0, 0.12);
+}
+
+.catDropdownTriggerLeft {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  max-width: 240px;
+  overflow: hidden;
+}
+
+.catDropdownTriggerText {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdownIcon {
+  color: var(--dm-amber, #ffb300);
+  flex-shrink: 0;
+}
+
+.catDropdownChevron {
+  color: rgba(255, 255, 255, 0.45);
+  transition: transform 0.2s ease, color 0.2s ease;
+  flex-shrink: 0;
+}
+
+.catDropdownTrigger:hover .catDropdownChevron {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.catDropdownChevronOpen {
+  transform: rotate(180deg);
+  color: var(--dm-amber, #ffb300);
+}
+
+.catDropdownMenu {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 260px;
+  max-width: 340px;
+  max-height: 320px;
+  overflow-y: auto;
+  background: rgba(14, 16, 24, 0.98);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 0.35rem;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 122, 0, 0.15);
+  z-index: 70;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 171, 46, 0.3) transparent;
+  animation: fadeInDown 0.15s ease-out;
+}
+
+@keyframes fadeInDown {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.catDropdownMenu::-webkit-scrollbar {
+  width: 4px;
+}
+
+.catDropdownMenu::-webkit-scrollbar-thumb {
+  background: rgba(255, 171, 46, 0.3);
+  border-radius: 9999px;
+}
+
+.catDropdownItem {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.5rem 0.65rem;
+  border-radius: 6px;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.75);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: all 0.15s ease;
+}
+
+.catDropdownItem:hover {
+  background: rgba(255, 255, 255, 0.07);
+  color: #ffffff;
+}
+
+.catDropdownItemActive {
+  background: rgba(255, 122, 0, 0.15) !important;
+  color: var(--dm-amber, #ffb300) !important;
+  font-weight: 600;
+}
+
+.catDropdownItemLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.catDropdownCheck {
+  color: var(--dm-amber, #ffb300);
+  flex-shrink: 0;
+}
+
+.catDropdownCheckPlaceholder {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+  display: inline-block;
+}
+
+.catDropdownItemCount {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  opacity: 0.65;
+  margin-left: 0.5rem;
+  flex-shrink: 0;
+}
+
+.catDropdownDivider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.08);
+  margin: 0.3rem 0.2rem;
 }
 
 /* =========================================================================
@@ -294,7 +425,7 @@
 
 .table {
   width: 100%;
-  min-width: 1240px;
+  min-width: 980px;
   border-collapse: separate;
   border-spacing: 0;
   table-layout: fixed;
@@ -312,19 +443,15 @@
 }
 
 .colTitle {
-  width: 270px;
+  width: 320px;
 }
 
 .colType {
-  width: 120px;
+  width: 130px;
 }
 
 .colCategory {
-  width: 180px;
-}
-
-.colSlug {
-  width: 220px;
+  width: 200px;
 }
 
 .colStatus {
@@ -332,7 +459,7 @@
 }
 
 .colActions {
-  width: 180px;
+  width: 160px;
 }
 
 .table thead {
@@ -1316,7 +1443,7 @@
 .mediaSection {
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
+  gap: 0.75rem;
 }
 
 .mediaSectionTitle {
@@ -1334,6 +1461,91 @@
   font-size: 0.78rem;
   color: rgba(255, 255, 255, 0.5);
   margin: 0;
+}
+
+/* Specification Cards & Helper UI */
+.specCard {
+  background: rgba(255, 122, 0, 0.04);
+  border: 1px solid rgba(255, 122, 0, 0.18);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.specHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.specBadge {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--dm-amber, #ffb300);
+  background: rgba(255, 122, 0, 0.12);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+}
+
+.specHighlight {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.specGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 0.65rem;
+  padding-top: 0.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.specItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.specLabel {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.66rem;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.specVal {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.specSubText {
+  font-size: 0.7rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-weight: 400;
+}
+
+.aspectRatioWarning {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: 8px;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #fbbf24;
+  font-size: 0.76rem;
 }
 
 .dropzone {
@@ -1489,12 +1701,55 @@
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
-  margin-top: 0.5rem;
+  margin-top: 0.25rem;
 }
 
 .manualUrlRow label {
   font-size: 0.74rem;
   color: rgba(255, 255, 255, 0.5);
+}
+
+/* Gallery Specifications & Dual Action Row */
+.gallerySpecBox {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0.75rem 0.95rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.gallerySpecTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.gallerySpecNote {
+  font-size: 0.76rem;
+  color: rgba(255, 255, 255, 0.65);
+}
+
+.gallerySpecChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.gallerySpecChip {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 0.2rem 0.5rem;
+  border-radius: 5px;
+}
+
+.gallerySpecChip strong {
+  color: var(--dm-amber, #ffb300);
+  font-weight: 600;
 }
 
 .galleryHeaderRow {
@@ -1503,11 +1758,64 @@
   align-items: center;
 }
 
+.galleryActionsRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  margin-top: 0.35rem;
+}
+
+.galleryUrlInputBox {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1;
+  min-width: 240px;
+}
+
+.galleryUrlInput {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  font-size: 0.82rem;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.galleryUrlInput:focus {
+  border-color: var(--dm-amber, #ffb300);
+}
+
+.addGalUrlBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.addGalUrlBtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
 .addGalleryBtn {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.4rem 0.85rem;
+  padding: 0.5rem 0.95rem;
   border-radius: 8px;
   background: rgba(255, 122, 0, 0.15);
   border: 1px solid rgba(255, 122, 0, 0.35);
@@ -1515,6 +1823,7 @@
   font-size: 0.78rem;
   font-weight: 700;
   cursor: pointer;
+  white-space: nowrap;
   transition: all 0.2s ease;
 }
 
@@ -1612,18 +1921,20 @@
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
+  min-height: 32px;
 }
 
 .techChip {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  padding: 0.3rem 0.65rem;
+  padding: 0.35rem 0.65rem;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: #ffffff;
   font-size: 0.78rem;
+  transition: all 0.2s ease;
 }
 
 .techChip button {
@@ -1658,6 +1969,11 @@
   font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.addChipBtn:hover {
+  background: rgba(255, 122, 0, 0.25);
 }
 
 .metricsList {
@@ -1666,30 +1982,49 @@
   gap: 0.5rem;
 }
 
-.metricItemRow {
+.metricCard {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.6rem 0.85rem;
-  border-radius: 8px;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.65rem 0.95rem;
+  border-radius: 10px;
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  transition: all 0.2s ease;
 }
 
-.metricValueBadge {
+.metricCard:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 122, 0, 0.2);
+}
+
+.metricCardLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.metricValBadge {
   font-family: var(--font-mono, monospace);
   font-size: 0.82rem;
   font-weight: 800;
   color: var(--dm-amber, #ffb300);
   background: rgba(255, 122, 0, 0.12);
-  padding: 0.2rem 0.5rem;
-  border-radius: 4px;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  white-space: nowrap;
 }
 
-.metricLabelText {
-  flex: 1;
+.metricLabelBadge {
   font-size: 0.84rem;
-  color: rgba(255, 255, 255, 0.85);
+  color: #ffffff;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .delMetricBtn {
@@ -1697,33 +2032,71 @@
   border: none;
   color: rgba(255, 255, 255, 0.35);
   cursor: pointer;
-  padding: 0.2rem;
+  padding: 0.25rem;
   display: flex;
   align-items: center;
+  border-radius: 4px;
+  transition: all 0.2s ease;
 }
 
 .delMetricBtn:hover {
   color: #ef4444;
+  background: rgba(239, 68, 68, 0.1);
 }
 
-.addMetricRow {
+.addMetricCard {
   display: flex;
-  gap: 0.65rem;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 0.95rem 1rem;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.addMetricInputs {
+  display: flex;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.metricInputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: 160px;
+}
+
+.metricInputGroupFlex {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  flex: 1;
+  min-width: 220px;
+}
+
+.metricSubLabel {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.55);
 }
 
 .metricValInput {
-  width: 140px;
+  width: 100%;
 }
 
 .metricLabelInput {
-  flex: 1;
+  width: 100%;
 }
 
 .addMetricBtn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
-  padding: 0.65rem 1rem;
+  padding: 0.6rem 1rem;
   border-radius: 8px;
   background: rgba(255, 122, 0, 0.15);
   border: 1px solid rgba(255, 122, 0, 0.35);
@@ -1731,7 +2104,12 @@
   font-size: 0.8rem;
   font-weight: 700;
   cursor: pointer;
-  white-space: nowrap;
+  align-self: flex-start;
+  transition: all 0.2s ease;
+}
+
+.addMetricBtn:hover {
+  background: rgba(255, 122, 0, 0.25);
 }
 
 /* =========================================================================
@@ -1782,6 +2160,46 @@
   font-size: 0.86rem;
   color: #ffffff;
   font-weight: 500;
+}
+
+.reviewSummaryMediaRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.reviewCoverThumb {
+  width: 56px;
+  height: 36px;
+  border-radius: 6px;
+  object-fit: cover;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.reviewSummaryChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin-top: 0.2rem;
+}
+
+.reviewTechChip {
+  font-size: 0.74rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.9);
+}
+
+.reviewMetricChip {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(255, 122, 0, 0.12);
+  color: var(--dm-amber, #ffb300);
+  font-weight: 600;
 }
 
 .toggleRow {
@@ -1937,5 +2355,41 @@
   .footerRight {
     width: 100%;
     justify-content: space-between;
+  }
+}
+
+@media (max-width: 640px) {
+  .filtersBar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .secondaryFiltersRow {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.75rem;
+  }
+  .searchBox {
+    min-width: 100%;
+    max-width: 100%;
+  }
+  .filterRightActions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .catDropdownWrapper {
+    width: 100%;
+  }
+  .catDropdownTrigger {
+    width: 100%;
+  }
+  .catDropdownTriggerLeft {
+    max-width: none;
+  }
+  .catDropdownMenu {
+    right: 0;
+    left: 0;
+    min-width: 100%;
+    max-width: 100%;
   }
 }
