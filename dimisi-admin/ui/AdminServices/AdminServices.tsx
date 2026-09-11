@@ -61,12 +61,15 @@ import { INITIAL_SERVICE_CATEGORIES } from "@/lib/services.data";
 import {
   saveServiceFn,
   deleteServiceFn,
+  toggleServiceActivationFn,
+  toggleServiceFeaturedFn,
   saveIndustryFn,
   deleteIndustryFn,
   getServiceCategoriesFn,
   saveServiceCategoryFn,
   deleteServiceCategoryFn,
 } from "@/lib/services.functions";
+import { resolveCategoryName, isMongoId } from "@/services/service.service";
 import styles from "./AdminServices.module.css";
 
 interface AdminServicesProps {
@@ -110,10 +113,10 @@ export function AdminServices({
 
   // Dynamic Categories State
   const [categoryList, setCategoryList] = useState<ServiceCategoryItem[]>(() => {
-    if (initialCategoryItems && initialCategoryItems.length > 0) {
+    if (initialCategoryItems && Array.isArray(initialCategoryItems)) {
       return initialCategoryItems;
     }
-    return INITIAL_SERVICE_CATEGORIES;
+    return [];
   });
 
   // Refresh categories from backend API or store
@@ -131,6 +134,12 @@ export function AdminServices({
   useEffect(() => {
     refreshCategories();
   }, [refreshCategories, services]);
+
+  useEffect(() => {
+    if (initialCategoryItems && Array.isArray(initialCategoryItems)) {
+      setCategoryList(initialCategoryItems);
+    }
+  }, [initialCategoryItems]);
 
   // Compute category service counts dynamically
   const categoryServiceCounts = useMemo(() => {
@@ -246,7 +255,7 @@ export function AdminServices({
   // Service Form Fields
   const [title, setTitle] = useState("");
   const [slug, setSlug] = useState("");
-  const [category, setCategory] = useState("Full-Stack Engineering");
+  const [category, setCategory] = useState("");
   const [tagline, setTagline] = useState("");
   const [summary, setSummary] = useState("");
 
@@ -398,6 +407,14 @@ export function AdminServices({
 
   const handleToggleCategoryStatus = (cat: ServiceCategoryItem) => {
     const nextStatus = cat.status === "active" ? "inactive" : "active";
+    setCatFormError(null);
+    setCatSuccessMsg(null);
+
+    // Optimistic UI update
+    setCategoryList((prev) =>
+      prev.map((item) => (item.id === cat.id ? { ...item, status: nextStatus } : item))
+    );
+
     startTransition(async () => {
       try {
         const res = await saveServiceCategoryFn({
@@ -414,9 +431,17 @@ export function AdminServices({
           await refreshCategories();
           onRefresh();
         } else {
+          // Revert optimistic update
+          setCategoryList((prev) =>
+            prev.map((item) => (item.id === cat.id ? { ...item, status: cat.status } : item))
+          );
           setCatFormError(res.error || "Failed to toggle category status.");
         }
       } catch (err) {
+        // Revert optimistic update
+        setCategoryList((prev) =>
+          prev.map((item) => (item.id === cat.id ? { ...item, status: cat.status } : item))
+        );
         console.warn("Failed to toggle category status", err);
         setCatFormError(err instanceof Error ? err.message : "Failed to toggle status.");
       }
@@ -424,7 +449,7 @@ export function AdminServices({
   };
 
   const handleDeleteCategoryClick = (cat: ServiceCategoryItem) => {
-    const count = categoryServiceCounts[cat.name.toLowerCase()] || 0;
+    const count = typeof cat.total_service_count === "number" ? cat.total_service_count : (categoryServiceCounts[cat.name.toLowerCase()] || 0);
     setCatDeleteConfirm({
       id: cat.id,
       name: cat.name,
@@ -435,6 +460,10 @@ export function AdminServices({
   const handleConfirmDeleteCategory = () => {
     if (!catDeleteConfirm) return;
     const targetId = catDeleteConfirm.id;
+    const previousList = [...categoryList];
+
+    // Optimistically remove from list
+    setCategoryList((prev) => prev.filter((c) => c.id !== targetId));
 
     startTransition(async () => {
       try {
@@ -445,9 +474,11 @@ export function AdminServices({
           await refreshCategories();
           onRefresh();
         } else {
+          setCategoryList(previousList);
           setCatFormError(res.error || "Failed to delete category.");
         }
       } catch (err) {
+        setCategoryList(previousList);
         setCatFormError(err instanceof Error ? err.message : "Error deleting category.");
       }
     });
@@ -550,8 +581,8 @@ export function AdminServices({
     setEditingService(null);
     setTitle("");
     setSlug("");
-    const defaultCat = activeCategories[0]?.name || "Full-Stack Engineering";
-    setCategory(defaultCat);
+    const defaultCatId = activeCategories[0]?.id || "";
+    setCategory(defaultCatId);
     setTagline("");
     setSummary("");
     setHeroImage("https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80");
@@ -596,7 +627,23 @@ export function AdminServices({
     setEditingService(srv);
     setTitle(srv.title);
     setSlug(srv.slug);
-    setCategory(srv.category);
+
+    let initialCatId = "";
+    if (typeof srv.category === "object" && srv.category !== null) {
+      initialCatId = (srv.category as any)._id || (srv.category as any).id || "";
+    } else if (typeof srv.category === "string") {
+      if (isMongoId(srv.category)) {
+        initialCatId = srv.category;
+      } else {
+        const found = categoryList.find(
+          (c) =>
+            c.name.toLowerCase() === srv.category.toLowerCase() ||
+            c.slug.toLowerCase() === srv.category.toLowerCase()
+        );
+        initialCatId = found?.id || srv.category;
+      }
+    }
+    setCategory(initialCatId || activeCategories[0]?.id || "");
     setTagline(srv.tagline);
     setSummary(srv.summary);
     setHeroImage(srv.hero_image);
@@ -744,21 +791,48 @@ export function AdminServices({
   };
 
   // Form Submission
-  const handleSaveService = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveService = (e?: React.FormEvent | React.MouseEvent) => {
+    if (e && e.preventDefault) {
+      e.preventDefault();
+    }
     setFormError(null);
     setFieldErrors({});
 
-    const resolvedWhatIsIt = whatIsIt.trim() || summary.trim();
+    // Resolve category to a valid MongoDB ObjectId or fallback to first active category
+    let finalCategoryId = category.trim();
+    if (!finalCategoryId && activeCategories.length > 0) {
+      finalCategoryId = activeCategories[0].id;
+    }
+
+    if (finalCategoryId && !isMongoId(finalCategoryId)) {
+      const match = categoryList.find(
+        (c) =>
+          c.id === finalCategoryId ||
+          c.name.toLowerCase() === finalCategoryId.toLowerCase() ||
+          c.slug.toLowerCase() === finalCategoryId.toLowerCase()
+      );
+      if (match && isMongoId(match.id)) {
+        finalCategoryId = match.id;
+      }
+    }
+
+    if (!finalCategoryId || !isMongoId(finalCategoryId)) {
+      const firstValid = activeCategories.find((c) => isMongoId(c.id)) || categoryList.find((c) => isMongoId(c.id));
+      if (firstValid) {
+        finalCategoryId = firstValid.id;
+      }
+    }
+
+    const resolvedWhatIsIt = whatIsIt.trim() || summary.trim() || "Comprehensive engineering service tailored to modern business requirements.";
 
     const input: ServiceInput = {
       id: editingService?.id ?? undefined,
       title: title.trim(),
       slug: slug.trim() || slugifyService(title),
-      category: category.trim(),
-      tagline: tagline.trim() || summary.trim().slice(0, 80),
+      category: finalCategoryId || category.trim() || activeCategories[0]?.id || "",
+      tagline: tagline.trim() || summary.trim().slice(0, 80) || "Engineering service",
       summary: summary.trim(),
-      hero_image: heroImage.trim(),
+      hero_image: heroImage.trim() || "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80",
       related_images: relatedImages,
       what_is_it: resolvedWhatIsIt,
       who_is_for: whoIsFor.trim() || "Businesses, high-growth startups, and enterprises.",
@@ -769,7 +843,7 @@ export function AdminServices({
       benefits,
       faqs,
       tech_stack: techStack,
-      order_index: Number(orderIndex),
+      order_index: Number(orderIndex) || 1,
       is_featured: isFeatured,
       is_active: isActive,
     };
@@ -797,6 +871,7 @@ export function AdminServices({
         const res = await saveService({ data: input });
         if (res.success) {
           setShowServiceModal(false);
+          await refreshCategories();
           onRefresh();
         } else {
           setFormError(res.error || "Failed to save service.");
@@ -818,61 +893,23 @@ export function AdminServices({
 
   const handleToggleActive = (srv: CompanyService) => {
     startTransition(async () => {
-      await saveService({
-        data: {
-          id: srv.id,
-          title: srv.title,
-          slug: srv.slug,
-          category: srv.category,
-          tagline: srv.tagline,
-          summary: srv.summary,
-          hero_image: srv.hero_image,
-          related_images: srv.related_images,
-          what_is_it: srv.what_is_it,
-          who_is_for: srv.who_is_for,
-          problem_solved: srv.problem_solved,
-          why_it_matters: srv.why_it_matters,
-          features: srv.features,
-          process_steps: srv.process_steps,
-          benefits: srv.benefits,
-          faqs: srv.faqs,
-          tech_stack: srv.tech_stack,
-          order_index: srv.order_index,
-          is_featured: srv.is_featured,
-          is_active: !srv.is_active,
-        },
-      });
-      onRefresh();
+      try {
+        await toggleServiceActivationFn({ data: { id: srv.id } });
+        onRefresh();
+      } catch (err) {
+        console.warn("Failed to toggle service activation:", err);
+      }
     });
   };
 
   const handleToggleFeatured = (srv: CompanyService) => {
     startTransition(async () => {
-      await saveService({
-        data: {
-          id: srv.id,
-          title: srv.title,
-          slug: srv.slug,
-          category: srv.category,
-          tagline: srv.tagline,
-          summary: srv.summary,
-          hero_image: srv.hero_image,
-          related_images: srv.related_images,
-          what_is_it: srv.what_is_it,
-          who_is_for: srv.who_is_for,
-          problem_solved: srv.problem_solved,
-          why_it_matters: srv.why_it_matters,
-          features: srv.features,
-          process_steps: srv.process_steps,
-          benefits: srv.benefits,
-          faqs: srv.faqs,
-          tech_stack: srv.tech_stack,
-          order_index: srv.order_index,
-          is_featured: !srv.is_featured,
-          is_active: srv.is_active,
-        },
-      });
-      onRefresh();
+      try {
+        await toggleServiceFeaturedFn({ data: { id: srv.id } });
+        onRefresh();
+      } catch (err) {
+        console.warn("Failed to toggle service featured status:", err);
+      }
     });
   };
 
@@ -968,7 +1005,7 @@ export function AdminServices({
                 ].join(" ")}
                 onClick={() => setCategoryFilter("All")}
               >
-                All Categories ({services.length})
+                All Categories ({categoryList.length})
               </button>
               {activeCategories.map((c) => {
                 const count = categoryServiceCounts[c.name.toLowerCase()] || 0;
@@ -1071,32 +1108,37 @@ export function AdminServices({
                       </td>
                     </tr>
                   ) : (
-                    filteredServices.map((srv) => (
-                      <tr key={srv.id} className={!srv.is_active ? styles.inactiveRow : ""}>
-                        <td className={styles.orderCell}>{srv.order_index}</td>
-                        <td>
-                          <img
-                            src={srv.hero_image}
-                            alt={srv.title}
-                            className={styles.thumbImg}
-                          />
-                        </td>
-                        <td>
-                          <div className={styles.titleCol}>
-                            <span className={styles.srvTitle}>{srv.title}</span>
-                            <span className={styles.srvTagline}>{srv.tagline}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <span className={styles.categoryBadge} title={srv.category}>
-                            {srv.category}
-                          </span>
-                        </td>
-                        <td>
-                          <code className={styles.slugCode} title={`/services/${srv.slug}`}>
-                            /services/{srv.slug}
-                          </code>
-                        </td>
+                    filteredServices.map((srv) => {
+                      const resolvedCat = resolveCategoryName(srv.category, categoryList);
+                      return (
+                        <tr key={srv.id} className={!srv.is_active ? styles.inactiveRow : ""}>
+                          <td className={styles.orderCell}>{srv.order_index}</td>
+                          <td>
+                            <img
+                              src={srv.hero_image || "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80"}
+                              alt={srv.title}
+                              className={styles.thumbImg}
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80";
+                              }}
+                            />
+                          </td>
+                          <td>
+                            <div className={styles.titleCol}>
+                              <span className={styles.srvTitle}>{srv.title}</span>
+                              <span className={styles.srvTagline}>{srv.tagline || srv.summary?.slice(0, 80) || "Comprehensive engineering service"}</span>
+                            </div>
+                          </td>
+                          <td>
+                            <span className={styles.categoryBadge} title={resolvedCat}>
+                              {resolvedCat}
+                            </span>
+                          </td>
+                          <td>
+                            <code className={styles.slugCode} title={`/services/${srv.slug}`}>
+                              /services/{srv.slug}
+                            </code>
+                          </td>
                         <td>
                           <span className={styles.featCount}>
                             {srv.features?.length || 0} features
@@ -1159,9 +1201,10 @@ export function AdminServices({
                           </div>
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
+                    );
+                  })
+                )}
+              </tbody>
               </table>
             </div>
           </div>
@@ -1511,7 +1554,7 @@ export function AdminServices({
                       {categoryList
                         .sort((a, b) => a.order_index - b.order_index)
                         .map((cat) => {
-                          const count = categoryServiceCounts[cat.name.toLowerCase()] || 0;
+                          const count = typeof cat.total_service_count === "number" ? cat.total_service_count : (categoryServiceCounts[cat.name.toLowerCase()] || 0);
                           const isBeingEdited = editingCatId === cat.id;
                           return (
                             <tr
@@ -1880,7 +1923,7 @@ export function AdminServices({
               </div>
             )}
 
-            <form onSubmit={handleSaveService} className={styles.modalForm}>
+            <form onSubmit={handleSaveService} noValidate className={styles.modalForm}>
               <div className={styles.modalBodyScroll}>
                 {/* STEP 1: OVERVIEW & CORE INFO */}
                 {modalTab === "overview" && (
@@ -1936,7 +1979,10 @@ export function AdminServices({
                           </button>
                         </div>
                         <select
-                          value={category}
+                          value={
+                            activeCategories.find((c) => c.id === category || c.name.toLowerCase() === category.toLowerCase())?.id ||
+                            category
+                          }
                           required
                           className={[styles.selectInput, fieldErrors.category ? styles.inputError : ""].join(" ")}
                           onChange={(e) => {
@@ -1951,13 +1997,14 @@ export function AdminServices({
                           }}
                         >
                           {activeCategories.map((c) => (
-                            <option key={c.id} value={c.name}>
+                            <option key={c.id} value={c.id}>
                               {c.name}
                             </option>
                           ))}
-                          {category && !activeCategories.some((c) => c.name === category) && (
-                            <option value={category}>{category} (Custom / Legacy)</option>
-                          )}
+                          {category &&
+                            !activeCategories.some((c) => c.id === category || c.name.toLowerCase() === category.toLowerCase()) && (
+                              <option value={category}>{category} (Custom / Legacy)</option>
+                            )}
                         </select>
                         {fieldErrors.category && (
                           <span className={styles.fieldErrorText}>{fieldErrors.category}</span>
@@ -2628,6 +2675,7 @@ export function AdminServices({
                   ) : (
                     <button
                       type="submit"
+                      onClick={handleSaveService}
                       disabled={isPending || isUploadingImage}
                       className={styles.saveSubmitBtn}
                     >

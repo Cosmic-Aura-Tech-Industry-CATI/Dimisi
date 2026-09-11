@@ -14,6 +14,8 @@ export interface BackendServiceCategoryDoc {
   displayOrder: number;
   status: "active" | "inactive";
   isActive?: boolean;
+  totalServiceCount?: number;
+  activeServiceCount?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -36,6 +38,7 @@ export interface BackendServiceCategorySingleResponse {
 
 export interface CreateServiceCategoryPayload {
   name: string;
+  slug?: string;
   description?: string;
   displayOrder: number;
   status?: "active" | "inactive";
@@ -43,6 +46,7 @@ export interface CreateServiceCategoryPayload {
 
 export interface UpdateServiceCategoryPayload {
   name?: string;
+  slug?: string;
   description?: string;
   displayOrder?: number;
   status?: "active" | "inactive";
@@ -67,13 +71,17 @@ export function normalizeBackendServiceCategory(
     };
   }
 
+  const cleanSlug = doc.slug || doc.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "category";
+
   return {
     id: String(doc._id),
     name: doc.name || "Unnamed Category",
-    slug: doc.slug || doc.name?.toLowerCase().replace(/[^\w\s-]/g, "").replace(/[\s_-]+/g, "-") || "category",
+    slug: cleanSlug,
     description: doc.description || "",
     status: doc.status === "inactive" ? "inactive" : "active",
     order_index: typeof doc.displayOrder === "number" ? doc.displayOrder : 1,
+    total_service_count: typeof doc.totalServiceCount === "number" ? doc.totalServiceCount : undefined,
+    active_service_count: typeof doc.activeServiceCount === "number" ? doc.activeServiceCount : undefined,
     created_at: doc.createdAt || new Date().toISOString(),
     updated_at: doc.updatedAt || new Date().toISOString(),
   };
@@ -107,7 +115,7 @@ export async function getAllServiceCategoriesApi(): Promise<ServiceCategoryItem[
 /**
  * 2. CREATE SERVICE CATEGORY
  * Endpoint: POST /api/v1/admin-panel/service-category/create
- * Body: { name, description?, displayOrder, status? }
+ * Body: { name, slug, description?, displayOrder, status? }
  */
 export async function createServiceCategoryApi(
   payload: CreateServiceCategoryPayload,
@@ -125,10 +133,15 @@ export async function createServiceCategoryApi(
     throw new Error("Category description must be between 5 and 200 characters.");
   }
 
+  const cleanSlug =
+    payload.slug?.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ||
+    cleanName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+
   const displayOrder = Number(payload.displayOrder) || 1;
 
   const requestBody: Record<string, any> = {
     name: cleanName,
+    slug: cleanSlug,
     displayOrder,
     status: payload.status || "active",
   };
@@ -173,6 +186,13 @@ export async function updateServiceCategoryApi(
       throw new Error("Category name must be between 5 and 50 characters.");
     }
     updateBody.name = cleanName;
+  }
+
+  if (payload.slug !== undefined) {
+    const cleanSlug = payload.slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    if (cleanSlug) {
+      updateBody.slug = cleanSlug;
+    }
   }
 
   if (payload.description !== undefined) {
