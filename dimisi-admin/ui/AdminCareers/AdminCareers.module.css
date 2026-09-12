@@ -103,6 +103,7 @@
 
 .table {
   width: 100%;
+  min-width: 860px;
   border-collapse: collapse;
   text-align: left;
   font-size: 0.86rem;
@@ -948,8 +949,8 @@
 }
 
 .applicantAvatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 8px;
   background: linear-gradient(135deg, rgba(255, 122, 0, 0.3), rgba(255, 94, 0, 0.15));
   border: 1px solid rgba(255, 122, 0, 0.35);
@@ -966,35 +967,43 @@
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  min-width: 0;
 }
 
 .applicantName {
   font-weight: 700;
   color: #ffffff;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
+  white-space: nowrap;
 }
 
 .applicantSubEmail {
-  font-size: 0.74rem;
-  color: rgba(255, 255, 255, 0.45);
+  display: none;
 }
 
 .posCell {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  max-width: 240px;
 }
 
 .posTitle {
   font-weight: 700;
   color: #ffffff;
   font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .posDept {
   font-family: var(--font-mono, monospace);
   font-size: 0.68rem;
   color: #93c5fd;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .contactLink {
@@ -1014,13 +1023,34 @@
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.75);
+  max-width: 180px;
+}
+
+.locTextTruncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .locPin {
   color: var(--dm-amber, #ffb300);
   flex-shrink: 0;
+}
+
+.appToastSuccess {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+  font-size: 0.84rem;
+  font-weight: 600;
+  animation: modalFadeIn 0.2s ease;
 }
 
 .resumeActionBtn {
@@ -1684,6 +1714,173 @@
   font-weight: 700;
   cursor: pointer;
   margin-top: 0.5rem;
+}
+
+.appStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.74rem;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.internalNotesCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1.1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* =========================================================================
+   DELETE APPLICATION CONFIRMATION MODAL
+   ========================================================================= */
+
+.deleteConfirmModal {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 20px;
+  background: #11131c;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.95);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  animation: modalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.deleteModalHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.deleteModalIconBox {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.deleteModalIcon {
+  color: #ef4444;
+}
+
+.deleteModalTitle {
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+}
+
+.deleteModalSubtitle {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0.25rem 0 0;
+}
+
+.deleteModalCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.deleteModalCandidateRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.deleteModalAvatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 122, 0, 0.3), rgba(255, 94, 0, 0.15));
+  border: 1px solid rgba(255, 122, 0, 0.35);
+  color: var(--dm-amber, #ffb300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.deleteModalCandidateInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.deleteModalCandidateName {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+
+.deleteModalCandidateRole {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.deleteModalWarning {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: rgba(248, 113, 113, 0.85);
+  margin: 0;
+}
+
+.deleteModalActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.deleteConfirmBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border: none;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);
+}
+
+.deleteConfirmBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+}
+
+.deleteConfirmBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 1024px) {

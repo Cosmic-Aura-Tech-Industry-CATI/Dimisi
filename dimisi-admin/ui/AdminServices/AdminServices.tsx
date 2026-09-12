@@ -1692,22 +1692,8 @@ export function AdminServices({
                       value={catName}
                       onChange={(e) => {
                         setCatName(e.target.value);
-                        if (!editingCatId) {
-                          setCatSlug(slugifyServiceCategory(e.target.value));
-                        }
                       }}
                       placeholder="e.g. Autonomous Systems"
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>URL Slug *</label>
-                    <input
-                      type="text"
-                      required
-                      value={catSlug}
-                      onChange={(e) => setCatSlug(e.target.value)}
-                      placeholder="e.g. autonomous-systems"
                     />
                   </div>
 
@@ -1783,7 +1769,7 @@ export function AdminServices({
                     <thead>
                       <tr>
                         <th style={{ width: "50px" }}>Order</th>
-                        <th>Category &amp; Slug</th>
+                        <th>Category</th>
                         <th style={{ width: "90px" }}>Services</th>
                         <th style={{ width: "95px" }}>Status</th>
                         <th style={{ width: "100px", textAlign: "right" }}>Actions</th>
@@ -1807,7 +1793,6 @@ export function AdminServices({
                               <td>
                                 <div className={styles.catItemMeta}>
                                   <span className={styles.catItemName}>{cat.name}</span>
-                                  <code className={styles.catItemSlug}>#{cat.slug}</code>
                                   {cat.description && (
                                     <span className={styles.catItemDesc}>
                                       {cat.description}

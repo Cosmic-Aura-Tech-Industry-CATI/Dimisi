@@ -9,16 +9,17 @@ import {
   ExternalLink,
   FolderGit2,
   Rocket,
-  CheckCircle2,
-  TrendingUp,
   MessageSquare,
   Globe,
   ArrowRight,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import { TiltCard } from "@/components/common/TiltCard/TiltCard";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
 import { getPublicWorkData } from "@/lib/work.functions";
+import { DEFAULT_CASESTUDY_FALLBACK_IMAGE } from "@/services/casestudy.service";
 import type { ProjectItem, ProjectType } from "@/lib/work.shared";
 import pageStyles from "@/styles/page.module.css";
 import styles from "./WorkPage.module.css";
@@ -26,8 +27,13 @@ import styles from "./WorkPage.module.css";
 export function WorkPage() {
   const [filterType, setFilterType] = useState<"all" | ProjectType>("all");
 
-  // Fetch live dynamic case studies from store
-  const { data: payload, isLoading } = useQuery({
+  // Fetch live dynamic case studies from backend API & store
+  const {
+    data: payload,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["publicWork"],
     queryFn: () => getPublicWorkData(),
     staleTime: 1000 * 15,
@@ -36,9 +42,9 @@ export function WorkPage() {
 
   const projects = payload?.projects || [];
   const stats = payload?.stats || {
-    totalProjects: 4,
-    totalWork: 2,
-    totalProducts: 2,
+    totalProjects: 0,
+    totalWork: 0,
+    totalProducts: 0,
     satisfactionScore: "99.4%",
     deliveryRate: "100%",
   };
@@ -190,96 +196,185 @@ export function WorkPage() {
             </Reveal>
           </div>
 
-          {/* Interactive Project Cards Grid */}
-          <div className={styles.projectsGrid}>
-            {filteredProjects.map((project, index) => (
-              <Reveal key={project.id} delay={index * 60} className={styles.gridItem}>
-                <TiltCard className={styles.projectCard}>
-                  {/* Card Visual Header with Cover Image */}
-                  <div className={styles.cardVisual}>
-                    <img
-                      src={project.cover_image}
-                      alt={project.title}
-                      className={styles.cardCoverImg}
-                      loading="lazy"
-                    />
-                    <div className={styles.cardImgOverlay} />
+          {/* SKELETON LOADING STATE */}
+          {isLoading && projects.length === 0 && (
+            <div className={styles.projectsGrid}>
+              {[1, 2, 3, 4].map((n) => (
+                <div key={n} className={styles.gridItem}>
+                  <div className={styles.skeletonCard}>
+                    <div className={styles.skeletonImageHolder} />
+                    <div className={styles.skeletonContent}>
+                      <div className={[styles.skeletonLine, styles.skeletonTitle].join(" ")} />
+                      <div className={[styles.skeletonLine, styles.skeletonTagline].join(" ")} />
+                      <div className={styles.skeletonLine} />
+                      <div className={[styles.skeletonLine, styles.skeletonPill].join(" ")} />
+                    </div>
+                    <div className={styles.skeletonFooter}>
+                      <div className={styles.skeletonLine} style={{ width: "35%" }} />
+                      <div className={styles.skeletonLine} style={{ width: "25%" }} />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
-                    {/* Type Badge (Our Work vs Our Product) */}
-                    <div className={styles.typeBadgeWrapper}>
-                      <span
-                        className={[
-                          styles.typeBadge,
-                          project.type === "product" ? styles.productBadge : styles.workBadge,
-                        ].join(" ")}
-                      >
-                        {project.type === "product" ? "Our Product" : "Our Work"}
-                      </span>
-                      <span className={styles.categoryBadge}>{project.category}</span>
+          {/* ERROR STATE */}
+          {isError && projects.length === 0 && (
+            <div className={styles.stateBox}>
+              <div className={[styles.stateIconBox, styles.stateIconError].join(" ")}>
+                <AlertTriangle size={28} />
+              </div>
+              <h3 className={styles.stateTitle}>Unable to load our work right now.</h3>
+              <p className={styles.stateText}>
+                We are having trouble retrieving the live case studies portfolio. Please check your connection or try again.
+              </p>
+              <button
+                type="button"
+                onClick={() => refetch()}
+                className={styles.retryBtn}
+              >
+                <RefreshCw size={16} />
+                <span>Retry</span>
+              </button>
+            </div>
+          )}
+
+          {/* EMPTY STATE */}
+          {!isLoading && !isError && filteredProjects.length === 0 && (
+            <div className={styles.stateBox}>
+              <div className={styles.stateIconBox}>
+                <FolderGit2 size={28} />
+              </div>
+              <h3 className={styles.stateTitle}>
+                {filterType !== "all"
+                  ? "No case studies found in this section"
+                  : "No projects available at the moment."}
+              </h3>
+              <p className={styles.stateText}>
+                {filterType !== "all"
+                  ? "There are currently no active case studies under this filter. View all projects or check back shortly."
+                  : "Our project showcase is being refreshed. Check back shortly or discuss tailored digital solutions with our team."}
+              </p>
+              {filterType !== "all" ? (
+                <button
+                  type="button"
+                  onClick={() => setFilterType("all")}
+                  className={styles.resetFilterBtn}
+                >
+                  View All Projects
+                </button>
+              ) : (
+                <MagneticButton to="/contact">
+                  <span>Discuss Your Project</span>
+                  <ArrowUpRight size={18} />
+                </MagneticButton>
+              )}
+            </div>
+          )}
+
+          {/* Interactive Live Project Cards Grid */}
+          {!isLoading && filteredProjects.length > 0 && (
+            <div className={styles.projectsGrid}>
+              {filteredProjects.map((project, index) => (
+                <Reveal key={project.id} delay={index * 60} className={styles.gridItem}>
+                  <TiltCard className={styles.projectCard}>
+                    {/* Card Visual Header with Cover Image */}
+                    <div className={styles.cardVisual}>
+                      <img
+                        src={project.cover_image || DEFAULT_CASESTUDY_FALLBACK_IMAGE}
+                        alt={project.title}
+                        className={styles.cardCoverImg}
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          if (target.src !== DEFAULT_CASESTUDY_FALLBACK_IMAGE) {
+                            target.src = DEFAULT_CASESTUDY_FALLBACK_IMAGE;
+                          }
+                        }}
+                      />
+                      <div className={styles.cardImgOverlay} />
+
+                      {/* Type Badge (Our Work vs Our Product) */}
+                      <div className={styles.typeBadgeWrapper}>
+                        <span
+                          className={[
+                            styles.typeBadge,
+                            project.type === "product" ? styles.productBadge : styles.workBadge,
+                          ].join(" ")}
+                        >
+                          {project.type === "product" ? "Our Product" : "Our Work"}
+                        </span>
+                        <span className={styles.categoryBadge}>{project.category}</span>
+                      </div>
+
+                      {project.website_url && (
+                        <a
+                          href={project.website_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={styles.extLinkFloating}
+                          title={`Visit ${project.title} live website`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Globe size={13} />
+                          <span>Live Site</span>
+                          <ExternalLink size={12} />
+                        </a>
+                      )}
                     </div>
 
-                    {project.website_url && (
-                      <a
-                        href={project.website_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={styles.extLinkFloating}
-                        title={`Visit ${project.title} live website`}
-                        onClick={(e) => e.stopPropagation()}
+                    {/* Card Content Body */}
+                    <div className={styles.cardBody}>
+                      <h3 className={styles.projectTitle}>{project.title}</h3>
+                      {project.tagline && (
+                        <p className={styles.projectTagline}>{project.tagline}</p>
+                      )}
+                      {project.overview && (
+                        <p className={styles.projectOverview}>{project.overview}</p>
+                      )}
+
+                      {/* Quick Metrics / Outcomes Highlights */}
+                      {project.metrics && project.metrics.length > 0 && (
+                        <div className={styles.metricsRow}>
+                          {project.metrics.slice(0, 3).map((m, idx) => (
+                            <div key={`${m.label}-${idx}`} className={styles.metricChip}>
+                              <span className={styles.chipVal}>{m.value}</span>
+                              <span className={styles.chipLbl}>{m.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Card Footer Actions */}
+                    <div className={styles.cardFooter}>
+                      <Link
+                        to="/work/$slug"
+                        params={{ slug: project.slug }}
+                        className={styles.detailLink}
                       >
-                        <Globe size={13} />
-                        <span>Live Site</span>
-                        <ExternalLink size={12} />
-                      </a>
-                    )}
-                  </div>
+                        <span>Read Case Study</span>
+                        <ArrowUpRight className={styles.arrowIcon} />
+                      </Link>
 
-                  {/* Card Content Body */}
-                  <div className={styles.cardBody}>
-                    <h3 className={styles.projectTitle}>{project.title}</h3>
-                    <p className={styles.projectTagline}>{project.tagline}</p>
-                    <p className={styles.projectOverview}>{project.overview}</p>
-
-                    {/* Quick Metrics / Outcomes Highlights */}
-                    {project.metrics && project.metrics.length > 0 && (
-                      <div className={styles.metricsRow}>
-                        {project.metrics.slice(0, 3).map((m) => (
-                          <div key={m.label} className={styles.metricChip}>
-                            <span className={styles.chipVal}>{m.value}</span>
-                            <span className={styles.chipLbl}>{m.label}</span>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Card Footer Actions */}
-                  <div className={styles.cardFooter}>
-                    <Link
-                      to="/work/$slug"
-                      params={{ slug: project.slug }}
-                      className={styles.detailLink}
-                    >
-                      <span>Read Case Study</span>
-                      <ArrowUpRight className={styles.arrowIcon} />
-                    </Link>
-
-                    {project.website_url && (
-                      <a
-                        href={project.website_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        className={styles.visitSiteLink}
-                      >
-                        <span>Visit Website</span>
-                        <ArrowRight size={13} />
-                      </a>
-                    )}
-                  </div>
-                </TiltCard>
-              </Reveal>
-            ))}
-          </div>
+                      {project.website_url && (
+                        <a
+                          href={project.website_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={styles.visitSiteLink}
+                        >
+                          <span>Visit Website</span>
+                          <ArrowRight size={13} />
+                        </a>
+                      )}
+                    </div>
+                  </TiltCard>
+                </Reveal>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

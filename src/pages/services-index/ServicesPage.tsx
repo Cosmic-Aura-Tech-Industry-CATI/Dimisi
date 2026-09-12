@@ -14,11 +14,14 @@ import {
   Clock,
   ExternalLink,
   Code2,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import { TiltCard } from "@/components/common/TiltCard/TiltCard";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
 import { getPublicServicesData } from "@/lib/services.functions";
+import { DEFAULT_SERVICE_FALLBACK_IMAGE } from "@/services/service.service";
 import type { CompanyService, IndustrySector } from "@/lib/services.shared";
 import pageStyles from "@/styles/page.module.css";
 import styles from "./ServicesPage.module.css";
@@ -47,8 +50,13 @@ const WHY_DIMISI_POINTS = [
 ];
 
 export function ServicesPage() {
-  // Live dynamic query synced with DIMISI Admin Panel
-  const { data: payload, isLoading } = useQuery({
+  // Live dynamic query synced with DIMISI Admin Panel & Express Backend API
+  const {
+    data: payload,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["publicServices"],
     queryFn: () => getPublicServicesData(),
     staleTime: 1000 * 15,
@@ -160,67 +168,144 @@ export function ServicesPage() {
             </Reveal>
           </div>
 
-          {/* Services Grid with Visual Imagery */}
-          <div className={styles.servicesGrid}>
-            {services.map((service, index) => (
-              <Reveal key={service.id} delay={index * 40} className={styles.gridItem}>
-                <TiltCard className={styles.serviceCard}>
-                  {/* Card Visual Header with Image */}
-                  <div className={styles.cardImageHolder}>
-                    <img
-                      src={service.hero_image}
-                      alt={service.title}
-                      className={styles.cardImg}
-                    />
-                    <div className={styles.cardImgOverlay} />
-                    <span className={styles.cardCatBadge}>{service.category}</span>
-                    <span className={styles.cardIndexTag}>
-                      {String(index + 1).padStart(2, "0")}
-                    </span>
+          {/* LOADING STATE SKELETONS */}
+          {isLoading && (!payload || services.length === 0) && (
+            <div className={styles.servicesGrid}>
+              {Array.from({ length: 6 }).map((_, idx) => (
+                <div key={idx} className={styles.gridItem}>
+                  <div className={styles.skeletonCard}>
+                    <div className={styles.skeletonImageHolder} />
+                    <div className={styles.skeletonContent}>
+                      <div className={[styles.skeletonLine, styles.skeletonTitle].join(" ")} />
+                      <div className={[styles.skeletonLine, styles.skeletonTagline].join(" ")} />
+                      <div className={styles.skeletonLine} style={{ width: "95%" }} />
+                      <div className={styles.skeletonLine} style={{ width: "80%" }} />
+                      <div className={[styles.skeletonLine, styles.skeletonPill].join(" ")} />
+                      <div
+                        className={[styles.skeletonLine, styles.skeletonPill].join(" ")}
+                        style={{ width: "70%" }}
+                      />
+                    </div>
+                    <div className={styles.skeletonFooter}>
+                      <div className={styles.skeletonLine} style={{ width: "40%" }} />
+                      <div className={styles.skeletonLine} style={{ width: "20%" }} />
+                    </div>
                   </div>
+                </div>
+              ))}
+            </div>
+          )}
 
-                  {/* Card Content */}
-                  <div className={styles.cardContent}>
-                    <h3 className={styles.serviceName}>{service.title}</h3>
-                    <p className={styles.serviceTagline}>{service.tagline}</p>
-                    <p className={styles.serviceDesc}>{service.summary}</p>
+          {/* ERROR STATE */}
+          {isError && services.length === 0 && (
+            <div className={styles.stateBox}>
+              <div className={[styles.stateIconBox, styles.stateIconError].join(" ")}>
+                <AlertTriangle size={28} />
+              </div>
+              <h3 className={styles.stateTitle}>Unable to load services</h3>
+              <p className={styles.stateText}>
+                We are having trouble retrieving the live services roster right now. Please verify your connection or try again.
+              </p>
+              <button
+                type="button"
+                onClick={() => refetch()}
+                className={styles.retryBtn}
+              >
+                <RefreshCw size={16} />
+                <span>Retry Connection</span>
+              </button>
+            </div>
+          )}
 
-                    {/* Feature Pills */}
-                    {service.features && service.features.length > 0 && (
-                      <ul className={styles.featuresList}>
-                        {service.features.slice(0, 4).map((feat) => (
-                          <li key={feat} className={styles.featureItem}>
-                            <CheckCircle2 className={styles.checkIcon} />
-                            <span>{feat}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-                  </div>
+          {/* EMPTY STATE */}
+          {!isLoading && !isError && services.length === 0 && (
+            <div className={styles.stateBox}>
+              <div className={styles.stateIconBox}>
+                <Layers size={28} />
+              </div>
+              <h3 className={styles.stateTitle}>No services available at the moment</h3>
+              <p className={styles.stateText}>
+                Our engineering disciplines are being updated. Check back shortly or discuss tailored business requirements directly with our architecture team.
+              </p>
+              <MagneticButton to="/contact">
+                <span>Discuss Custom Requirements</span>
+                <ArrowUpRight size={18} />
+              </MagneticButton>
+            </div>
+          )}
 
-                  {/* Card Footer Actions */}
-                  <div className={styles.cardFooter}>
-                    <Link
-                      to="/services/$slug"
-                      params={{ slug: service.slug }}
-                      className={styles.serviceLink}
-                    >
-                      <span>View Full Service Details</span>
-                      <ArrowUpRight className={styles.linkArrow} />
-                    </Link>
+          {/* Live Services Grid with Visual Imagery */}
+          {services.length > 0 && (
+            <div className={styles.servicesGrid}>
+              {services.map((service, index) => (
+                <Reveal key={service.id} delay={index * 40} className={styles.gridItem}>
+                  <TiltCard className={styles.serviceCard}>
+                    {/* Card Visual Header with Image */}
+                    <div className={styles.cardImageHolder}>
+                      <img
+                        src={service.hero_image || DEFAULT_SERVICE_FALLBACK_IMAGE}
+                        alt={service.title}
+                        className={styles.cardImg}
+                        loading="lazy"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          if (target.src !== DEFAULT_SERVICE_FALLBACK_IMAGE) {
+                            target.src = DEFAULT_SERVICE_FALLBACK_IMAGE;
+                          }
+                        }}
+                      />
+                      <div className={styles.cardImgOverlay} />
+                      <span className={styles.cardCatBadge}>{service.category}</span>
+                      <span className={styles.cardIndexTag}>
+                        {String(index + 1).padStart(2, "0")}
+                      </span>
+                    </div>
 
-                    <Link
-                      to="/contact"
-                      search={{ service: service.slug }}
-                      className={styles.inquireLink}
-                    >
-                      Inquire →
-                    </Link>
-                  </div>
-                </TiltCard>
-              </Reveal>
-            ))}
-          </div>
+                    {/* Card Content */}
+                    <div className={styles.cardContent}>
+                      <h3 className={styles.serviceName}>{service.title}</h3>
+                      {service.tagline && (
+                        <p className={styles.serviceTagline}>{service.tagline}</p>
+                      )}
+                      <p className={styles.serviceDesc}>{service.summary}</p>
+
+                      {/* Feature / Deliverable Pills */}
+                      {service.features && service.features.length > 0 && (
+                        <ul className={styles.featuresList}>
+                          {service.features.slice(0, 4).map((feat) => (
+                            <li key={feat} className={styles.featureItem}>
+                              <CheckCircle2 className={styles.checkIcon} />
+                              <span>{feat}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    {/* Card Footer Actions */}
+                    <div className={styles.cardFooter}>
+                      <Link
+                        to="/services/$slug"
+                        params={{ slug: service.slug }}
+                        className={styles.serviceLink}
+                      >
+                        <span>View Full Service Details</span>
+                        <ArrowUpRight className={styles.linkArrow} />
+                      </Link>
+
+                      <Link
+                        to="/contact"
+                        search={{ service: service.slug }}
+                        className={styles.inquireLink}
+                      >
+                        Inquire →
+                      </Link>
+                    </div>
+                  </TiltCard>
+                </Reveal>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 

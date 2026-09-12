@@ -23,6 +23,7 @@ import {
 } from "../services/serviceCategory.service";
 import {
   getAllServicesApi,
+  getVisitorServicesApi,
   getServiceByIdApi,
   createServiceApi,
   updateServiceApi,
@@ -38,21 +39,27 @@ export async function getPublicServicesData(): Promise<PublicServicesPayload> {
   let catItems = servicesStore.categoryItems;
   try {
     const apiCats = await getAllServiceCategoriesApi();
-    if (apiCats && apiCats.length > 0) {
+    if (Array.isArray(apiCats) && apiCats.length > 0) {
       catItems = apiCats;
       servicesStore.setCategories(apiCats);
     }
-  } catch {
-    // Fallback to local store
+  } catch (err) {
+    console.warn("Could not load live categories for public services:", err);
   }
 
   try {
-    const remoteServices = await getAllServicesApi(undefined, catItems);
-    if (Array.isArray(remoteServices) && remoteServices.length > 0) {
+    let remoteServices: CompanyService[] = [];
+    try {
+      remoteServices = await getVisitorServicesApi(undefined, catItems);
+    } catch {
+      remoteServices = await getAllServicesApi(undefined, catItems);
+    }
+
+    if (Array.isArray(remoteServices)) {
       servicesStore.setServices(remoteServices);
     }
-  } catch {
-    // Fallback to local store
+  } catch (err) {
+    console.warn("Could not load live services for public services:", err);
   }
 
   const activeCats = catItems.filter((c) => c.status === "active");
@@ -70,7 +77,43 @@ export async function getServiceBySlug({
   data: { slug: string };
 }): Promise<CompanyService | null> {
   if (!data.slug) return null;
-  return servicesStore.getServiceBySlug(data.slug);
+  const trimmedSlug = data.slug.trim().toLowerCase();
+
+  // 1. Check local store
+  let service = servicesStore.getServiceBySlug(trimmedSlug);
+  if (service) return service;
+
+  // 2. Fetch fresh live visitor services from backend
+  try {
+    const catItems = servicesStore.categoryItems;
+    let liveServices: CompanyService[] = [];
+    try {
+      liveServices = await getVisitorServicesApi(undefined, catItems);
+    } catch {
+      liveServices = await getAllServicesApi(undefined, catItems);
+    }
+
+    if (Array.isArray(liveServices) && liveServices.length > 0) {
+      servicesStore.setServices(liveServices);
+      service = servicesStore.getServiceBySlug(trimmedSlug);
+      if (service) return service;
+    }
+  } catch (err) {
+    console.warn("Live lookup for service by slug failed:", err);
+  }
+
+  // 3. If slug is a MongoDB ObjectId, attempt direct ID lookup
+  if (isMongoId(data.slug)) {
+    try {
+      const single = await getServiceByIdApi(data.slug, servicesStore.categoryItems);
+      if (single) {
+        servicesStore.saveService(single);
+        return single;
+      }
+    } catch {}
+  }
+
+  return null;
 }
 
 export async function getServiceCategoriesFn(): Promise<{

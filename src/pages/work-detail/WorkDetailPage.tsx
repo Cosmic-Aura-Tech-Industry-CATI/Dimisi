@@ -26,6 +26,7 @@ import { Reveal } from "@/components/common/Reveal/Reveal";
 import { TiltCard } from "@/components/common/TiltCard/TiltCard";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
 import { getPublicWorkData } from "@/lib/work.functions";
+import { DEFAULT_CASESTUDY_FALLBACK_IMAGE } from "@/services/casestudy.service";
 import type { ProjectItem, ProjectGalleryImage } from "@/lib/work.shared";
 import pageStyles from "@/styles/page.module.css";
 import styles from "./WorkDetailPage.module.css";
@@ -129,10 +130,16 @@ export function WorkDetailPage({ project }: WorkDetailPageProps) {
           <Reveal variant="up" delay={220}>
             <div className={styles.heroImageHolder}>
               <img
-                src={project.cover_image}
+                src={project.cover_image || DEFAULT_CASESTUDY_FALLBACK_IMAGE}
                 alt={project.title}
                 className={styles.heroCoverImg}
                 fetchPriority="high"
+                onError={(e) => {
+                  const target = e.currentTarget as HTMLImageElement;
+                  if (target.src !== DEFAULT_CASESTUDY_FALLBACK_IMAGE) {
+                    target.src = DEFAULT_CASESTUDY_FALLBACK_IMAGE;
+                  }
+                }}
               />
               <div className={styles.heroImgGlow} />
             </div>
@@ -320,7 +327,17 @@ export function WorkDetailPage({ project }: WorkDetailPageProps) {
                 <Reveal key={rel.id} delay={idx * 60}>
                   <TiltCard className={styles.relatedCard}>
                     <div className={styles.relatedImgHolder}>
-                      <img src={rel.cover_image} alt={rel.title} className={styles.relatedCoverImg} />
+                      <img
+                        src={rel.cover_image || DEFAULT_CASESTUDY_FALLBACK_IMAGE}
+                        alt={rel.title}
+                        className={styles.relatedCoverImg}
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          if (target.src !== DEFAULT_CASESTUDY_FALLBACK_IMAGE) {
+                            target.src = DEFAULT_CASESTUDY_FALLBACK_IMAGE;
+                          }
+                        }}
+                      />
                       <span className={styles.relCatBadge}>{rel.category}</span>
                     </div>
                     <div className={styles.relatedBody}>

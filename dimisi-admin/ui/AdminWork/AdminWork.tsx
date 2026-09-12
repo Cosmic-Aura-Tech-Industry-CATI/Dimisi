@@ -62,9 +62,12 @@ import { INITIAL_WORK_CATEGORIES } from "@/lib/work.data";
 import {
   saveProjectFn,
   deleteProjectFn,
+  toggleProjectActivationFn,
+  toggleProjectFeaturedFn,
   getWorkCategoriesFn,
   saveWorkCategoryFn,
   deleteWorkCategoryFn,
+  getAdminWorkData,
 } from "@/lib/work.functions";
 import styles from "./AdminWork.module.css";
 
@@ -104,6 +107,11 @@ export function AdminWork({
   const [searchQuery, setSearchQuery] = useState<string>("");
   const catDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Dynamic Projects State
+  const [projectList, setProjectList] = useState<ProjectItem[]>(projects || []);
+  const [isProjectsLoading, setIsProjectsLoading] = useState<boolean>(false);
+  const [projectsLoadError, setProjectsLoadError] = useState<string | null>(null);
+
   // Dynamic Categories State
   const [categoryList, setCategoryList] = useState<WorkCategoryItem[]>(() => {
     if (initialCategoryItems && initialCategoryItems.length > 0) {
@@ -111,22 +119,61 @@ export function AdminWork({
     }
     return INITIAL_WORK_CATEGORIES;
   });
+  const [isCatLoading, setIsCatLoading] = useState<boolean>(false);
+  const [catLoadError, setCatLoadError] = useState<string | null>(null);
+  const [updatingCatId, setUpdatingCatId] = useState<string | null>(null);
+  const [deletingCatId, setDeletingCatId] = useState<string | null>(null);
 
-  // Load latest categories from store
+  // Load latest projects and categories from backend API / store
+  const refreshProjects = useCallback(async () => {
+    setIsProjectsLoading(true);
+    setProjectsLoadError(null);
+    try {
+      const data = await getAdminWorkData();
+      if (data && Array.isArray(data.projects)) {
+        setProjectList(data.projects);
+      }
+      if (data && Array.isArray(data.categoryItems) && data.categoryItems.length > 0) {
+        setCategoryList(data.categoryItems);
+      }
+    } catch (err) {
+      console.warn("Failed to load projects from backend API:", err);
+      setProjectsLoadError(
+        err instanceof Error ? err.message : "Unable to load case studies. Please try again."
+      );
+    } finally {
+      setIsProjectsLoading(false);
+    }
+  }, []);
+
+  // Load latest categories from backend API / store
   const refreshCategories = useCallback(async () => {
+    setIsCatLoading(true);
+    setCatLoadError(null);
     try {
       const res = await getWorkCategoriesFn();
-      if (res && res.categories && res.categories.length > 0) {
+      if (res && res.categories && Array.isArray(res.categories)) {
         setCategoryList(res.categories);
       }
     } catch (err) {
-      console.warn("Failed to load work categories", err);
+      console.warn("Failed to load work categories from backend:", err);
+      setCatLoadError(
+        err instanceof Error ? err.message : "Unable to load categories. Please try again.",
+      );
+    } finally {
+      setIsCatLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    refreshCategories();
-  }, [refreshCategories, projects]);
+    refreshProjects();
+  }, [refreshProjects]);
+
+  useEffect(() => {
+    if (projects && Array.isArray(projects)) {
+      setProjectList(projects);
+    }
+  }, [projects]);
 
   useEffect(() => {
     if (initialCategoryItems && initialCategoryItems.length > 0) {
@@ -137,7 +184,7 @@ export function AdminWork({
   // Compute category project counts dynamically
   const categoryProjectCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    projects.forEach((p) => {
+    projectList.forEach((p) => {
       const cat = p.category?.trim();
       if (cat) {
         counts[cat] = (counts[cat] || 0) + 1;
@@ -151,7 +198,7 @@ export function AdminWork({
       }
     });
     return counts;
-  }, [projects]);
+  }, [projectList]);
 
   // Active category items for filter selector
   const activeCategories = useMemo(() => {
@@ -292,12 +339,12 @@ export function AdminWork({
     };
   }, [isCatDropdownOpen]);
 
-  const workCount = useMemo(() => projects.filter((p) => p.type === "work").length, [projects]);
-  const productCount = useMemo(() => projects.filter((p) => p.type === "product").length, [projects]);
+  const workCount = useMemo(() => projectList.filter((p) => p.type === "work").length, [projectList]);
+  const productCount = useMemo(() => projectList.filter((p) => p.type === "product").length, [projectList]);
 
   // Filtered Projects
   const filteredProjects = useMemo(() => {
-    return projects.filter((p) => {
+    return projectList.filter((p) => {
       // Type Tab Filter
       if (activeTabFilter !== "all" && p.type !== activeTabFilter) {
         return false;
@@ -334,13 +381,14 @@ export function AdminWork({
       }
       return true;
     });
-  }, [projects, activeTabFilter, categoryFilter, searchQuery]);
+  }, [projectList, activeTabFilter, categoryFilter, searchQuery]);
 
   // CATEGORY TAXONOMY HANDLERS
   const handleOpenCatModal = (catToEdit?: WorkCategoryItem) => {
     setCatFormError(null);
     setCatSuccessMsg(null);
     setCatDeleteConfirm(null);
+    refreshCategories();
     if (catToEdit) {
       setEditingCatId(catToEdit.id);
       setCatName(catToEdit.name);
@@ -419,7 +467,17 @@ export function AdminWork({
   };
 
   const handleToggleCategoryStatus = (cat: WorkCategoryItem) => {
+    if (updatingCatId) return;
     const nextStatus = cat.status === "active" ? "inactive" : "active";
+    setUpdatingCatId(cat.id);
+    setCatFormError(null);
+    setCatSuccessMsg(null);
+
+    // Optimistic UI update
+    setCategoryList((prev) =>
+      prev.map((item) => (item.id === cat.id ? { ...item, status: nextStatus } : item)),
+    );
+
     startTransition(async () => {
       try {
         const res = await saveWorkCategoryFn({
@@ -435,9 +493,21 @@ export function AdminWork({
         if (res.success) {
           await refreshCategories();
           onRefresh();
+        } else {
+          // Revert optimistic update
+          setCategoryList((prev) =>
+            prev.map((item) => (item.id === cat.id ? { ...item, status: cat.status } : item)),
+          );
+          setCatFormError(res.error || "Failed to update category status.");
         }
       } catch (err) {
+        setCategoryList((prev) =>
+          prev.map((item) => (item.id === cat.id ? { ...item, status: cat.status } : item)),
+        );
         console.warn("Failed to toggle category status", err);
+        setCatFormError(err instanceof Error ? err.message : "Failed to toggle category status.");
+      } finally {
+        setUpdatingCatId(null);
       }
     });
   };
@@ -454,6 +524,9 @@ export function AdminWork({
   const handleConfirmDeleteCategory = () => {
     if (!catDeleteConfirm) return;
     const targetId = catDeleteConfirm.id;
+    setDeletingCatId(targetId);
+    setCatFormError(null);
+    setCatSuccessMsg(null);
 
     startTransition(async () => {
       try {
@@ -468,6 +541,8 @@ export function AdminWork({
         }
       } catch (err) {
         setCatFormError(err instanceof Error ? err.message : "Error deleting category.");
+      } finally {
+        setDeletingCatId(null);
       }
     });
   };
@@ -507,7 +582,7 @@ export function AdminWork({
     ]);
     setNewMetricLabel("");
     setNewMetricValue("");
-    setOrderIndex(projects.length + 1);
+    setOrderIndex(projectList.length + 1);
     setIsFeatured(false);
     setIsActive(true);
     setModalTab("overview");
@@ -858,6 +933,7 @@ export function AdminWork({
         const res = await saveProject({ data: input });
         if (res.success) {
           setShowModal(false);
+          await refreshProjects();
           onRefresh();
         } else {
           setFormError(res.error || "Failed to save project.");
@@ -871,69 +947,50 @@ export function AdminWork({
   const handleDelete = (id: string, projTitle: string) => {
     if (window.confirm(`Are you sure you want to delete case study "${projTitle}"?`)) {
       startTransition(async () => {
-        await deleteProject({ data: { id } });
-        onRefresh();
+        try {
+          const res = await deleteProject({ data: { id } });
+          if (res.success) {
+            await refreshProjects();
+            onRefresh();
+          } else {
+            alert(res.error || "Failed to delete case study.");
+          }
+        } catch (err) {
+          alert(err instanceof Error ? err.message : "Error deleting case study.");
+        }
       });
     }
   };
 
   const handleToggleActive = (p: ProjectItem) => {
     startTransition(async () => {
-      await saveProject({
-        data: {
-          id: p.id,
-          title: p.title,
-          slug: p.slug,
-          type: p.type,
-          category: p.category,
-          tagline: p.tagline,
-          overview: p.overview,
-          challenge: p.challenge,
-          solution: p.solution,
-          outcome: p.outcome,
-          cover_image: p.cover_image,
-          gallery_images: p.gallery_images,
-          website_url: p.website_url,
-          client_name: p.client_name,
-          timeline: p.timeline,
-          tech_stack: p.tech_stack,
-          metrics: p.metrics,
-          order_index: p.order_index,
-          is_featured: p.is_featured,
-          is_active: !p.is_active,
-        },
-      });
-      onRefresh();
+      try {
+        const res = await toggleProjectActivationFn({ data: { id: p.id } });
+        if (res.success) {
+          await refreshProjects();
+          onRefresh();
+        } else {
+          console.warn("Failed to toggle project status:", res.error);
+        }
+      } catch (err) {
+        console.warn("Toggle activation error:", err);
+      }
     });
   };
 
   const handleToggleFeatured = (p: ProjectItem) => {
     startTransition(async () => {
-      await saveProject({
-        data: {
-          id: p.id,
-          title: p.title,
-          slug: p.slug,
-          type: p.type,
-          category: p.category,
-          tagline: p.tagline,
-          overview: p.overview,
-          challenge: p.challenge,
-          solution: p.solution,
-          outcome: p.outcome,
-          cover_image: p.cover_image,
-          gallery_images: p.gallery_images,
-          website_url: p.website_url,
-          client_name: p.client_name,
-          timeline: p.timeline,
-          tech_stack: p.tech_stack,
-          metrics: p.metrics,
-          order_index: p.order_index,
-          is_featured: !p.is_featured,
-          is_active: p.is_active,
-        },
-      });
-      onRefresh();
+      try {
+        const res = await toggleProjectFeaturedFn({ data: { id: p.id } });
+        if (res.success) {
+          await refreshProjects();
+          onRefresh();
+        } else {
+          console.warn("Failed to toggle featured status:", res.error);
+        }
+      } catch (err) {
+        console.warn("Toggle featured error:", err);
+      }
     });
   };
 
@@ -958,7 +1015,7 @@ export function AdminWork({
               ].join(" ")}
               onClick={() => setActiveTabFilter("all")}
             >
-              All ({projects.length})
+              All ({projectList.length})
             </button>
             <button
               type="button"
@@ -1179,7 +1236,34 @@ export function AdminWork({
             </tr>
           </thead>
           <tbody>
-            {filteredProjects.length === 0 ? (
+            {isProjectsLoading && projectList.length === 0 ? (
+              <tr>
+                <td colSpan={7} className={styles.emptyCell}>
+                  <div className={styles.emptyState}>
+                    <RefreshCw size={32} className={styles.emptyIcon} style={{ animation: "spin 1.2s linear infinite" }} />
+                    <span className={styles.emptyTitle}>Connecting to live case studies database...</span>
+                    <span className={styles.emptySub}>Fetching projects from backend API</span>
+                  </div>
+                </td>
+              </tr>
+            ) : projectsLoadError && projectList.length === 0 ? (
+              <tr>
+                <td colSpan={7} className={styles.emptyCell}>
+                  <div className={styles.emptyState}>
+                    <AlertTriangle size={36} className={styles.emptyIcon} style={{ color: "#ef4444" }} />
+                    <span className={styles.emptyTitle}>Failed to load case studies</span>
+                    <span className={styles.emptySub}>{projectsLoadError}</span>
+                    <button
+                      type="button"
+                      className={styles.resetFiltersBtn}
+                      onClick={() => refreshProjects()}
+                    >
+                      Retry Connection
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ) : filteredProjects.length === 0 ? (
               <tr>
                 <td colSpan={7} className={styles.emptyCell}>
                   <div className={styles.emptyState}>
@@ -1458,12 +1542,7 @@ export function AdminWork({
                       type="text"
                       required
                       value={catName}
-                      onChange={(e) => {
-                        setCatName(e.target.value);
-                        if (!editingCatId) {
-                          setCatSlug(slugifyWorkCategory(e.target.value));
-                        }
-                      }}
+                      onChange={(e) => setCatName(e.target.value)}
                       placeholder="e.g. AI & Autonomy"
                     />
                   </div>
@@ -1516,11 +1595,19 @@ export function AdminWork({
                     )}
                     <button
                       type="submit"
-                      disabled={isPending}
+                      disabled={isPending || isCatLoading}
                       className={styles.saveSubmitBtn}
                     >
                       <Save size={14} />
-                      <span>{editingCatId ? "Update Category" : "Add Category"}</span>
+                      <span>
+                        {isPending
+                          ? editingCatId
+                            ? "Updating..."
+                            : "Saving..."
+                          : editingCatId
+                            ? "Update Category"
+                            : "Add Category"}
+                      </span>
                     </button>
                   </div>
                 </form>
@@ -1538,96 +1625,133 @@ export function AdminWork({
                   </span>
                 </div>
 
+                {catLoadError && (
+                  <div className={styles.catErrorBanner}>
+                    <span>{catLoadError}</span>
+                    <button
+                      type="button"
+                      className={styles.catRetryBtn}
+                      onClick={refreshCategories}
+                    >
+                      <RefreshCw size={12} />
+                      <span>Retry</span>
+                    </button>
+                  </div>
+                )}
+
                 <div className={styles.catListScrollContainer}>
-                  <table className={styles.catTable}>
-                    <thead>
-                      <tr>
-                        <th style={{ width: "50px" }}>Order</th>
-                        <th>Category</th>
-                        <th style={{ width: "90px" }}>Projects</th>
-                        <th style={{ width: "95px" }}>Status</th>
-                        <th style={{ width: "110px", textAlign: "right" }}>Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {categoryList
-                        .sort((a, b) => a.order_index - b.order_index)
-                        .map((cat) => {
-                          const count = categoryProjectCounts[cat.name.toLowerCase()] || 0;
-                          const isBeingEdited = editingCatId === cat.id;
-                          return (
-                            <tr
-                              key={cat.id}
-                              className={[
-                                isBeingEdited ? styles.catRowEditing : "",
-                                cat.status === "inactive" ? styles.catRowInactive : "",
-                              ].join(" ")}
-                            >
-                              <td className={styles.orderCell}>{cat.order_index}</td>
-                              <td>
-                                <div className={styles.catItemMeta}>
-                                  <span className={styles.catItemName}>{cat.name}</span>
-                                  {cat.description && (
-                                    <span className={styles.catItemDesc}>
-                                      {cat.description}
+                  {isCatLoading && categoryList.length === 0 ? (
+                    <div className={styles.catLoadingState}>
+                      <RefreshCw size={22} className={styles.spinIcon} />
+                      <span>Loading categories from database...</span>
+                    </div>
+                  ) : categoryList.length === 0 ? (
+                    <div className={styles.catEmptyState}>
+                      <Tag size={28} style={{ opacity: 0.4 }} />
+                      <span className={styles.catEmptyText}>No categories configured yet.</span>
+                    </div>
+                  ) : (
+                    <table className={styles.catTable}>
+                      <thead>
+                        <tr>
+                          <th style={{ width: "50px" }}>Order</th>
+                          <th>Category</th>
+                          <th style={{ width: "90px" }}>Projects</th>
+                          <th style={{ width: "95px" }}>Status</th>
+                          <th style={{ width: "110px", textAlign: "right" }}>Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {categoryList
+                          .sort((a, b) => a.order_index - b.order_index)
+                          .map((cat) => {
+                            const count = categoryProjectCounts[cat.name.toLowerCase()] || 0;
+                            const isBeingEdited = editingCatId === cat.id;
+                            const isUpdating = updatingCatId === cat.id;
+                            const isDeleting = deletingCatId === cat.id;
+                            return (
+                              <tr
+                                key={cat.id}
+                                className={[
+                                  isBeingEdited ? styles.catRowEditing : "",
+                                  cat.status === "inactive" ? styles.catRowInactive : "",
+                                  isUpdating || isDeleting ? styles.catRowUpdating : "",
+                                ].join(" ")}
+                              >
+                                <td className={styles.orderCell}>{cat.order_index}</td>
+                                <td>
+                                  <div className={styles.catItemMeta}>
+                                    <span className={styles.catItemName}>{cat.name}</span>
+                                    {cat.description && (
+                                      <span className={styles.catItemDesc}>
+                                        {cat.description}
+                                      </span>
+                                    )}
+                                  </div>
+                                </td>
+                                <td>
+                                  <span className={styles.catPostCountBadge}>
+                                    {count} project{count !== 1 ? "s" : ""}
+                                  </span>
+                                </td>
+                                <td>
+                                  <button
+                                    type="button"
+                                    disabled={isUpdating}
+                                    className={[
+                                      styles.catStatusPill,
+                                      cat.status === "active"
+                                        ? styles.catStatusPillActive
+                                        : styles.catStatusPillInactive,
+                                    ].join(" ")}
+                                    onClick={() => handleToggleCategoryStatus(cat)}
+                                    title={
+                                      cat.status === "active"
+                                        ? "Active — Click to Deactivate"
+                                        : "Inactive — Click to Activate"
+                                    }
+                                  >
+                                    {cat.status === "active" ? (
+                                      <Check size={11} />
+                                    ) : (
+                                      <EyeOff size={11} />
+                                    )}
+                                    <span>
+                                      {isUpdating
+                                        ? "Updating..."
+                                        : cat.status === "active"
+                                          ? "Active"
+                                          : "Inactive"}
                                     </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td>
-                                <span className={styles.catPostCountBadge}>
-                                  {count} project{count !== 1 ? "s" : ""}
-                                </span>
-                              </td>
-                              <td>
-                                <button
-                                  type="button"
-                                  className={[
-                                    styles.catStatusPill,
-                                    cat.status === "active"
-                                      ? styles.catStatusPillActive
-                                      : styles.catStatusPillInactive,
-                                  ].join(" ")}
-                                  onClick={() => handleToggleCategoryStatus(cat)}
-                                  title={
-                                    cat.status === "active"
-                                      ? "Active — Click to Deactivate"
-                                      : "Inactive — Click to Activate"
-                                  }
-                                >
-                                  {cat.status === "active" ? (
-                                    <Check size={11} />
-                                  ) : (
-                                    <EyeOff size={11} />
-                                  )}
-                                  <span>{cat.status === "active" ? "Active" : "Inactive"}</span>
-                                </button>
-                              </td>
-                              <td>
-                                <div className={styles.catRowActions}>
-                                  <button
-                                    type="button"
-                                    className={styles.editBtn}
-                                    onClick={() => handleOpenCatModal(cat)}
-                                    title="Edit Category Details"
-                                  >
-                                    <Edit2 size={13} />
                                   </button>
-                                  <button
-                                    type="button"
-                                    className={styles.delBtn}
-                                    onClick={() => handleDeleteCategoryClick(cat)}
-                                    title="Delete Category"
-                                  >
-                                    <Trash2 size={13} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
+                                </td>
+                                <td>
+                                  <div className={styles.catRowActions}>
+                                    <button
+                                      type="button"
+                                      className={styles.editBtn}
+                                      onClick={() => handleOpenCatModal(cat)}
+                                      title="Edit Category Details"
+                                    >
+                                      <Edit2 size={13} />
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={isDeleting}
+                                      className={styles.delBtn}
+                                      onClick={() => handleDeleteCategoryClick(cat)}
+                                      title="Delete Category"
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
               </div>
             </div>

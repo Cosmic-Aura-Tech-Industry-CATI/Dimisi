@@ -78,46 +78,66 @@ test("Work & Products System - Validation", async (t) => {
   });
 });
 
-test("Work & Products System - Store Operations & Seed Integrity", async (t) => {
-  await t.test("returns public payload with all 4 seeded featured projects", () => {
+test("Work & Products System - Store Operations & Live Data Sync", async (t) => {
+  await t.test("accepts dynamic project list and computes stats correctly", () => {
+    workStore.setProjects([
+      {
+        id: "test-1",
+        slug: "test-work-1",
+        title: "Test Work 1",
+        type: "work",
+        category: "Web Application",
+        overview: "Overview text describing work 1 in detail.",
+        challenge: "Challenge text describing work 1 in detail.",
+        solution: "Solution text describing work 1 in detail.",
+        outcome: "Outcome text describing work 1 in detail.",
+        cover_image: "https://example.com/cover1.jpg",
+        gallery_images: [],
+        website_url: "https://example.com",
+        tech_stack: ["React", "TypeScript"],
+        metrics: [{ label: "Speed", value: "2x" }],
+        order_index: 1,
+        is_featured: true,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+      {
+        id: "test-2",
+        slug: "test-prod-1",
+        title: "Test Product 1",
+        type: "product",
+        category: "SaaS Platform",
+        overview: "Overview text describing product 1 in detail.",
+        challenge: "Challenge text describing product 1 in detail.",
+        solution: "Solution text describing product 1 in detail.",
+        outcome: "Outcome text describing product 1 in detail.",
+        cover_image: "https://example.com/cover2.jpg",
+        gallery_images: [],
+        website_url: "https://product.example.com",
+        tech_stack: ["Node.js", "PostgreSQL"],
+        metrics: [{ label: "Uptime", value: "99.9%" }],
+        order_index: 2,
+        is_featured: true,
+        is_active: true,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      },
+    ]);
+
     const payload = workStore.getPublicPayload();
-    assert.ok(payload.projects.length >= 4);
-    assert.ok(payload.stats.totalWork >= 2);
-    assert.ok(payload.stats.totalProducts >= 2);
-  });
+    assert.equal(payload.projects.length, 2);
+    assert.equal(payload.stats.totalProjects, 2);
+    assert.equal(payload.stats.totalWork, 1);
+    assert.equal(payload.stats.totalProducts, 1);
 
-  await t.test("retrieves Rudra Tours & Travels by slug with correct category and link", () => {
-    const proj = workStore.getProjectBySlug("rudra-tours-travels");
-    assert.ok(proj !== null);
-    assert.equal(proj?.type, "work");
-    assert.equal(proj?.category, "Travel · Website");
-    assert.equal(proj?.website_url, "https://toursbyrudra.com");
-    assert.ok(proj?.gallery_images.length >= 3);
-    assert.ok(proj?.metrics.length >= 3);
-  });
+    const workItem = workStore.getProjectBySlug("test-work-1");
+    assert.ok(workItem !== null);
+    assert.equal(workItem?.type, "work");
 
-  await t.test("retrieves Kalesh by slug with product type", () => {
-    const proj = workStore.getProjectBySlug("kalesh");
-    assert.ok(proj !== null);
-    assert.equal(proj?.type, "product");
-    assert.equal(proj?.category, "Social Platform · Website");
-    assert.equal(proj?.website_url, "https://thekalesh.com");
-  });
-
-  await t.test("retrieves Karyon by slug with product type", () => {
-    const proj = workStore.getProjectBySlug("karyon");
-    assert.ok(proj !== null);
-    assert.equal(proj?.type, "product");
-    assert.equal(proj?.category, "Home Services · Web App");
-    assert.equal(proj?.website_url, "https://karyon.app");
-  });
-
-  await t.test("retrieves AxisCon by slug with work type", () => {
-    const proj = workStore.getProjectBySlug("axiscon");
-    assert.ok(proj !== null);
-    assert.equal(proj?.type, "work");
-    assert.equal(proj?.category, "Conference · Website");
-    assert.equal(proj?.website_url, "https://axiscon.netlify.app/");
+    const prodItem = workStore.getProjectBySlug("test-prod-1");
+    assert.ok(prodItem !== null);
+    assert.equal(prodItem?.type, "product");
   });
 
   await t.test("creates, updates, and deletes case study in store", () => {

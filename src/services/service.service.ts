@@ -111,6 +111,9 @@ export function resolveCategoryName(
   return catStr || "Custom Software";
 }
 
+export const DEFAULT_SERVICE_FALLBACK_IMAGE =
+  "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80";
+
 /**
  * Normalizes backend IService document into the clean frontend CompanyService model.
  */
@@ -126,7 +129,7 @@ export function normalizeBackendService(
       category: "Custom Software",
       summary: "",
       tagline: "",
-      hero_image: "",
+      hero_image: DEFAULT_SERVICE_FALLBACK_IMAGE,
       related_images: [],
       what_is_it: "",
       who_is_for: "",
@@ -146,6 +149,8 @@ export function normalizeBackendService(
   }
 
   const resolvedCategory = resolveCategoryName(doc.category, categories);
+  const rawHero = doc.heroImage?.trim() || "";
+  const heroImage = rawHero.length > 0 ? rawHero : DEFAULT_SERVICE_FALLBACK_IMAGE;
 
   return {
     id: String(doc._id),
@@ -154,10 +159,10 @@ export function normalizeBackendService(
     category: resolvedCategory,
     summary: doc.summary || "",
     tagline: doc.tagline || (doc.summary ? doc.summary.slice(0, 80) : ""),
-    hero_image: doc.heroImage || "",
+    hero_image: heroImage,
     related_images: Array.isArray(doc.relatedImages)
       ? doc.relatedImages.map((img) => ({
-          url: img.url,
+          url: img.url || DEFAULT_SERVICE_FALLBACK_IMAGE,
           caption: img.caption || "",
           alt: img.alt || "",
         }))
@@ -180,7 +185,38 @@ export function normalizeBackendService(
 }
 
 /**
- * 1. GET ALL SERVICES (ADMIN)
+ * 1. GET ALL SERVICES FOR VISITORS (PUBLIC ACTIVE SERVICES)
+ * Endpoint: GET /api/v1/admin-panel/services/visitors/all
+ * Query parameter: ?category=<categoryId> (optional)
+ */
+export async function getVisitorServicesApi(
+  categoryId?: string,
+  categories?: ServiceCategoryItem[],
+): Promise<CompanyService[]> {
+  try {
+    const query =
+      categoryId && categoryId.toLowerCase() !== "all"
+        ? `?category=${encodeURIComponent(categoryId)}`
+        : "";
+    const res = await apiRequest<BackendServiceListResponse>(
+      `/api/v1/admin-panel/services/visitors/all${query}`,
+      { method: "GET" },
+    );
+
+    if (Array.isArray(res?.services)) {
+      return res.services.map((doc) => normalizeBackendService(doc, categories));
+    }
+    return [];
+  } catch (err: unknown) {
+    if (err instanceof ApiError) {
+      console.warn("Failed to fetch visitor services from backend API:", err.message);
+    }
+    throw err;
+  }
+}
+
+/**
+ * 2. GET ALL SERVICES (ADMIN)
  * Endpoint: GET /api/v1/admin-panel/services/all
  * Query parameter: ?category=<categoryId> (optional)
  */

@@ -12,7 +12,7 @@ export const Route = createFileRoute("/products")({
       {
         name: "description",
         content:
-          "Explore selected case studies and proprietary products engineered by DIMISI Technologies — Rudra Tours, Kalesh, Karyon, AxisCon, and scalable enterprise architectures.",
+          "Explore selected case studies and proprietary products engineered by DIMISI Technologies — client solutions, digital products, and scalable enterprise architectures.",
       },
       { property: "og:title", content: "Our Work & Products — DIMISI Technologies" },
       {

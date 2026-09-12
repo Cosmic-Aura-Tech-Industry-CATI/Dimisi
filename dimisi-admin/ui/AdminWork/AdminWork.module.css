@@ -1127,6 +1127,71 @@
   gap: 0.35rem;
 }
 
+.catRowUpdating {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.catEmptyState {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: rgba(255, 255, 255, 0.45);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.catEmptyText {
+  font-size: 0.85rem;
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+}
+
+.catLoadingState {
+  padding: 2.5rem 1rem;
+  text-align: center;
+  color: var(--dm-amber, #ffb300);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  font-size: 0.84rem;
+}
+
+.catErrorBanner {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  color: #fca5a5;
+  font-size: 0.8rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0.5rem 0;
+}
+
+.catRetryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 4px;
+  background: rgba(239, 68, 68, 0.25);
+  border: 1px solid rgba(239, 68, 68, 0.5);
+  color: #ffffff;
+  font-size: 0.74rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.catRetryBtn:hover {
+  background: rgba(239, 68, 68, 0.4);
+}
+
+
 /* =========================================================================
    CASE STUDY MODAL DIALOG
    ========================================================================= */
