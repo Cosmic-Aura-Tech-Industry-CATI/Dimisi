@@ -107,7 +107,7 @@ export function Footer() {
           <h3 className={styles.colTitle}>Connect</h3>
           <div className={styles.socialGrid}>
             {SOCIALS.map((s) => {
-              const IconComponent = SOCIAL_ICON_MAP[s.id as keyof typeof SOCIAL_ICON_MAP] || FaXTwitter;
+              const IconComponent = SOCIAL_ICON_MAP[s.id as keyof typeof SOCIAL_ICON_MAP] || IconXTwitter;
               return (
                 <a
                   key={s.label}

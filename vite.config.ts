@@ -38,8 +38,30 @@ export default defineConfig(({ command }) => ({
             }
           }
           if (id.includes("dimisi-admin")) {
-            return "admin-module";
+            if (id.includes("AdminServices")) return "admin-services";
+            if (id.includes("AdminWork")) return "admin-work";
+            if (id.includes("AdminCareers")) return "admin-careers";
+            if (id.includes("AdminBlog")) return "admin-blog";
+            if (id.includes("AdminEvents")) return "admin-events";
+            if (
+              id.includes("AdminReviews") ||
+              id.includes("AdminCampaigns") ||
+              id.includes("AdminReports") ||
+              id.includes("AdminAnalytics")
+            ) {
+              return "admin-reviews-analytics";
+            }
+            if (
+              id.includes("AdminLogs") ||
+              id.includes("AdminSettings") ||
+              id.includes("AdminLeads") ||
+              id.includes("AdminAdmins")
+            ) {
+              return "admin-system";
+            }
+            return "admin-core";
           }
+          return undefined;
         },
       },
     },

@@ -29,28 +29,47 @@ function pickIndex() {
 
 /** Fullscreen cinematic video preloader; hands over to the site when the film ends. */
 export function VideoPreloader({ onDone }: { onDone: () => void }) {
-  // Deterministic first render (server + client) — the real tier is chosen after
-  // mount so hydration never swaps the <video> element mid-playback.
-  const [tier, setTier] = useState<number | null>(null);
-  const src = tier === null ? undefined : LADDER[tier];
+  const [tier, setTier] = useState<number>(() => pickIndex());
+  const src = LADDER[tier] ?? LADDER[2];
   const [fade, setFade] = useState(false);
   const [muted, setMuted] = useState(true);
   const videoRef = useRef<HTMLVideoElement>(null);
   const doneRef = useRef(false);
-  const stallTimerRef = useRef(0);
-
-  useEffect(() => {
-    setTier(pickIndex());
-  }, []);
-
+  const stallTimerRef = useRef<number>(0);
   const finishRef = useRef<() => void>(() => {});
+
+  const finish = useCallback(() => {
+    if (doneRef.current) return;
+    doneRef.current = true;
+    if (stallTimerRef.current) {
+      window.clearTimeout(stallTimerRef.current);
+      stallTimerRef.current = 0;
+    }
+    // Guarantee body overflow is restored
+    if (typeof document !== "undefined" && document.body) {
+      document.body.style.overflow = "";
+    }
+    setFade(true);
+    window.setTimeout(onDone, 500);
+  }, [onDone]);
+  finishRef.current = finish;
+
+  // Unmount safety net
+  useEffect(() => {
+    return () => {
+      if (stallTimerRef.current) {
+        window.clearTimeout(stallTimerRef.current);
+      }
+      if (typeof document !== "undefined" && document.body) {
+        document.body.style.overflow = "";
+      }
+    };
+  }, []);
 
   // If the chosen stream stalls, drop one quality step and resume where we were.
   const onStall = useCallback(() => {
     const v = videoRef.current;
     if (!v || doneRef.current) return;
-    // A brief buffer hiccup is normal right after load — only step down if the
-    // player is genuinely starved of data.
     if (v.readyState >= 3) return;
     if (stallTimerRef.current) return;
     stallTimerRef.current = window.setTimeout(() => {
@@ -58,36 +77,30 @@ export function VideoPreloader({ onDone }: { onDone: () => void }) {
       const el = videoRef.current;
       if (!el || doneRef.current || el.readyState >= 3) return;
       stepDown(el);
-    }, 1200);
+    }, 1000);
   }, []);
 
   const stepDown = useCallback((v: HTMLVideoElement) => {
     setTier((i) => {
-      if (i === null || i >= LADDER.length - 1) return i;
+      if (i >= LADDER.length - 1) {
+        finishRef.current();
+        return i;
+      }
       const at = v.currentTime;
       window.setTimeout(() => {
         const el = videoRef.current;
-        if (!el) return;
+        if (!el || doneRef.current) return;
         el.currentTime = at;
-        el.play()?.catch(() => {});
+        el.play()?.catch(() => finishRef.current());
       }, 0);
       return i + 1;
     });
   }, []);
 
-  const finish = useCallback(() => {
-    if (doneRef.current) return;
-    doneRef.current = true;
-    setFade(true);
-    window.setTimeout(onDone, 650);
-  }, [onDone]);
-  finishRef.current = finish;
-
-  // A decode/network error on one tier shouldn't kill the intro — step down first.
+  // A decode/network error on one tier shouldn't kill the intro — step down first, or finish gracefully
   const onError = useCallback(() => {
     if (doneRef.current) return;
     setTier((i) => {
-      if (i === null) return i;
       if (i >= LADDER.length - 1) {
         finishRef.current();
         return i;
@@ -98,7 +111,13 @@ export function VideoPreloader({ onDone }: { onDone: () => void }) {
 
   useEffect(() => {
     // Safety net: never trap the visitor if the file stalls on a weak network.
-    const t = window.setTimeout(finish, 14000);
+    const isSlow =
+      typeof navigator !== "undefined" &&
+      ((navigator as { connection?: { effectiveType?: string; saveData?: boolean } }).connection?.saveData ||
+        (navigator as { connection?: { effectiveType?: string } }).connection?.effectiveType?.includes("2g") ||
+        (navigator as { connection?: { effectiveType?: string } }).connection?.effectiveType === "3g");
+    const timeoutMs = isSlow ? 2000 : 3800;
+    const t = window.setTimeout(finish, timeoutMs);
     return () => window.clearTimeout(t);
   }, [finish]);
 
@@ -114,21 +133,27 @@ export function VideoPreloader({ onDone }: { onDone: () => void }) {
   // and unmute automatically on the visitor's first interaction.
   useEffect(() => {
     const v = videoRef.current;
-    if (!v || tier === null) return;
+    if (!v) return;
     v.volume = 0.9;
     
+    let isCancelled = false;
+    let cleanup = () => {};
+
     // Attempt playback
     const playPromise = v.play();
     if (playPromise !== undefined) {
       playPromise.catch(() => {
+        if (isCancelled || doneRef.current) return;
         v.muted = true;
         setMuted(true);
-        v.play()?.catch(finish);
+        v.play()?.catch(() => {
+          if (!isCancelled) finishRef.current();
+        });
       });
     }
 
-    let cleanup = () => {};
     const unmute = () => {
+      if (!v || doneRef.current) return;
       v.muted = false;
       v.volume = 0.9;
       setMuted(false);
@@ -146,7 +171,10 @@ export function VideoPreloader({ onDone }: { onDone: () => void }) {
       window.removeEventListener("touchstart", unmute);
     };
 
-    return () => cleanup();
+    return () => {
+      isCancelled = true;
+      cleanup();
+    };
   }, [finish, tier]);
 
   const enableSound = useCallback(() => {

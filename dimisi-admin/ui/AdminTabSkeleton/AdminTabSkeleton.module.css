@@ -1,0 +1,147 @@
+/* =========================================================================
+   ADMIN TAB SKELETON — NON-BLOCKING OBSIDIAN SHIMMER
+   ========================================================================= */
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+  padding-bottom: 2rem;
+  contain: content;
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.03) 25%,
+    rgba(255, 255, 255, 0.08) 50%,
+    rgba(255, 255, 255, 0.03) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite ease-in-out;
+  border-radius: 6px;
+}
+
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.headerLeft {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.titleSkeleton {
+  width: 240px;
+  height: 32px;
+  border-radius: 8px;
+}
+
+.subSkeleton {
+  width: 380px;
+  height: 16px;
+  max-width: 80vw;
+}
+
+.actionSkeleton {
+  width: 150px;
+  height: 38px;
+  border-radius: 999px;
+}
+
+.toolbar {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.searchSkeleton {
+  flex: 1;
+  min-width: 240px;
+  height: 42px;
+  border-radius: 10px;
+}
+
+.filterSkeleton {
+  width: 180px;
+  height: 42px;
+  border-radius: 10px;
+}
+
+.tableCard {
+  background: rgba(12, 14, 20, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.tableHeaderRow {
+  display: flex;
+  gap: 1.5rem;
+  padding: 1rem 1.25rem;
+  background: rgba(18, 22, 30, 0.95);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tableRow {
+  display: flex;
+  gap: 1.5rem;
+  align-items: center;
+  padding: 1.1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.tableRow:last-child {
+  border-bottom: none;
+}
+
+.colSmall {
+  width: 60px;
+  height: 16px;
+}
+
+.colThumb {
+  width: 68px;
+  height: 44px;
+  border-radius: 6px;
+}
+
+.colLarge {
+  flex: 2;
+  height: 18px;
+}
+
+.colMedium {
+  flex: 1;
+  height: 16px;
+}
+
+.colBadge {
+  width: 90px;
+  height: 24px;
+  border-radius: 6px;
+}
+
+.colActions {
+  width: 80px;
+  height: 28px;
+  border-radius: 6px;
+  margin-left: auto;
+}

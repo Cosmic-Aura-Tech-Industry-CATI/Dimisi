@@ -37,8 +37,6 @@ export function BlogPage() {
   const { data: payload, isLoading } = useQuery({
     queryKey: ["publicBlog"],
     queryFn: () => getPublicBlogData(),
-    staleTime: 1000 * 15,
-    refetchInterval: 1000 * 25,
   });
 
   const config = payload?.config || {

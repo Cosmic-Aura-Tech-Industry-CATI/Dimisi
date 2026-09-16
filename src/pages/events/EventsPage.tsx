@@ -37,8 +37,6 @@ export function EventsPage() {
   const { data: payload, isLoading } = useQuery({
     queryKey: ["publicEvents"],
     queryFn: () => getPublicEvents(),
-    staleTime: 1000 * 15,
-    refetchInterval: 1000 * 25, // Live synchronization with Admin Panel
   });
 
   const events = payload?.events || [];
@@ -328,7 +326,13 @@ export function EventsPage() {
               <Reveal key={ev.id} delay={index * 60} className={styles.gridItem}>
                 <TiltCard className={styles.eventCard}>
                   <div className={styles.cardImageHolder}>
-                    <img src={ev.cover_image} alt={ev.title} className={styles.cardImg} />
+                    <img
+                      src={ev.cover_image}
+                      alt={ev.title}
+                      className={styles.cardImg}
+                      loading="lazy"
+                      decoding="async"
+                    />
                     <div className={styles.cardGlow} aria-hidden="true" />
                     <span
                       className={styles.statusChip}
@@ -480,7 +484,13 @@ export function EventsPage() {
                   onClick={() => setActiveLightboxItem(item)}
                   aria-label={`Open visual plate ${item.title}`}
                 >
-                  <img src={item.image_url} alt={item.title} className={styles.mosaicImg} />
+                  <img
+                    src={item.image_url}
+                    alt={item.title}
+                    className={styles.mosaicImg}
+                    loading="lazy"
+                    decoding="async"
+                  />
                   <div className={styles.mosaicOverlay} />
                   <div className={styles.mosaicInfo}>
                     <span className={styles.mosaicCat}>{item.category}</span>
@@ -542,7 +552,7 @@ export function EventsPage() {
                       ].join(" ")}
                       onClick={() => setActiveModalImageIdx(idx)}
                     >
-                      <img src={img} alt="Thumbnail" />
+                      <img src={img} alt="Thumbnail" loading="lazy" decoding="async" />
                     </button>
                   ))}
                 </div>

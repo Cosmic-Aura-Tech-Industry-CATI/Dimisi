@@ -142,14 +142,12 @@ export function AdminServices({
   }, []);
 
   useEffect(() => {
-    refreshCategories();
-  }, [refreshCategories, services]);
-
-  useEffect(() => {
-    if (initialCategoryItems && Array.isArray(initialCategoryItems)) {
+    if (initialCategoryItems && Array.isArray(initialCategoryItems) && initialCategoryItems.length > 0) {
       setCategoryList(initialCategoryItems);
+    } else {
+      refreshCategories();
     }
-  }, [initialCategoryItems]);
+  }, [initialCategoryItems, refreshCategories]);
 
   // Click outside and Escape key handler for Category Popover Dropdown
   useEffect(() => {
@@ -305,6 +303,17 @@ export function AdminServices({
     id: string;
     name: string;
     count: number;
+  } | null>(null);
+
+  // SERVICE DELETE CONFIRMATION & ACTION ALERT STATE
+  const [serviceDeleteConfirm, setServiceDeleteConfirm] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [isDeletingService, setIsDeletingService] = useState(false);
+  const [actionAlert, setActionAlert] = useState<{
+    type: "success" | "error";
+    message: string;
   } | null>(null);
 
   // INDUSTRY MODAL STATE
@@ -654,8 +663,26 @@ export function AdminServices({
   const handleDeleteIndustry = (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete industry sector "${name}"?`)) {
       startTransition(async () => {
-        await deleteIndustry({ data: { id } });
-        onRefresh();
+        try {
+          const res = await deleteIndustry({ data: { id } });
+          if (res.success) {
+            setActionAlert({
+              type: "success",
+              message: `Industry sector "${name}" deleted successfully.`,
+            });
+            onRefresh();
+          } else {
+            setActionAlert({
+              type: "error",
+              message: res.error || `Failed to delete industry "${name}".`,
+            });
+          }
+        } catch (err) {
+          setActionAlert({
+            type: "error",
+            message: err instanceof Error ? err.message : `Failed to delete industry "${name}".`,
+          });
+        }
       });
     }
   };
@@ -1052,12 +1079,45 @@ export function AdminServices({
     });
   };
 
-  const handleDeleteService = (id: string, srvTitle: string) => {
-    if (window.confirm(`Are you sure you want to delete service "${srvTitle}"?`)) {
-      startTransition(async () => {
-        await deleteService({ data: { id } });
+  const handleDeleteServiceClick = (srv: CompanyService) => {
+    setActionAlert(null);
+    setServiceDeleteConfirm({
+      id: srv.id,
+      title: srv.title,
+    });
+  };
+
+  const handleConfirmDeleteService = async () => {
+    if (!serviceDeleteConfirm) return;
+    const { id, title } = serviceDeleteConfirm;
+    setIsDeletingService(true);
+    setActionAlert(null);
+
+    try {
+      const res = await deleteService({ data: { id } });
+      if (res.success) {
+        setServiceDeleteConfirm(null);
+        setActionAlert({
+          type: "success",
+          message: `Service "${title}" was successfully deleted from the backend.`,
+        });
+        await refreshCategories();
         onRefresh();
+      } else {
+        setServiceDeleteConfirm(null);
+        setActionAlert({
+          type: "error",
+          message: res.error || `Failed to delete service "${title}" from backend.`,
+        });
+      }
+    } catch (err) {
+      setServiceDeleteConfirm(null);
+      setActionAlert({
+        type: "error",
+        message: err instanceof Error ? err.message : `Failed to delete service "${title}".`,
       });
+    } finally {
+      setIsDeletingService(false);
     }
   };
 
@@ -1163,6 +1223,66 @@ export function AdminServices({
       {/* SECTION 1: SERVICES TABLE & FILTERS */}
       {activeSection === "services" && (
         <>
+          {/* Service Delete Confirmation Warning Box */}
+          {serviceDeleteConfirm && (
+            <div className={styles.deleteWarningAlert} style={{ margin: "0 0 1.25rem 0" }}>
+              <AlertTriangle size={18} className={styles.deleteWarningIcon} />
+              <div className={styles.deleteWarningText}>
+                <h5>Confirm Service Deletion</h5>
+                <p>
+                  Are you sure you want to delete service <strong>"{serviceDeleteConfirm.title}"</strong>?{" "}
+                  This will send a DELETE request to the backend and remove it permanently from the database.
+                </p>
+                <div className={styles.deleteWarningActions}>
+                  <button
+                    type="button"
+                    className={styles.confirmDeleteBtn}
+                    onClick={handleConfirmDeleteService}
+                    disabled={isDeletingService}
+                  >
+                    {isDeletingService ? "Deleting from Backend..." : "Confirm & Delete"}
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.cancelDeleteBtn}
+                    onClick={() => setServiceDeleteConfirm(null)}
+                    disabled={isDeletingService}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Action Feedback Alert Banner */}
+          {actionAlert && (
+            <div
+              className={
+                actionAlert.type === "success"
+                  ? styles.actionAlertSuccess
+                  : styles.actionAlertError
+              }
+              role={actionAlert.type === "error" ? "alert" : "status"}
+              style={{ marginBottom: "1.25rem" }}
+            >
+              {actionAlert.type === "success" ? (
+                <CheckCircle2 size={16} className={styles.alertIcon} />
+              ) : (
+                <AlertTriangle size={16} className={styles.alertIcon} />
+              )}
+              <span className={styles.alertText}>{actionAlert.message}</span>
+              <button
+                type="button"
+                onClick={() => setActionAlert(null)}
+                className={styles.alertCloseBtn}
+                aria-label="Dismiss message"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
           {/* Dynamic Filters & Search Control Bar (Search left, Category Dropdown right) */}
           <div className={styles.filtersBar}>
             {/* Search Control */}
@@ -1362,6 +1482,8 @@ export function AdminServices({
                               src={srv.hero_image || "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80"}
                               alt={srv.title}
                               className={styles.thumbImg}
+                              loading="lazy"
+                              decoding="async"
                               onError={(e) => {
                                 (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80";
                               }}
@@ -1432,8 +1554,9 @@ export function AdminServices({
                             <button
                               type="button"
                               className={styles.delBtn}
-                              onClick={() => handleDeleteService(srv.id, srv.title)}
-                              title="Delete Service"
+                              onClick={() => handleDeleteServiceClick(srv)}
+                              disabled={isDeletingService && serviceDeleteConfirm?.id === srv.id}
+                              title={`Delete service "${srv.title}"`}
                             >
                               <Trash2 size={14} />
                             </button>
@@ -1538,6 +1661,8 @@ export function AdminServices({
                             src={ind.image_url}
                             alt={ind.name}
                             className={styles.thumbImg}
+                            loading="lazy"
+                            decoding="async"
                           />
                         </td>
                         <td>
@@ -1692,22 +1817,8 @@ export function AdminServices({
                       value={catName}
                       onChange={(e) => {
                         setCatName(e.target.value);
-                        if (!editingCatId) {
-                          setCatSlug(slugifyServiceCategory(e.target.value));
-                        }
                       }}
                       placeholder="e.g. Autonomous Systems"
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>URL Slug *</label>
-                    <input
-                      type="text"
-                      required
-                      value={catSlug}
-                      onChange={(e) => setCatSlug(e.target.value)}
-                      placeholder="e.g. autonomous-systems"
                     />
                   </div>
 
@@ -1783,7 +1894,7 @@ export function AdminServices({
                     <thead>
                       <tr>
                         <th style={{ width: "50px" }}>Order</th>
-                        <th>Category &amp; Slug</th>
+                        <th>Category</th>
                         <th style={{ width: "90px" }}>Services</th>
                         <th style={{ width: "95px" }}>Status</th>
                         <th style={{ width: "100px", textAlign: "right" }}>Actions</th>
@@ -1807,7 +1918,6 @@ export function AdminServices({
                               <td>
                                 <div className={styles.catItemMeta}>
                                   <span className={styles.catItemName}>{cat.name}</span>
-                                  <code className={styles.catItemSlug}>#{cat.slug}</code>
                                   {cat.description && (
                                     <span className={styles.catItemDesc}>
                                       {cat.description}
@@ -2395,6 +2505,8 @@ export function AdminServices({
                               src={imagePreviewUrl}
                               alt="Hero Preview"
                               className={styles.dropzonePreviewImg}
+                              loading="lazy"
+                              decoding="async"
                             />
                             <div className={styles.previewMetaRow}>
                               <span className={styles.fileInfoBadge}>
@@ -2537,6 +2649,8 @@ export function AdminServices({
                                 src={img.url}
                                 alt={img.alt || `Gallery preview ${idx + 1}`}
                                 className={styles.relatedImgThumb}
+                                loading="lazy"
+                                decoding="async"
                               />
                               <input
                                 type="text"

@@ -171,15 +171,37 @@ function RootComponent() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isAdmin = pathname.startsWith("/dimisi-admin");
   useSmoothScroll(isAdmin);
-  // The cinematic intro plays on every page load / refresh, before the site appears.
-  const [intro, setIntro] = useState(true);
+  // The cinematic intro plays on first visit per browser session, before the site appears.
+  const [intro, setIntro] = useState(() => {
+    if (typeof window === "undefined") return false;
+    try {
+      if (window.sessionStorage.getItem("dimisi_intro_seen") === "1") return false;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+      const conn = (
+        navigator as Navigator & {
+          connection?: { saveData?: boolean; effectiveType?: string };
+        }
+      ).connection;
+      if (conn?.saveData || conn?.effectiveType === "2g" || conn?.effectiveType === "slow-2g") {
+        return false;
+      }
+      return true;
+    } catch {
+      return false;
+    }
+  });
+
   useEffect(() => {
-    if (isAdmin) return;
+    if (isAdmin || !intro) {
+      document.body.style.overflow = "";
+      return;
+    }
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isAdmin]);
+  }, [isAdmin, intro]);
+
   useEffect(() => {
     const recoverFromStalePreload = (event: Event) => {
       event.preventDefault();
@@ -195,7 +217,11 @@ function RootComponent() {
     window.addEventListener("vite:preloadError", recoverFromStalePreload);
     return () => window.removeEventListener("vite:preloadError", recoverFromStalePreload);
   }, []);
+
   const finishIntro = useCallback(() => {
+    try {
+      window.sessionStorage.setItem("dimisi_intro_seen", "1");
+    } catch {}
     document.body.style.overflow = "";
     setIntro(false);
   }, []);

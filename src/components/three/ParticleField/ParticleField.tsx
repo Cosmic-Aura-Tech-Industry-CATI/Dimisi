@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -37,24 +37,52 @@ export function ParticleField({
     return geo;
   }, [count, radius, depth]);
 
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+    };
+  }, [geometry]);
+
+  const material = useMemo(
+    () =>
+      new THREE.PointsMaterial({
+        size: 0.05,
+        sizeAttenuation: true,
+        color: "#ffc78a",
+        transparent: true,
+        opacity: 0.9,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    return () => {
+      material.dispose();
+    };
+  }, [material]);
+
   const travel = useRef(0);
   const lastScroll = useRef(0);
 
   useFrame((state, delta) => {
     const pts = points.current;
     if (!pts) return;
+    const clampedDelta = Math.min(0.08, delta);
     const t = state.clock.elapsedTime;
 
     const s = scrollRef?.current ?? 0;
-    const ds = s - lastScroll.current;
+    const ds = Math.max(-0.04, Math.min(0.04, s - lastScroll.current));
     lastScroll.current = s;
 
     // constant drift + scroll thrust
-    travel.current += delta * 2.2 + ds * 260;
+    const step = clampedDelta * 2.2 + ds * 260;
+    travel.current += step;
 
     const attr = pts.geometry.getAttribute("position") as THREE.BufferAttribute;
+    if (!attr) return;
     const arr = attr.array as Float32Array;
-    const step = delta * 2.2 + ds * 260;
     for (let i = 2; i < arr.length; i += 3) {
       let z = arr[i]! + step;
       if (z > 6) z -= depth;
@@ -66,17 +94,5 @@ export function ParticleField({
     pts.rotation.z = Math.sin(t * 0.05) * 0.08 + s * 0.6;
   });
 
-  return (
-    <points ref={points} geometry={geometry}>
-      <pointsMaterial
-        size={0.05}
-        sizeAttenuation
-        color="#ffc78a"
-        transparent
-        opacity={0.9}
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-      />
-    </points>
-  );
+  return <points ref={points} geometry={geometry} material={material} />;
 }

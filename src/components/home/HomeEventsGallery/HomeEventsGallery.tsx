@@ -35,8 +35,6 @@ export function HomeEventsGallery() {
   } = useQuery({
     queryKey: ["publicEvents"],
     queryFn: () => getPublicEvents(),
-    staleTime: 1000 * 15,
-    refetchInterval: 1000 * 25, // Auto-sync with Admin Panel updates
   });
 
   const rawEvents = payload?.events || [];

@@ -49,5 +49,5 @@ export function useSmoothScroll(disabled = false): void {
       cancelAnimationFrame(frame);
       lenis.destroy();
     };
-  }, []);
+  }, [disabled]);
 }

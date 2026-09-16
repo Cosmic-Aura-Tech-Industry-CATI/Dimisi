@@ -189,7 +189,7 @@ const LOCAL_FAQ_KNOWLEDGE: {
   },
 ];
 
-function getLocalFallbackAnswer(question: string): { reply: string; actions?: ActionChip[] } {
+function getLocalFallbackAnswer(question: string): { reply: string; actions?: ActionChip[] | undefined } {
   const normalized = question.toLowerCase();
 
   for (const item of LOCAL_FAQ_KNOWLEDGE) {

@@ -84,15 +84,15 @@ export async function submitLeadFn({
 }: {
   data: {
     email: string;
-    fullName?: string;
-    phone?: string;
-    company?: string;
-    inquiryType?: string;
-    source?: string;
-    page?: string;
-    message?: string;
-    visitorId?: string;
-    sessionId?: string;
+    fullName?: string | undefined;
+    phone?: string | undefined;
+    company?: string | undefined;
+    inquiryType?: string | undefined;
+    source?: string | undefined;
+    page?: string | undefined;
+    message?: string | undefined;
+    visitorId?: string | undefined;
+    sessionId?: string | undefined;
   };
 }): Promise<{ success: boolean; leadId: string }> {
   const cleanEmail = sanitizeText(data.email, 160).toLowerCase();
@@ -131,14 +131,14 @@ export async function getAdminLeadsFn({
   data,
 }: {
   data?: {
-    page?: number;
-    pageSize?: number;
-    status?: string;
-    source?: string;
-    search?: string;
-    sortBy?: string;
-    sortOrder?: string;
-  };
+    page?: number | undefined;
+    pageSize?: number | undefined;
+    status?: string | undefined;
+    source?: string | undefined;
+    search?: string | undefined;
+    sortBy?: string | undefined;
+    sortOrder?: string | undefined;
+  } | undefined;
 } = {}): Promise<{
   leads: LeadItem[];
   total: number;

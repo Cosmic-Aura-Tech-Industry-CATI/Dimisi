@@ -1007,7 +1007,13 @@ export function AdminEvents({
                       <tr key={ev.id}>
                         {/* 1. Cover Thumbnail */}
                         <td className={styles.coverCell}>
-                          <img src={ev.cover_image} alt={ev.title} className={styles.thumbImg} />
+                          <img
+                            src={ev.cover_image}
+                            alt={ev.title}
+                            className={styles.thumbImg}
+                            loading="lazy"
+                            decoding="async"
+                          />
                         </td>
 
                         {/* 2. Event Title & Slug */}
@@ -1143,7 +1149,13 @@ export function AdminEvents({
         <div className={styles.galleryAdminGrid}>
           {gallery.map((g) => (
             <div key={g.id} className={styles.galAdminCard}>
-              <img src={g.image_url} alt={g.title} className={styles.galAdminThumb} />
+              <img
+                src={g.image_url}
+                alt={g.title}
+                className={styles.galAdminThumb}
+                loading="lazy"
+                decoding="async"
+              />
               <div className={styles.galAdminInfo}>
                 <span className={styles.galCategoryTag}>{g.category}</span>
                 <h5 className={styles.galItemTitle}>{g.title}</h5>
@@ -1895,7 +1907,13 @@ export function AdminEvents({
 
                           {coverPreviewUrl ? (
                             <div className={styles.previewContainer}>
-                              <img src={coverPreviewUrl} alt="Cover Preview" className={styles.dropzonePreviewImg} />
+                              <img
+                                src={coverPreviewUrl}
+                                alt="Cover Preview"
+                                className={styles.dropzonePreviewImg}
+                                loading="lazy"
+                                decoding="async"
+                              />
 
                               <div className={styles.previewMetaRow}>
                                 <div className={styles.fileInfoBadge}>
@@ -1971,7 +1989,13 @@ export function AdminEvents({
 
                           {coverPreviewUrl && (
                             <div className={styles.urlPreviewContainer}>
-                              <img src={coverPreviewUrl} alt="URL Preview" className={styles.dropzonePreviewImg} />
+                              <img
+                                src={coverPreviewUrl}
+                                alt="URL Preview"
+                                className={styles.dropzonePreviewImg}
+                                loading="lazy"
+                                decoding="async"
+                              />
                             </div>
                           )}
                         </div>
@@ -2059,7 +2083,13 @@ export function AdminEvents({
                         <div className={styles.galleryThumbGrid}>
                           {galleryImages.map((imgUrl, idx) => (
                             <div key={idx} className={styles.galleryThumbCard}>
-                              <img src={imgUrl} alt={`Gallery item ${idx + 1}`} className={styles.galleryGridThumb} />
+                              <img
+                                src={imgUrl}
+                                alt={`Gallery item ${idx + 1}`}
+                                className={styles.galleryGridThumb}
+                                loading="lazy"
+                                decoding="async"
+                              />
                               <div className={styles.galleryThumbOverlay}>
                                 <span className={styles.galleryThumbBadge}>#{idx + 1}</span>
                                 <div className={styles.thumbBtnGroup}>
@@ -2354,7 +2384,13 @@ export function AdminEvents({
                         }}
                       />
                       {galPreviewUrl ? (
-                        <img src={galPreviewUrl} alt="Gallery Preview" className={styles.dropzonePreviewImg} />
+                        <img
+                          src={galPreviewUrl}
+                          alt="Gallery Preview"
+                          className={styles.dropzonePreviewImg}
+                          loading="lazy"
+                          decoding="async"
+                        />
                       ) : (
                         <div className={styles.dropzoneEmpty}>
                           <UploadCloud size={22} className={styles.uploadIcon} />

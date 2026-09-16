@@ -13,17 +13,17 @@ import { resolveReport } from "@/lib/reviews.functions";
 import styles from "./AdminReports.module.css";
 
 export function AdminReports({
-  reports,
+  reports = [],
   onRefresh,
 }: {
-  reports: ReviewReport[];
+  reports?: ReviewReport[];
   onRefresh: () => void;
 }) {
   const resolve = resolveReport;
   const [isPending, startTransition] = useTransition();
 
-  const openReports = reports.filter((r) => r.status === "open");
-  const resolvedReports = reports.filter((r) => r.status === "resolved");
+  const openReports = (reports || []).filter((r) => r.status === "open");
+  const resolvedReports = (reports || []).filter((r) => r.status === "resolved");
 
   const handleAction = (reportId: string, action: "keep" | "archive" | "delete") => {
     startTransition(async () => {
@@ -31,8 +31,7 @@ export function AdminReports({
         await resolve({
           data: {
             reportId,
-            action,
-            moderationNotes: `Admin action: ${action}`,
+            status: action === "keep" ? "dismissed" : "resolved",
           },
         });
         onRefresh();

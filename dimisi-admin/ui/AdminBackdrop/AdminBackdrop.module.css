@@ -1,52 +1,61 @@
-/* Standalone cinematic backdrop for the admin area — same language as the site,
-   but scoped to the admin module so it never touches public layout. */
-.aura {
+/* High-performance cinematic backdrop for the admin area.
+   GPU-isolated layer with zero mix-blend-mode or WebGL overhead. */
+
+.backdropContainer {
   position: fixed;
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  overflow: hidden;
+  background-color: #060506;
+  contain: strict;
+  transform: translateZ(0);
+  will-change: transform;
+}
+
+.aura {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
   background:
-    radial-gradient(ellipse at 50% -10%, rgba(255, 106, 0, 0.16), transparent 58%),
-    radial-gradient(ellipse at 12% 82%, rgba(255, 159, 28, 0.09), transparent 62%),
-    radial-gradient(ellipse at 88% 26%, rgba(255, 200, 110, 0.06), transparent 55%),
-    radial-gradient(ellipse at 70% 95%, rgba(255, 120, 30, 0.06), transparent 60%);
-  mix-blend-mode: screen;
+    radial-gradient(ellipse 60% 45% at 50% -5%, rgba(255, 106, 0, 0.14), transparent 70%),
+    radial-gradient(ellipse 50% 40% at 10% 85%, rgba(255, 159, 28, 0.08), transparent 65%),
+    radial-gradient(ellipse 45% 35% at 90% 20%, rgba(255, 190, 80, 0.05), transparent 60%),
+    radial-gradient(ellipse 55% 45% at 75% 95%, rgba(255, 120, 30, 0.06), transparent 65%);
 }
 
 .grid {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 0;
   pointer-events: none;
-  opacity: 0.22;
+  opacity: 0.15;
   background-image:
-    linear-gradient(rgba(255, 175, 90, 0.06) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(255, 175, 90, 0.06) 1px, transparent 1px);
-  background-size: 74px 74px;
-  mask-image: radial-gradient(ellipse at 50% 40%, #000 0%, transparent 78%);
+    linear-gradient(rgba(255, 175, 90, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 175, 90, 0.05) 1px, transparent 1px);
+  background-size: 64px 64px;
 }
 
 .sweep {
-  position: fixed;
-  inset: -25% -15%;
-  z-index: 0;
+  position: absolute;
+  inset: -30% -20%;
   pointer-events: none;
-  transform-origin: 50% 0%;
-  mix-blend-mode: screen;
+  transform-origin: 50% 50%;
+  opacity: 0.8;
   background: conic-gradient(
-    from 200deg at 50% -10%,
+    from 180deg at 50% 20%,
     transparent 0deg,
-    rgba(255, 170, 60, 0.08) 12deg,
-    transparent 26deg,
-    rgba(255, 140, 20, 0.06) 42deg,
-    transparent 60deg
+    rgba(255, 170, 60, 0.05) 15deg,
+    transparent 30deg,
+    rgba(255, 140, 20, 0.04) 45deg,
+    transparent 65deg
   );
-  animation: adminSweep 26s linear infinite;
+  animation: adminSweep 32s linear infinite;
+  will-change: transform;
 }
 
 @keyframes adminSweep {
-  from { transform: rotate(0deg) scale(1.2); }
-  to { transform: rotate(360deg) scale(1.2); }
+  from { transform: rotate(0deg) scale(1.1); }
+  to { transform: rotate(360deg) scale(1.1); }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -55,10 +64,9 @@
 
 /* Keeps admin data readable on top of the cinematic layer. */
 .veil {
-  position: fixed;
+  position: absolute;
   inset: 0;
-  z-index: 0;
   pointer-events: none;
   background:
-    linear-gradient(to bottom, rgba(6, 5, 6, 0.55), rgba(6, 5, 6, 0.3) 45%, rgba(6, 5, 6, 0.6));
+    linear-gradient(to bottom, rgba(6, 5, 6, 0.6), rgba(6, 5, 6, 0.35) 45%, rgba(6, 5, 6, 0.65));
 }

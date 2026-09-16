@@ -11,7 +11,7 @@ export interface ActionChip {
   id: string;
   label: string;
   action: "navigate" | "message" | "estimator";
-  target?: string;
+  target?: string | undefined;
 }
 
 export interface UploadedFile {
@@ -24,31 +24,31 @@ export interface UploadedFile {
 export interface ChatMessage {
   role: Role;
   content: string;
-  attachment?: UploadedFile;
-  actions?: ActionChip[];
-  timestamp?: number;
+  attachment?: UploadedFile | undefined;
+  actions?: ActionChip[] | undefined;
+  timestamp?: number | undefined;
 }
 
 export interface ChatPayload {
   messages: ChatMessage[];
-  currentRoute?: string;
-  origin?: string;
-  attachment?: UploadedFile;
+  currentRoute?: string | undefined;
+  origin?: string | undefined;
+  attachment?: UploadedFile | undefined;
 }
 
 export interface ChatResponse {
   reply: string;
-  intent?: LeadIntent;
-  actions?: ActionChip[];
-  detectedLanguage?: "en" | "hi" | "hinglish";
+  intent?: LeadIntent | undefined;
+  actions?: ActionChip[] | undefined;
+  detectedLanguage?: ("en" | "hi" | "hinglish") | undefined;
 }
 
 export interface LeadMetadata {
   intent: LeadIntent;
-  projectType?: string;
-  language?: string;
-  page?: string;
-  conversationId?: string;
+  projectType?: string | undefined;
+  language?: string | undefined;
+  page?: string | undefined;
+  conversationId?: string | undefined;
   timestamp: number;
 }
 
@@ -56,7 +56,7 @@ export interface ProjectEstimateInput {
   projectType: "web" | "mobile" | "ai" | "enterprise" | "custom";
   scale: "mvp" | "growth" | "enterprise";
   features: string[]; // e.g. ["auth", "payments", "admin", "ai", "realtime"]
-  timelineNeed?: "urgent" | "standard" | "flexible";
+  timelineNeed?: ("urgent" | "standard" | "flexible") | undefined;
 }
 
 export interface ProjectEstimateResult {

@@ -24,10 +24,16 @@ export {
 
 // 3. Admin & User Management Services
 export {
-  getAllAdminsApi,
-  grantAdminApi,
+  getAllPanelAdmins,
+  getPanelAdminById,
+  createPanelAdmin,
+  updatePanelAdminRole,
+  activatePanelAdmin,
+  deactivatePanelAdmin,
+  fetchAdminsApi,
+  grantAdminAccessApi,
   updateAdminRoleApi,
-  toggleAdminStatusApi,
+  updateAdminActiveApi,
   deleteAdminApi,
   normalizeBackendPanelUser,
   type BackendPanelUserDoc,
@@ -54,7 +60,7 @@ export {
 // 5. Company Services API
 export {
   getAllServicesApi,
-  getAllServicesForVisitorApi,
+  getVisitorServicesApi,
   getServiceByIdApi,
   createServiceApi,
   updateServiceApi,
@@ -68,6 +74,51 @@ export {
   type BackendServiceDoc,
   type BackendServiceListResponse,
   type BackendServiceSingleResponse,
-  type CreateServiceBackendPayload,
-  type UpdateServiceBackendPayload,
 } from "./service.service";
+
+// 6. Case Study & Work Categories API
+export {
+  getAllCasestudyCategoriesApi,
+  createCasestudyCategoryApi,
+  updateCasestudyCategoryApi,
+  deleteCasestudyCategoryApi,
+  normalizeBackendCasestudyCategory,
+  type BackendCasestudyCategoryDoc,
+  type BackendCasestudyCategoryListResponse,
+  type BackendCasestudyCategorySingleResponse,
+  type CreateCasestudyCategoryPayload,
+  type UpdateCasestudyCategoryPayload,
+} from "./casestudyCategory.service";
+
+// 7. Case Studies / Our Work & Products API
+export {
+  getAllCasestudiesApi,
+  getActiveCasestudiesApi,
+  getCasestudyByIdApi,
+  createCasestudyApi,
+  updateCasestudyApi,
+  deleteCasestudyApi,
+  toggleCasestudyActivationApi,
+  toggleCasestudyFeaturedApi,
+  resolveCasestudyCategoryName,
+  resolveCasestudyCategoryIdForPayload,
+  normalizeBackendCasestudy,
+  DEFAULT_CASESTUDY_FALLBACK_IMAGE,
+  type BackendCasestudyDoc,
+  type BackendCasestudyListResponse,
+  type BackendCasestudySingleResponse,
+} from "./casestudy.service";
+
+// 8. Department API
+export {
+  getAllActiveDepartmentsApi,
+  getDepartmentByIdApi,
+  normalizeBackendDepartment,
+  type BackendDepartmentDoc,
+  type BackendDepartmentListResponse,
+  type BackendDepartmentSingleResponse,
+  type DepartmentItem,
+} from "./department.service";
+
+
+

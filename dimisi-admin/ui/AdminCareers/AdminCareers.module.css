@@ -103,13 +103,14 @@
 
 .table {
   width: 100%;
+  min-width: 960px;
   border-collapse: collapse;
-  text-align: left;
+  table-layout: fixed;
   font-size: 0.86rem;
 }
 
 .table th {
-  padding: 0.9rem 1rem;
+  padding: 0.85rem 0.9rem;
   font-family: var(--font-mono, monospace);
   font-size: 0.72rem;
   font-weight: 700;
@@ -117,14 +118,31 @@
   letter-spacing: 0.06em;
   color: rgba(255, 255, 255, 0.45);
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(0, 0, 0, 0.25);
+  white-space: nowrap;
+}
+
+.thCenter {
+  text-align: center;
+}
+
+.thLeft {
+  text-align: left;
 }
 
 .table td {
-  padding: 1rem;
+  padding: 0.85rem 0.9rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   color: rgba(255, 255, 255, 0.85);
   vertical-align: middle;
+}
+
+.tdCenter {
+  text-align: center;
+}
+
+.tdLeft {
+  text-align: left;
 }
 
 .inactiveRow {
@@ -132,53 +150,94 @@
 }
 
 .orderCell {
+  text-align: center;
   font-family: var(--font-mono, monospace);
   font-weight: 700;
   color: var(--dm-amber, #ffb300);
+}
+
+.titleTd {
+  text-align: left;
+  overflow: hidden;
 }
 
 .titleCol {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  min-width: 0;
 }
 
 .jobName {
   font-weight: 700;
   color: #ffffff;
-  font-size: 0.92rem;
+  font-size: 0.9rem;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .jobSummarySnippet {
-  font-size: 0.76rem;
-  color: rgba(255, 255, 255, 0.5);
-  max-width: 320px;
-  white-space: nowrap;
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.48);
   overflow: hidden;
   text-overflow: ellipsis;
+  white-space: nowrap;
+  line-height: 1.3;
 }
 
 .departmentTag {
   font-family: var(--font-mono, monospace);
   font-size: 0.72rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 5px;
+  font-weight: 600;
+  padding: 0.22rem 0.55rem;
+  border-radius: 6px;
   background: rgba(255, 122, 0, 0.1);
+  border: 1px solid rgba(255, 122, 0, 0.22);
   color: var(--dm-amber, #ffb300);
+  white-space: nowrap;
+  display: inline-block;
 }
 
 .typeTag {
   font-family: var(--font-mono, monospace);
   font-size: 0.72rem;
-  padding: 0.2rem 0.5rem;
-  border-radius: 5px;
+  font-weight: 600;
+  padding: 0.22rem 0.55rem;
+  border-radius: 6px;
   background: rgba(59, 130, 246, 0.12);
+  border: 1px solid rgba(59, 130, 246, 0.25);
   color: #93c5fd;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.workplaceTag {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.22rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(168, 85, 247, 0.12);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  color: #d8b4fe;
+  white-space: nowrap;
+  display: inline-block;
+}
+
+.locTd {
+  text-align: left;
+  overflow: hidden;
 }
 
 .locText {
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.7);
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .applyLinkA {
@@ -195,18 +254,26 @@
 }
 
 .statusCell {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  justify-content: center;
+  gap: 0.35rem;
 }
 
 .toggleIconBtn {
   background: none;
   border: none;
   cursor: pointer;
-  padding: 4px;
+  padding: 5px;
   border-radius: 6px;
   transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toggleIconBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .activeIcon {
@@ -226,9 +293,30 @@
 }
 
 .rowActions {
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 0.45rem;
+}
+
+.emptyTableTd {
+  padding: 3rem 1rem !important;
+  text-align: center;
+}
+
+.emptyTableState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.86rem;
+}
+
+.emptyTableIcon {
+  color: var(--dm-amber, #ffb300);
+  opacity: 0.6;
 }
 
 .editBtn,
@@ -449,12 +537,75 @@
 }
 
 .selectInput {
+  width: 100%;
   padding: 0.6rem 0.85rem;
   border-radius: 8px;
   background: rgba(18, 20, 30, 0.9);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: #ffffff;
   font-size: 0.88rem;
+  outline: none;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.selectInput:focus {
+  border-color: var(--dm-amber, #ffb300);
+  box-shadow: 0 0 0 2px rgba(255, 171, 46, 0.18);
+}
+
+.selectInput:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  background: rgba(18, 20, 30, 0.5);
+}
+
+.selectInput option {
+  background: #11131c;
+  color: #ffffff;
+  padding: 0.5rem;
+}
+
+.labelWithAction {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.deptRetryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(255, 122, 0, 0.12);
+  border: 1px solid rgba(255, 122, 0, 0.3);
+  color: var(--dm-amber, #ffb300);
+  border-radius: 4px;
+  padding: 0.15rem 0.45rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.deptRetryBtn:hover {
+  background: rgba(255, 122, 0, 0.25);
+  border-color: rgba(255, 122, 0, 0.6);
+}
+
+.spinning {
+  animation: spinDept 1s linear infinite;
+}
+
+@keyframes spinDept {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Hero / CTA Settings */
@@ -948,8 +1099,8 @@
 }
 
 .applicantAvatar {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 8px;
   background: linear-gradient(135deg, rgba(255, 122, 0, 0.3), rgba(255, 94, 0, 0.15));
   border: 1px solid rgba(255, 122, 0, 0.35);
@@ -966,35 +1117,43 @@
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  min-width: 0;
 }
 
 .applicantName {
   font-weight: 700;
   color: #ffffff;
-  font-size: 0.9rem;
+  font-size: 0.92rem;
+  white-space: nowrap;
 }
 
 .applicantSubEmail {
-  font-size: 0.74rem;
-  color: rgba(255, 255, 255, 0.45);
+  display: none;
 }
 
 .posCell {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
+  max-width: 240px;
 }
 
 .posTitle {
   font-weight: 700;
   color: #ffffff;
   font-size: 0.88rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .posDept {
   font-family: var(--font-mono, monospace);
   font-size: 0.68rem;
   color: #93c5fd;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .contactLink {
@@ -1014,13 +1173,34 @@
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.65);
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.75);
+  max-width: 180px;
+}
+
+.locTextTruncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .locPin {
   color: var(--dm-amber, #ffb300);
   flex-shrink: 0;
+}
+
+.appToastSuccess {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1rem;
+  border-radius: 10px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: #34d399;
+  font-size: 0.84rem;
+  font-weight: 600;
+  animation: modalFadeIn 0.2s ease;
 }
 
 .resumeActionBtn {
@@ -1684,6 +1864,173 @@
   font-weight: 700;
   cursor: pointer;
   margin-top: 0.5rem;
+}
+
+.appStatusBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.74rem;
+  font-weight: 700;
+  width: fit-content;
+}
+
+.internalNotesCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 1.1rem;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* =========================================================================
+   DELETE APPLICATION CONFIRMATION MODAL
+   ========================================================================= */
+
+.deleteConfirmModal {
+  position: relative;
+  width: 100%;
+  max-width: 480px;
+  border-radius: 20px;
+  background: #11131c;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.95);
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  animation: modalFadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.deleteModalHeader {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.deleteModalIconBox {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.deleteModalIcon {
+  color: #ef4444;
+}
+
+.deleteModalTitle {
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+}
+
+.deleteModalSubtitle {
+  font-size: 0.82rem;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0.25rem 0 0;
+}
+
+.deleteModalCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.deleteModalCandidateRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.deleteModalAvatar {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(255, 122, 0, 0.3), rgba(255, 94, 0, 0.15));
+  border: 1px solid rgba(255, 122, 0, 0.35);
+  color: var(--dm-amber, #ffb300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.deleteModalCandidateInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.deleteModalCandidateName {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 0.9rem;
+}
+
+.deleteModalCandidateRole {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.deleteModalWarning {
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: rgba(248, 113, 113, 0.85);
+  margin: 0;
+}
+
+.deleteModalActions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.deleteConfirmBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.25rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #ef4444, #dc2626);
+  border: none;
+  color: #ffffff;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.35);
+}
+
+.deleteConfirmBtn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.5);
+}
+
+.deleteConfirmBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 @media (max-width: 1024px) {
