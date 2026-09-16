@@ -33,12 +33,21 @@ export function ReviewsPage() {
   const [featured, setFeatured] = useState<PublicReview[]>([]);
   const [stats, setStats] = useState<ReviewStats>({
     total: 0,
+    totalReviews: 0,
     average: 5.0,
+    averageRating: 5.0,
     distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
     clientTotal: 0,
     clientAverage: 5.0,
     employeeTotal: 0,
     employeeAverage: 5.0,
+    pendingCount: 0,
+    approvedCount: 0,
+    rejectedCount: 0,
+    archivedCount: 0,
+    reviewsThisMonth: 0,
+    overallConversionRate: 0,
+    openReportsCount: 0,
   });
   const [services, setServices] = useState<string[]>([]);
   const [totalApproved, setTotalApproved] = useState(0);
@@ -131,7 +140,7 @@ export function ReviewsPage() {
             ...(reporterEmail ? { reporterEmail } : {}),
           },
         });
-        setReportSuccess(res.message);
+        setReportSuccess(res.message || "Report submitted successfully.");
         setTimeout(() => {
           setReportingReview(null);
           setReportSuccess(null);
@@ -403,7 +412,13 @@ export function ReviewsPage() {
                     <div className={styles.cardTop}>
                       <div className={styles.authorBox}>
                         {item.photo_url ? (
-                          <img src={item.photo_url} alt={item.customer_name} className={styles.avatar} />
+                          <img
+                            src={item.photo_url}
+                            alt={item.customer_name}
+                            className={styles.avatar}
+                            loading="lazy"
+                            decoding="async"
+                          />
                         ) : (
                           <div className={[styles.avatarInitials, isEmp ? styles.avatarEmployee : ""].join(" ")}>
                             {item.customer_name.slice(0, 2).toUpperCase()}
@@ -454,7 +469,7 @@ export function ReviewsPage() {
 
                     <div className={styles.cardFoot}>
                       <span className={styles.reviewDate}>
-                        {new Date(item.published_at).toLocaleDateString("en-US", {
+                        {new Date(item.published_at || item.submitted_at || Date.now()).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
                           year: "numeric",
@@ -530,7 +545,13 @@ export function ReviewsPage() {
                     <div className={styles.cardTop}>
                       <div className={styles.authorBox}>
                         {item.photo_url ? (
-                          <img src={item.photo_url} alt={item.customer_name} className={styles.avatar} />
+                          <img
+                            src={item.photo_url}
+                            alt={item.customer_name}
+                            className={styles.avatar}
+                            loading="lazy"
+                            decoding="async"
+                          />
                         ) : (
                           <div className={[styles.avatarInitials, isEmp ? styles.avatarEmployee : ""].join(" ")}>
                             {item.customer_name.slice(0, 2).toUpperCase()}
@@ -581,7 +602,7 @@ export function ReviewsPage() {
 
                     <div className={styles.cardFoot}>
                       <span className={styles.reviewDate}>
-                        {new Date(item.published_at).toLocaleDateString("en-US", {
+                        {new Date(item.published_at || item.submitted_at || Date.now()).toLocaleDateString("en-US", {
                           month: "short",
                           day: "numeric",
                           year: "numeric",

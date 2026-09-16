@@ -27,9 +27,9 @@ export async function updateProfileFn({
 }: {
   data: {
     id: string;
-    email?: string;
-    fullName?: string;
-    notifyEmail?: boolean;
+    email?: string | undefined;
+    fullName?: string | undefined;
+    notifyEmail?: boolean | undefined;
   };
 }): Promise<{ success: boolean }> {
   if (typeof window === "undefined" || !data.id) return { success: false };

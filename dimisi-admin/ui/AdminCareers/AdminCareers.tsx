@@ -27,6 +27,7 @@ import {
   AlertCircle,
   Calendar,
   Layers,
+  RotateCw,
 } from "lucide-react";
 import {
   type JobOpening,
@@ -52,6 +53,10 @@ import {
   updateApplicationStatusFn,
   deleteApplicationFn,
 } from "@/lib/careers.functions";
+import {
+  getAllActiveDepartmentsApi,
+  type DepartmentItem,
+} from "@/services";
 import styles from "./AdminCareers.module.css";
 
 interface AdminCareersProps {
@@ -263,9 +268,35 @@ export function AdminCareers({
   const [editingJob, setEditingJob] = useState<JobOpening | null>(null);
   const [modalTab, setModalTab] = useState<"basic" | "details" | "requirements">("basic");
 
+  // Dynamic Departments from Backend API
+  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
+  const [departmentsError, setDepartmentsError] = useState<string | null>(null);
+
+  const fetchDepartments = async () => {
+    setLoadingDepartments(true);
+    setDepartmentsError(null);
+    try {
+      const liveDepts = await getAllActiveDepartmentsApi();
+      setDepartments(liveDepts);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Unable to load departments. Please try again.";
+      setDepartmentsError(msg);
+    } finally {
+      setLoadingDepartments(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
+
   // Job Form State
   const [title, setTitle] = useState("");
-  const [department, setDepartment] = useState("Content & Editorial");
+  const [department, setDepartment] = useState("");
   const [type, setType] = useState<JobType>("Internship");
   const [workplace, setWorkplace] = useState<WorkplaceType>("Remote");
   const [location, setLocation] = useState("Remote / Noida");
@@ -310,14 +341,23 @@ export function AdminCareers({
   const handleOpenCreateJob = () => {
     setEditingJob(null);
     setTitle("");
-    setDepartment("Engineering");
+    setDepartment("");
     setType("Full-time");
     setWorkplace("Remote");
     setLocation("Remote / Noida");
     setSummary("");
-    setResponsibilities(["Architect scalable backend workflows.", "Collaborate with UI/UX designers."]);
-    setRequirements(["2+ years with TypeScript & React/Node.", "Passion for clean modular architecture."]);
-    setJobBenefits(["Competitive compensation & bonuses.", "Flexible remote working hours."]);
+    setResponsibilities([
+      "Architect scalable backend workflows.",
+      "Collaborate with UI/UX designers.",
+    ]);
+    setRequirements([
+      "2+ years with TypeScript & React/Node.",
+      "Passion for clean modular architecture.",
+    ]);
+    setJobBenefits([
+      "Competitive compensation & bonuses.",
+      "Flexible remote working hours.",
+    ]);
     setApplyUrl("");
     setOrderIndex(jobs.length + 1);
     setIsFeatured(false);
@@ -325,12 +365,15 @@ export function AdminCareers({
     setModalTab("basic");
     setFormError(null);
     setShowJobModal(true);
+    if (departments.length === 0 && !loadingDepartments) {
+      fetchDepartments();
+    }
   };
 
   const handleOpenEditJob = (j: JobOpening) => {
     setEditingJob(j);
     setTitle(j.title);
-    setDepartment(j.department);
+    setDepartment(j.department || "");
     setType(j.type);
     setWorkplace(j.workplace);
     setLocation(j.location);
@@ -345,17 +388,27 @@ export function AdminCareers({
     setModalTab("basic");
     setFormError(null);
     setShowJobModal(true);
+    if (departments.length === 0 && !loadingDepartments) {
+      fetchDepartments();
+    }
   };
 
   const handleSaveJob = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
+    const cleanDept = department?.trim();
+    if (!cleanDept || cleanDept === "" || cleanDept === "Select Department") {
+      setFormError("Please select a department.");
+      setModalTab("basic");
+      return;
+    }
+
     const input: JobInput = {
       id: editingJob?.id ?? undefined,
       title,
       slug: editingJob?.slug || slugifyJob(title),
-      department,
+      department: cleanDept,
       type,
       workplace,
       location,
@@ -1300,85 +1353,148 @@ export function AdminCareers({
       {activeSection === "jobs" && (
         <div className={styles.tableCard}>
           <table className={styles.table}>
+            <colgroup>
+              <col style={{ width: "6%" }} />
+              <col style={{ width: "24%" }} />
+              <col style={{ width: "15%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "9%" }} />
+            </colgroup>
             <thead>
               <tr>
-                <th style={{ width: "60px" }}>Order</th>
-                <th>Role Title</th>
-                <th>Department</th>
-                <th>Type</th>
-                <th>Location</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th className={styles.thCenter}>Order</th>
+                <th className={styles.thLeft}>Role Title</th>
+                <th className={styles.thCenter}>Department</th>
+                <th className={styles.thCenter}>Job Type</th>
+                <th className={styles.thCenter}>Workplace Mode</th>
+                <th className={styles.thLeft}>Location</th>
+                <th className={styles.thCenter}>Status</th>
+                <th className={styles.thCenter}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {jobs.map((j) => (
-                <tr key={j.id} className={j.status !== "open" ? styles.inactiveRow : ""}>
-                  <td className={styles.orderCell}>{j.order_index}</td>
-                  <td>
-                    <div className={styles.titleCol}>
-                      <span className={styles.jobName}>{j.title}</span>
-                      <span className={styles.jobSummarySnippet}>{j.summary}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={styles.departmentTag}>{j.department}</span>
-                  </td>
-                  <td>
-                    <span className={styles.typeTag}>{j.type}</span>
-                  </td>
-                  <td>
-                    <span className={styles.locText}>{j.location}</span>
-                  </td>
-                  <td>
-                    <div className={styles.statusCell}>
-                      <button
-                        type="button"
-                        className={[
-                          styles.toggleIconBtn,
-                          j.status === "open" ? styles.activeIcon : styles.inactiveIcon,
-                        ].join(" ")}
-                        onClick={() => handleToggleStatus(j)}
-                        title={j.status === "open" ? "Click to close role" : "Click to open role"}
-                      >
-                        {j.status === "open" ? <Eye size={16} /> : <EyeOff size={16} />}
-                      </button>
-
-                      <button
-                        type="button"
-                        className={[
-                          styles.toggleIconBtn,
-                          j.is_featured ? styles.starActive : styles.starInactive,
-                        ].join(" ")}
-                        onClick={() => handleToggleFeatured(j)}
-                        title={j.is_featured ? "Featured spotlight" : "Click to feature"}
-                      >
-                        <Star size={16} />
-                      </button>
-                    </div>
-                  </td>
-                  <td>
-                    <div className={styles.rowActions}>
-                      <button
-                        type="button"
-                        className={styles.editBtn}
-                        onClick={() => handleOpenEditJob(j)}
-                        title="Edit Full Role"
-                      >
-                        <Edit2 size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.delBtn}
-                        onClick={() => handleDeleteJob(j.id, j.title)}
-                        title="Delete Role"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+              {jobs.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className={styles.emptyTableTd}>
+                    <div className={styles.emptyTableState}>
+                      <Briefcase size={28} className={styles.emptyTableIcon} />
+                      <span>
+                        No open job positions found. Click &quot;+ Add New Role&quot; to create one.
+                      </span>
                     </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                jobs.map((j) => (
+                  <tr
+                    key={j.id}
+                    className={j.status !== "open" ? styles.inactiveRow : ""}
+                  >
+                    <td className={styles.orderCell}>{j.order_index ?? "—"}</td>
+                    <td className={styles.titleTd}>
+                      <div className={styles.titleCol}>
+                        <span className={styles.jobName} title={j.title}>
+                          {j.title || "Untitled Role"}
+                        </span>
+                        {j.summary ? (
+                          <span
+                            className={styles.jobSummarySnippet}
+                            title={j.summary}
+                          >
+                            {j.summary}
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className={styles.tdCenter}>
+                      <span className={styles.departmentTag}>
+                        {j.department || "General"}
+                      </span>
+                    </td>
+                    <td className={styles.tdCenter}>
+                      <span className={styles.typeTag}>
+                        {j.type || "Full-time"}
+                      </span>
+                    </td>
+                    <td className={styles.tdCenter}>
+                      <span className={styles.workplaceTag}>
+                        {j.workplace || "Remote"}
+                      </span>
+                    </td>
+                    <td className={styles.locTd}>
+                      <span className={styles.locText} title={j.location}>
+                        {j.location || "—"}
+                      </span>
+                    </td>
+                    <td className={styles.tdCenter}>
+                      <div className={styles.statusCell}>
+                        <button
+                          type="button"
+                          className={[
+                            styles.toggleIconBtn,
+                            j.status === "open"
+                              ? styles.activeIcon
+                              : styles.inactiveIcon,
+                          ].join(" ")}
+                          onClick={() => handleToggleStatus(j)}
+                          title={
+                            j.status === "open"
+                              ? "Status: Active / Open (Click to close)"
+                              : "Status: Closed (Click to activate)"
+                          }
+                        >
+                          {j.status === "open" ? (
+                            <Eye size={15} />
+                          ) : (
+                            <EyeOff size={15} />
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          className={[
+                            styles.toggleIconBtn,
+                            j.is_featured
+                              ? styles.starActive
+                              : styles.starInactive,
+                          ].join(" ")}
+                          onClick={() => handleToggleFeatured(j)}
+                          title={
+                            j.is_featured
+                              ? "Featured Spotlight (Click to remove)"
+                              : "Click to feature"
+                          }
+                        >
+                          <Star size={15} />
+                        </button>
+                      </div>
+                    </td>
+                    <td className={styles.tdCenter}>
+                      <div className={styles.rowActions}>
+                        <button
+                          type="button"
+                          className={styles.editBtn}
+                          onClick={() => handleOpenEditJob(j)}
+                          title="Edit Full Role"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.delBtn}
+                          onClick={() => handleDeleteJob(j.id, j.title)}
+                          title="Delete Role"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -1672,14 +1788,72 @@ export function AdminCareers({
 
                   <div className={styles.formGrid3}>
                     <div className={styles.formGroup}>
-                      <label>Department *</label>
-                      <input
-                        type="text"
+                      <div className={styles.labelWithAction}>
+                        <label>Department *</label>
+                        {departmentsError && (
+                          <button
+                            type="button"
+                            onClick={fetchDepartments}
+                            className={styles.deptRetryBtn}
+                            title="Retry loading departments"
+                          >
+                            <RotateCw
+                              size={10}
+                              className={loadingDepartments ? styles.spinning : ""}
+                            />
+                            Retry
+                          </button>
+                        )}
+                      </div>
+                      <select
                         required
                         value={department}
-                        onChange={(e) => setDepartment(e.target.value)}
-                        placeholder="e.g. Content & Editorial"
-                      />
+                        onChange={(e) => {
+                          setDepartment(e.target.value);
+                          if (formError) setFormError(null);
+                        }}
+                        className={styles.selectInput}
+                        disabled={
+                          loadingDepartments ||
+                          (departments.length === 0 && !editingJob?.department)
+                        }
+                      >
+                        {loadingDepartments ? (
+                          <option value="" disabled>
+                            Loading departments...
+                          </option>
+                        ) : departmentsError && departments.length === 0 ? (
+                          <option value="" disabled>
+                            Unable to load departments
+                          </option>
+                        ) : departments.length === 0 ? (
+                          <option value="" disabled>
+                            No departments available
+                          </option>
+                        ) : (
+                          <>
+                            <option value="" disabled>
+                              Select Department
+                            </option>
+                            {/* Retain current department safely if editing a legacy job */}
+                            {department &&
+                              !departments.some(
+                                (d) =>
+                                  d.name.toLowerCase() ===
+                                  department.toLowerCase(),
+                              ) && (
+                                <option value={department}>
+                                  {department} (Current)
+                                </option>
+                              )}
+                            {departments.map((dept) => (
+                              <option key={dept.id} value={dept.name}>
+                                {dept.name} {dept.code ? `(${dept.code})` : ""}
+                              </option>
+                            ))}
+                          </>
+                        )}
+                      </select>
                     </div>
 
                     <div className={styles.formGroup}>

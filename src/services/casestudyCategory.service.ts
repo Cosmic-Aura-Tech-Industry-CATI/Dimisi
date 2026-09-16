@@ -35,19 +35,19 @@ export interface BackendCasestudyCategorySingleResponse {
 
 export interface CreateCasestudyCategoryPayload {
   name: string;
-  description?: string;
+  description?: string | undefined;
   displayOrder: number;
-  isActive?: boolean;
-  status?: "active" | "inactive";
-  slug?: string;
+  isActive?: boolean | undefined;
+  status?: "active" | "inactive" | undefined;
+  slug?: string | undefined;
 }
 
 export interface UpdateCasestudyCategoryPayload {
-  name?: string;
-  description?: string;
-  displayOrder?: number;
-  isActive?: boolean;
-  status?: "active" | "inactive";
+  name?: string | undefined;
+  description?: string | undefined;
+  displayOrder?: number | undefined;
+  isActive?: boolean | undefined;
+  status?: "active" | "inactive" | undefined;
 }
 
 /**

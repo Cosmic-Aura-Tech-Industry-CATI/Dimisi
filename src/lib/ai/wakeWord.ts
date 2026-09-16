@@ -6,8 +6,8 @@
 export interface WakeDetectionResult {
   activated: boolean;
   isWakeOnly: boolean;
-  phrase?: string;
-  remainingQuery?: string;
+  phrase?: string | undefined;
+  remainingQuery?: string | undefined;
 }
 
 // Regex matching common wake invocations with flexible prefixes and punctuation

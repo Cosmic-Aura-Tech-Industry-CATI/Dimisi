@@ -21,6 +21,7 @@ export interface ProjectItem {
   title: string;
   type: ProjectType; // "work" (Client Solutions) | "product" (In-House Products)
   category: string; // e.g. "Travel · Website", "Social Platform · Website", "Home Services · Web App", "Conference · Website"
+  category_id?: string | undefined;
   tagline: string;
   overview: string;
   challenge: string;
@@ -46,6 +47,7 @@ export interface ProjectInput {
   slug?: string | undefined;
   type: ProjectType;
   category: string;
+  category_id?: string | undefined;
   tagline?: string | undefined;
   overview: string;
   challenge: string;

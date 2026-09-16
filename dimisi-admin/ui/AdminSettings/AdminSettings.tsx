@@ -8,17 +8,17 @@ export function AdminSettings({
   settings,
   onRefresh,
 }: {
-  settings: ReviewSettings;
+  settings?: ReviewSettings;
   onRefresh: () => void;
 }) {
   const saveSettings = updateReviewSettings;
 
-  const [notifyOnSubmit, setNotifyOnSubmit] = useState(settings.notify_on_submit);
-  const [notifyOnApprove, setNotifyOnApprove] = useState(settings.notify_on_approve);
-  const [notifyOnReject, setNotifyOnReject] = useState(settings.notify_on_reject);
-  const [notifyOnReport, setNotifyOnReport] = useState(settings.notify_on_report);
-  const [notifySummary, setNotifySummary] = useState(settings.notify_campaign_summary);
-  const [email, setEmail] = useState(settings.notify_email || "");
+  const [notifyOnSubmit, setNotifyOnSubmit] = useState(settings?.notify_on_submit ?? true);
+  const [notifyOnApprove, setNotifyOnApprove] = useState(settings?.notify_on_approve ?? true);
+  const [notifyOnReject, setNotifyOnReject] = useState(settings?.notify_on_reject ?? false);
+  const [notifyOnReport, setNotifyOnReport] = useState(settings?.notify_on_report ?? true);
+  const [notifySummary, setNotifySummary] = useState(settings?.notify_campaign_summary ?? true);
+  const [email, setEmail] = useState(settings?.notify_email || "");
 
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -29,15 +29,15 @@ export function AdminSettings({
       try {
         const res = await saveSettings({
           data: {
-            notifyOnSubmit,
-            notifyOnApprove,
-            notifyOnReject,
-            notifyOnReport,
-            notifyCampaignSummary: notifySummary,
-            notifyEmail: email,
+            notify_on_submit: notifyOnSubmit,
+            notify_on_approve: notifyOnApprove,
+            notify_on_reject: notifyOnReject,
+            notify_on_report: notifyOnReport,
+            notify_campaign_summary: notifySummary,
+            notify_email: email,
           },
         });
-        setMessage(res.message);
+        setMessage(res.message || "Notification preferences updated.");
         onRefresh();
         setTimeout(() => setMessage(null), 3000);
       } catch (err) {

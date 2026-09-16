@@ -62,33 +62,33 @@ export interface JobApplicationItem {
   email: string;
   phone: string;
   location: string;
-  portfolio_url?: string;
-  linkedin_url?: string;
-  github_url?: string;
-  cover_letter?: string;
-  additional_info?: string;
+  portfolio_url?: string | undefined;
+  linkedin_url?: string | undefined;
+  github_url?: string | undefined;
+  cover_letter?: string | undefined;
+  additional_info?: string | undefined;
   resume_name: string;
   resume_size: number;
   resume_type: string;
   resume_data_url: string;
   status: ApplicationStatus;
   applied_at: string;
-  notes?: string;
+  notes?: string | undefined;
 }
 
 export interface JobApplicationInput {
   job_id: string;
   job_title: string;
-  job_department?: string;
+  job_department?: string | undefined;
   full_name: string;
   email: string;
   phone: string;
   location: string;
-  portfolio_url?: string;
-  linkedin_url?: string;
-  github_url?: string;
-  cover_letter?: string;
-  additional_info?: string;
+  portfolio_url?: string | undefined;
+  linkedin_url?: string | undefined;
+  github_url?: string | undefined;
+  cover_letter?: string | undefined;
+  additional_info?: string | undefined;
   resume_name: string;
   resume_size: number;
   resume_type: string;

@@ -51,9 +51,11 @@ export function toPublicReview(row: AdminReview): PublicReview {
     is_verified: row.is_verified,
     rating: row.rating,
     review_text: row.review_text,
-    customer_photo_url: row.customer_photo_url,
+    photo_url: row.customer_photo_url ?? row.photo_url ?? null,
+    customer_photo_url: row.customer_photo_url ?? row.photo_url ?? null,
     customer_location: row.customer_location,
     is_featured: row.is_featured,
+    published_at: row.submitted_at ?? null,
     submitted_at: row.submitted_at,
   };
 }

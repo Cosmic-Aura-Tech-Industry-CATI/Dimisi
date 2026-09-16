@@ -59,8 +59,6 @@ export function ServicesPage() {
   } = useQuery({
     queryKey: ["publicServices"],
     queryFn: () => getPublicServicesData(),
-    staleTime: 1000 * 15,
-    refetchInterval: 1000 * 25,
   });
 
   const services = payload?.services || [];
@@ -361,7 +359,13 @@ export function ServicesPage() {
                 <div className={styles.industryCard}>
                   {/* Industry Image Banner */}
                   <div className={styles.indImageHolder}>
-                    <img src={ind.image_url} alt={ind.name} className={styles.indImg} />
+                    <img
+                      src={ind.image_url}
+                      alt={ind.name}
+                      className={styles.indImg}
+                      loading="lazy"
+                      decoding="async"
+                    />
                     <div className={styles.indImgOverlay} />
                     <span className={styles.indBadge}>{ind.badge}</span>
                   </div>

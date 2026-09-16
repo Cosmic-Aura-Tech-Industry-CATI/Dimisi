@@ -43,7 +43,6 @@ export function WorkDetailPage({ project }: WorkDetailPageProps) {
   const { data: payload } = useQuery({
     queryKey: ["publicWork"],
     queryFn: () => getPublicWorkData(),
-    staleTime: 1000 * 30,
   });
 
   const allProjects = payload?.projects || [];
@@ -267,7 +266,13 @@ export function WorkDetailPage({ project }: WorkDetailPageProps) {
                     tabIndex={0}
                     title="Click to view full screen"
                   >
-                    <img src={img.url} alt={img.caption || `Plate ${idx + 1}`} className={styles.galleryImg} />
+                    <img
+                      src={img.url}
+                      alt={img.caption || `Plate ${idx + 1}`}
+                      className={styles.galleryImg}
+                      loading="lazy"
+                      decoding="async"
+                    />
                     <div className={styles.galleryOverlay}>
                       <span className={styles.zoomPrompt}>
                         <Maximize2 size={16} />

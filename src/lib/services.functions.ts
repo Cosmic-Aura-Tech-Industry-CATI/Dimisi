@@ -37,29 +37,23 @@ export { isMongoId };
 
 export async function getPublicServicesData(): Promise<PublicServicesPayload> {
   let catItems = servicesStore.categoryItems;
-  try {
-    const apiCats = await getAllServiceCategoriesApi();
-    if (Array.isArray(apiCats) && apiCats.length > 0) {
-      catItems = apiCats;
-      servicesStore.setCategories(apiCats);
-    }
-  } catch (err) {
-    console.warn("Could not load live categories for public services:", err);
+
+  const [catRes, srvRes] = await Promise.allSettled([
+    getAllServiceCategoriesApi(),
+    getVisitorServicesApi().catch(() => getAllServicesApi()),
+  ]);
+
+  if (catRes.status === "fulfilled" && Array.isArray(catRes.value) && catRes.value.length > 0) {
+    catItems = catRes.value;
+    servicesStore.setCategories(catItems);
+  } else if (catRes.status === "rejected") {
+    console.warn("Could not load live categories for public services:", catRes.reason);
   }
 
-  try {
-    let remoteServices: CompanyService[] = [];
-    try {
-      remoteServices = await getVisitorServicesApi(undefined, catItems);
-    } catch {
-      remoteServices = await getAllServicesApi(undefined, catItems);
-    }
-
-    if (Array.isArray(remoteServices)) {
-      servicesStore.setServices(remoteServices);
-    }
-  } catch (err) {
-    console.warn("Could not load live services for public services:", err);
+  if (srvRes.status === "fulfilled" && Array.isArray(srvRes.value) && srvRes.value.length > 0) {
+    servicesStore.setServices(srvRes.value);
+  } else if (srvRes.status === "rejected") {
+    console.warn("Could not load live services for public services:", srvRes.reason);
   }
 
   const activeCats = catItems.filter((c) => c.status === "active");
@@ -238,24 +232,29 @@ export async function deleteServiceCategoryFn({
     if (isMongoId(data.id)) {
       await deleteServiceCategoryApi(data.id);
     } else {
-      try {
-        const currentCats = await getAllServiceCategoriesApi();
-        const localCat = servicesStore.categoryItems.find((c) => c.id === data.id);
-        if (localCat) {
-          const found = currentCats.find((c) => c.name.toLowerCase() === localCat.name.toLowerCase());
-          if (found && isMongoId(found.id)) {
-            await deleteServiceCategoryApi(found.id);
-          }
+      const currentCats = await getAllServiceCategoriesApi();
+      const localCat = servicesStore.categoryItems.find((c) => c.id === data.id);
+      if (localCat) {
+        const found = currentCats.find(
+          (c) =>
+            c.id === data.id ||
+            c.name.toLowerCase() === localCat.name.toLowerCase() ||
+            c.slug.toLowerCase() === localCat.slug.toLowerCase(),
+        );
+        if (found && isMongoId(found.id)) {
+          await deleteServiceCategoryApi(found.id);
         }
-      } catch {}
+      }
     }
   } catch (err: unknown) {
-    console.warn("Backend delete category warning:", err);
-    apiError = err instanceof Error ? err.message : "Failed to delete category.";
+    console.error("[Backend Delete Category Error]", err);
+    apiError = err instanceof Error ? err.message : "Failed to delete category from backend.";
+    return { success: false, error: apiError };
   }
 
+  // Only remove locally if backend deletion was successful
   servicesStore.deleteCategory(data.id);
-  return { success: !apiError, error: apiError || undefined };
+  return { success: true };
 }
 
 export async function getAdminServicesData(): Promise<{
@@ -266,26 +265,25 @@ export async function getAdminServicesData(): Promise<{
   categoryCounts: Record<string, number>;
 }> {
   let catItems = servicesStore.categoryItems;
+  let servicesList = servicesStore.services;
 
-  try {
-    const apiCats = await getAllServiceCategoriesApi();
-    if (apiCats && apiCats.length > 0) {
-      catItems = apiCats;
-      servicesStore.setCategories(apiCats);
-    }
-  } catch (err) {
-    console.warn("Could not fetch remote service categories for admin panel:", err);
+  const [catRes, srvRes] = await Promise.allSettled([
+    getAllServiceCategoriesApi(),
+    getAllServicesApi(),
+  ]);
+
+  if (catRes.status === "fulfilled" && Array.isArray(catRes.value) && catRes.value.length > 0) {
+    catItems = catRes.value;
+    servicesStore.setCategories(catItems);
+  } else if (catRes.status === "rejected") {
+    console.warn("Could not fetch remote service categories for admin panel:", catRes.reason);
   }
 
-  let servicesList = servicesStore.services;
-  try {
-    const remoteServices = await getAllServicesApi(undefined, catItems);
-    if (Array.isArray(remoteServices)) {
-      servicesList = remoteServices;
-      servicesStore.setServices(remoteServices);
-    }
-  } catch (err) {
-    console.warn("Could not fetch remote services for admin panel:", err);
+  if (srvRes.status === "fulfilled" && Array.isArray(srvRes.value)) {
+    servicesList = srvRes.value;
+    servicesStore.setServices(servicesList);
+  } else if (srvRes.status === "rejected") {
+    console.warn("Could not fetch remote services for admin panel:", srvRes.reason);
   }
 
   const activeCategories = catItems.filter((c) => c.status === "active").map((c) => c.name);
@@ -362,14 +360,30 @@ export async function deleteServiceFn({
   try {
     if (isMongoId(data.id)) {
       await deleteServiceApi(data.id);
+    } else {
+      const remoteServices = await getAllServicesApi();
+      const localSrv = servicesStore.services.find((s) => s.id === data.id);
+      if (localSrv) {
+        const found = remoteServices.find(
+          (s) =>
+            s.id === data.id ||
+            s.title.toLowerCase() === localSrv.title.toLowerCase() ||
+            s.slug.toLowerCase() === localSrv.slug.toLowerCase(),
+        );
+        if (found && isMongoId(found.id)) {
+          await deleteServiceApi(found.id);
+        }
+      }
     }
   } catch (err: unknown) {
-    console.warn("Backend delete service failed:", err);
-    apiError = err instanceof Error ? err.message : "Failed to delete service.";
+    console.error("[Backend Delete Service Error]", err);
+    apiError = err instanceof Error ? err.message : "Failed to delete service from backend.";
+    return { success: false, error: apiError };
   }
 
+  // Only remove locally if backend deletion was successful
   servicesStore.deleteService(data.id);
-  return { success: !apiError, error: apiError || undefined };
+  return { success: true };
 }
 
 export async function toggleServiceActivationFn({

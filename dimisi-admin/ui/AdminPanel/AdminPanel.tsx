@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, lazy, Suspense } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { ShieldAlert, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
@@ -7,20 +7,51 @@ import { AdminBackdrop } from "../AdminBackdrop/AdminBackdrop";
 import { AdminLogin } from "../AdminLogin/AdminLogin";
 import { AdminShell, type AdminTab } from "../AdminShell/AdminShell";
 import { AdminProfile } from "../AdminProfile/AdminProfile";
-import { AdminOverview as AdminOverviewView } from "../AdminOverview/AdminOverview";
-import { AdminAdmins } from "../AdminAdmins/AdminAdmins";
-import { AdminReviews } from "../AdminReviews/AdminReviews";
-import { AdminServices } from "../AdminServices/AdminServices";
-import { AdminWork } from "../AdminWork/AdminWork";
-import { AdminCareers } from "../AdminCareers/AdminCareers";
-import { AdminBlog } from "../AdminBlog/AdminBlog";
-import { AdminEvents } from "../AdminEvents/AdminEvents";
-import { AdminCampaigns } from "../AdminCampaigns/AdminCampaigns";
-import { AdminReports } from "../AdminReports/AdminReports";
-import { AdminAnalytics } from "../AdminAnalytics/AdminAnalytics";
-import { AdminLogs } from "../AdminLogs/AdminLogs";
-import { AdminSettings } from "../AdminSettings/AdminSettings";
-import { AdminLeads } from "../AdminLeads/AdminLeads";
+import { AdminTabSkeleton } from "../AdminTabSkeleton/AdminTabSkeleton";
+import { AdminErrorBoundary } from "../AdminErrorBoundary/AdminErrorBoundary";
+
+const AdminOverviewView = lazy(() =>
+  import("../AdminOverview/AdminOverview").then((m) => ({ default: m.AdminOverview }))
+);
+const AdminAdmins = lazy(() =>
+  import("../AdminAdmins/AdminAdmins").then((m) => ({ default: m.AdminAdmins }))
+);
+const AdminReviews = lazy(() =>
+  import("../AdminReviews/AdminReviews").then((m) => ({ default: m.AdminReviews }))
+);
+const AdminServices = lazy(() =>
+  import("../AdminServices/AdminServices").then((m) => ({ default: m.AdminServices }))
+);
+const AdminWork = lazy(() =>
+  import("../AdminWork/AdminWork").then((m) => ({ default: m.AdminWork }))
+);
+const AdminCareers = lazy(() =>
+  import("../AdminCareers/AdminCareers").then((m) => ({ default: m.AdminCareers }))
+);
+const AdminBlog = lazy(() =>
+  import("../AdminBlog/AdminBlog").then((m) => ({ default: m.AdminBlog }))
+);
+const AdminEvents = lazy(() =>
+  import("../AdminEvents/AdminEvents").then((m) => ({ default: m.AdminEvents }))
+);
+const AdminCampaigns = lazy(() =>
+  import("../AdminCampaigns/AdminCampaigns").then((m) => ({ default: m.AdminCampaigns }))
+);
+const AdminReports = lazy(() =>
+  import("../AdminReports/AdminReports").then((m) => ({ default: m.AdminReports }))
+);
+const AdminAnalytics = lazy(() =>
+  import("../AdminAnalytics/AdminAnalytics").then((m) => ({ default: m.AdminAnalytics }))
+);
+const AdminLogs = lazy(() =>
+  import("../AdminLogs/AdminLogs").then((m) => ({ default: m.AdminLogs }))
+);
+const AdminSettings = lazy(() =>
+  import("../AdminSettings/AdminSettings").then((m) => ({ default: m.AdminSettings }))
+);
+const AdminLeads = lazy(() =>
+  import("../AdminLeads/AdminLeads").then((m) => ({ default: m.AdminLeads }))
+);
 import { canAccessTab, getRoleMeta, type AdminRole } from "../../lib/rbac.shared";
 import {
   getAdminOverview,
@@ -50,17 +81,65 @@ import type { CompanyService, IndustrySector, ServiceCategoryItem } from "@/lib/
 import type { ProjectItem, WorkCategoryItem } from "@/lib/work.shared";
 import type {
   JobOpening,
+  JobApplicationItem,
   HiringProcessStep,
   CultureBenefit,
   CareersHeroConfig,
   CareersClosingCtaConfig,
 } from "@/lib/careers.shared";
 import type { BlogPostItem, BlogConfig, BlogCategoryItem } from "@/lib/blog.shared";
+import type { ReviewSettings, ReviewStats } from "@/lib/reviews.shared";
 import styles from "../styles/admin.module.css";
 
 type Tab = AdminTab;
 
+const DEFAULT_SETTINGS: ReviewSettings = {
+  id: true,
+  notify_on_submit: true,
+  notify_on_approve: true,
+  notify_on_reject: false,
+  notify_on_report: true,
+  notify_campaign_summary: true,
+  notify_email: null,
+};
+
+const DEFAULT_STATS: ReviewStats = {
+  total: 0,
+  totalReviews: 0,
+  average: 5,
+  averageRating: 5,
+  distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 },
+  clientTotal: 0,
+  clientAverage: 5,
+  employeeTotal: 0,
+  employeeAverage: 5,
+  pendingCount: 0,
+  approvedCount: 0,
+  rejectedCount: 0,
+  archivedCount: 0,
+  reviewsThisMonth: 0,
+  overallConversionRate: 0,
+  openReportsCount: 0,
+};
+
 /** DIMISI admin panel — reviews, campaigns, moderation, analytics, leads, admins with RBAC enforcement. */
+const DEFAULT_OVERVIEW: AdminOverview = {
+  isAdmin: true,
+  role: "super_admin",
+  stats: { users: 1, leads: 0, leadsToday: 0, notifyOptIn: 0 },
+  leads: [],
+  admins: [],
+  selfId: "",
+};
+
+const DEFAULT_REVIEWS: AdminDashboardData = {
+  reviews: [],
+  campaigns: [],
+  reports: [],
+  settings: DEFAULT_SETTINGS,
+  stats: DEFAULT_STATS,
+};
+
 export function AdminPanel() {
   const navigate = useNavigate();
   const { user, loading } = useAuth();
@@ -72,8 +151,49 @@ export function AdminPanel() {
   const loadCareersData = getAdminCareersData;
   const loadBlogData = getAdminBlogData;
 
-  const [data, setData] = useState<AdminOverview | null>(null);
-  const [reviewsData, setReviewsData] = useState<AdminDashboardData | null>(null);
+  const [tab, setTab] = useState<Tab>(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlTab = params.get("tab") as Tab;
+      if (urlTab) return urlTab;
+      if (window.location.pathname.endsWith("/logs")) return "logs";
+    }
+    return "overview";
+  });
+
+  const [data, setData] = useState<AdminOverview | null>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("dimisi_admin_session");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (parsed?.user) {
+            return {
+              isAdmin: true,
+              role: (parsed.user.role as AdminRole) || "admin",
+              stats: { users: 1, leads: 0, leadsToday: 0, notifyOptIn: 0 },
+              leads: [],
+              admins: [
+                {
+                  user_id: parsed.user.id || "usr-me",
+                  email: parsed.user.email || null,
+                  full_name: parsed.user.full_name || parsed.user.name || "Administrator",
+                  designation: "Administrator",
+                  role: (parsed.user.role as AdminRole) || "admin",
+                  is_active: true,
+                  created_at: new Date().toISOString(),
+                },
+              ],
+              selfId: parsed.user.id || "",
+            };
+          }
+        }
+      } catch {}
+    }
+    return null;
+  });
+
+  const [reviewsData, setReviewsData] = useState<AdminDashboardData>(() => DEFAULT_REVIEWS);
   const [eventsData, setEventsData] = useState<{
     events: CompanyEvent[];
     gallery: EventGalleryItem[];
@@ -151,16 +271,6 @@ export function AdminPanel() {
     categoryItems: [],
   });
   const [error, setError] = useState<string | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState<Tab>(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const urlTab = params.get("tab") as Tab;
-      if (urlTab) return urlTab;
-      if (window.location.pathname.endsWith("/logs")) return "logs";
-    }
-    return "overview";
-  });
 
   const refreshReviews = useCallback(() => {
     loadReviewsData()
@@ -204,56 +314,117 @@ export function AdminPanel() {
       .catch((err) => console.warn("Failed to refresh overview data", err));
   }, [load]);
 
+  const handleTabChange = useCallback(
+    (newTab: Tab) => {
+      setTab(newTab);
+      // Fetch fresh data immediately for the selected tab
+      if (newTab === "services") {
+        refreshServices();
+      } else if (newTab === "work") {
+        refreshWork();
+      } else if (newTab === "careers") {
+        refreshCareers();
+      } else if (newTab === "blog") {
+        refreshBlog();
+      } else if (newTab === "events") {
+        refreshEvents();
+      } else if (
+        newTab === "reviews" ||
+        newTab === "campaigns" ||
+        newTab === "reports" ||
+        newTab === "analytics"
+      ) {
+        refreshReviews();
+      } else if (newTab === "overview" || newTab === "admins" || newTab === "leads") {
+        refreshOverview();
+      }
+    },
+    [refreshServices, refreshWork, refreshCareers, refreshBlog, refreshEvents, refreshReviews, refreshOverview],
+  );
+
   useEffect(() => {
     if (!user) {
       setData(null);
-      setReviewsData(null);
       return;
     }
     let active = true;
-    setBusy(true);
-    setError(null);
 
-    Promise.allSettled([
-      load(),
-      loadReviewsData(),
-      loadEventsData(),
-      loadServicesData(),
-      loadWorkData(),
-      loadCareersData(),
-      loadBlogData(),
-    ])
-      .then(([resOverview, resReviews, resEvents, resServices, resWork, resCareers, resBlog]) => {
-        if (active) {
-          if (resOverview.status === "fulfilled") setData(resOverview.value);
-          if (resReviews.status === "fulfilled") setReviewsData(resReviews.value);
-          if (resEvents.status === "fulfilled") setEventsData(resEvents.value);
-          if (resServices.status === "fulfilled") setServicesData(resServices.value);
-          if (resWork.status === "fulfilled") setWorkData(resWork.value);
-          if (resCareers.status === "fulfilled") setCareersData(resCareers.value);
-          if (resBlog.status === "fulfilled") setBlogData(resBlog.value);
+    // 1. High priority: Fetch active tab first for instant interactive responsiveness
+    const loadActiveTab = async () => {
+      try {
+        if (tab === "services") {
+          const res = await loadServicesData();
+          if (active) setServicesData(res);
+        } else if (tab === "work") {
+          const res = await loadWorkData();
+          if (active) setWorkData(res);
+        } else if (tab === "careers") {
+          const res = await loadCareersData();
+          if (active) setCareersData(res);
+        } else if (tab === "blog") {
+          const res = await loadBlogData();
+          if (active) setBlogData(res);
+        } else if (tab === "events") {
+          const res = await loadEventsData();
+          if (active) setEventsData(res);
+        } else if (tab === "reviews" || tab === "campaigns" || tab === "reports" || tab === "analytics") {
+          const res = await loadReviewsData();
+          if (active) setReviewsData(res);
+        } else {
+          const [resOverview, resReviews] = await Promise.allSettled([load(), loadReviewsData()]);
+          if (active) {
+            if (resOverview.status === "fulfilled") setData(resOverview.value);
+            if (resReviews.status === "fulfilled") setReviewsData(resReviews.value);
+          }
         }
-      })
-      .catch((err: unknown) => {
-        console.warn("Admin panel non-fatal data fetch warning:", err);
-      })
-      .finally(() => {
-        if (active) setBusy(false);
-      });
+      } catch (err) {
+        console.warn("Active tab data fetch warning:", err);
+      }
+    };
+
+    // 2. Progressive background hydration for secondary modules
+    const hydrateBackground = async () => {
+      await loadActiveTab();
+      if (!active) return;
+
+      // Ensure overview core is loaded
+      if (tab !== "overview") {
+        Promise.allSettled([load(), loadReviewsData()]).then(([resOverview, resReviews]) => {
+          if (active) {
+            if (resOverview.status === "fulfilled") setData(resOverview.value);
+            if (resReviews.status === "fulfilled") setReviewsData(resReviews.value);
+          }
+        });
+      }
+
+      // Background fetch remaining tabs
+      Promise.allSettled([
+        loadEventsData(),
+        loadServicesData(),
+        loadWorkData(),
+        loadCareersData(),
+        loadBlogData(),
+      ])
+        .then(([resEvents, resServices, resWork, resCareers, resBlog]) => {
+          if (active) {
+            if (resEvents.status === "fulfilled") setEventsData(resEvents.value);
+            if (resServices.status === "fulfilled") setServicesData(resServices.value);
+            if (resWork.status === "fulfilled") setWorkData(resWork.value);
+            if (resCareers.status === "fulfilled") setCareersData(resCareers.value);
+            if (resBlog.status === "fulfilled") setBlogData(resBlog.value);
+          }
+        })
+        .catch((err) => {
+          console.warn("Admin panel background hydration warning:", err);
+        });
+    };
+
+    hydrateBackground();
 
     return () => {
       active = false;
     };
-  }, [
-    user,
-    load,
-    loadReviewsData,
-    loadEventsData,
-    loadServicesData,
-    loadWorkData,
-    loadCareersData,
-    loadBlogData,
-  ]);
+  }, [user, tab]);
 
   async function signOut() {
     try {
@@ -278,17 +449,6 @@ export function AdminPanel() {
       <>
         <AdminBackdrop />
         <AdminLogin />
-      </>
-    );
-  }
-
-  if (busy && (!data || !reviewsData)) {
-    return (
-      <>
-        <AdminBackdrop />
-        <section className={styles.center}>
-          <p className={styles.sub}>Loading admin control room…</p>
-        </section>
       </>
     );
   }
@@ -331,20 +491,30 @@ export function AdminPanel() {
     );
   }
 
-  if (!data || !reviewsData) {
-    return (
-      <>
-        <AdminBackdrop />
-        <section className={styles.center}>
-          <p className={styles.sub}>Loading admin control room…</p>
-        </section>
-      </>
-    );
-  }
+  const currentData: AdminOverview = data ?? {
+    isAdmin: true,
+    role: "super_admin",
+    stats: { users: 1, leads: 0, leadsToday: 0, notifyOptIn: 0 },
+    leads: [],
+    admins: user
+      ? [
+          {
+            user_id: user.id || "usr-me",
+            email: user.email || null,
+            full_name: (user as any).user_metadata?.full_name || (user as any).name || "Administrator",
+            designation: "Administrator",
+            role: "super_admin",
+            is_active: true,
+            created_at: new Date().toISOString(),
+          },
+        ]
+      : [],
+    selfId: user?.id || "usr-me",
+  };
 
-  const userRole = data.role ?? "admin";
+  const userRole = currentData.role ?? "admin";
   const roleMeta = getRoleMeta(userRole);
-  const self = data.admins.find((a) => a.user_id === data.selfId);
+  const self = (currentData.admins || []).find((a) => a.user_id === currentData.selfId);
 
   // Check if current tab is permitted for user's role
   const isTabPermitted = canAccessTab(userRole, tab);
@@ -354,14 +524,14 @@ export function AdminPanel() {
       <AdminBackdrop />
       <AdminShell
         tab={tab}
-        onTab={setTab}
+        onTab={handleTabChange}
         onSignOut={signOut}
         userRole={userRole}
         pendingReviewsCount={reviewsData.stats.pendingCount}
         openReportsCount={reviewsData.stats.openReportsCount}
         profile={
           <AdminProfile
-            userId={data.selfId}
+            userId={currentData.selfId}
             email={user.email}
             fullName={self?.full_name ?? null}
             designation={self?.designation ?? null}
@@ -384,7 +554,7 @@ export function AdminPanel() {
             <button
               type="button"
               className={styles.btn}
-              onClick={() => setTab("overview")}
+              onClick={() => handleTabChange("overview")}
               style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", margin: "0 auto" }}
             >
               <ArrowLeft size={16} />
@@ -392,134 +562,138 @@ export function AdminPanel() {
             </button>
           </div>
         ) : (
-          <>
-            {/* OVERVIEW TAB */}
-            {tab === "overview" && (
-              <AdminOverviewView
-                overviewData={data}
-                reviewsData={reviewsData}
-                servicesData={servicesData}
-                workData={workData}
-                careersData={careersData}
-                blogData={blogData}
-                eventsData={eventsData}
-                currentUser={{
-                  id: data.selfId,
-                  email: user.email,
-                  fullName: self?.full_name ?? null,
-                  designation: self?.designation ?? null,
-                  role: userRole,
-                }}
-                onTab={setTab}
-                onRefreshReviews={refreshReviews}
-              />
-            )}
+          <AdminErrorBoundary tab={tab} onResetTab={() => handleTabChange("overview")}>
+            <Suspense fallback={<AdminTabSkeleton tab={tab} />}>
+              {/* OVERVIEW TAB */}
+              {tab === "overview" && (
+                <AdminOverviewView
+                  overviewData={currentData}
+                  reviewsData={reviewsData}
+                  servicesData={servicesData}
+                  workData={workData}
+                  careersData={careersData}
+                  blogData={blogData}
+                  eventsData={eventsData}
+                  currentUser={{
+                    id: currentData.selfId,
+                    email: user.email,
+                    fullName: self?.full_name ?? null,
+                    designation: self?.designation ?? null,
+                    role: userRole,
+                  }}
+                  onTab={handleTabChange}
+                  onRefreshReviews={refreshReviews}
+                />
+              )}
 
-            {/* SERVICES & SECTORS MANAGEMENT TAB */}
-            {tab === "services" && (
-              <AdminServices
-                services={servicesData.services}
-                industries={servicesData.industries}
-                categoryItems={servicesData.categoryItems}
-                categoryCounts={servicesData.categoryCounts}
-                onRefresh={refreshServices}
-              />
-            )}
+              {/* SERVICES & SECTORS MANAGEMENT TAB */}
+              {tab === "services" && (
+                <AdminServices
+                  services={servicesData.services || []}
+                  industries={servicesData.industries || []}
+                  categoryItems={servicesData.categoryItems || []}
+                  categoryCounts={servicesData.categoryCounts || {}}
+                  onRefresh={refreshServices}
+                />
+              )}
 
-            {/* OUR WORK & PRODUCTS CASE STUDIES TAB */}
-            {tab === "work" && (
-              <AdminWork
-                projects={workData.projects}
-                categoryItems={workData.categoryItems}
-                categoryCounts={workData.categoryCounts}
-                onRefresh={refreshWork}
-              />
-            )}
+              {/* OUR WORK & PRODUCTS CASE STUDIES TAB */}
+              {tab === "work" && (
+                <AdminWork
+                  projects={workData.projects || []}
+                  categoryItems={workData.categoryItems || []}
+                  categoryCounts={workData.categoryCounts || {}}
+                  onRefresh={refreshWork}
+                />
+              )}
 
-            {/* CAREERS & RECRUITMENT MANAGEMENT TAB */}
-            {tab === "careers" && (
-              <AdminCareers
-                jobs={careersData.jobs}
-                applications={careersData.applications || []}
-                hiringSteps={careersData.hiring_steps}
-                benefits={careersData.benefits}
-                hero={careersData.hero}
-                closingCta={careersData.closing_cta}
-                onRefresh={refreshCareers}
-              />
-            )}
+              {/* CAREERS & RECRUITMENT MANAGEMENT TAB */}
+              {tab === "careers" && (
+                <AdminCareers
+                  jobs={careersData.jobs || []}
+                  applications={careersData.applications || []}
+                  hiringSteps={careersData.hiring_steps || []}
+                  benefits={careersData.benefits || []}
+                  hero={careersData.hero}
+                  closingCta={careersData.closing_cta}
+                  onRefresh={refreshCareers}
+                />
+              )}
 
-            {/* BLOG & JOURNAL EDITORIAL TAB */}
-            {tab === "blog" && (
-              <AdminBlog
-                posts={blogData.posts}
-                config={blogData.config}
-                categories={blogData.categories}
-                categoryItems={blogData.categoryItems}
-                onRefresh={refreshBlog}
-              />
-            )}
+              {/* BLOG & JOURNAL EDITORIAL TAB */}
+              {tab === "blog" && (
+                <AdminBlog
+                  posts={blogData.posts || []}
+                  config={blogData.config}
+                  categories={blogData.categories || []}
+                  categoryItems={blogData.categoryItems || []}
+                  onRefresh={refreshBlog}
+                />
+              )}
 
-            {/* EVENTS & GALLERY MANAGEMENT TAB */}
-            {tab === "events" && (
-              <AdminEvents
-                events={eventsData.events}
-                gallery={eventsData.gallery}
-                categoryItems={eventsData.categoryItems}
-                categoryCounts={eventsData.categoryCounts}
-                onRefresh={refreshEvents}
-              />
-            )}
+              {/* EVENTS & GALLERY MANAGEMENT TAB */}
+              {tab === "events" && (
+                <AdminEvents
+                  events={eventsData.events || []}
+                  gallery={eventsData.gallery || []}
+                  categoryItems={eventsData.categoryItems || []}
+                  categoryCounts={eventsData.categoryCounts || {}}
+                  onRefresh={refreshEvents}
+                />
+              )}
 
-            {/* REVIEWS MANAGEMENT TAB */}
-            {tab === "reviews" && (
-              <AdminReviews reviews={reviewsData.reviews} onRefresh={refreshReviews} />
-            )}
+              {/* REVIEWS MANAGEMENT TAB */}
+              {tab === "reviews" && (
+                <AdminReviews reviews={reviewsData.reviews || []} onRefresh={refreshReviews} />
+              )}
 
-            {/* CAMPAIGNS & QR CODE TAB */}
-            {tab === "campaigns" && (
-              <AdminCampaigns campaigns={reviewsData.campaigns} onRefresh={refreshReviews} />
-            )}
+              {/* CAMPAIGNS & QR CODE TAB */}
+              {tab === "campaigns" && (
+                <AdminCampaigns campaigns={reviewsData.campaigns || []} onRefresh={refreshReviews} />
+              )}
 
-            {/* MODERATION QUEUE / REPORTS TAB */}
-            {tab === "reports" && (
-              <AdminReports reports={reviewsData.reports} onRefresh={refreshReviews} />
-            )}
+              {/* MODERATION QUEUE / REPORTS TAB */}
+              {tab === "reports" && (
+                <AdminReports reports={reviewsData.reports || []} onRefresh={refreshReviews} />
+              )}
 
-            {/* ANALYTICS TAB */}
-            {tab === "analytics" && (
-              <AdminAnalytics data={reviewsData} />
-            )}
+              {/* ANALYTICS TAB */}
+              {tab === "analytics" && (
+                <AdminAnalytics data={reviewsData} />
+              )}
 
-            {/* ADMIN LOGS TAB */}
-            {tab === "logs" && (
-              <AdminLogs currentUserRole={userRole} />
-            )}
+              {/* ADMIN LOGS TAB */}
+              {tab === "logs" && (
+                <AdminLogs currentUserRole={userRole} />
+              )}
 
-            {/* SETTINGS TAB */}
-            {tab === "settings" && (
-              <AdminSettings settings={reviewsData.settings} onRefresh={refreshReviews} />
-            )}
+              {/* SETTINGS TAB */}
+              {tab === "settings" && (
+                <AdminSettings settings={reviewsData.settings || DEFAULT_SETTINGS} onRefresh={refreshReviews} />
+              )}
 
-            {/* LEADS & VISITOR INTELLIGENCE TAB */}
-            {tab === "leads" && (
-              <AdminLeads
-                initialLeads={data.leads as any}
-                currentUserRole={userRole}
-                onRefreshOverview={refreshOverview}
-              />
-            )}
+              {/* LEADS & VISITOR INTELLIGENCE TAB */}
+              {tab === "leads" && (
+                <AdminLeads
+                  initialLeads={(currentData.leads || []) as any}
+                  currentUserRole={userRole}
+                  onRefreshOverview={refreshOverview}
+                />
+              )}
 
-            {/* ADMINS TAB */}
-            {tab === "admins" && (
-              <AdminAdmins
-                admins={data.admins}
-                selfId={data.selfId}
-                currentUserRole={userRole}
-                onAdmins={(next) => setData((prev) => (prev ? { ...prev, admins: next } : prev))}
-              />
-            )}
-          </>
+              {/* ADMINS TAB */}
+              {tab === "admins" && (
+                <AdminAdmins
+                  admins={currentData.admins || []}
+                  selfId={currentData.selfId || ""}
+                  currentUserRole={userRole}
+                  onAdmins={(next) =>
+                    setData((prev) => (prev ? { ...prev, admins: next } : { ...currentData, admins: next }))
+                  }
+                />
+              )}
+            </Suspense>
+          </AdminErrorBoundary>
         )}
       </AdminShell>
     </>

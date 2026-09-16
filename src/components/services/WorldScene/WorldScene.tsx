@@ -35,11 +35,18 @@ function Core({ motif, pointer }: { motif: WorldMotif; pointer: React.RefObject<
     }
   }, [motif]);
 
+  useEffect(() => {
+    return () => {
+      geo.dispose();
+    };
+  }, [geo]);
+
   useFrame((state, delta) => {
     const g = group.current;
     if (!g) return;
+    const clampedDelta = Math.min(0.08, delta);
     const t = state.clock.elapsedTime;
-    g.rotation.y += delta * 0.35;
+    g.rotation.y += clampedDelta * 0.35;
     g.rotation.x = Math.sin(t * 0.3) * 0.18 + (pointer.current?.y ?? 0) * 0.25;
     g.rotation.z = (pointer.current?.x ?? 0) * 0.12;
     g.position.y = Math.sin(t * 0.7) * 0.12;
@@ -141,32 +148,48 @@ function Dust({ count = 700 }: { count?: number }) {
     return g;
   }, [count]);
 
+  useEffect(() => {
+    return () => {
+      geometry.dispose();
+    };
+  }, [geometry]);
+
+  const material = useMemo(
+    () =>
+      new THREE.PointsMaterial({
+        size: 0.045,
+        sizeAttenuation: true,
+        color: GOLD,
+        transparent: true,
+        opacity: 0.75,
+        depthWrite: false,
+        blending: THREE.AdditiveBlending,
+      }),
+    [],
+  );
+
+  useEffect(() => {
+    return () => {
+      material.dispose();
+    };
+  }, [material]);
+
   useFrame((_, delta) => {
     const p = pts.current;
     if (!p) return;
+    const clampedDelta = Math.min(0.08, delta);
     const attr = p.geometry.getAttribute("position") as THREE.BufferAttribute;
+    if (!attr) return;
     const arr = attr.array as Float32Array;
     for (let i = 2; i < arr.length; i += 3) {
-      let z = arr[i]! + delta * 1.6;
+      let z = arr[i]! + clampedDelta * 1.6;
       if (z > 4) z -= 30;
       arr[i] = z;
     }
     attr.needsUpdate = true;
   });
 
-  return (
-    <points ref={pts} geometry={geometry}>
-      <pointsMaterial
-        size={0.045}
-        sizeAttenuation
-        color={GOLD}
-        transparent
-        opacity={0.75}
-        depthWrite={false}
-        blending={THREE.AdditiveBlending}
-      />
-    </points>
-  );
+  return <points ref={pts} geometry={geometry} material={material} />;
 }
 
 function Rig({ pointer }: { pointer: React.RefObject<{ x: number; y: number }> }) {

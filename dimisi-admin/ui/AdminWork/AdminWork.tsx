@@ -166,8 +166,10 @@ export function AdminWork({
   }, []);
 
   useEffect(() => {
-    refreshProjects();
-  }, [refreshProjects]);
+    if (!projects || projects.length === 0) {
+      refreshProjects();
+    }
+  }, [projects, refreshProjects]);
 
   useEffect(() => {
     if (projects && Array.isArray(projects)) {
@@ -1290,7 +1292,7 @@ export function AdminWork({
                       <button
                         type="button"
                         className={styles.emptyAddBtn}
-                        onClick={() => handleOpenCreate(activeTabFilter === "product" ? "product" : "work")}
+                        onClick={() => handleOpenCreate((activeTabFilter as string) === "product" ? "product" : "work")}
                       >
                         <Plus size={14} />
                         <span>Add New Case Study</span>
@@ -1310,6 +1312,7 @@ export function AdminWork({
                         alt={p.title}
                         className={styles.thumbImg}
                         loading="lazy"
+                        decoding="async"
                         onError={(e) => {
                           (e.currentTarget as HTMLElement).style.display = "none";
                           const fallback = e.currentTarget.nextElementSibling as HTMLElement | null;
@@ -2154,6 +2157,8 @@ export function AdminWork({
                               src={coverPreviewUrl}
                               alt="Cover Preview"
                               className={styles.dropzonePreviewImg}
+                              loading="lazy"
+                              decoding="async"
                             />
                             <div className={styles.previewMetaRow}>
                               <span className={styles.fileInfoBadge}>
@@ -2317,7 +2322,12 @@ export function AdminWork({
                         <div className={styles.galleryThumbGrid}>
                           {galleryImages.map((img, idx) => (
                             <div key={idx} className={styles.galleryThumbCard}>
-                              <img src={img.url} alt={img.caption || `Gallery image ${idx + 1}`} />
+                              <img
+                                src={img.url}
+                                alt={img.caption || `Gallery image ${idx + 1}`}
+                                loading="lazy"
+                                decoding="async"
+                              />
                               <div className={styles.galleryThumbOverlay}>
                                 <span className={styles.galleryThumbBadge}>#{idx + 1}</span>
                                 <button
@@ -2528,6 +2538,8 @@ export function AdminWork({
                                 src={coverPreviewUrl}
                                 alt="Cover Preview"
                                 className={styles.reviewCoverThumb}
+                                loading="lazy"
+                                decoding="async"
                               />
                             ) : null}
                             <span className={styles.summaryValue}>

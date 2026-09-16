@@ -36,8 +36,6 @@ export function WorkPage() {
   } = useQuery({
     queryKey: ["publicWork"],
     queryFn: () => getPublicWorkData(),
-    staleTime: 1000 * 15,
-    refetchInterval: 1000 * 25,
   });
 
   const projects = payload?.projects || [];

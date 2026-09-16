@@ -198,7 +198,13 @@ export function ServiceDetailPage({ service }: ServiceDetailPageProps) {
                     onClick={() => setActiveLightboxImg(img)}
                     aria-label={`Open visual ${img.alt || "plate"}`}
                   >
-                    <img src={img.url} alt={img.alt || service.title} className={styles.galleryImg} />
+                    <img
+                      src={img.url}
+                      alt={img.alt || service.title}
+                      className={styles.galleryImg}
+                      loading="lazy"
+                      decoding="async"
+                    />
                     <div className={styles.galleryOverlay} />
                     {img.caption && (
                       <div className={styles.galleryCaptionBox}>

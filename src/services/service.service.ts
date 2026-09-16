@@ -445,9 +445,9 @@ export async function updateServiceApi(
     if (payload.category !== undefined) {
       updateObj.category = await resolveCategoryIdForPayload(payload.category, categories);
     }
-    if (payload.tagline !== undefined) updateObj.tagline = payload.tagline.trim();
-    if (payload.slug !== undefined) updateObj.slug = payload.slug.trim();
-    if (payload.summary !== undefined) updateObj.summary = payload.summary.trim();
+    if (payload.tagline !== undefined && payload.tagline !== null) updateObj.tagline = payload.tagline.trim();
+    if (payload.slug !== undefined && payload.slug !== null) updateObj.slug = payload.slug.trim();
+    if (payload.summary !== undefined && payload.summary !== null) updateObj.summary = payload.summary.trim();
     if (payload.hero_image !== undefined) updateObj.heroImage = payload.hero_image.trim();
     if (payload.related_images !== undefined) updateObj.relatedImages = payload.related_images;
     if (payload.what_is_it !== undefined) updateObj.whatIsIt = payload.what_is_it.trim();

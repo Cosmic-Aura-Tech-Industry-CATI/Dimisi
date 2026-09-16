@@ -32,21 +32,86 @@ export function CinematicStage() {
   }, []);
 
   useEffect(() => {
-    const onVis = () => setActive(!document.hidden);
+    let onScreen = true;
+    let explicitPause = false;
+    let idleTimer: number | undefined;
+
+    const recomputeActive = () => {
+      const isVisible = !document.hidden;
+      setActive(onScreen && isVisible && !explicitPause);
+    };
+
+    const onActivity = () => {
+      if (idleTimer) window.clearTimeout(idleTimer);
+      if (!explicitPause && onScreen && !document.hidden) {
+        setActive(true);
+      }
+      // Idle sleep after 3.5s of no user activity to save GPU/CPU cycles
+      idleTimer = window.setTimeout(() => {
+        // Only sleep if no continuous interaction
+        setActive(false);
+      }, 3500);
+    };
+
+    // Intersection observer for off-screen / modal occlusions
+    let io: IntersectionObserver | null = null;
+    if (stageRef.current && typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(([entry]) => {
+        onScreen = Boolean(entry?.isIntersecting);
+        recomputeActive();
+      });
+      io.observe(stageRef.current);
+    }
+
+    const onVis = () => {
+      if (document.hidden) {
+        setActive(false);
+      } else {
+        onActivity();
+      }
+    };
+
+    const onPause = () => {
+      explicitPause = true;
+      setActive(false);
+    };
+
+    const onResume = () => {
+      explicitPause = false;
+      onActivity();
+    };
+
     document.addEventListener("visibilitychange", onVis);
-    const onPause = () => setActive(false);
-    const onResume = () => setActive(!document.hidden);
     window.addEventListener("dm:pause3d", onPause);
     window.addEventListener("dm:resume3d", onResume);
+
+    // Activity triggers for instant 60fps wake
+    window.addEventListener("scroll", onActivity, { passive: true });
+    window.addEventListener("pointermove", onActivity, { passive: true });
+    window.addEventListener("touchstart", onActivity, { passive: true });
+    window.addEventListener("keydown", onActivity, { passive: true });
+    window.addEventListener("wheel", onActivity, { passive: true });
+
+    // Initial wake
+    onActivity();
+
     return () => {
+      if (idleTimer) window.clearTimeout(idleTimer);
+      io?.disconnect();
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("dm:pause3d", onPause);
       window.removeEventListener("dm:resume3d", onResume);
+      window.removeEventListener("scroll", onActivity);
+      window.removeEventListener("pointermove", onActivity);
+      window.removeEventListener("touchstart", onActivity);
+      window.removeEventListener("keydown", onActivity);
+      window.removeEventListener("wheel", onActivity);
     };
   }, []);
 
   useEffect(() => {
-    const onScroll = () => {
+    let rafId = 0;
+    const updateScroll = () => {
       const max = document.body.scrollHeight - window.innerHeight;
       const s = max > 0 ? Math.min(1, window.scrollY / max) : 0;
       scrollRef.current = s;
@@ -57,11 +122,19 @@ export function CinematicStage() {
       if (stageRef.current) {
         stageRef.current.style.setProperty("--dm-scroll", String(s));
       }
+      rafId = 0;
     };
-    onScroll();
+
+    const onScroll = () => {
+      if (!rafId) {
+        rafId = window.requestAnimationFrame(updateScroll);
+      }
+    };
+    updateScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    window.addEventListener("resize", onScroll);
+    window.addEventListener("resize", onScroll, { passive: true });
     return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);
     };

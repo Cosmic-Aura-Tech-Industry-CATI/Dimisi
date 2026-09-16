@@ -38,18 +38,18 @@ export interface BackendServiceCategorySingleResponse {
 
 export interface CreateServiceCategoryPayload {
   name: string;
-  slug?: string;
-  description?: string;
+  slug?: string | undefined;
+  description?: string | undefined;
   displayOrder: number;
-  status?: "active" | "inactive";
+  status?: "active" | "inactive" | undefined;
 }
 
 export interface UpdateServiceCategoryPayload {
-  name?: string;
-  slug?: string;
-  description?: string;
-  displayOrder?: number;
-  status?: "active" | "inactive";
+  name?: string | undefined;
+  slug?: string | undefined;
+  description?: string | undefined;
+  displayOrder?: number | undefined;
+  status?: "active" | "inactive" | undefined;
 }
 
 /**

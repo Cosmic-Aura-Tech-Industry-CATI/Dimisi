@@ -51,7 +51,7 @@ export function getPerfProfile(): PerfProfile {
 
   cached =
     tier === "high"
-      ? { tier, dpr: [1, Math.min(2, window.devicePixelRatio || 1)], quality: 1, reducedMotion, antialias: true }
+      ? { tier, dpr: [1, Math.min(1.75, window.devicePixelRatio || 1)], quality: 1, reducedMotion, antialias: true }
       : tier === "medium"
         ? { tier, dpr: [1, 1.35], quality: 0.6, reducedMotion, antialias: true }
         : { tier, dpr: [1, 1], quality: 0.3, reducedMotion, antialias: false };

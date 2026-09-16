@@ -41,22 +41,33 @@ export async function getPublicWorkData(): Promise<PublicWorkPayload> {
   let catItems: WorkCategoryItem[] = [];
 
   try {
-    const remoteCats = await getAllCasestudyCategoriesApi();
-    if (Array.isArray(remoteCats)) {
-      catItems = remoteCats;
-      workStore.setCategories(remoteCats);
-    }
-  } catch (err) {
-    console.warn("Could not fetch remote case study categories for public site:", err);
-  }
+    const [catsResult, projectsResult] = await Promise.allSettled([
+      getAllCasestudyCategoriesApi(),
+      getActiveCasestudiesApi(),
+    ]);
 
-  try {
-    const remoteProjects = await getActiveCasestudiesApi(undefined, catItems);
-    if (Array.isArray(remoteProjects)) {
-      workStore.setProjects(remoteProjects);
+    if (catsResult.status === "fulfilled" && Array.isArray(catsResult.value)) {
+      catItems = catsResult.value;
+      workStore.setCategories(catItems);
+    }
+
+    if (projectsResult.status === "fulfilled" && Array.isArray(projectsResult.value)) {
+      const mapped =
+        catItems.length > 0
+          ? projectsResult.value.map((p) => {
+              if (!p.category && p.category_id) {
+                const matched = catItems.find(
+                  (c) => c.id === p.category_id || c.name === p.category_id,
+                );
+                return { ...p, category: matched?.name || p.category_id };
+              }
+              return p;
+            })
+          : projectsResult.value;
+      workStore.setProjects(mapped);
     }
   } catch (err) {
-    console.warn("Could not fetch remote active case studies for public site:", err);
+    console.warn("Could not fetch remote work data for public site:", err);
   }
 
   return workStore.getPublicPayload();
@@ -116,27 +127,25 @@ export async function getAdminWorkData(): Promise<{
   categoryCounts: Record<string, number>;
 }> {
   let catItems = workStore.getCategoryItems();
-
-  try {
-    const apiCats = await getAllCasestudyCategoriesApi();
-    if (Array.isArray(apiCats) && apiCats.length > 0) {
-      catItems = apiCats;
-      workStore.setCategories(apiCats);
-    }
-  } catch (err) {
-    console.warn("Could not fetch remote case study categories for admin panel:", err);
-  }
-
   let projectsList = workStore.getAllProjects();
 
   try {
-    const apiProjects = await getAllCasestudiesApi(undefined, catItems);
-    if (Array.isArray(apiProjects) && apiProjects.length > 0) {
-      projectsList = apiProjects;
-      workStore.setProjects(apiProjects);
+    const [catsResult, projectsResult] = await Promise.allSettled([
+      getAllCasestudyCategoriesApi(),
+      getAllCasestudiesApi(),
+    ]);
+
+    if (catsResult.status === "fulfilled" && Array.isArray(catsResult.value) && catsResult.value.length > 0) {
+      catItems = catsResult.value;
+      workStore.setCategories(catItems);
+    }
+
+    if (projectsResult.status === "fulfilled" && Array.isArray(projectsResult.value) && projectsResult.value.length > 0) {
+      projectsList = projectsResult.value;
+      workStore.setProjects(projectsList);
     }
   } catch (err) {
-    console.warn("Could not fetch remote case studies for admin panel:", err);
+    console.warn("Could not fetch remote work data for admin panel:", err);
   }
 
   const payload = workStore.getPublicPayload();
@@ -268,27 +277,31 @@ export async function deleteWorkCategoryFn({
     if (isMongoId(data.id)) {
       await deleteCasestudyCategoryApi(data.id);
     } else {
-      try {
-        const currentCats = await getAllCasestudyCategoriesApi();
-        const localCat = workStore.getCategoryItems().find((c) => c.id === data.id);
-        if (localCat) {
-          const found = currentCats.find(
-            (c) => c.name.toLowerCase() === localCat.name.toLowerCase(),
-          );
-          if (found && isMongoId(found.id)) {
-            await deleteCasestudyCategoryApi(found.id);
-          }
+      const currentCats = await getAllCasestudyCategoriesApi();
+      const localCat = workStore.getCategoryItems().find((c) => c.id === data.id);
+      if (localCat) {
+        const found = currentCats.find(
+          (c) =>
+            c.id === data.id ||
+            c.name.toLowerCase() === localCat.name.toLowerCase() ||
+            c.slug.toLowerCase() === localCat.slug.toLowerCase(),
+        );
+        if (found && isMongoId(found.id)) {
+          await deleteCasestudyCategoryApi(found.id);
         }
-      } catch {}
+      }
     }
   } catch (err: unknown) {
-    console.warn("Backend delete case study category warning:", err);
-    apiError = err instanceof Error ? err.message : "Failed to delete category.";
+    console.error("[Backend Delete Casestudy Category Error]", err);
+    apiError = err instanceof Error ? err.message : "Failed to delete category from backend.";
+    return { success: false, error: apiError };
   }
 
   const res = workStore.deleteCategory(data.id);
-  return { success: !apiError, projectCount: res.projectCount, error: apiError || undefined };
+  return { success: true, projectCount: res.projectCount };
 }
+
+export const deleteCasestudyCategoryFn = deleteWorkCategoryFn;
 
 /**
  * 7. SAVE PROJECT / CASE STUDY (CREATE / UPDATE)
@@ -347,7 +360,7 @@ export async function saveProjectFn({
     return {
       success: !apiError,
       project: remoteSaved || localSaved,
-      error: apiError || undefined,
+      ...(apiError ? { error: apiError } : {}),
     };
   } catch (err) {
     return {
@@ -365,41 +378,36 @@ export async function deleteProjectFn({
 }: {
   data: { id: string };
 }): Promise<{ success: boolean; error?: string }> {
+  if (!data?.id) return { success: false, error: "Case study ID is required." };
+
+  let apiError: string | null = null;
+
   try {
-    if (!data?.id) return { success: false, error: "Case study ID is required." };
-
-    let apiError: string | null = null;
-
-    try {
-      if (isMongoId(data.id)) {
-        await deleteCasestudyApi(data.id);
-      } else {
-        try {
-          const allRemote = await getAllCasestudiesApi();
-          const localItem = workStore.getProjectById(data.id);
-          if (localItem) {
-            const found = allRemote.find(
-              (p) => p.title.toLowerCase() === localItem.title.toLowerCase(),
-            );
-            if (found && isMongoId(found.id)) {
-              await deleteCasestudyApi(found.id);
-            }
-          }
-        } catch {}
+    if (isMongoId(data.id)) {
+      await deleteCasestudyApi(data.id);
+    } else {
+      const allRemote = await getAllCasestudiesApi();
+      const localItem = workStore.getProjectById(data.id);
+      if (localItem) {
+        const found = allRemote.find(
+          (p) =>
+            p.id === data.id ||
+            p.title.toLowerCase() === localItem.title.toLowerCase() ||
+            p.slug.toLowerCase() === localItem.slug.toLowerCase(),
+        );
+        if (found && isMongoId(found.id)) {
+          await deleteCasestudyApi(found.id);
+        }
       }
-    } catch (err: unknown) {
-      console.warn("Backend delete case study failed:", err);
-      apiError = err instanceof Error ? err.message : "Failed to delete case study.";
     }
-
-    const ok = workStore.deleteProject(data.id);
-    return { success: ok && !apiError, error: apiError || undefined };
-  } catch (err) {
-    return {
-      success: false,
-      error: err instanceof Error ? err.message : "Failed to delete case study.",
-    };
+  } catch (err: unknown) {
+    console.error("[Backend Delete Project Error]", err);
+    apiError = err instanceof Error ? err.message : "Failed to delete case study from backend.";
+    return { success: false, error: apiError };
   }
+
+  const ok = workStore.deleteProject(data.id);
+  return { success: ok };
 }
 
 /**
