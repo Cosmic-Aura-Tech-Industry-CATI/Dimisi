@@ -42,10 +42,10 @@ import {
 import styles from "./AdminReviews.module.css";
 
 export function AdminReviews({
-  reviews,
+  reviews = [],
   onRefresh,
 }: {
-  reviews: AdminReview[];
+  reviews?: AdminReview[];
   onRefresh: () => void;
 }) {
   const changeStatus = updateReviewStatus;
@@ -424,7 +424,13 @@ export function AdminReviews({
                       <td>
                         <div className={styles.customerCell}>
                           {rev.customer_photo_url ? (
-                            <img src={rev.customer_photo_url} alt="" className={styles.avatar} />
+                            <img
+                              src={rev.customer_photo_url}
+                              alt=""
+                              className={styles.avatar}
+                              loading="lazy"
+                              decoding="async"
+                            />
                           ) : (
                             <div
                               className={[

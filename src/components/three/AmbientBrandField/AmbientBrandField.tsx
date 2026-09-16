@@ -113,13 +113,58 @@ export function AmbientBrandField({ scrollRef }: { scrollRef: React.RefObject<nu
     let last = performance.now();
     let lastScroll = scrollRef.current ?? 0;
     let running = true;
+    let onScreen = true;
+    let explicitPause = false;
+    let idleTimer: number | undefined;
+
+    const startLoop = () => {
+      if (!running) {
+        running = true;
+        last = performance.now();
+        lastScroll = scrollRef.current ?? 0;
+        if (!raf) raf = requestAnimationFrame(loop);
+      }
+    };
+
+    const stopLoop = () => {
+      running = false;
+      if (raf) {
+        cancelAnimationFrame(raf);
+        raf = 0;
+      }
+    };
+
+    const onActivity = () => {
+      if (idleTimer) window.clearTimeout(idleTimer);
+      if (onScreen && !explicitPause && !document.hidden) {
+        startLoop();
+      }
+      idleTimer = window.setTimeout(() => {
+        stopLoop();
+      }, 3500);
+    };
+
+    let io: IntersectionObserver | null = null;
+    if (typeof IntersectionObserver !== "undefined") {
+      io = new IntersectionObserver(([entry]) => {
+        onScreen = Boolean(entry?.isIntersecting);
+        if (onScreen && !explicitPause && !document.hidden) {
+          onActivity();
+        } else {
+          stopLoop();
+        }
+      });
+      io.observe(layer);
+    }
 
     const loop = (now: number) => {
-      const dt = Math.min(0.05, (now - last) / 1000);
+      if (!running) return;
+      const dt = Math.min(0.04, (now - last) / 1000);
       last = now;
       const t = now / 1000;
       const s = scrollRef.current ?? 0;
-      const ds = s - lastScroll;
+      const rawDs = s - lastScroll;
+      const ds = Math.max(-0.04, Math.min(0.04, rawDs));
       lastScroll = s;
       // constant drift forward + extra thrust from scrolling → endless approach loop
       const advance = dt * 0.045 + ds * 1.6;
@@ -171,7 +216,6 @@ export function AmbientBrandField({ scrollRef }: { scrollRef: React.RefObject<nu
         const py = (0.5 + (o.y + cy - 0.5) * spread) * h - s * o.parallax;
         const scale = 0.2 + o.depth * 1.0;
         const rot = o.rot + t * o.rotSpeed * 60;
-        const blur = (1 - o.depth) * 5;
         // brighter breathing: baseline stays visible, peak nearly solid
         const wave = (Math.sin(t * o.opSpeed * Math.PI * 2 + o.opPhase) + 1) / 2;
         const peak = o.kind === "dust" || o.kind === "star" ? 0.95 : 0.42;
@@ -181,25 +225,53 @@ export function AmbientBrandField({ scrollRef }: { scrollRef: React.RefObject<nu
 
         el.style.transform = `translate3d(${px.toFixed(1)}px, ${py.toFixed(1)}px, 0) scale(${scale.toFixed(3)}) rotate(${rot.toFixed(2)}deg)`;
         el.style.opacity = opacity.toFixed(3);
-        el.style.filter = blur > 0.4 ? `blur(${blur.toFixed(1)}px)` : "none";
       }
 
       raf = running ? requestAnimationFrame(loop) : 0;
     };
 
-    raf = requestAnimationFrame(loop);
     const onVis = () => {
-      running = !document.hidden;
-      if (running && !raf) {
-        last = performance.now();
-        raf = requestAnimationFrame(loop);
+      if (document.hidden) {
+        stopLoop();
+      } else {
+        onActivity();
       }
     };
+
+    const onPause = () => {
+      explicitPause = true;
+      stopLoop();
+    };
+
+    const onResume = () => {
+      explicitPause = false;
+      onActivity();
+    };
+
     document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("dm:pause3d", onPause);
+    window.addEventListener("dm:resume3d", onResume);
+
+    window.addEventListener("scroll", onActivity, { passive: true });
+    window.addEventListener("pointermove", onActivity, { passive: true });
+    window.addEventListener("touchstart", onActivity, { passive: true });
+    window.addEventListener("keydown", onActivity, { passive: true });
+    window.addEventListener("wheel", onActivity, { passive: true });
+
+    onActivity();
+
     return () => {
-      running = false;
-      cancelAnimationFrame(raf);
+      if (idleTimer) window.clearTimeout(idleTimer);
+      io?.disconnect();
+      stopLoop();
       document.removeEventListener("visibilitychange", onVis);
+      window.removeEventListener("dm:pause3d", onPause);
+      window.removeEventListener("dm:resume3d", onResume);
+      window.removeEventListener("scroll", onActivity);
+      window.removeEventListener("pointermove", onActivity);
+      window.removeEventListener("touchstart", onActivity);
+      window.removeEventListener("keydown", onActivity);
+      window.removeEventListener("wheel", onActivity);
     };
   }, [objects, scrollRef, mounted]);
 

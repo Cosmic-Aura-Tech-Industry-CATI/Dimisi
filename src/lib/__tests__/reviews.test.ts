@@ -251,7 +251,7 @@ describe("End-to-End Review Pipeline (Submit -> Pending -> Approve -> Public)", 
     assert.equal(foundPublic.customer_name, uniqueName);
     assert.equal(foundPublic.rating, 5);
 
-    const publicFormatted = toPublicReview(foundPublic, new Map());
+    const publicFormatted = toPublicReview(foundPublic);
     assert.equal(publicFormatted.id, newId);
     assert.equal(publicFormatted.reviewer_type, "client");
     assert.equal(publicFormatted.customer_name, uniqueName);
@@ -307,7 +307,7 @@ describe("End-to-End Review Pipeline (Submit -> Pending -> Approve -> Public)", 
     found.approved_at = new Date().toISOString();
 
     // Verify public projection
-    const publicFormatted = toPublicReview(found, new Map());
+    const publicFormatted = toPublicReview(found);
     assert.equal(publicFormatted.reviewer_type, "employee");
     assert.equal(publicFormatted.role_or_title, "Senior AI Engineer");
     assert.equal(publicFormatted.employee_department, "AI & Autonomous Systems");

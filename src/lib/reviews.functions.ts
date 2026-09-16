@@ -315,9 +315,11 @@ export function toPublicReview(row: AdminReview): PublicReview {
     is_verified: row.is_verified,
     rating: row.rating,
     review_text: row.review_text,
-    customer_photo_url: row.customer_photo_url,
+    photo_url: row.customer_photo_url ?? row.photo_url ?? null,
+    customer_photo_url: row.customer_photo_url ?? row.photo_url ?? null,
     customer_location: row.customer_location,
     is_featured: row.is_featured,
+    published_at: row.submitted_at ?? null,
     submitted_at: row.submitted_at,
   };
 }
@@ -518,8 +520,8 @@ export async function reportReview({
     reason: string;
     message?: string;
   };
-}): Promise<{ success: boolean }> {
-  return { success: true };
+}): Promise<{ success: boolean; message?: string }> {
+  return { success: true, message: "Report submitted successfully." };
 }
 
 // ==========================================
@@ -627,14 +629,17 @@ export async function updateReviewStatus({
   data: {
     reviewId: string;
     status: ReviewStatus;
-    reason?: string;
+    reason?: string | undefined;
+    moderationReason?: string | undefined;
+    notifyCustomer?: boolean | undefined;
   };
 }): Promise<{ success: boolean }> {
   const reviews = getStoredReviews();
   const index = reviews.findIndex((r) => r.id === data.reviewId);
   if (index !== -1) {
     reviews[index].status = data.status;
-    if (data.reason !== undefined) reviews[index].moderation_reason = data.reason;
+    const finalReason = data.moderationReason ?? data.reason;
+    if (finalReason !== undefined) reviews[index].moderation_reason = finalReason;
     reviews[index].updated_at = new Date().toISOString();
     saveStoredReviews(reviews);
   }
@@ -650,6 +655,9 @@ export async function editReviewContent({
     serviceName?: string;
     reviewerType?: ReviewType;
     roleOrTitle?: string;
+    employeeDepartment?: string;
+    employmentStatus?: "current" | "former";
+    isVerified?: boolean;
     rating: number;
     reviewText: string;
     customerLocation?: string;
@@ -662,6 +670,9 @@ export async function editReviewContent({
     reviews[index].service_name = sanitizeText(data.serviceName, 100) || null;
     reviews[index].reviewer_type = normalizeReviewerType(data.reviewerType);
     reviews[index].role_or_title = sanitizeText(data.roleOrTitle, 100) || null;
+    if (data.employeeDepartment !== undefined) reviews[index].employee_department = sanitizeText(data.employeeDepartment, 100) || null;
+    if (data.employmentStatus !== undefined) reviews[index].employment_status = data.employmentStatus;
+    if (data.isVerified !== undefined) reviews[index].is_verified = data.isVerified;
     reviews[index].rating = Math.min(5, Math.max(1, Number(data.rating) || 5));
     reviews[index].review_text = sanitizeText(data.reviewText, 2000);
     reviews[index].customer_location = sanitizeText(data.customerLocation, 100) || null;
@@ -819,12 +830,9 @@ export async function getReviewSettings(): Promise<{ settings: ReviewSettings }>
       notify_on_submit: true,
       notify_on_approve: true,
       notify_on_reject: false,
-      auto_approve_5_star: false,
-      notification_email: "hello@dimisi.in",
-      default_min_rating_to_show: 1,
-      captcha_enabled: true,
-      profanity_filter_enabled: true,
-      created_at: new Date().toISOString(),
+      notify_on_report: true,
+      notify_campaign_summary: true,
+      notify_email: "hello@dimisi.in",
       updated_at: new Date().toISOString(),
     },
   };
@@ -834,6 +842,6 @@ export async function updateReviewSettings({
   data,
 }: {
   data: Partial<ReviewSettings>;
-}): Promise<{ success: boolean }> {
-  return { success: true };
+}): Promise<{ success: boolean; message?: string }> {
+  return { success: true, message: "Settings updated successfully." };
 }

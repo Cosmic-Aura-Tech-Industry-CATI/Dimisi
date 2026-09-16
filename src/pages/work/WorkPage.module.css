@@ -647,3 +647,174 @@
     width: 100%;
   }
 }
+
+/* =========================================================================
+   4. SKELETON LOADING, ERROR & EMPTY STATES
+   ========================================================================= */
+
+@keyframes shimmerAnimation {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeletonCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-height: 460px;
+  border-radius: 22px;
+  background: linear-gradient(150deg, rgba(20, 22, 33, 0.78), rgba(10, 11, 18, 0.88));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+
+.skeletonImageHolder {
+  width: 100%;
+  height: 220px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.03) 25%, rgba(255, 179, 0, 0.08) 50%, rgba(255, 255, 255, 0.03) 75%);
+  background-size: 200% 100%;
+  animation: shimmerAnimation 1.8s infinite ease-in-out;
+}
+
+.skeletonContent {
+  padding: 1.65rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.skeletonLine {
+  height: 14px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.09) 50%, rgba(255, 255, 255, 0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmerAnimation 1.8s infinite ease-in-out;
+}
+
+.skeletonTitle {
+  height: 26px;
+  width: 70%;
+  border-radius: 6px;
+}
+
+.skeletonTagline {
+  height: 14px;
+  width: 85%;
+  background: linear-gradient(90deg, rgba(255, 179, 0, 0.05) 25%, rgba(255, 179, 0, 0.12) 50%, rgba(255, 179, 0, 0.05) 75%);
+  background-size: 200% 100%;
+  animation: shimmerAnimation 1.8s infinite ease-in-out;
+}
+
+.skeletonPill {
+  height: 22px;
+  width: 60%;
+  margin-top: 0.5rem;
+}
+
+.skeletonFooter {
+  margin-top: auto;
+  padding: 1.25rem 1.65rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  justify-content: space-between;
+}
+
+.stateBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 3.5rem 2rem;
+  border-radius: 24px;
+  background: linear-gradient(150deg, rgba(20, 22, 33, 0.75), rgba(12, 14, 22, 0.85));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  max-width: 640px;
+  margin: 1rem auto 2rem;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+}
+
+.stateIconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: rgba(255, 122, 0, 0.1);
+  border: 1px solid rgba(255, 122, 0, 0.3);
+  color: var(--dm-amber, #ffb300);
+  margin-bottom: 1.25rem;
+}
+
+.stateIconError {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.stateTitle {
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.5rem;
+}
+
+.stateText {
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0 0 1.5rem;
+  max-width: 480px;
+}
+
+.retryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.7rem 1.4rem;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #ff9100, #ff6a00);
+  border: none;
+  color: #000000;
+  font-weight: 700;
+  font-size: 0.88rem;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(255, 122, 0, 0.35);
+  transition: all 0.25s ease;
+}
+
+.retryBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(255, 122, 0, 0.5);
+  filter: brightness(1.1);
+}
+
+.resetFilterBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.65rem 1.25rem;
+  border-radius: 10px;
+  background: rgba(255, 122, 0, 0.12);
+  border: 1px solid rgba(255, 122, 0, 0.35);
+  color: var(--dm-amber, #ffb300);
+  font-weight: 700;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.resetFilterBtn:hover {
+  background: rgba(255, 122, 0, 0.22);
+  transform: translateY(-1px);
+}

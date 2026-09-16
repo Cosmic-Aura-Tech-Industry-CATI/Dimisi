@@ -18,8 +18,8 @@ export async function syncGoogleUserFn({
   data: {
     id: string;
     email: string;
-    fullName?: string;
-    avatarUrl?: string | null;
+    fullName?: string | undefined;
+    avatarUrl?: string | null | undefined;
   };
 }): Promise<{ success: boolean; user: any }> {
   const cleanEmail = sanitizeText(data.email, 160).toLowerCase();

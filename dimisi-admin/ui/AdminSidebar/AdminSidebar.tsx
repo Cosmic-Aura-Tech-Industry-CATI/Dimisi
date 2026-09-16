@@ -18,6 +18,7 @@ import {
   ScrollText,
 } from "lucide-react";
 import { type AdminRole, canAccessTab } from "../../lib/rbac.shared";
+import { prefetchAdminTab } from "../AdminPrefetch";
 import styles from "./AdminSidebar.module.css";
 
 export type AdminTab =
@@ -102,6 +103,8 @@ export function AdminSidebar({
                 key={item.id}
                 type="button"
                 className={[styles.navItem, tab === item.id ? styles.navItemActive : ""].join(" ")}
+                onMouseEnter={() => prefetchAdminTab(item.id)}
+                onFocus={() => prefetchAdminTab(item.id)}
                 onClick={() => {
                   onTab(item.id);
                   onClose();

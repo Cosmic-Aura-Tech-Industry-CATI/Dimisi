@@ -10,7 +10,7 @@ function createMockLogs(): AdminLog[] {
   const msInHour = 60 * 60 * 1000;
   const msInDay = 24 * msInHour;
 
-  const rawEntries: Omit<AdminLog, "date" | "time" | "timestamp"> & { offsetMs: number }[] = [
+  const rawEntries: Array<Omit<AdminLog, "date" | "time" | "timestamp"> & { offsetMs: number }> = [
     // --- TODAY ---
     {
       id: "log-101",

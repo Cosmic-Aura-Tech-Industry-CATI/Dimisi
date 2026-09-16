@@ -1005,6 +1005,7 @@ export function AdminBlog({
                           alt={p.title}
                           className={styles.thumbImg}
                           loading="lazy"
+                          decoding="async"
                           onError={(e) => {
                             e.currentTarget.onerror = null;
                             e.currentTarget.src = FALLBACK_COVER;
@@ -1054,10 +1055,12 @@ export function AdminBlog({
                               src={p.author_avatar}
                               alt={p.author_name}
                               className={styles.avatarImg}
+                              loading="lazy"
+                              decoding="async"
                               onError={(e) => {
                                 e.currentTarget.style.display = "none";
                                 const next = e.currentTarget.nextElementSibling;
-                                if (next) next.style.display = "flex";
+                                if (next && "style" in next) (next as HTMLElement).style.display = "flex";
                               }}
                             />
                           ) : null}
@@ -1962,6 +1965,8 @@ export function AdminBlog({
                                 src={coverPreviewUrl}
                                 alt="Cover Preview"
                                 className={styles.dropzonePreviewImg}
+                                loading="lazy"
+                                decoding="async"
                               />
 
                               <div className={styles.previewMetaRow}>
@@ -2047,6 +2052,8 @@ export function AdminBlog({
                                 src={coverPreviewUrl}
                                 alt="URL Preview"
                                 className={styles.dropzonePreviewImg}
+                                loading="lazy"
+                                decoding="async"
                               />
                             </div>
                           )}

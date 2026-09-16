@@ -27,6 +27,7 @@ import {
   AlertCircle,
   Calendar,
   Layers,
+  RotateCw,
 } from "lucide-react";
 import {
   type JobOpening,
@@ -52,6 +53,10 @@ import {
   updateApplicationStatusFn,
   deleteApplicationFn,
 } from "@/lib/careers.functions";
+import {
+  getAllActiveDepartmentsApi,
+  type DepartmentItem,
+} from "@/services";
 import styles from "./AdminCareers.module.css";
 
 interface AdminCareersProps {
@@ -112,8 +117,10 @@ export function AdminCareers({
   const [appPositionFilter, setAppPositionFilter] = useState<string>("all");
   const [selectedApplication, setSelectedApplication] = useState<JobApplicationItem | null>(null);
   const [selectedResume, setSelectedResume] = useState<JobApplicationItem | null>(null);
+  const [applicationToDelete, setApplicationToDelete] = useState<JobApplicationItem | null>(null);
   const [appNotesText, setAppNotesText] = useState("");
   const [appNotesSuccess, setAppNotesSuccess] = useState<string | null>(null);
+  const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
 
   // Synchronize notes when selectedApplication changes
   useEffect(() => {
@@ -122,6 +129,23 @@ export function AdminCareers({
       setAppNotesSuccess(null);
     }
   }, [selectedApplication]);
+
+  // Keyboard accessibility for modals
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (applicationToDelete) {
+          setApplicationToDelete(null);
+        } else if (selectedResume) {
+          setSelectedResume(null);
+        } else if (selectedApplication) {
+          setSelectedApplication(null);
+        }
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [applicationToDelete, selectedResume, selectedApplication]);
 
   // Unique job titles for filtering
   const uniqueJobPositions = useMemo(() => {
@@ -134,11 +158,14 @@ export function AdminCareers({
   // Filtered applications
   const filteredApplications = useMemo(() => {
     return applications.filter((app) => {
+      const query = appSearch.toLowerCase().trim();
       const matchSearch =
-        app.full_name.toLowerCase().includes(appSearch.toLowerCase()) ||
-        app.email.toLowerCase().includes(appSearch.toLowerCase()) ||
-        app.job_title.toLowerCase().includes(appSearch.toLowerCase()) ||
-        app.location.toLowerCase().includes(appSearch.toLowerCase());
+        !query ||
+        app.full_name.toLowerCase().includes(query) ||
+        app.email.toLowerCase().includes(query) ||
+        app.job_title.toLowerCase().includes(query) ||
+        app.location.toLowerCase().includes(query) ||
+        (app.job_department && app.job_department.toLowerCase().includes(query));
 
       const matchStatus =
         appStatusFilter === "all" || app.status === appStatusFilter;
@@ -202,19 +229,25 @@ export function AdminCareers({
     });
   };
 
-  const handleDeleteApplication = (id: string, candidateName: string) => {
-    if (window.confirm(`Are you sure you want to delete application from "${candidateName}"?`)) {
-      startTransition(async () => {
-        await deleteApplicationFn({ data: { id } });
-        if (selectedApplication?.id === id) {
+  const confirmDeleteApplication = () => {
+    if (!applicationToDelete) return;
+    const targetId = applicationToDelete.id;
+    const candidateName = applicationToDelete.full_name;
+    startTransition(async () => {
+      const res = await deleteApplicationFn({ data: { id: targetId } });
+      if (res.success) {
+        if (selectedApplication?.id === targetId) {
           setSelectedApplication(null);
         }
-        if (selectedResume?.id === id) {
+        if (selectedResume?.id === targetId) {
           setSelectedResume(null);
         }
+        setApplicationToDelete(null);
+        setActionSuccessMsg(`Application from "${candidateName}" has been removed.`);
+        setTimeout(() => setActionSuccessMsg(null), 3500);
         onRefresh();
-      });
-    }
+      }
+    });
   };
 
   const handleDownloadResume = (app: JobApplicationItem) => {
@@ -235,10 +268,35 @@ export function AdminCareers({
   const [editingJob, setEditingJob] = useState<JobOpening | null>(null);
   const [modalTab, setModalTab] = useState<"basic" | "details" | "requirements">("basic");
 
+  // Dynamic Departments from Backend API
+  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
+  const [loadingDepartments, setLoadingDepartments] = useState(false);
+  const [departmentsError, setDepartmentsError] = useState<string | null>(null);
+
+  const fetchDepartments = async () => {
+    setLoadingDepartments(true);
+    setDepartmentsError(null);
+    try {
+      const liveDepts = await getAllActiveDepartmentsApi();
+      setDepartments(liveDepts);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Unable to load departments. Please try again.";
+      setDepartmentsError(msg);
+    } finally {
+      setLoadingDepartments(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchDepartments();
+  }, []);
+
   // Job Form State
   const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
-  const [department, setDepartment] = useState("Content & Editorial");
+  const [department, setDepartment] = useState("");
   const [type, setType] = useState<JobType>("Internship");
   const [workplace, setWorkplace] = useState<WorkplaceType>("Remote");
   const [location, setLocation] = useState("Remote / Noida");
@@ -283,15 +341,23 @@ export function AdminCareers({
   const handleOpenCreateJob = () => {
     setEditingJob(null);
     setTitle("");
-    setSlug("");
-    setDepartment("Engineering");
+    setDepartment("");
     setType("Full-time");
     setWorkplace("Remote");
     setLocation("Remote / Noida");
     setSummary("");
-    setResponsibilities(["Architect scalable backend workflows.", "Collaborate with UI/UX designers."]);
-    setRequirements(["2+ years with TypeScript & React/Node.", "Passion for clean modular architecture."]);
-    setJobBenefits(["Competitive compensation & bonuses.", "Flexible remote working hours."]);
+    setResponsibilities([
+      "Architect scalable backend workflows.",
+      "Collaborate with UI/UX designers.",
+    ]);
+    setRequirements([
+      "2+ years with TypeScript & React/Node.",
+      "Passion for clean modular architecture.",
+    ]);
+    setJobBenefits([
+      "Competitive compensation & bonuses.",
+      "Flexible remote working hours.",
+    ]);
     setApplyUrl("");
     setOrderIndex(jobs.length + 1);
     setIsFeatured(false);
@@ -299,13 +365,15 @@ export function AdminCareers({
     setModalTab("basic");
     setFormError(null);
     setShowJobModal(true);
+    if (departments.length === 0 && !loadingDepartments) {
+      fetchDepartments();
+    }
   };
 
   const handleOpenEditJob = (j: JobOpening) => {
     setEditingJob(j);
     setTitle(j.title);
-    setSlug(j.slug);
-    setDepartment(j.department);
+    setDepartment(j.department || "");
     setType(j.type);
     setWorkplace(j.workplace);
     setLocation(j.location);
@@ -320,17 +388,27 @@ export function AdminCareers({
     setModalTab("basic");
     setFormError(null);
     setShowJobModal(true);
+    if (departments.length === 0 && !loadingDepartments) {
+      fetchDepartments();
+    }
   };
 
   const handleSaveJob = (e: React.FormEvent) => {
     e.preventDefault();
     setFormError(null);
 
+    const cleanDept = department?.trim();
+    if (!cleanDept || cleanDept === "" || cleanDept === "Select Department") {
+      setFormError("Please select a department.");
+      setModalTab("basic");
+      return;
+    }
+
     const input: JobInput = {
       id: editingJob?.id ?? undefined,
       title,
-      slug: slug || slugifyJob(title),
-      department,
+      slug: editingJob?.slug || slugifyJob(title),
+      department: cleanDept,
       type,
       workplace,
       location,
@@ -638,6 +716,14 @@ export function AdminCareers({
             </div>
           </div>
 
+          {/* Action Success Toast */}
+          {actionSuccessMsg && (
+            <div className={styles.appToastSuccess}>
+              <CheckCircle2 size={16} />
+              <span>{actionSuccessMsg}</span>
+            </div>
+          )}
+
           {/* Applications Data Table */}
           <div className={styles.tableCard}>
             {filteredApplications.length === 0 ? (
@@ -669,8 +755,6 @@ export function AdminCareers({
                   <tr>
                     <th>Applicant</th>
                     <th>Job Position</th>
-                    <th>Email</th>
-                    <th>Phone</th>
                     <th>Location</th>
                     <th>Resume</th>
                     <th>Applied On</th>
@@ -691,32 +775,22 @@ export function AdminCareers({
                             </div>
                             <div className={styles.applicantInfo}>
                               <span className={styles.applicantName}>{app.full_name}</span>
-                              <span className={styles.applicantSubEmail}>{app.email}</span>
                             </div>
                           </div>
                         </td>
                         <td>
-                          <div className={styles.posCell}>
+                          <div
+                            className={styles.posCell}
+                            title={`${app.job_title}${app.job_department ? ` (${app.job_department})` : ""}`}
+                          >
                             <span className={styles.posTitle}>{app.job_title}</span>
-                            <span className={styles.posDept}>{app.job_department}</span>
+                            <span className={styles.posDept}>{app.job_department || "General"}</span>
                           </div>
                         </td>
                         <td>
-                          <a href={`mailto:${app.email}`} className={styles.contactLink}>
-                            <Mail size={13} />
-                            <span>{app.email}</span>
-                          </a>
-                        </td>
-                        <td>
-                          <a href={`tel:${app.phone}`} className={styles.contactLink}>
-                            <Phone size={13} />
-                            <span>{app.phone}</span>
-                          </a>
-                        </td>
-                        <td>
-                          <div className={styles.locCell}>
+                          <div className={styles.locCell} title={app.location}>
                             <MapPin size={13} className={styles.locPin} />
-                            <span>{app.location}</span>
+                            <span className={styles.locTextTruncate}>{app.location}</span>
                           </div>
                         </td>
                         <td>
@@ -724,7 +798,8 @@ export function AdminCareers({
                             type="button"
                             className={styles.resumeActionBtn}
                             onClick={() => setSelectedResume(app)}
-                            title="Preview Resume"
+                            title={`View Resume: ${app.resume_name || "Resume"}`}
+                            aria-label={`View resume for ${app.full_name}`}
                           >
                             <FileText size={13} />
                             <span>View Resume</span>
@@ -748,6 +823,7 @@ export function AdminCareers({
                               background: statusMeta.bg,
                               borderColor: statusMeta.border,
                             }}
+                            aria-label={`Update status for ${app.full_name}`}
                           >
                             <option value="new">New</option>
                             <option value="reviewing">Reviewing</option>
@@ -764,6 +840,7 @@ export function AdminCareers({
                               className={styles.viewDetailsIconBtn}
                               onClick={() => setSelectedApplication(app)}
                               title="View Full Application Details"
+                              aria-label={`View details for ${app.full_name}`}
                             >
                               <Eye size={15} />
                             </button>
@@ -772,14 +849,16 @@ export function AdminCareers({
                               className={styles.downloadIconBtn}
                               onClick={() => handleDownloadResume(app)}
                               title="Download Resume File"
+                              aria-label={`Download resume for ${app.full_name}`}
                             >
                               <Download size={15} />
                             </button>
                             <button
                               type="button"
                               className={styles.delBtn}
-                              onClick={() => handleDeleteApplication(app.id, app.full_name)}
+                              onClick={() => setApplicationToDelete(app)}
                               title="Delete Application"
+                              aria-label={`Delete application from ${app.full_name}`}
                             >
                               <Trash2 size={15} />
                             </button>
@@ -793,7 +872,7 @@ export function AdminCareers({
             )}
           </div>
 
-          {/* APPLICATION DETAILS MODAL */}
+          {/* APPLICATION DETAILS DOSSIER MODAL */}
           {selectedApplication && (
             <div
               className={styles.modalBackdrop}
@@ -813,9 +892,11 @@ export function AdminCareers({
                       <span className={styles.appModalJobBadge}>
                         {selectedApplication.job_title}
                       </span>
-                      <span className={styles.appModalDeptBadge}>
-                        {selectedApplication.job_department}
-                      </span>
+                      {selectedApplication.job_department && (
+                        <span className={styles.appModalDeptBadge}>
+                          {selectedApplication.job_department}
+                        </span>
+                      )}
                     </div>
                     <h3 className={styles.appModalCandidateName}>
                       {selectedApplication.full_name}
@@ -834,6 +915,7 @@ export function AdminCareers({
                           )
                         }
                         className={styles.statusDropdownModal}
+                        aria-label="Application Status"
                       >
                         <option value="new">New</option>
                         <option value="reviewing">Reviewing</option>
@@ -848,6 +930,8 @@ export function AdminCareers({
                       type="button"
                       className={styles.modalClose}
                       onClick={() => setSelectedApplication(null)}
+                      title="Close Dossier"
+                      aria-label="Close Dossier"
                     >
                       <X size={18} />
                     </button>
@@ -856,12 +940,12 @@ export function AdminCareers({
 
                 {/* Modal Body */}
                 <div className={styles.appModalBody}>
-                  {/* Section 1: Candidate Overview */}
+                  {/* Section 1: APPLICANT PROFILE */}
                   <div className={styles.appDetailSection}>
-                    <h4 className={styles.appDetailSectionTitle}>APPLICANT INFORMATION</h4>
+                    <h4 className={styles.appDetailSectionTitle}>APPLICANT PROFILE</h4>
                     <div className={styles.appInfoGrid}>
                       <div className={styles.appInfoItem}>
-                        <span className={styles.appInfoLabel}>Full Name</span>
+                        <span className={styles.appInfoLabel}>Applicant Name</span>
                         <span className={styles.appInfoVal}>{selectedApplication.full_name}</span>
                       </div>
                       <div className={styles.appInfoItem}>
@@ -869,6 +953,7 @@ export function AdminCareers({
                         <a
                           href={`mailto:${selectedApplication.email}`}
                           className={styles.appInfoLink}
+                          title={`Send email to ${selectedApplication.email}`}
                         >
                           <Mail size={13} />
                           <span>{selectedApplication.email}</span>
@@ -879,34 +964,114 @@ export function AdminCareers({
                         <a
                           href={`tel:${selectedApplication.phone}`}
                           className={styles.appInfoLink}
+                          title={`Call ${selectedApplication.phone}`}
                         >
                           <Phone size={13} />
                           <span>{selectedApplication.phone}</span>
                         </a>
                       </div>
                       <div className={styles.appInfoItem}>
-                        <span className={styles.appInfoLabel}>Current Location</span>
+                        <span className={styles.appInfoLabel}>Location</span>
                         <span className={styles.appInfoVal}>
                           <MapPin size={13} className={styles.inlinePin} />
                           {selectedApplication.location}
                         </span>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Section 2: APPLICATION DETAILS */}
+                  <div className={styles.appDetailSection}>
+                    <h4 className={styles.appDetailSectionTitle}>APPLICATION DETAILS</h4>
+                    <div className={styles.appInfoGrid}>
                       <div className={styles.appInfoItem}>
-                        <span className={styles.appInfoLabel}>Applied Position</span>
+                        <span className={styles.appInfoLabel}>Applied For / Role</span>
                         <span className={styles.appInfoVal}>{selectedApplication.job_title}</span>
                       </div>
                       <div className={styles.appInfoItem}>
-                        <span className={styles.appInfoLabel}>Submission Date</span>
+                        <span className={styles.appInfoLabel}>Category / Department</span>
                         <span className={styles.appInfoVal}>
+                          {selectedApplication.job_department || "General"}
+                        </span>
+                      </div>
+                      <div className={styles.appInfoItem}>
+                        <span className={styles.appInfoLabel}>Application Date</span>
+                        <span className={styles.appInfoVal}>
+                          <Calendar size={13} className={styles.inlinePin} />
                           {formatDate(selectedApplication.applied_at)}
+                        </span>
+                      </div>
+                      <div className={styles.appInfoItem}>
+                        <span className={styles.appInfoLabel}>Current Status</span>
+                        <span
+                          className={styles.appStatusBadge}
+                          style={{
+                            color:
+                              APPLICATION_STATUS_META[selectedApplication.status]?.color ||
+                              "#ffffff",
+                            backgroundColor:
+                              APPLICATION_STATUS_META[selectedApplication.status]?.bg ||
+                              "rgba(255,255,255,0.1)",
+                            borderColor:
+                              APPLICATION_STATUS_META[selectedApplication.status]?.border ||
+                              "transparent",
+                          }}
+                        >
+                          {APPLICATION_STATUS_META[selectedApplication.status]?.label ||
+                            selectedApplication.status}
                         </span>
                       </div>
                     </div>
                   </div>
 
-                  {/* Section 2: Professional Links */}
+                  {/* Section 3: RESUME */}
                   <div className={styles.appDetailSection}>
-                    <h4 className={styles.appDetailSectionTitle}>PROFESSIONAL LINKS &amp; PROFILES</h4>
+                    <h4 className={styles.appDetailSectionTitle}>RESUME</h4>
+                    <div className={styles.resumeDisplayCard}>
+                      <div className={styles.resumeDisplayLeft}>
+                        <div className={styles.resumeFileIconCircle}>
+                          <FileText size={22} />
+                        </div>
+                        <div className={styles.resumeFileInfo}>
+                          <div className={styles.resumeFileName}>
+                            {selectedApplication.resume_name}
+                          </div>
+                          <div className={styles.resumeFileMeta}>
+                            <span className={styles.formatPill}>
+                              {selectedApplication.resume_name.split(".").pop()?.toUpperCase() || "PDF"}
+                            </span>
+                            <span>•</span>
+                            <span>{formatFileSize(selectedApplication.resume_size)}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={styles.resumeDisplayActions}>
+                        <button
+                          type="button"
+                          className={styles.previewResumeBtn}
+                          onClick={() => setSelectedResume(selectedApplication)}
+                        >
+                          <Eye size={14} />
+                          <span>View Resume</span>
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.downloadResumeBtn}
+                          onClick={() => handleDownloadResume(selectedApplication)}
+                        >
+                          <Download size={14} />
+                          <span>Download Resume</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Section 4: ADDITIONAL INFORMATION */}
+                  <div className={styles.appDetailSection}>
+                    <h4 className={styles.appDetailSectionTitle}>ADDITIONAL INFORMATION</h4>
+
+                    {/* Professional Links */}
                     <div className={styles.appLinksGrid}>
                       <div className={styles.appLinkCard}>
                         <span className={styles.appLinkLabel}>Portfolio / Live Website</span>
@@ -959,11 +1124,8 @@ export function AdminCareers({
                         )}
                       </div>
                     </div>
-                  </div>
 
-                  {/* Section 3: Cover Letter & Additional Notes */}
-                  <div className={styles.appDetailSection}>
-                    <h4 className={styles.appDetailSectionTitle}>APPLICATION STATEMENTS</h4>
+                    {/* Cover Note */}
                     <div className={styles.appStatementCard}>
                       <span className={styles.appStatementLabel}>
                         Cover Note / Why join DIMISI?
@@ -981,76 +1143,33 @@ export function AdminCareers({
                         </p>
                       </div>
                     )}
-                  </div>
 
-                  {/* Section 4: Resume File Box */}
-                  <div className={styles.appDetailSection}>
-                    <h4 className={styles.appDetailSectionTitle}>SUBMITTED RESUME</h4>
-                    <div className={styles.resumeDisplayCard}>
-                      <div className={styles.resumeDisplayLeft}>
-                        <div className={styles.resumeFileIconCircle}>
-                          <FileText size={22} />
-                        </div>
-                        <div className={styles.resumeFileInfo}>
-                          <div className={styles.resumeFileName}>
-                            {selectedApplication.resume_name}
-                          </div>
-                          <div className={styles.resumeFileMeta}>
-                            <span className={styles.formatPill}>
-                              {selectedApplication.resume_name.split(".").pop()?.toUpperCase() || "PDF"}
-                            </span>
-                            <span>•</span>
-                            <span>{formatFileSize(selectedApplication.resume_size)}</span>
-                          </div>
-                        </div>
+                    {/* Internal Recruitment Notes */}
+                    <div className={styles.internalNotesCard}>
+                      <div className={styles.notesSectionHeader}>
+                        <span className={styles.appStatementLabel}>INTERNAL RECRUITMENT NOTES</span>
+                        {appNotesSuccess && (
+                          <span className={styles.notesSuccessBadge}>{appNotesSuccess}</span>
+                        )}
                       </div>
-
-                      <div className={styles.resumeDisplayActions}>
+                      <textarea
+                        rows={3}
+                        value={appNotesText}
+                        onChange={(e) => setAppNotesText(e.target.value)}
+                        placeholder="Add interviewer notes, technical screening feedback, or salary expectations..."
+                        className={styles.notesTextarea}
+                      />
+                      <div className={styles.notesActionRow}>
                         <button
                           type="button"
-                          className={styles.previewResumeBtn}
-                          onClick={() => setSelectedResume(selectedApplication)}
+                          className={styles.saveNotesBtn}
+                          onClick={() => handleSaveNotes(selectedApplication.id)}
+                          disabled={isPending}
                         >
-                          <Eye size={14} />
-                          <span>Preview Resume</span>
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.downloadResumeBtn}
-                          onClick={() => handleDownloadResume(selectedApplication)}
-                        >
-                          <Download size={14} />
-                          <span>Download</span>
+                          <Save size={14} />
+                          <span>Save Notes</span>
                         </button>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Section 5: Internal Admin Notes */}
-                  <div className={styles.appDetailSection}>
-                    <div className={styles.notesSectionHeader}>
-                      <h4 className={styles.appDetailSectionTitle}>INTERNAL RECRUITMENT NOTES</h4>
-                      {appNotesSuccess && (
-                        <span className={styles.notesSuccessBadge}>{appNotesSuccess}</span>
-                      )}
-                    </div>
-                    <textarea
-                      rows={3}
-                      value={appNotesText}
-                      onChange={(e) => setAppNotesText(e.target.value)}
-                      placeholder="Add interviewer notes, technical screening feedback, or salary expectations..."
-                      className={styles.notesTextarea}
-                    />
-                    <div className={styles.notesActionRow}>
-                      <button
-                        type="button"
-                        className={styles.saveNotesBtn}
-                        onClick={() => handleSaveNotes(selectedApplication.id)}
-                        disabled={isPending}
-                      >
-                        <Save size={14} />
-                        <span>Save Notes</span>
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -1071,6 +1190,77 @@ export function AdminCareers({
                   >
                     <Download size={15} />
                     <span>Download Full Resume</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* DELETE APPLICATION CONFIRMATION MODAL */}
+          {applicationToDelete && (
+            <div
+              className={styles.modalBackdrop}
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="deleteAppModalTitle"
+              onClick={() => setApplicationToDelete(null)}
+            >
+              <div
+                className={styles.deleteConfirmModal}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <div className={styles.deleteModalHeader}>
+                  <div className={styles.deleteModalIconBox}>
+                    <Trash2 size={24} className={styles.deleteModalIcon} />
+                  </div>
+                  <div>
+                    <h3 id="deleteAppModalTitle" className={styles.deleteModalTitle}>
+                      Delete Application?
+                    </h3>
+                    <p className={styles.deleteModalSubtitle}>
+                      Are you sure you want to permanently remove this application?
+                    </p>
+                  </div>
+                </div>
+
+                <div className={styles.deleteModalCard}>
+                  <div className={styles.deleteModalCandidateRow}>
+                    <div className={styles.deleteModalAvatar}>
+                      {applicationToDelete.full_name.charAt(0).toUpperCase()}
+                    </div>
+                    <div className={styles.deleteModalCandidateInfo}>
+                      <span className={styles.deleteModalCandidateName}>
+                        {applicationToDelete.full_name}
+                      </span>
+                      <span className={styles.deleteModalCandidateRole}>
+                        {applicationToDelete.job_title}
+                        {applicationToDelete.job_department
+                          ? ` • ${applicationToDelete.job_department}`
+                          : ""}
+                      </span>
+                    </div>
+                  </div>
+                  <p className={styles.deleteModalWarning}>
+                    This action is permanent and will remove all submitted candidate details and attachments from the system.
+                  </p>
+                </div>
+
+                <div className={styles.deleteModalActions}>
+                  <button
+                    type="button"
+                    className={styles.cancelBtn}
+                    onClick={() => setApplicationToDelete(null)}
+                    disabled={isPending}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.deleteConfirmBtn}
+                    onClick={confirmDeleteApplication}
+                    disabled={isPending}
+                  >
+                    {isPending ? "Deleting..." : "Delete Application"}
                   </button>
                 </div>
               </div>
@@ -1163,85 +1353,148 @@ export function AdminCareers({
       {activeSection === "jobs" && (
         <div className={styles.tableCard}>
           <table className={styles.table}>
+            <colgroup>
+              <col style={{ width: "6%" }} />
+              <col style={{ width: "24%" }} />
+              <col style={{ width: "15%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "9%" }} />
+              <col style={{ width: "9%" }} />
+            </colgroup>
             <thead>
               <tr>
-                <th style={{ width: "60px" }}>Order</th>
-                <th>Role Title</th>
-                <th>Department</th>
-                <th>Type</th>
-                <th>Location</th>
-                <th>Status</th>
-                <th>Actions</th>
+                <th className={styles.thCenter}>Order</th>
+                <th className={styles.thLeft}>Role Title</th>
+                <th className={styles.thCenter}>Department</th>
+                <th className={styles.thCenter}>Job Type</th>
+                <th className={styles.thCenter}>Workplace Mode</th>
+                <th className={styles.thLeft}>Location</th>
+                <th className={styles.thCenter}>Status</th>
+                <th className={styles.thCenter}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {jobs.map((j) => (
-                <tr key={j.id} className={j.status !== "open" ? styles.inactiveRow : ""}>
-                  <td className={styles.orderCell}>{j.order_index}</td>
-                  <td>
-                    <div className={styles.titleCol}>
-                      <span className={styles.jobName}>{j.title}</span>
-                      <span className={styles.jobSummarySnippet}>{j.summary}</span>
-                    </div>
-                  </td>
-                  <td>
-                    <span className={styles.departmentTag}>{j.department}</span>
-                  </td>
-                  <td>
-                    <span className={styles.typeTag}>{j.type}</span>
-                  </td>
-                  <td>
-                    <span className={styles.locText}>{j.location}</span>
-                  </td>
-                  <td>
-                    <div className={styles.statusCell}>
-                      <button
-                        type="button"
-                        className={[
-                          styles.toggleIconBtn,
-                          j.status === "open" ? styles.activeIcon : styles.inactiveIcon,
-                        ].join(" ")}
-                        onClick={() => handleToggleStatus(j)}
-                        title={j.status === "open" ? "Click to close role" : "Click to open role"}
-                      >
-                        {j.status === "open" ? <Eye size={16} /> : <EyeOff size={16} />}
-                      </button>
-
-                      <button
-                        type="button"
-                        className={[
-                          styles.toggleIconBtn,
-                          j.is_featured ? styles.starActive : styles.starInactive,
-                        ].join(" ")}
-                        onClick={() => handleToggleFeatured(j)}
-                        title={j.is_featured ? "Featured spotlight" : "Click to feature"}
-                      >
-                        <Star size={16} />
-                      </button>
-                    </div>
-                  </td>
-                  <td>
-                    <div className={styles.rowActions}>
-                      <button
-                        type="button"
-                        className={styles.editBtn}
-                        onClick={() => handleOpenEditJob(j)}
-                        title="Edit Full Role"
-                      >
-                        <Edit2 size={15} />
-                      </button>
-                      <button
-                        type="button"
-                        className={styles.delBtn}
-                        onClick={() => handleDeleteJob(j.id, j.title)}
-                        title="Delete Role"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+              {jobs.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className={styles.emptyTableTd}>
+                    <div className={styles.emptyTableState}>
+                      <Briefcase size={28} className={styles.emptyTableIcon} />
+                      <span>
+                        No open job positions found. Click &quot;+ Add New Role&quot; to create one.
+                      </span>
                     </div>
                   </td>
                 </tr>
-              ))}
+              ) : (
+                jobs.map((j) => (
+                  <tr
+                    key={j.id}
+                    className={j.status !== "open" ? styles.inactiveRow : ""}
+                  >
+                    <td className={styles.orderCell}>{j.order_index ?? "—"}</td>
+                    <td className={styles.titleTd}>
+                      <div className={styles.titleCol}>
+                        <span className={styles.jobName} title={j.title}>
+                          {j.title || "Untitled Role"}
+                        </span>
+                        {j.summary ? (
+                          <span
+                            className={styles.jobSummarySnippet}
+                            title={j.summary}
+                          >
+                            {j.summary}
+                          </span>
+                        ) : null}
+                      </div>
+                    </td>
+                    <td className={styles.tdCenter}>
+                      <span className={styles.departmentTag}>
+                        {j.department || "General"}
+                      </span>
+                    </td>
+                    <td className={styles.tdCenter}>
+                      <span className={styles.typeTag}>
+                        {j.type || "Full-time"}
+                      </span>
+                    </td>
+                    <td className={styles.tdCenter}>
+                      <span className={styles.workplaceTag}>
+                        {j.workplace || "Remote"}
+                      </span>
+                    </td>
+                    <td className={styles.locTd}>
+                      <span className={styles.locText} title={j.location}>
+                        {j.location || "—"}
+                      </span>
+                    </td>
+                    <td className={styles.tdCenter}>
+                      <div className={styles.statusCell}>
+                        <button
+                          type="button"
+                          className={[
+                            styles.toggleIconBtn,
+                            j.status === "open"
+                              ? styles.activeIcon
+                              : styles.inactiveIcon,
+                          ].join(" ")}
+                          onClick={() => handleToggleStatus(j)}
+                          title={
+                            j.status === "open"
+                              ? "Status: Active / Open (Click to close)"
+                              : "Status: Closed (Click to activate)"
+                          }
+                        >
+                          {j.status === "open" ? (
+                            <Eye size={15} />
+                          ) : (
+                            <EyeOff size={15} />
+                          )}
+                        </button>
+
+                        <button
+                          type="button"
+                          className={[
+                            styles.toggleIconBtn,
+                            j.is_featured
+                              ? styles.starActive
+                              : styles.starInactive,
+                          ].join(" ")}
+                          onClick={() => handleToggleFeatured(j)}
+                          title={
+                            j.is_featured
+                              ? "Featured Spotlight (Click to remove)"
+                              : "Click to feature"
+                          }
+                        >
+                          <Star size={15} />
+                        </button>
+                      </div>
+                    </td>
+                    <td className={styles.tdCenter}>
+                      <div className={styles.rowActions}>
+                        <button
+                          type="button"
+                          className={styles.editBtn}
+                          onClick={() => handleOpenEditJob(j)}
+                          title="Edit Full Role"
+                        >
+                          <Edit2 size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.delBtn}
+                          onClick={() => handleDeleteJob(j.id, j.title)}
+                          title="Delete Role"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>
@@ -1522,43 +1775,85 @@ export function AdminCareers({
               {/* TAB 1: BASIC INFO */}
               {modalTab === "basic" && (
                 <div className={styles.tabPane}>
-                  <div className={styles.formGrid2}>
-                    <div className={styles.formGroup}>
-                      <label>Job Title *</label>
-                      <input
-                        type="text"
-                        required
-                        value={title}
-                        onChange={(e) => {
-                          setTitle(e.target.value);
-                          if (!editingJob) setSlug(slugifyJob(e.target.value));
-                        }}
-                        placeholder="e.g. Content Writer Intern"
-                      />
-                    </div>
-
-                    <div className={styles.formGroup}>
-                      <label>URL Slug *</label>
-                      <input
-                        type="text"
-                        required
-                        value={slug}
-                        onChange={(e) => setSlug(e.target.value)}
-                        placeholder="e.g. content-writer-intern"
-                      />
-                    </div>
+                  <div className={styles.formGroup}>
+                    <label>Job Title *</label>
+                    <input
+                      type="text"
+                      required
+                      value={title}
+                      onChange={(e) => setTitle(e.target.value)}
+                      placeholder="e.g. Content Writer Intern"
+                    />
                   </div>
 
                   <div className={styles.formGrid3}>
                     <div className={styles.formGroup}>
-                      <label>Department *</label>
-                      <input
-                        type="text"
+                      <div className={styles.labelWithAction}>
+                        <label>Department *</label>
+                        {departmentsError && (
+                          <button
+                            type="button"
+                            onClick={fetchDepartments}
+                            className={styles.deptRetryBtn}
+                            title="Retry loading departments"
+                          >
+                            <RotateCw
+                              size={10}
+                              className={loadingDepartments ? styles.spinning : ""}
+                            />
+                            Retry
+                          </button>
+                        )}
+                      </div>
+                      <select
                         required
                         value={department}
-                        onChange={(e) => setDepartment(e.target.value)}
-                        placeholder="e.g. Content & Editorial"
-                      />
+                        onChange={(e) => {
+                          setDepartment(e.target.value);
+                          if (formError) setFormError(null);
+                        }}
+                        className={styles.selectInput}
+                        disabled={
+                          loadingDepartments ||
+                          (departments.length === 0 && !editingJob?.department)
+                        }
+                      >
+                        {loadingDepartments ? (
+                          <option value="" disabled>
+                            Loading departments...
+                          </option>
+                        ) : departmentsError && departments.length === 0 ? (
+                          <option value="" disabled>
+                            Unable to load departments
+                          </option>
+                        ) : departments.length === 0 ? (
+                          <option value="" disabled>
+                            No departments available
+                          </option>
+                        ) : (
+                          <>
+                            <option value="" disabled>
+                              Select Department
+                            </option>
+                            {/* Retain current department safely if editing a legacy job */}
+                            {department &&
+                              !departments.some(
+                                (d) =>
+                                  d.name.toLowerCase() ===
+                                  department.toLowerCase(),
+                              ) && (
+                                <option value={department}>
+                                  {department} (Current)
+                                </option>
+                              )}
+                            {departments.map((dept) => (
+                              <option key={dept.id} value={dept.name}>
+                                {dept.name} {dept.code ? `(${dept.code})` : ""}
+                              </option>
+                            ))}
+                          </>
+                        )}
+                      </select>
                     </div>
 
                     <div className={styles.formGroup}>

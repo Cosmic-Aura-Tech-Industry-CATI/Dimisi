@@ -8,14 +8,14 @@ export interface GoogleUser {
   id: string;
   email: string;
   fullName: string;
-  avatarUrl?: string | null;
+  avatarUrl?: string | null | undefined;
 }
 
 export interface GoogleAuthResult {
   success: boolean;
-  user?: GoogleUser;
-  error?: string;
-  redirected?: boolean;
+  user?: GoogleUser | undefined;
+  error?: string | undefined;
+  redirected?: boolean | undefined;
 }
 
 /**
@@ -139,8 +139,8 @@ export async function handleGoogleOAuthCallback(): Promise<GoogleUser | null> {
  * Redirects the user directly to Google's official Account Chooser UI.
  */
 export async function signInWithGoogleOAuth(options?: {
-  redirectUri?: string;
-}): Promise<GoogleAuthResult> {
+  redirectUri?: string | undefined;
+} | undefined): Promise<GoogleAuthResult> {
   if (typeof window === "undefined") {
     return { success: false, error: "Window is not defined" };
   }

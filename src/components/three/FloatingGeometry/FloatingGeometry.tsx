@@ -1,4 +1,4 @@
-import { useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 
@@ -40,25 +40,6 @@ export function FloatingGeometry({ scrollRef, count = 22 }: FloatingGeometryProp
     return list;
   }, [count]);
 
-  useFrame((state, delta) => {
-    if (!group.current) return;
-    const t = state.clock.elapsedTime;
-    const s = scrollRef.current ?? 0;
-    const ds = s - lastScroll.current;
-    lastScroll.current = s;
-    const step = delta * 1.6 + ds * 200;
-
-    group.current.children.forEach((child, i) => {
-      let z = child.position.z + step;
-      if (z > 7) z -= DEPTH;
-      else if (z < -DEPTH) z += DEPTH;
-      child.position.z = z;
-      child.rotation.x = t * (0.12 + i * 0.01);
-      child.rotation.y = t * 0.09;
-      child.rotation.z = t * 0.06;
-    });
-  });
-
   const geometries = useMemo(
     () => ({
       icosahedron: new THREE.IcosahedronGeometry(1, 0),
@@ -89,6 +70,36 @@ export function FloatingGeometry({ scrollRef, count = 22 }: FloatingGeometryProp
     }),
     [],
   );
+
+  useEffect(() => {
+    return () => {
+      geometries.icosahedron.dispose();
+      geometries.octahedron.dispose();
+      geometries.torus.dispose();
+      materials.standard.dispose();
+      materials.torusEmissive.dispose();
+    };
+  }, [geometries, materials]);
+
+  useFrame((state, delta) => {
+    if (!group.current) return;
+    const clampedDelta = Math.min(0.08, delta);
+    const t = state.clock.elapsedTime;
+    const s = scrollRef.current ?? 0;
+    const ds = Math.max(-0.04, Math.min(0.04, s - lastScroll.current));
+    lastScroll.current = s;
+    const step = clampedDelta * 1.6 + ds * 200;
+
+    group.current.children.forEach((child, i) => {
+      let z = child.position.z + step;
+      if (z > 7) z -= DEPTH;
+      else if (z < -DEPTH) z += DEPTH;
+      child.position.z = z;
+      child.rotation.x = t * (0.12 + i * 0.01);
+      child.rotation.y = t * 0.09;
+      child.rotation.z = t * 0.06;
+    });
+  });
 
   return (
     <group ref={group}>

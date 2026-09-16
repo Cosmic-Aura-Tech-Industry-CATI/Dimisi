@@ -9,8 +9,10 @@ import {
 import type { AdminDashboardData } from "@/lib/reviews.functions";
 import styles from "./AdminAnalytics.module.css";
 
-export function AdminAnalytics({ data }: { data: AdminDashboardData }) {
-  const { stats, campaigns, reviews } = data;
+export function AdminAnalytics({ data }: { data?: AdminDashboardData }) {
+  const stats = data?.stats;
+  const campaigns = data?.campaigns || [];
+  const reviews = data?.reviews || [];
 
   // Group by service
   const serviceCounts: Record<string, { total: number; avg: number; sum: number }> = {};
@@ -29,7 +31,7 @@ export function AdminAnalytics({ data }: { data: AdminDashboardData }) {
       {/* Key Metric Scorecards */}
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
-          <div className={styles.statValue}>{Number(stats?.averageRating ?? stats?.average ?? 0).toFixed(1)} ★</div>
+          <div className={styles.statValue}>{Number(stats?.averageRating ?? stats?.average ?? 5).toFixed(1)} ★</div>
           <div className={styles.statLabel}>Average Rating</div>
         </div>
 
@@ -76,8 +78,9 @@ export function AdminAnalytics({ data }: { data: AdminDashboardData }) {
 
           <div style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
             {([5, 4, 3, 2, 1] as const).map((stars) => {
-              const count = stats.distribution[stars] || 0;
-              const pct = stats.approvedCount > 0 ? (count / stats.approvedCount) * 100 : 0;
+              const count = stats?.distribution?.[stars] ?? (stats as any)?.ratingBreakdown?.[stars] ?? 0;
+              const approvedCount = stats?.approvedCount ?? 0;
+              const pct = approvedCount > 0 ? (count / approvedCount) * 100 : 0;
               return (
                 <div key={stars} className={styles.distRow}>
                   <span style={{ width: "60px", color: "#cbd5e1", fontWeight: 600 }}>

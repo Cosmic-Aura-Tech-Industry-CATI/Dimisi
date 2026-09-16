@@ -70,18 +70,18 @@ export async function recordVisitorSessionFn({
   data: {
     visitor_id: string;
     session_id: string;
-    initial_page?: string;
-    last_page?: string;
-    referrer?: string | null;
-    utm_source?: string | null;
-    utm_medium?: string | null;
-    utm_campaign?: string | null;
-    utm_term?: string | null;
-    utm_content?: string | null;
-    device_category?: "desktop" | "mobile" | "tablet" | "unknown";
-    browser?: string | null;
-    os?: string | null;
-    screen_resolution?: string | null;
+    initial_page?: string | undefined;
+    last_page?: string | undefined;
+    referrer?: string | null | undefined;
+    utm_source?: string | null | undefined;
+    utm_medium?: string | null | undefined;
+    utm_campaign?: string | null | undefined;
+    utm_term?: string | null | undefined;
+    utm_content?: string | null | undefined;
+    device_category?: "desktop" | "mobile" | "tablet" | "unknown" | undefined;
+    browser?: string | null | undefined;
+    os?: string | null | undefined;
+    screen_resolution?: string | null | undefined;
   };
 }): Promise<{ success: boolean }> {
   return { success: true };
@@ -95,9 +95,9 @@ export async function recordPageViewFn({
     session_id: string;
     visitor_id: string;
     path: string;
-    title?: string | null;
-    referrer?: string | null;
-    entered_at?: string;
+    title?: string | null | undefined;
+    referrer?: string | null | undefined;
+    entered_at?: string | undefined;
   };
 }): Promise<{ success: boolean; id: string }> {
   return { success: true, id: data.page_view_id };
@@ -112,7 +112,7 @@ export async function finalizePageViewFn({
     visitor_id: string;
     duration_seconds: number;
     max_scroll_percent: number;
-    exited_at?: string;
+    exited_at?: string | undefined;
   };
 }): Promise<{ success: boolean }> {
   return { success: true };
@@ -124,8 +124,8 @@ export async function heartbeatVisitorFn({
   data: {
     visitor_id: string;
     session_id: string;
-    path?: string;
-    scroll_percent?: number;
+    path?: string | undefined;
+    scroll_percent?: number | undefined;
   };
 }): Promise<{ ok: boolean }> {
   return { ok: true };
@@ -135,15 +135,15 @@ export async function getAdminVisitorsFn({
   data,
 }: {
   data?: {
-    page?: number;
-    limit?: number;
-    search?: string;
-    status?: "all" | "live" | "recent" | "offline";
-    device?: string;
-    authState?: string;
-    sortBy?: string;
-    sortOrder?: string;
-  };
+    page?: number | undefined;
+    limit?: number | undefined;
+    search?: string | undefined;
+    status?: ("all" | "live" | "recent" | "offline") | undefined;
+    device?: string | undefined;
+    authState?: string | undefined;
+    sortBy?: string | undefined;
+    sortOrder?: string | undefined;
+  } | undefined;
 } = {}): Promise<{
   sessions: VisitorSessionItem[];
   total: number;

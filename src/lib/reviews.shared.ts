@@ -51,36 +51,38 @@ export type PublicReview = {
   id: string;
   customer_name: string;
   service_name: string | null;
-  reviewer_type?: ReviewType;
-  role_or_title?: string | null;
-  employee_department?: string | null;
-  employment_status?: "current" | "former" | null;
-  is_verified?: boolean;
+  reviewer_type?: ReviewType | undefined;
+  role_or_title?: string | null | undefined;
+  employee_department?: string | null | undefined;
+  employment_status?: ("current" | "former") | null | undefined;
+  is_verified?: boolean | undefined;
   rating: number;
   review_text: string;
-  photo_url: string | null;
+  photo_url?: string | null | undefined;
+  customer_photo_url?: string | null | undefined;
   customer_location: string | null;
   is_featured: boolean;
-  published_at: string;
+  published_at?: string | null | undefined;
+  submitted_at?: string | null | undefined;
 };
 
 export type AdminReview = {
   id: string;
   campaign_id: string | null;
-  campaign_name?: string | null;
+  campaign_name?: string | null | undefined;
   customer_name: string;
   customer_email: string | null;
   customer_phone: string | null;
   service_name: string | null;
-  reviewer_type?: ReviewType;
-  role_or_title?: string | null;
-  employee_department?: string | null;
-  employment_status?: "current" | "former" | null;
-  is_verified?: boolean;
+  reviewer_type?: ReviewType | undefined;
+  role_or_title?: string | null | undefined;
+  employee_department?: string | null | undefined;
+  employment_status?: ("current" | "former") | null | undefined;
+  is_verified?: boolean | undefined;
   rating: number;
   review_text: string;
   customer_photo_url: string | null;
-  photo_url?: string | null;
+  photo_url?: string | null | undefined;
   customer_location: string | null;
   consent_to_publish: boolean;
   status: ReviewStatus;
@@ -233,14 +235,14 @@ export function slugify(value: string): string {
 export function computeStats(
   rows: {
     rating: number;
-    reviewer_type?: ReviewType;
-    status?: ReviewStatus;
-    created_at?: string;
-    submitted_at?: string;
-    date?: string;
+    reviewer_type?: ReviewType | undefined;
+    status?: ReviewStatus | undefined;
+    created_at?: string | undefined;
+    submitted_at?: string | undefined;
+    date?: string | undefined;
   }[],
-  campaigns?: { visit_count?: number; review_count?: number }[],
-  reports?: { status?: string }[],
+  campaigns?: (ReviewCampaign[] | { visit_count?: number | undefined; review_count?: number | undefined }[]) | undefined,
+  reports?: { status?: string | undefined }[] | undefined,
 ): ReviewStats {
   const distribution: Record<1 | 2 | 3 | 4 | 5, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
   let sum = 0;
@@ -290,9 +292,9 @@ export function computeStats(
   let totalVisits = 0;
   let totalSubmissions = 0;
   if (campaigns && campaigns.length > 0) {
-    for (const c of campaigns) {
-      totalVisits += c.visit_count || 0;
-      totalSubmissions += c.review_count || 0;
+    for (const c of campaigns as any[]) {
+      totalVisits += c.visits || c.visit_count || 0;
+      totalSubmissions += c.submissions || c.review_count || 0;
     }
   }
   const overallConversionRate = totalVisits > 0 ? Math.round((totalSubmissions / totalVisits) * 1000) / 10 : 0;

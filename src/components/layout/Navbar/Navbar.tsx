@@ -13,17 +13,39 @@ export function Navbar() {
 
   useEffect(() => {
     let last = window.scrollY;
-    const onScroll = () => {
+    let isScrolled = last > 40;
+    let isHidden = false;
+    let rafId = 0;
+
+    const checkScroll = () => {
       const y = window.scrollY;
-      setScrolled(y > 40);
+      const nextScrolled = y > 40;
+      if (nextScrolled !== isScrolled) {
+        isScrolled = nextScrolled;
+        setScrolled(nextScrolled);
+      }
       if (Math.abs(y - last) > 6) {
-        setHidden(y > 120 && y > last);
+        const nextHidden = y > 120 && y > last;
+        if (nextHidden !== isHidden) {
+          isHidden = nextHidden;
+          setHidden(nextHidden);
+        }
         last = y;
       }
+      rafId = 0;
     };
-    onScroll();
+
+    const onScroll = () => {
+      if (!rafId) {
+        rafId = window.requestAnimationFrame(checkScroll);
+      }
+    };
+    checkScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      window.removeEventListener("scroll", onScroll);
+    };
   }, []);
 
   useEffect(() => {

@@ -119,7 +119,7 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
       const res = await getAdminLeadsFn({
         data: {
           page: leadPage,
-          limit: 15,
+          pageSize: 15,
           search: leadSearch,
           status: leadStatusFilter,
           source: leadSourceFilter,

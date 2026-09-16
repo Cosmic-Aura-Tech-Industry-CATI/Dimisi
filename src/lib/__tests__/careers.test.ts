@@ -212,6 +212,7 @@ test("Careers System - Store Operations & Seed Integrity", async (t) => {
       linkedin_url: "https://linkedin.com/in/priyasharma",
       cover_letter: "Passionate storyteller ready to write for DIMISI.",
       resume_name: "priya_cv.pdf",
+      resume_type: "application/pdf",
       resume_data_url: "data:application/pdf;base64,JVBERi0xLjQK...",
       resume_size: 1048576,
     };

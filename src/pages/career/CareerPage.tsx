@@ -100,8 +100,6 @@ export function CareerPage() {
   const { data: payload } = useQuery({
     queryKey: ["publicCareers"],
     queryFn: () => getPublicCareersData(),
-    staleTime: 1000 * 15,
-    refetchInterval: 1000 * 25,
   });
 
   const hero = payload?.hero || {

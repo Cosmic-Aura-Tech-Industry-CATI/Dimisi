@@ -21,6 +21,7 @@ export interface ProjectItem {
   title: string;
   type: ProjectType; // "work" (Client Solutions) | "product" (In-House Products)
   category: string; // e.g. "Travel · Website", "Social Platform · Website", "Home Services · Web App", "Conference · Website"
+  category_id?: string | undefined;
   tagline: string;
   overview: string;
   challenge: string;
@@ -46,6 +47,7 @@ export interface ProjectInput {
   slug?: string | undefined;
   type: ProjectType;
   category: string;
+  category_id?: string | undefined;
   tagline?: string | undefined;
   overview: string;
   challenge: string;
@@ -129,8 +131,26 @@ export function validateWorkCategoryInput(input: Partial<WorkCategoryInput>): {
   field?: string;
 } {
   const name = input.name?.trim() || "";
-  if (name.length < 2) {
-    return { valid: false, error: "Category name must be at least 2 characters long.", field: "name" };
+  if (name.length < 5) {
+    return { valid: false, error: "Category name must be at least 5 characters long (5-50 characters).", field: "name" };
+  }
+  if (name.length > 50) {
+    return { valid: false, error: "Category name cannot exceed 50 characters.", field: "name" };
+  }
+  if (input.description && input.description.trim().length > 0) {
+    const desc = input.description.trim();
+    if (desc.length < 5) {
+      return { valid: false, error: "Description must be at least 5 characters long.", field: "description" };
+    }
+    if (desc.length > 200) {
+      return { valid: false, error: "Description cannot exceed 200 characters.", field: "description" };
+    }
+  }
+  if (input.order_index !== undefined && input.order_index !== null) {
+    const num = Number(input.order_index);
+    if (!Number.isInteger(num) || num < 1 || num > 10000) {
+      return { valid: false, error: "Display order must be a whole number between 1 and 10000.", field: "order_index" };
+    }
   }
   return { valid: true };
 }

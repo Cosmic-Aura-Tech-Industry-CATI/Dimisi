@@ -129,9 +129,6 @@ export function LiveReviewsMotion() {
   } = useQuery({
     queryKey: ["livePublicReviews"],
     queryFn: () => getPublicReviews({ data: { pageSize: 32, sort: "newest" } }),
-    staleTime: 1000 * 15,
-    refetchInterval: 1000 * 25, // Auto-sync in real time with Admin Panel
-    refetchOnWindowFocus: true,
   });
 
   // Extract deduplicated list prioritizing featured reviews

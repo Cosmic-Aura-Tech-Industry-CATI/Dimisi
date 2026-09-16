@@ -32,10 +32,10 @@ import {
 import styles from "./AdminCampaigns.module.css";
 
 export function AdminCampaigns({
-  campaigns,
+  campaigns = [],
   onRefresh,
 }: {
-  campaigns: ReviewCampaign[];
+  campaigns?: ReviewCampaign[];
   onRefresh: () => void;
 }) {
   const addCampaign = createCampaign;
@@ -163,7 +163,7 @@ export function AdminCampaigns({
       try {
         await editCampaign({
           data: {
-            id: c.id,
+            campaignId: c.id,
             campaignName: c.campaign_name,
             ...(c.service_name ? { serviceName: c.service_name } : {}),
             ...(c.location ? { location: c.location } : {}),
@@ -182,7 +182,7 @@ export function AdminCampaigns({
     if (!confirm(`Are you sure you want to delete campaign "${c.campaign_name}"?`)) return;
     startTransition(async () => {
       try {
-        await removeCampaign({ data: { id: c.id } });
+        await removeCampaign({ data: { campaignId: c.id } });
         onRefresh();
       } catch (err) {
         alert(err instanceof Error ? err.message : "Error deleting campaign.");
