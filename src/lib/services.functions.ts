@@ -50,10 +50,11 @@ export async function getPublicServicesData(): Promise<PublicServicesPayload> {
     console.warn("Could not load live categories for public services:", catRes.reason);
   }
 
-  if (srvRes.status === "fulfilled" && Array.isArray(srvRes.value) && srvRes.value.length > 0) {
+  if (srvRes.status === "fulfilled" && Array.isArray(srvRes.value)) {
     servicesStore.setServices(srvRes.value);
   } else if (srvRes.status === "rejected") {
     console.warn("Could not load live services for public services:", srvRes.reason);
+    throw srvRes.reason;
   }
 
   const activeCats = catItems.filter((c) => c.status === "active");
@@ -87,7 +88,7 @@ export async function getServiceBySlug({
       liveServices = await getAllServicesApi(undefined, catItems);
     }
 
-    if (Array.isArray(liveServices) && liveServices.length > 0) {
+    if (Array.isArray(liveServices)) {
       servicesStore.setServices(liveServices);
       service = servicesStore.getServiceBySlug(trimmedSlug);
       if (service) return service;

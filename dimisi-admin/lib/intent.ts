@@ -9,6 +9,6 @@ export function isAdminIntent(text: string): boolean {
   return /\bdimisi-admin\b/i.test(normalized) || normalized === "dimisi-admin";
 }
 
-export const ADMIN_ROUTE = "/dimisi-admin";
+export const ADMIN_ROUTE = "/dimisi-admin/overview";
 
 export const ADMIN_REPLY = "Access verified. Please use the secure administrator portal below.";

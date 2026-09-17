@@ -98,11 +98,14 @@ export function AdminSidebar({
                 ? openReportsCount
                 : 0;
 
+            const targetUrl = `/dimisi-admin/${item.id}`;
+            const isActive = tab === item.id;
+
             return (
-              <button
+              <Link
                 key={item.id}
-                type="button"
-                className={[styles.navItem, tab === item.id ? styles.navItemActive : ""].join(" ")}
+                to={targetUrl}
+                className={[styles.navItem, isActive ? styles.navItemActive : ""].join(" ")}
                 onMouseEnter={() => prefetchAdminTab(item.id)}
                 onFocus={() => prefetchAdminTab(item.id)}
                 onClick={() => {
@@ -122,7 +125,7 @@ export function AdminSidebar({
                     {badge}
                   </span>
                 ) : null}
-              </button>
+              </Link>
             );
           })}
         </nav>

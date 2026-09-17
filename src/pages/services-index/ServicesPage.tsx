@@ -64,8 +64,8 @@ export function ServicesPage() {
   const services = payload?.services || [];
   const industries = payload?.industries || [];
   const stats = payload?.stats || {
-    totalServices: 11,
-    totalIndustries: 8,
+    totalServices: services.length,
+    totalIndustries: industries.length,
     uptimeSla: "99.99%",
     satisfactionScore: "4.9/5",
   };

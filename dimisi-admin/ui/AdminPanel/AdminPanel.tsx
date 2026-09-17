@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, lazy, Suspense } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useLocation } from "@tanstack/react-router";
 import { ShieldAlert, ArrowLeft } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
 import { logoutAdmin } from "@/services/adminAuth.service";
@@ -140,8 +140,61 @@ const DEFAULT_REVIEWS: AdminDashboardData = {
   stats: DEFAULT_STATS,
 };
 
+const VALID_ADMIN_TABS: AdminTab[] = [
+  "overview",
+  "services",
+  "work",
+  "careers",
+  "blog",
+  "events",
+  "reviews",
+  "campaigns",
+  "reports",
+  "analytics",
+  "logs",
+  "settings",
+  "leads",
+  "admins",
+];
+
+function resolveActiveTab(pathname: string, search?: unknown): { tab: AdminTab; isInvalid: boolean; invalidSlug?: string } {
+  if (typeof pathname !== "string") return { tab: "overview", isInvalid: false };
+
+  // 1. Check path segment: /dimisi-admin/services -> 'services'
+  const pathParts = pathname.split("/").filter(Boolean);
+  const adminIdx = pathParts.indexOf("dimisi-admin");
+  if (adminIdx !== -1 && pathParts[adminIdx + 1]) {
+    const candidate = pathParts[adminIdx + 1].toLowerCase();
+    if (VALID_ADMIN_TABS.includes(candidate as AdminTab)) {
+      return { tab: candidate as AdminTab, isInvalid: false };
+    }
+    return { tab: "overview", isInvalid: true, invalidSlug: pathParts[adminIdx + 1] };
+  }
+
+  // 2. Check query search param for backward compatibility: /dimisi-admin?tab=services
+  if (search) {
+    if (typeof search === "object" && search !== null && "tab" in search) {
+      const urlTab = String((search as Record<string, unknown>).tab).toLowerCase() as AdminTab;
+      if (VALID_ADMIN_TABS.includes(urlTab)) {
+        return { tab: urlTab, isInvalid: false };
+      }
+    } else if (typeof search === "string") {
+      try {
+        const searchParams = new URLSearchParams(search);
+        const urlTab = searchParams.get("tab")?.toLowerCase() as AdminTab;
+        if (urlTab && VALID_ADMIN_TABS.includes(urlTab)) {
+          return { tab: urlTab, isInvalid: false };
+        }
+      } catch {}
+    }
+  }
+
+  return { tab: "overview", isInvalid: false };
+}
+
 export function AdminPanel() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, loading } = useAuth();
   const load = getAdminOverview;
   const loadReviewsData = getAdminReviewsData;
@@ -151,15 +204,18 @@ export function AdminPanel() {
   const loadCareersData = getAdminCareersData;
   const loadBlogData = getAdminBlogData;
 
-  const [tab, setTab] = useState<Tab>(() => {
-    if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const urlTab = params.get("tab") as Tab;
-      if (urlTab) return urlTab;
-      if (window.location.pathname.endsWith("/logs")) return "logs";
+  // Single Source of Truth: Active tab derived directly from current URL route
+  const { tab, isInvalid: isInvalidTab, invalidSlug } = resolveActiveTab(location.pathname, location.search);
+
+  // Migrate legacy ?tab=query URLs to clean canonical URLs with history replacement
+  useEffect(() => {
+    if (location.search && typeof location.search === "object" && "tab" in location.search) {
+      const queryTab = String((location.search as any).tab).toLowerCase();
+      if (VALID_ADMIN_TABS.includes(queryTab as AdminTab)) {
+        void navigate({ to: `/dimisi-admin/${queryTab}`, replace: true, search: {} });
+      }
     }
-    return "overview";
-  });
+  }, [location.search, navigate]);
 
   const [data, setData] = useState<AdminOverview | null>(() => {
     if (typeof window !== "undefined") {
@@ -316,7 +372,11 @@ export function AdminPanel() {
 
   const handleTabChange = useCallback(
     (newTab: Tab) => {
-      setTab(newTab);
+      const targetPath = `/dimisi-admin/${newTab}`;
+      if (location.pathname !== targetPath) {
+        void navigate({ to: targetPath });
+      }
+
       // Fetch fresh data immediately for the selected tab
       if (newTab === "services") {
         refreshServices();
@@ -339,7 +399,7 @@ export function AdminPanel() {
         refreshOverview();
       }
     },
-    [refreshServices, refreshWork, refreshCareers, refreshBlog, refreshEvents, refreshReviews, refreshOverview],
+    [navigate, location.pathname, refreshServices, refreshWork, refreshCareers, refreshBlog, refreshEvents, refreshReviews, refreshOverview],
   );
 
   useEffect(() => {
@@ -540,8 +600,28 @@ export function AdminPanel() {
           />
         }
       >
-        {/* ACCESS DENIED PAGE-LEVEL GUARD */}
-        {!isTabPermitted ? (
+        {/* 404 / SECTION NOT FOUND GUARD */}
+        {isInvalidTab ? (
+          <div className={styles.card} style={{ margin: "2rem auto", maxWidth: "560px", textAlign: "center" }}>
+            <div style={{ display: "inline-flex", padding: "12px", borderRadius: "50%", background: "rgba(239, 68, 68, 0.14)", color: "#ef4444", marginBottom: "1rem" }}>
+              <ShieldAlert size={36} />
+            </div>
+            <p className={styles.kicker}>Section Not Found</p>
+            <h2 className={styles.title}>404 — Section Not Found</h2>
+            <p className={styles.sub} style={{ marginBottom: "1.25rem", lineHeight: "1.5" }}>
+              The admin section <code>"{invalidSlug}"</code> does not exist or has been moved.
+            </p>
+            <button
+              type="button"
+              className={styles.btn}
+              onClick={() => handleTabChange("overview")}
+              style={{ display: "inline-flex", alignItems: "center", gap: "0.5rem", margin: "0 auto" }}
+            >
+              <ArrowLeft size={16} />
+              <span>Return to Overview</span>
+            </button>
+          </div>
+        ) : !isTabPermitted ? (
           <div className={styles.card} style={{ margin: "2rem auto", maxWidth: "560px", textAlign: "center" }}>
             <div style={{ display: "inline-flex", padding: "12px", borderRadius: "50%", background: "rgba(239, 68, 68, 0.14)", color: "#ef4444", marginBottom: "1rem" }}>
               <ShieldAlert size={36} />
