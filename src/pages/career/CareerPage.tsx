@@ -86,7 +86,6 @@ export function CareerPage() {
   const [resumeDataUrl, setResumeDataUrl] = useState("");
   const [resumeName, setResumeName] = useState("");
   const [resumeSize, setResumeSize] = useState(0);
-  const [resumeType, setResumeType] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -122,8 +121,8 @@ export function CareerPage() {
   const hiringSteps = payload?.hiring_steps || [];
   const benefits = payload?.benefits || [];
   const stats = payload?.stats || {
-    totalOpenings: 2,
-    departmentsCount: 2,
+    totalOpenings: 0,
+    departmentsCount: 0,
     hiringTimeline: "2-3 Weeks",
     responseRate: "100%",
   };
@@ -199,7 +198,6 @@ export function CareerPage() {
       setResumeDataUrl(result);
       setResumeName(file.name);
       setResumeSize(file.size);
-      setResumeType(file.type || "application/pdf");
       setResumeFile(file);
       setFormErrors((prev) => {
         const next = { ...prev };
@@ -235,7 +233,6 @@ export function CareerPage() {
     setResumeDataUrl("");
     setResumeName("");
     setResumeSize(0);
-    setResumeType("");
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -253,8 +250,6 @@ export function CareerPage() {
 
     const inputData = {
       job_id: selectedJobForApply?.id || "general-inquiry",
-      job_title: selectedJobForApply?.title || "General Application",
-      job_department: selectedJobForApply?.department || "General",
       full_name: fullName,
       email,
       phone,
@@ -264,9 +259,6 @@ export function CareerPage() {
       github_url: githubUrl,
       cover_letter: coverLetter,
       additional_info: additionalInfo,
-      resume_name: resumeName,
-      resume_size: resumeSize,
-      resume_type: resumeType,
       resume_data_url: resumeDataUrl,
     };
 
@@ -280,7 +272,7 @@ export function CareerPage() {
     setIsSubmitting(true);
 
     try {
-      const res = await submitJobApplicationFn({ data: inputData });
+      const res = await submitJobApplicationFn({ data: inputData, resumeFile });
       if (res.success) {
         setIsSuccess(true);
         // Reset form data for next time
@@ -492,18 +484,22 @@ export function CareerPage() {
             {filteredJobs.length === 0 ? (
               <div className={styles.noResultsBox}>
                 <p className={styles.noResultsText}>
-                  No open positions match your search criteria. Try a different query or reach out directly!
+                  {jobs.length === 0
+                    ? "We currently have no open positions. Please check back soon or submit a general application below!"
+                    : "No open positions match your search criteria. Try a different query or reach out directly!"}
                 </p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearchQuery("");
-                    setSelectedFilter("all");
-                  }}
-                  className={styles.resetFilterBtn}
-                >
-                  Reset Filters
-                </button>
+                {jobs.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery("");
+                      setSelectedFilter("all");
+                    }}
+                    className={styles.resetFilterBtn}
+                  >
+                    Reset Filters
+                  </button>
+                )}
               </div>
             ) : (
               filteredJobs.map((job, index) => (

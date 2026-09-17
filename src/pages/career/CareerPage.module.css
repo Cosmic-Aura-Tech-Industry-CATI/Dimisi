@@ -1658,8 +1658,15 @@
   flex-direction: column;
   align-items: center;
   text-align: center;
-  padding: 3rem 2rem;
+  padding: clamp(1.5rem, 3.5vw, 2.5rem) clamp(1.25rem, 3vw, 2rem) clamp(2rem, 4vw, 2.75rem);
   gap: 1.15rem;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  width: 100%;
+  box-sizing: border-box;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .successIconOuter {
@@ -1669,6 +1676,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
 .successIconPulse {
@@ -1720,6 +1728,7 @@
   border: 1px solid rgba(52, 211, 153, 0.3);
   padding: 0.25rem 0.85rem;
   border-radius: 999px;
+  flex-shrink: 0;
 }
 
 .successTitle {
@@ -1746,7 +1755,10 @@
   border-radius: 16px;
   background: rgba(255, 122, 0, 0.08);
   border: 1px solid rgba(255, 122, 0, 0.3);
-  margin: 0.5rem 0;
+  margin: 0.25rem 0;
+  width: 100%;
+  max-width: 480px;
+  box-sizing: border-box;
 }
 
 .successPositionLabel {
@@ -1783,8 +1795,9 @@
 }
 
 .successCloseBtn {
-  margin-top: 0.5rem;
-  padding: 0.75rem 2rem;
+  margin-top: 0.75rem;
+  margin-bottom: 0.5rem;
+  padding: 0.8rem 2.25rem;
   border-radius: 12px;
   background: linear-gradient(135deg, #ff9500, #ff5e00);
   border: none;
@@ -1794,6 +1807,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   box-shadow: 0 4px 20px rgba(255, 100, 0, 0.4);
+  flex-shrink: 0;
 }
 
 .successCloseBtn:hover {

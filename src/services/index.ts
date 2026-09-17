@@ -114,6 +114,7 @@ export {
   getAllActiveDepartmentsApi,
   getDepartmentByIdApi,
   normalizeBackendDepartment,
+  DEFAULT_DEPARTMENTS,
   type BackendDepartmentDoc,
   type BackendDepartmentListResponse,
   type BackendDepartmentSingleResponse,

@@ -43,18 +43,24 @@ import {
   type CareersClosingCtaConfig,
   APPLICATION_STATUS_META,
   slugifyJob,
+  isMongoId,
 } from "@/lib/careers.shared";
 import {
   saveJobFn,
   deleteJobFn,
+  toggleJobActiveFn,
+  toggleJobFeaturedFn,
   saveHiringStepsFn,
   saveBenefitsFn,
   saveCareersHeroFn,
+  getApplicationByIdApi,
   updateApplicationStatusFn,
   deleteApplicationFn,
+  downloadResumeApi,
 } from "@/lib/careers.functions";
 import {
   getAllActiveDepartmentsApi,
+  DEFAULT_DEPARTMENTS,
   type DepartmentItem,
 } from "@/services";
 import styles from "./AdminCareers.module.css";
@@ -198,6 +204,19 @@ export function AdminCareers({
   }, [applications]);
 
   // Handle Application Actions
+  const handleOpenApplicationDetails = (app: JobApplicationItem) => {
+    setSelectedApplication(app);
+    if (app.id && isMongoId(app.id)) {
+      getApplicationByIdApi(app.id)
+        .then((fresh) => {
+          if (fresh) setSelectedApplication(fresh);
+        })
+        .catch((err) => {
+          console.warn("Could not fetch latest application detail from API:", err);
+        });
+    }
+  };
+
   const handleStatusChange = (id: string, nextStatus: ApplicationStatus) => {
     startTransition(async () => {
       await updateApplicationStatusFn({
@@ -250,17 +269,32 @@ export function AdminCareers({
     });
   };
 
-  const handleDownloadResume = (app: JobApplicationItem) => {
-    if (!app.resume_data_url) {
-      alert("Resume data is not available for this record.");
+  const handleDownloadResume = async (app: JobApplicationItem) => {
+    try {
+      if (app.id && app.id.length === 24) {
+        await downloadResumeApi(app.id, app.full_name);
+        return;
+      }
+    } catch {
+      // Fallback to direct URL if live stream endpoint is not available
+    }
+
+    if (app.resume_data_url && app.resume_data_url.startsWith("http")) {
+      window.open(app.resume_data_url, "_blank");
       return;
     }
-    const link = document.createElement("a");
-    link.href = app.resume_data_url;
-    link.download = app.resume_name || `${app.full_name.replace(/\s+/g, "_")}_Resume.pdf`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+
+    if (app.resume_data_url) {
+      const link = document.createElement("a");
+      link.href = app.resume_data_url;
+      link.download = app.resume_name || `${app.full_name.replace(/\s+/g, "_")}_Resume.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
+    alert("Resume data is not available for this record.");
   };
 
   // --- JOB MODAL STATE ---
@@ -268,8 +302,8 @@ export function AdminCareers({
   const [editingJob, setEditingJob] = useState<JobOpening | null>(null);
   const [modalTab, setModalTab] = useState<"basic" | "details" | "requirements">("basic");
 
-  // Dynamic Departments from Backend API
-  const [departments, setDepartments] = useState<DepartmentItem[]>([]);
+  // Dynamic Departments from Backend API (with company standard default fallback)
+  const [departments, setDepartments] = useState<DepartmentItem[]>(DEFAULT_DEPARTMENTS);
   const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [departmentsError, setDepartmentsError] = useState<string | null>(null);
 
@@ -278,13 +312,13 @@ export function AdminCareers({
     setDepartmentsError(null);
     try {
       const liveDepts = await getAllActiveDepartmentsApi();
-      setDepartments(liveDepts);
-    } catch (err: unknown) {
-      const msg =
-        err instanceof Error
-          ? err.message
-          : "Unable to load departments. Please try again.";
-      setDepartmentsError(msg);
+      if (liveDepts && liveDepts.length > 0) {
+        setDepartments(liveDepts);
+      } else {
+        setDepartments(DEFAULT_DEPARTMENTS);
+      }
+    } catch {
+      setDepartments(DEFAULT_DEPARTMENTS);
     } finally {
       setLoadingDepartments(false);
     }
@@ -424,7 +458,7 @@ export function AdminCareers({
 
     startTransition(async () => {
       try {
-        const res = await saveJob({ data: input });
+        const res = await saveJob({ data: input, departments });
         if (res.success) {
           setShowJobModal(false);
           onRefresh();
@@ -447,52 +481,15 @@ export function AdminCareers({
   };
 
   const handleToggleStatus = (j: JobOpening) => {
-    const nextStatus: JobStatus = j.status === "open" ? "closed" : "open";
     startTransition(async () => {
-      await saveJob({
-        data: {
-          id: j.id,
-          title: j.title,
-          slug: j.slug,
-          department: j.department,
-          type: j.type,
-          workplace: j.workplace,
-          location: j.location,
-          summary: j.summary,
-          responsibilities: j.responsibilities,
-          requirements: j.requirements,
-          benefits: j.benefits,
-          apply_url: j.apply_url,
-          order_index: j.order_index,
-          is_featured: j.is_featured,
-          status: nextStatus,
-        },
-      });
+      await toggleJobActiveFn({ data: { id: j.id }, departments });
       onRefresh();
     });
   };
 
   const handleToggleFeatured = (j: JobOpening) => {
     startTransition(async () => {
-      await saveJob({
-        data: {
-          id: j.id,
-          title: j.title,
-          slug: j.slug,
-          department: j.department,
-          type: j.type,
-          workplace: j.workplace,
-          location: j.location,
-          summary: j.summary,
-          responsibilities: j.responsibilities,
-          requirements: j.requirements,
-          benefits: j.benefits,
-          apply_url: j.apply_url,
-          order_index: j.order_index,
-          is_featured: !j.is_featured,
-          status: j.status,
-        },
-      });
+      await toggleJobFeaturedFn({ data: { id: j.id }, departments });
       onRefresh();
     });
   };
@@ -838,7 +835,7 @@ export function AdminCareers({
                             <button
                               type="button"
                               className={styles.viewDetailsIconBtn}
-                              onClick={() => setSelectedApplication(app)}
+                              onClick={() => handleOpenApplicationDetails(app)}
                               title="View Full Application Details"
                               aria-label={`View details for ${app.full_name}`}
                             >
@@ -1813,46 +1810,27 @@ export function AdminCareers({
                           if (formError) setFormError(null);
                         }}
                         className={styles.selectInput}
-                        disabled={
-                          loadingDepartments ||
-                          (departments.length === 0 && !editingJob?.department)
-                        }
+                        disabled={loadingDepartments}
                       >
-                        {loadingDepartments ? (
-                          <option value="" disabled>
-                            Loading departments...
-                          </option>
-                        ) : departmentsError && departments.length === 0 ? (
-                          <option value="" disabled>
-                            Unable to load departments
-                          </option>
-                        ) : departments.length === 0 ? (
-                          <option value="" disabled>
-                            No departments available
-                          </option>
-                        ) : (
-                          <>
-                            <option value="" disabled>
-                              Select Department
+                        <option value="" disabled>
+                          Select Department
+                        </option>
+                        {/* Retain current department safely if editing a legacy job */}
+                        {department &&
+                          !departments.some(
+                            (d) =>
+                              d.name.toLowerCase() ===
+                              department.toLowerCase(),
+                          ) && (
+                            <option value={department}>
+                              {department} (Current)
                             </option>
-                            {/* Retain current department safely if editing a legacy job */}
-                            {department &&
-                              !departments.some(
-                                (d) =>
-                                  d.name.toLowerCase() ===
-                                  department.toLowerCase(),
-                              ) && (
-                                <option value={department}>
-                                  {department} (Current)
-                                </option>
-                              )}
-                            {departments.map((dept) => (
-                              <option key={dept.id} value={dept.name}>
-                                {dept.name} {dept.code ? `(${dept.code})` : ""}
-                              </option>
-                            ))}
-                          </>
-                        )}
+                          )}
+                        {departments.map((dept) => (
+                          <option key={dept.id} value={dept.name}>
+                            {dept.name} {dept.code ? `(${dept.code})` : ""}
+                          </option>
+                        ))}
                       </select>
                     </div>
 

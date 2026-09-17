@@ -107,125 +107,9 @@ const INITIAL_BENEFITS: CultureBenefit[] = [
   },
 ];
 
-const INITIAL_JOBS: JobOpening[] = [
-  {
-    id: "job-content-writer-intern",
-    slug: "content-writer-intern",
-    title: "Content Writer Intern",
-    department: "Content & Editorial",
-    type: "Internship",
-    workplace: "Remote",
-    location: "Remote / Noida",
-    summary:
-      "Research, write, and craft compelling narratives, tech articles, case studies, and engaging social content across DIMISI and Kalesh platforms.",
-    responsibilities: [
-      "Draft high-impact technical blog posts, project case studies, and product launch announcements.",
-      "Write engaging viral copy and conversational prompts for the Kalesh social ecosystem.",
-      "Collaborate with engineering and UI/UX designers to translate complex architectures into clear documentation.",
-      "Optimize website content for search visibility, conversion, and brand voice consistency.",
-    ],
-    requirements: [
-      "Exceptional English written communication with a keen eye for storytelling and clarity.",
-      "Curiosity about modern web development, artificial intelligence, and startup culture.",
-      "Demonstrated writing portfolio (articles, newsletters, blogs, or social threads).",
-      "Ability to work independently in a fast-paced, remote-friendly team.",
-    ],
-    benefits: [
-      "Monthly competitive internship stipend with performance bonuses.",
-      "Direct mentorship from founding engineers and product leads.",
-      "Fast-track conversion to full-time Associate Content Strategist.",
-      "Flexible working hours and 100% remote flexibility.",
-    ],
-    apply_url: "",
-    order_index: 1,
-    is_featured: true,
-    status: "open",
-    created_at: "2026-08-20T10:00:00Z",
-    updated_at: "2026-08-27T08:00:00Z",
-  },
-  {
-    id: "job-graphic-designer-intern",
-    slug: "graphic-designer-intern",
-    title: "Graphic Designer Intern",
-    department: "Design & Creative",
-    type: "Internship",
-    workplace: "Remote",
-    location: "Remote / Noida",
-    summary:
-      "Design visual assets, marketing graphics, 3D social plates, interface mockups, and brand identities for client projects and internal ventures.",
-    responsibilities: [
-      "Create striking social media visual banners, promotional graphics, and brand illustrations.",
-      "Assist in crafting UI mockups, iconography sets, and digital art for web applications.",
-      "Produce engaging motion graphics and short micro-animations for product announcements.",
-      "Maintain design system coherence across typography, colors, and obsidian dark mode themes.",
-    ],
-    requirements: [
-      "Proficiency in Figma, Adobe Creative Suite (Photoshop, Illustrator), or modern 3D design tools.",
-      "Strong aesthetic sensibility for typography, composition, and dark cyber glass aesthetics.",
-      "Portfolio showcasing graphic design, branding, illustration, or UI experimentation.",
-      "Eagerness to receive creative feedback and iterate quickly.",
-    ],
-    benefits: [
-      "Monthly competitive internship stipend with creative software tool subscriptions.",
-      "Direct guidance from Senior Art Directors and Product Designers.",
-      "Full ownership of visual campaigns featured on high-traffic websites.",
-      "Potential pre-placement offer (PPO) based on internship performance.",
-    ],
-    apply_url: "",
-    order_index: 2,
-    is_featured: true,
-    status: "open",
-    created_at: "2026-08-21T10:00:00Z",
-    updated_at: "2026-08-27T08:00:00Z",
-  },
-];
+export const INITIAL_JOBS: JobOpening[] = [];
 
-const INITIAL_APPLICATIONS: JobApplicationItem[] = [
-  {
-    id: "app-101",
-    job_id: "job-graphic-designer-intern",
-    job_title: "Graphic Designer Intern",
-    job_department: "Design & Creative",
-    full_name: "Aarav Sharma",
-    email: "aarav.sharma.design@gmail.com",
-    phone: "+91 98765 43210",
-    location: "Noida, Uttar Pradesh",
-    portfolio_url: "https://behance.net/aaravsharma-design",
-    linkedin_url: "https://linkedin.com/in/aarav-sharma-ux",
-    github_url: "https://github.com/aarav-designs",
-    cover_letter: "I specialize in obsidian dark-mode interface mockups, 3D visual assets, and high-conversion social creatives. I have worked extensively with Figma, Blender, and modern vector design systems.",
-    additional_info: "Available to start immediately for a full-time or remote internship.",
-    resume_name: "Aarav_Sharma_Design_Resume.pdf",
-    resume_size: 2450000,
-    resume_type: "application/pdf",
-    resume_data_url: "data:application/pdf;base64,JVBERi0xLjQKJcTl8uXrp/Og0MTGCjEgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBSCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9UeXBlIC9QYWdlcwovS2lkcyBbMyAwIFJdCi9Db3VudCAxIAo+PgplbmRvYmoKMyAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDIgMCBSCi9NZWRpYUJveCBbMCAwIDYxMiA3OTJdCj4+CmVuZG9iago0IDAgb2JqCjw8Ci9MZW5ndGggMTIKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgoyMCA3NTAgVGRKCihoaXJpbmcgZGVtbyByZXN1bWUpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDUKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDE4IDAwMDAwIG4gCjAwMDAwMDAwNjcgMDAwMDAgbiAKMDAwMDAwMDExNCAwMDAwMCBuIAowMDAwMDAwMTcwIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNQovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKMjI0CiUlRU9GCg==",
-    status: "new",
-    applied_at: "2026-09-11T10:30:00.000Z",
-    notes: "Strong portfolio in Figma and dark cyberpunk aesthetics. Shortlisted for screening call.",
-  },
-  {
-    id: "app-102",
-    job_id: "job-content-writer-intern",
-    job_title: "Content Writer Intern",
-    job_department: "Content & Editorial",
-    full_name: "Priya Nair",
-    email: "priya.nair.writer@outlook.com",
-    phone: "+91 91234 56789",
-    location: "Bengaluru / Remote",
-    portfolio_url: "https://medium.com/@priya.nair.tech",
-    linkedin_url: "https://linkedin.com/in/priya-nair-editorial",
-    github_url: "",
-    cover_letter: "I write technical long-form articles, developer case studies, and engaging community copy. Passionate about AI agents and distributed cloud architecture.",
-    additional_info: "Can commit 35+ hours weekly with flexible hours.",
-    resume_name: "Priya_Nair_Content_CV.pdf",
-    resume_size: 1820000,
-    resume_type: "application/pdf",
-    resume_data_url: "data:application/pdf;base64,JVBERi0xLjQKJcTl8uXrp/Og0MTGCjEgMCBvYmoKPDwKL1R5cGUgL0NhdGFsb2cKL1BhZ2VzIDIgMCBSCj4+CmVuZG9iagoyIDAgb2JqCjw8Ci9UeXBlIC9QYWdlcwovS2lkcyBbMyAwIFJdCi9Db3VudCAxIAo+PgplbmRvYmoKMyAwIG9iago8PAovVHlwZSAvUGFnZQovUGFyZW50IDIgMCBSCi9NZWRpYUJveCBbMCAwIDYxMiA3OTJdCj4+CmVuZG9iago0IDAgb2JqCjw8Ci9MZW5ndGggMTIKPj4Kc3RyZWFtCkJUCi9GMSAxMiBUZgoyMCA3NTAgVGRKCihoaXJpbmcgZGVtbyByZXN1bWUpIFRqCkVUCmVuZHN0cmVhbQplbmRvYmoKeHJlZgowIDUKMDAwMDAwMDAwMCA2NTUzNSBmIAowMDAwMDAwMDE4IDAwMDAwIG4gCjAwMDAwMDAwNjcgMDAwMDAgbiAKMDAwMDAwMDExNCAwMDAwMCBuIAowMDAwMDAwMTcwIDAwMDAwIG4gCnRyYWlsZXIKPDwKL1NpemUgNQovUm9vdCAxIDAgUgo+PgpzdGFydHhyZWYKMjI0CiUlRU9GCg==",
-    status: "reviewing",
-    applied_at: "2026-09-10T14:15:00.000Z",
-    notes: "Great sample work in technical editorial. Scheduled for interview round.",
-  },
-];
+export const INITIAL_APPLICATIONS: JobApplicationItem[] = [];
 
 class MemoryCareersStore {
   private jobs: Map<string, JobOpening> = new Map();
@@ -236,9 +120,20 @@ class MemoryCareersStore {
   private closingCta: CareersClosingCtaConfig = { ...INITIAL_CLOSING_CTA };
 
   constructor() {
-    INITIAL_JOBS.forEach((j) => this.jobs.set(j.id, { ...j }));
-    INITIAL_APPLICATIONS.forEach((a) => this.applications.set(a.id, { ...a }));
+    // Initialized empty — live database is the single source of truth
   }
+
+  public setJobs = (jobs: JobOpening[]): void => {
+    if (!this.jobs) this.jobs = new Map();
+    this.jobs.clear();
+    jobs.forEach((j) => this.jobs.set(j.id, { ...j }));
+  };
+
+  public setApplications = (applications: JobApplicationItem[]): void => {
+    if (!this.applications) this.applications = new Map();
+    this.applications.clear();
+    applications.forEach((a) => this.applications.set(a.id, { ...a }));
+  };
 
   public getPublicPayload(): PublicCareersPayload {
     const list = Array.from(this.jobs.values())
@@ -331,11 +226,15 @@ class MemoryCareersStore {
     const now = new Date().toISOString();
     const id = `app-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+    const job = this.getJobById(input.job_id) || this.getJobBySlug(input.job_id);
+    const jobTitle = job ? job.title : "General Application";
+    const jobDept = job ? job.department : "General";
+
     const application: JobApplicationItem = {
       id,
-      job_id: input.job_id || "general",
-      job_title: input.job_title.trim(),
-      job_department: input.job_department?.trim() || "General",
+      job_id: input.job_id || "general-inquiry",
+      job_title: jobTitle,
+      job_department: jobDept,
       full_name: input.full_name.trim(),
       email: input.email.trim().toLowerCase(),
       phone: input.phone.trim(),
@@ -345,9 +244,9 @@ class MemoryCareersStore {
       github_url: input.github_url?.trim() || undefined,
       cover_letter: input.cover_letter?.trim() || undefined,
       additional_info: input.additional_info?.trim() || undefined,
-      resume_name: input.resume_name,
-      resume_size: input.resume_size,
-      resume_type: input.resume_type,
+      resume_name: "Resume.pdf",
+      resume_size: 0,
+      resume_type: "application/pdf",
       resume_data_url: input.resume_data_url,
       status: "new",
       applied_at: now,
@@ -411,9 +310,37 @@ class MemoryCareersStore {
   }
 }
 
-// Global persistent instance on server
-const globalForCareers = globalThis as unknown as { __dimisi_careers_store__?: MemoryCareersStore };
-export const careersStore = globalForCareers.__dimisi_careers_store__ || new MemoryCareersStore();
-if (process.env.NODE_ENV !== "production") {
-  globalForCareers.__dimisi_careers_store__ = careersStore;
+// Global persistent instance on server / runtime
+const globalForCareers = globalThis as unknown as {
+  __dimisi_careers_store__?: MemoryCareersStore;
+};
+
+// Check if existing cached instance is valid and has callable setJobs
+const existingStore = globalForCareers.__dimisi_careers_store__;
+const isValidStore =
+  existingStore &&
+  typeof existingStore.setJobs === "function" &&
+  typeof existingStore.setApplications === "function";
+
+export const careersStore: MemoryCareersStore = isValidStore
+  ? existingStore
+  : new MemoryCareersStore();
+
+// Fallback runtime safety guard
+if (typeof (careersStore as any).setJobs !== "function") {
+  (careersStore as any).setJobs = function (jobs: JobOpening[]): void {
+    if (!this.jobs) this.jobs = new Map();
+    this.jobs.clear();
+    jobs.forEach((j: JobOpening) => this.jobs.set(j.id, { ...j }));
+  };
 }
+
+if (typeof (careersStore as any).setApplications !== "function") {
+  (careersStore as any).setApplications = function (applications: JobApplicationItem[]): void {
+    if (!this.applications) this.applications = new Map();
+    this.applications.clear();
+    applications.forEach((a: JobApplicationItem) => this.applications.set(a.id, { ...a }));
+  };
+}
+
+globalForCareers.__dimisi_careers_store__ = careersStore;
