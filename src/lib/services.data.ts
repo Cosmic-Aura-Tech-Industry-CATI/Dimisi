@@ -1585,7 +1585,7 @@ export const INITIAL_SERVICE_CATEGORIES: ServiceCategoryItem[] = [
 const SERVICE_CATEGORIES_STORAGE_KEY = "dimisi_admin_service_categories_v2";
 
 class MemoryServicesStore {
-  private _services: CompanyService[] = [...SEED_SERVICES];
+  private _services: CompanyService[] = [];
   private _industries: IndustrySector[] = [...SEED_INDUSTRIES];
   private _categories: ServiceCategoryItem[] = [...INITIAL_SERVICE_CATEGORIES];
 

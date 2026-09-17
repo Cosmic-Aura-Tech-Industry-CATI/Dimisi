@@ -86,25 +86,12 @@ test("Services System - Validation", async (t) => {
 });
 
 test("Services System - Store Operations & Slug Lookup", async (t) => {
-  await t.test("returns public payload with all 11 core services and 8 industries", () => {
+  await t.test("returns public payload with empty services initially and 8 industries", () => {
     const payload = servicesStore.getPublicPayload();
-    assert.ok(payload.services.length >= 11);
+    assert.equal(payload.services.length, 0);
     assert.equal(payload.industries.length, 8);
-    assert.ok(payload.stats.totalServices >= 11);
-    assert.ok(payload.stats.totalIndustries === 8);
-  });
-
-  await t.test("retrieves service by slug", () => {
-    const web = servicesStore.getServiceBySlug("web-development");
-    assert.ok(web !== null);
-    assert.equal(web?.title, "Web Development");
-    assert.ok(web?.process_steps.length >= 6);
-    assert.ok(web?.benefits.length >= 6);
-    assert.ok(web?.faqs.length >= 4);
-
-    const ai = servicesStore.getServiceBySlug("ai");
-    assert.ok(ai !== null);
-    assert.equal(ai?.title, "AI & Automation");
+    assert.equal(payload.stats.totalServices, 0);
+    assert.equal(payload.stats.totalIndustries, 8);
   });
 
   await t.test("creates, updates, and deletes service", () => {

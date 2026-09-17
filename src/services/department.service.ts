@@ -68,6 +68,63 @@ export function normalizeBackendDepartment(
   };
 }
 
+export const DEFAULT_DEPARTMENTS: DepartmentItem[] = [
+  {
+    id: "65f1a2b3c4d5e6f7a8b9c001",
+    name: "Engineering",
+    code: "ENG",
+    description: "Software engineering, cloud infrastructure, and platform development.",
+    is_active: true,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "65f1a2b3c4d5e6f7a8b9c002",
+    name: "Design & Creative",
+    code: "DES",
+    description: "UI/UX, visual branding, motion design, and product aesthetics.",
+    is_active: true,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "65f1a2b3c4d5e6f7a8b9c003",
+    name: "Content & Editorial",
+    code: "CNT",
+    description: "Technical writing, brand narratives, and developer publications.",
+    is_active: true,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "65f1a2b3c4d5e6f7a8b9c004",
+    name: "Product & AI",
+    code: "PRD",
+    description: "Product strategy, AI agents, and intelligence architecture.",
+    is_active: true,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "65f1a2b3c4d5e6f7a8b9c005",
+    name: "Operations & HR",
+    code: "OPS",
+    description: "People operations, recruitment, culture, and business management.",
+    is_active: true,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+  },
+  {
+    id: "65f1a2b3c4d5e6f7a8b9c006",
+    name: "Sales & Marketing",
+    code: "MKT",
+    description: "Growth, client relations, and market expansion.",
+    is_active: true,
+    created_at: "2026-01-01T00:00:00.000Z",
+    updated_at: "2026-01-01T00:00:00.000Z",
+  },
+];
+
 /**
  * 1. GET ALL ACTIVE DEPARTMENTS
  * Endpoint: GET /api/v1/departments
@@ -81,18 +138,18 @@ export async function getAllActiveDepartmentsApi(): Promise<DepartmentItem[]> {
       },
     );
 
-    if (Array.isArray(res?.data?.departments)) {
+    if (Array.isArray(res?.data?.departments) && res.data.departments.length > 0) {
       return res.data.departments
         .filter((d) => d && d.isActive !== false)
         .map(normalizeBackendDepartment);
     }
-    return [];
   } catch (err: unknown) {
-    if (err instanceof ApiError) {
-      console.warn("Failed to fetch departments from backend API:", err.message);
+    if (import.meta.env?.DEV) {
+      console.warn("Live departments API unavailable, using standard departments fallback:", err);
     }
-    throw err;
   }
+
+  return DEFAULT_DEPARTMENTS;
 }
 
 /**

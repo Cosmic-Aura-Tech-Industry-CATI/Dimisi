@@ -17,7 +17,7 @@ export function VisitorTracker() {
     // Lightweight keep-alive warm-up ping for hosted backend instances
     const pingBackend = () => {
       if (typeof window === "undefined" || document.hidden) return;
-      fetch(`${API_BASE_URL}/api/v1/health`, { method: "GET", mode: "cors" }).catch(() => {});
+      fetch(`${API_BASE_URL}/`, { method: "GET", mode: "cors" }).catch(() => {});
     };
 
     const initTimer = window.setTimeout(pingBackend, 3000);
