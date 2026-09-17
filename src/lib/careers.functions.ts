@@ -32,7 +32,7 @@ import {
   API_BASE_URL,
 } from "../services/apiClient";
 import {
-  getAllActiveDepartmentsApi,
+  DEFAULT_DEPARTMENTS,
   type DepartmentItem,
 } from "../services/department.service";
 
@@ -44,15 +44,7 @@ export { isMongoId };
  * Only active jobs (isActive: true) are returned for public visitors.
  */
 export async function getPublicCareersData(): Promise<PublicCareersPayload> {
-  let departments: DepartmentItem[] = [];
-  // Only attempt to fetch departments if an admin token exists (departments API requires auth)
-  if (typeof window !== "undefined" && localStorage.getItem("dimisi_admin_session")) {
-    try {
-      departments = await getAllActiveDepartmentsApi();
-    } catch {
-      departments = [];
-    }
-  }
+  const departments: DepartmentItem[] = DEFAULT_DEPARTMENTS;
 
   try {
     const res = await apiRequest<BackendJobListResponse>(
