@@ -4,7 +4,7 @@
  *
  * Backend route: POST /api/v1/admin-panel/auth/login
  */
-import { apiRequest, ApiError } from "./apiClient";
+import { apiRequest, clearApiCache, ApiError } from "./apiClient";
 import type { AuthUser } from "@/hooks/useAuth";
 
 export interface AdminLoginCredentials {
@@ -139,12 +139,25 @@ export async function loginAdmin(
 }
 
 /**
- * Invalidate admin session and clear credentials.
+ * Invalidate admin session on backend and clear local credentials.
+ * Endpoint: POST /api/v1/admin-panel/auth/logout
  */
-export function logoutAdmin(): void {
-  if (typeof window !== "undefined") {
-    localStorage.removeItem(ADMIN_SESSION_KEY);
-    window.dispatchEvent(new Event("dimisi-auth-change"));
+export async function logoutAdmin(): Promise<void> {
+  try {
+    await apiRequest("/api/v1/admin-panel/auth/logout", {
+      method: "POST",
+    });
+  } catch (error) {
+    console.warn(
+      "Backend admin logout request failed, proceeding with local cleanup:",
+      error,
+    );
+  } finally {
+    if (typeof window !== "undefined") {
+      localStorage.removeItem(ADMIN_SESSION_KEY);
+      clearApiCache();
+      window.dispatchEvent(new Event("dimisi-auth-change"));
+    }
   }
 }
 

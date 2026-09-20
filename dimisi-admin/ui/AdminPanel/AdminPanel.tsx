@@ -488,7 +488,7 @@ export function AdminPanel() {
 
   async function signOut() {
     try {
-      logoutAdmin();
+      await logoutAdmin();
     } catch {}
     void navigate({ to: "/", replace: true });
   }
