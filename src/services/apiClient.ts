@@ -4,19 +4,48 @@
  * Configured via VITE_API_BASE_URL (defaults to https://api.dimisi.tech).
  */
 
-export const API_BASE_URL =
-  (typeof import.meta !== "undefined" &&
-    import.meta.env &&
-    typeof import.meta.env.VITE_API_BASE_URL === "string" &&
-    import.meta.env.VITE_API_BASE_URL.trim()) ||
-  (typeof process !== "undefined" &&
-    process.env &&
-    typeof process.env.VITE_API_BASE_URL === "string" &&
-    process.env.VITE_API_BASE_URL.trim()) ||
-  "https://api.dimisi.tech";
+export const API_BASE_URL = (() => {
+  const envUrl =
+    (typeof import.meta !== "undefined" &&
+      import.meta.env &&
+      typeof import.meta.env.VITE_API_BASE_URL === "string" &&
+      import.meta.env.VITE_API_BASE_URL.trim()) ||
+    (typeof process !== "undefined" &&
+      process.env &&
+      typeof process.env.VITE_API_BASE_URL === "string" &&
+      process.env.VITE_API_BASE_URL.trim()) ||
+    "";
+
+  // In local browser development (localhost/127.0.0.1 or DEV mode):
+  if (
+    typeof window !== "undefined" &&
+    (window.location.hostname === "localhost" ||
+      window.location.hostname === "127.0.0.1" ||
+      window.location.port === "8080" ||
+      import.meta.env?.DEV)
+  ) {
+    // If the developer explicitly specified a local server URL (e.g. http://localhost:5000), use that directly
+    if (envUrl && (envUrl.includes("localhost:") || envUrl.includes("127.0.0.1:"))) {
+      return envUrl;
+    }
+    // For remote backends (https://api.dimisi.tech), ALWAYS return "" (relative path)
+    // so Vite dev server proxies /api requests server-to-server, eliminating CORS preflight errors.
+    return "";
+  }
+
+  // In production or SSR environments:
+  if (envUrl) {
+    return envUrl;
+  }
+
+  return "https://api.dimisi.tech";
+})();
 
 if (typeof window !== "undefined" && import.meta.env?.DEV) {
-  console.info("[API CONFIG]", API_BASE_URL);
+  console.info(
+    "[API CONFIG]",
+    API_BASE_URL ? API_BASE_URL : "(Vite Dev Proxy -> https://api.dimisi.tech)"
+  );
 }
 
 export class ApiError extends Error {

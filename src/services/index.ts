@@ -121,5 +121,38 @@ export {
   type DepartmentItem,
 } from "./department.service";
 
+// 9. Blog Category Taxonomy API
+export {
+  getAllBlogCategoriesApi,
+  createBlogCategoryApi,
+  updateBlogCategoryApi,
+  deleteBlogCategoryApi,
+  normalizeBackendBlogCategory,
+  resolveBlogCategoryName,
+  resolveBlogCategoryIdForPayload,
+  type BackendBlogCategoryDoc,
+  type BackendBlogCategoryListResponse,
+  type BackendBlogCategorySingleResponse,
+  type CreateBlogCategoryPayload,
+  type UpdateBlogCategoryPayload,
+} from "./blogCategory.service";
 
-
+// 10. Blog & Editorial Publication API
+export {
+  getPublicActiveBlogsApi,
+  getAllAdminBlogsApi,
+  getBlogByIdApi,
+  createBlogApi,
+  updateBlogApi,
+  deleteBlogApi,
+  toggleBlogActiveApi,
+  setBlogFeaturedApi,
+  getBlogConfigApi,
+  updateBlogConfigApi,
+  normalizeBackendBlog,
+  DEFAULT_BLOG_FALLBACK_IMAGE,
+  type BackendBlogDoc,
+  type BackendBlogListResponse,
+  type BackendBlogSingleResponse,
+  type BackendBlogConfigResponse,
+} from "./blog.service";

@@ -50,15 +50,9 @@ export function BlogPage() {
 
   const allPosts = payload?.posts || [];
   const featuredPost = payload?.featured_post || null;
-  const categories = payload?.categories || [
-    "All Posts",
-    "Web",
-    "Mobile",
-    "AI",
-    "Cloud",
-    "Startups",
-    "Technology Trends",
-  ];
+  const categories = payload?.categories
+    ? ["All Posts", ...payload.categories.filter((c) => c.toLowerCase() !== "all posts")]
+    : ["All Posts"];
   const stats = payload?.stats || {
     totalPosts: allPosts.length,
     totalCategories: categories.length - 1,

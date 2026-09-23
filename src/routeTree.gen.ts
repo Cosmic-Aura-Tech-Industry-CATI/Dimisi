@@ -26,11 +26,13 @@ import { Route as ReviewsRouteImport } from './routes/reviews'
 import { Route as ServicesRouteImport } from './routes/services'
 import { Route as TeamRouteImport } from './routes/team'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as BlogIndexRouteImport } from './routes/blog.index'
 import { Route as BlogSlugRouteImport } from './routes/blog.$slug'
 import { Route as DimisiAdminIndexRouteImport } from './routes/dimisi-admin.index'
 import { Route as DimisiAdminTabRouteImport } from './routes/dimisi-admin.$tab'
 import { Route as DimisiAdminLogsRouteImport } from './routes/dimisi-admin.logs'
 import { Route as DimisiAdminOverviewRouteImport } from './routes/dimisi-admin.overview'
+import { Route as ReviewIndexRouteImport } from './routes/review.index'
 import { Route as ReviewSlugRouteImport } from './routes/review.$slug'
 import { Route as ServicesIndexRouteImport } from './routes/services.index'
 import { Route as ServicesSlugRouteImport } from './routes/services.$slug'
@@ -122,6 +124,11 @@ const TermsRoute = TermsRouteImport.update({
   path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BlogIndexRoute = BlogIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => BlogRoute,
+} as any)
 const BlogSlugRoute = BlogSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -146,6 +153,11 @@ const DimisiAdminOverviewRoute = DimisiAdminOverviewRouteImport.update({
   id: '/overview',
   path: '/overview',
   getParentRoute: () => DimisiAdminRoute,
+} as any)
+const ReviewIndexRoute = ReviewIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ReviewRoute,
 } as any)
 const ReviewSlugRoute = ReviewSlugRouteImport.update({
   id: '/$slug',
@@ -198,7 +210,9 @@ export interface FileRoutesByFullPath {
   '/review/$slug': typeof ReviewSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
   '/work/$slug': typeof WorkSlugRoute
+  '/blog/': typeof BlogIndexRoute
   '/dimisi-admin/': typeof DimisiAdminIndexRoute
+  '/review/': typeof ReviewIndexRoute
   '/services/': typeof ServicesIndexRoute
   '/work/': typeof WorkIndexRoute
 }
@@ -207,14 +221,12 @@ export interface FileRoutesByTo {
   '/about': typeof AboutRoute
   '/account': typeof AccountRoute
   '/auth': typeof AuthRoute
-  '/blog': typeof BlogRouteWithChildren
   '/career': typeof CareerRoute
   '/contact': typeof ContactRoute
   '/events': typeof EventsRoute
   '/gallery': typeof GalleryRoute
   '/privacy': typeof PrivacyRoute
   '/products': typeof ProductsRoute
-  '/review': typeof ReviewRouteWithChildren
   '/reviews': typeof ReviewsRoute
   '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
@@ -225,7 +237,9 @@ export interface FileRoutesByTo {
   '/review/$slug': typeof ReviewSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
   '/work/$slug': typeof WorkSlugRoute
+  '/blog': typeof BlogIndexRoute
   '/dimisi-admin': typeof DimisiAdminIndexRoute
+  '/review': typeof ReviewIndexRoute
   '/services': typeof ServicesIndexRoute
   '/work': typeof WorkIndexRoute
 }
@@ -255,7 +269,9 @@ export interface FileRoutesById {
   '/review/$slug': typeof ReviewSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
   '/work/$slug': typeof WorkSlugRoute
+  '/blog/': typeof BlogIndexRoute
   '/dimisi-admin/': typeof DimisiAdminIndexRoute
+  '/review/': typeof ReviewIndexRoute
   '/services/': typeof ServicesIndexRoute
   '/work/': typeof WorkIndexRoute
 }
@@ -286,7 +302,9 @@ export interface FileRouteTypes {
     | '/review/$slug'
     | '/services/$slug'
     | '/work/$slug'
+    | '/blog/'
     | '/dimisi-admin/'
+    | '/review/'
     | '/services/'
     | '/work/'
   fileRoutesByTo: FileRoutesByTo
@@ -295,14 +313,12 @@ export interface FileRouteTypes {
     | '/about'
     | '/account'
     | '/auth'
-    | '/blog'
     | '/career'
     | '/contact'
     | '/events'
     | '/gallery'
     | '/privacy'
     | '/products'
-    | '/review'
     | '/reviews'
     | '/team'
     | '/terms'
@@ -313,7 +329,9 @@ export interface FileRouteTypes {
     | '/review/$slug'
     | '/services/$slug'
     | '/work/$slug'
+    | '/blog'
     | '/dimisi-admin'
+    | '/review'
     | '/services'
     | '/work'
   id:
@@ -342,7 +360,9 @@ export interface FileRouteTypes {
     | '/review/$slug'
     | '/services/$slug'
     | '/work/$slug'
+    | '/blog/'
     | '/dimisi-admin/'
+    | '/review/'
     | '/services/'
     | '/work/'
   fileRoutesById: FileRoutesById
@@ -490,6 +510,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/blog/': {
+      id: '/blog/'
+      path: '/'
+      fullPath: '/blog/'
+      preLoaderRoute: typeof BlogIndexRouteImport
+      parentRoute: typeof BlogRoute
+    }
     '/blog/$slug': {
       id: '/blog/$slug'
       path: '/$slug'
@@ -524,6 +551,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/dimisi-admin/overview'
       preLoaderRoute: typeof DimisiAdminOverviewRouteImport
       parentRoute: typeof DimisiAdminRoute
+    }
+    '/review/': {
+      id: '/review/'
+      path: '/'
+      fullPath: '/review/'
+      preLoaderRoute: typeof ReviewIndexRouteImport
+      parentRoute: typeof ReviewRoute
     }
     '/review/$slug': {
       id: '/review/$slug'
@@ -565,10 +599,12 @@ declare module '@tanstack/react-router' {
 
 interface BlogRouteChildren {
   BlogSlugRoute: typeof BlogSlugRoute
+  BlogIndexRoute: typeof BlogIndexRoute
 }
 
 const BlogRouteChildren: BlogRouteChildren = {
   BlogSlugRoute: BlogSlugRoute,
+  BlogIndexRoute: BlogIndexRoute,
 }
 
 const BlogRouteWithChildren = BlogRoute._addFileChildren(BlogRouteChildren)
@@ -593,10 +629,12 @@ const DimisiAdminRouteWithChildren = DimisiAdminRoute._addFileChildren(
 
 interface ReviewRouteChildren {
   ReviewSlugRoute: typeof ReviewSlugRoute
+  ReviewIndexRoute: typeof ReviewIndexRoute
 }
 
 const ReviewRouteChildren: ReviewRouteChildren = {
   ReviewSlugRoute: ReviewSlugRoute,
+  ReviewIndexRoute: ReviewIndexRoute,
 }
 
 const ReviewRouteWithChildren =

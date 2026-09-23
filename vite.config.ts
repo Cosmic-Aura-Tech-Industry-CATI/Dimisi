@@ -1,14 +1,31 @@
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
 import path from "path";
 
-export default defineConfig(({ command }) => ({
-  envPrefix: ["VITE_", "GOOGLE_"],
-  server: {
-    port: 8080,
-  },
+export default defineConfig(({ mode, command }) => {
+  const env = loadEnv(mode, process.cwd(), "");
+  const backendTarget =
+    env.VITE_BACKEND_TARGET ||
+    (env.VITE_API_BASE_URL && !env.VITE_API_BASE_URL.includes("localhost:8080")
+      ? env.VITE_API_BASE_URL
+      : "") ||
+    "https://api.dimisi.tech";
+
+  return {
+    envPrefix: ["VITE_", "GOOGLE_"],
+    server: {
+      port: 8080,
+      proxy: {
+        "/api": {
+          target: backendTarget,
+          changeOrigin: true,
+          secure: false,
+          ws: true,
+        },
+      },
+    },
   resolve: {
     tsconfigPaths: true,
     alias: {
@@ -66,11 +83,12 @@ export default defineConfig(({ command }) => ({
       },
     },
   },
-  plugins: [
-    tanstackStart({
-      server: { entry: "server" },
-    }),
-    react(),
-    tailwindcss(),
-  ],
-}));
+    plugins: [
+      tanstackStart({
+        server: { entry: "server" },
+      }),
+      react(),
+      tailwindcss(),
+    ],
+  };
+});

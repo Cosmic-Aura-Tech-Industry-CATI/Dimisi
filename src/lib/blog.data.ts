@@ -25,234 +25,31 @@ const INITIAL_BLOG_CONFIG: BlogConfig = {
   under_development_notice_text: "Blog section under development. Please visit again after some time.",
 };
 
-const INITIAL_CATEGORIES: BlogCategoryItem[] = [
-  {
-    id: "cat-ai",
-    name: "AI",
-    slug: "ai",
-    description: "Artificial Intelligence, Neural Perception, Multi-Agent Swarms & Applied ML",
-    status: "active",
-    order_index: 1,
-    created_at: "2026-08-01T00:00:00Z",
-  },
-  {
-    id: "cat-cloud",
-    name: "Cloud",
-    slug: "cloud",
-    description: "Cloud Architecture, GPU Economics, DevOps & Distributed Infrastructure",
-    status: "active",
-    order_index: 2,
-    created_at: "2026-08-01T00:00:00Z",
-  },
-  {
-    id: "cat-web",
-    name: "Web",
-    slug: "web",
-    description: "Modern Frontend, WebGL Shaders, Micro-Frontends & High Performance",
-    status: "active",
-    order_index: 3,
-    created_at: "2026-08-01T00:00:00Z",
-  },
-  {
-    id: "cat-mobile",
-    name: "Mobile",
-    slug: "mobile",
-    description: "Cross-Platform Mobile Engineering, Edge Inference & Native Architectures",
-    status: "active",
-    order_index: 4,
-    created_at: "2026-08-01T00:00:00Z",
-  },
-  {
-    id: "cat-startups",
-    name: "Startups",
-    slug: "startups",
-    description: "Lean Product Principles, Fast 14-Day MVP Velocity & Founder Strategy",
-    status: "active",
-    order_index: 5,
-    created_at: "2026-08-01T00:00:00Z",
-  },
-  {
-    id: "cat-trends",
-    name: "Technology Trends",
-    slug: "technology-trends",
-    description: "Emerging Paradigms, Hardware Accelerators, Robotics & Future Tech",
-    status: "active",
-    order_index: 6,
-    created_at: "2026-08-01T00:00:00Z",
-  },
-];
+const INITIAL_CATEGORIES: BlogCategoryItem[] = [];
 
-const INITIAL_POSTS: BlogPostItem[] = [
-  {
-    id: "post-owl-protocol",
-    slug: "owl-protocol",
-    title: "The Owl Protocol: Designing Perception Systems That See in the Dark",
-    category: "AI",
-    tags: ["Computer Vision", "Perception", "Applied ML", "Robotics"],
-    excerpt:
-      "Why low-light vision remains one of the hardest problems in applied computer vision, and the multi-spectral sensor fusion stack we engineered to solve it.",
-    content: `## The Dark Room Dilemma in Autonomous Vision
+const INITIAL_POSTS: BlogPostItem[] = [];
 
-Low-light optical perception breaks almost all standard machine learning assumptions. When photon count plummets, sensor noise dominates luminance signals, turning high-resolution edge detectors into stochastic noise amplifiers.
+const MOCK_IDS_TO_PURGE = new Set([
+  "owl-protocol",
+  "post-owl-protocol",
+  "agents-in-production",
+  "post-agents-production",
+  "cinematic-webgl-performance",
+  "post-cinematic-web",
+  "cloud-gpu-economics",
+  "post-cloud-gpu-economics",
+  "shipping-mvp-in-two-weeks",
+  "post-startup-mvp-velocity",
+]);
 
-### Multi-Spectral Sensor Fusion
-To overcome optical decay, we developed the **Owl Sensor Protocol** — combining raw infrared sensor streams with temporal frame integration:
-
-\`\`\`typescript
-interface OwlPerceptionFrame {
-  timestampNs: bigint;
-  luxLevel: number;
-  irChannel: Uint8ClampedArray;
-  confidenceScore: number;
-}
-\`\`\`
-
-### Key Architectural Takeaways
-1. **Dynamic Gain Scaling:** Adjust exposure windows adaptively across 120fps intervals.
-2. **Edge Quantization:** Run int8 quantized tensor networks directly on mobile hardware.
-3. **Failover Safety:** Fallback to acoustic radar when ambient illumination drops below 0.05 lux.`,
-    cover_image:
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
-    cover_caption: "Neural sensor fusion pipeline running at 120fps.",
-    author_name: "Dr. Ira Mehta",
-    author_role: "Head of AI Research",
-    author_avatar:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
-    reading_time: "9 min read",
-    published_at: "2026-08-15T09:00:00Z",
-    is_featured: true,
-    status: "published",
-    meta_title: "The Owl Protocol: Designing Perception Systems That See in the Dark",
-    meta_description:
-      "Multi-spectral sensor fusion and real-time computer vision architectures for low-light perception.",
-    order_index: 1,
-    created_at: "2026-08-10T10:00:00Z",
-    updated_at: "2026-08-15T09:00:00Z",
-  },
-  {
-    id: "post-agents-production",
-    slug: "agents-in-production",
-    title: "Agents in Production: What Actually Breaks After Week Three",
-    category: "AI",
-    tags: ["AI Agents", "Architecture", "Guardrails", "Reliability"],
-    excerpt:
-      "Twelve production agent deployments, one honest post-mortem. Memory bloat, runaway tool loops, and the deterministic guardrails that saved our systems.",
-    content: `## Beyond the Demo Sandbox
-
-Building autonomous agents in a Jupyter notebook is fundamentally different from operating resilient multi-agent swarms under unpredictable user inputs.
-
-### 1. The Context Window Bloat Trap
-As conversation turns accumulate, unbounded chat histories degrade attention weights. We enforce sliding window summarizers with structured key-value state graphs.
-
-### 2. Guardrails & Circuit Breakers
-- **Maximum recursion depth:** 5 sub-turns per user action.
-- **Budget caps:** Hardware token throttle per tenant.
-- **Deterministic verification:** Pre-execution JSON Schema enforcement.`,
-    cover_image:
-      "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1200&q=80",
-    author_name: "Kabir Rao",
-    author_role: "Lead Platform Architect",
-    author_avatar:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
-    reading_time: "12 min read",
-    published_at: "2026-08-10T08:00:00Z",
-    is_featured: false,
-    status: "published",
-    order_index: 2,
-    created_at: "2026-08-05T12:00:00Z",
-    updated_at: "2026-08-10T08:00:00Z",
-  },
-  {
-    id: "post-cinematic-web",
-    slug: "cinematic-webgl-performance",
-    title: "Shipping Cinematic WebGL Without Destroying Your Lighthouse Score",
-    category: "Web",
-    tags: ["WebGL", "Three.js", "Performance", "Shaders"],
-    excerpt:
-      "Budgeting draw calls, deferred canvas rendering, and the exact threshold where adding another particle shader harms mobile conversions.",
-    content: `## 60FPS on Mobile Without Burning Batteries
-
-Cinematic websites frequently look breathtaking on M3 Max MacBooks but freeze budget Android devices. Here is how we maintain a 98+ Google Lighthouse score with full WebGL scenes.
-
-### Techniques We Rely On:
-- **Canvas Visibility Intersection Observers:** Completely suspend render loops when canvases are outside viewport bounds.
-- **Geometry Instancing:** Combine hundreds of individual meshes into a single draw call.
-- **Half-Precision Float Textures:** Halve memory bandwidth consumption.`,
-    cover_image:
-      "https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&w=1200&q=80",
-    author_name: "Naina Sethi",
-    author_role: "Creative Technologist",
-    author_avatar:
-      "https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=200&q=80",
-    reading_time: "7 min read",
-    published_at: "2026-08-02T10:00:00Z",
-    is_featured: false,
-    status: "published",
-    order_index: 3,
-    created_at: "2026-07-28T09:00:00Z",
-    updated_at: "2026-08-02T10:00:00Z",
-  },
-  {
-    id: "post-cloud-gpu-economics",
-    slug: "cloud-gpu-economics",
-    title: "Cloud GPU Economics for Teams That Are Not Hyperscalers",
-    category: "Cloud",
-    tags: ["Cloud", "DevOps", "Infrastructure", "Cost Optimization"],
-    excerpt:
-      "Spot instances, intelligent batching windows, and 4-bit quantization: three architectural levers that reduced our serverless inference bills by 63%.",
-    content: `## The Reality of AI Inference Budgets
-
-Running state-of-the-art models 24/7 can quickly exhaust early startup capital. We restructured our cluster routing to optimize GPU saturation.
-
-### The 3 Optimization Pillars:
-1. **Dynamic Spot Bidding:** Orchestrating ephemeral GPU nodes across multiple cloud zones.
-2. **Batch Queue Aggregation:** Queuing non-urgent background tasks for off-peak computation windows.
-3. **Model Quantization:** Shifting from FP16 to AWQ 4-bit with under 0.8% loss in benchmark accuracy.`,
-    cover_image:
-      "https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&w=1200&q=80",
-    author_name: "Dr. Ira Mehta",
-    author_role: "Head of AI Research",
-    author_avatar:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
-    reading_time: "8 min read",
-    published_at: "2026-07-25T11:00:00Z",
-    is_featured: false,
-    status: "published",
-    order_index: 4,
-    created_at: "2026-07-20T10:00:00Z",
-    updated_at: "2026-07-25T11:00:00Z",
-  },
-  {
-    id: "post-startup-mvp-velocity",
-    slug: "shipping-mvp-in-two-weeks",
-    title: "Shipping Startups from Scratch: The 14-Day Velocity Playbook",
-    category: "Startups",
-    tags: ["Startups", "Product Thinking", "Velocity", "Lean"],
-    excerpt:
-      "Why early stage founders get stuck in architecture rabbit holes and the modular development framework we use to test market validation in 14 days.",
-    content: `## Velocity Is Your Only Unfair Advantage
-
-When launching an early-stage product, building for 10 million concurrent users before gaining your first 100 paying customers is a fatal mistake.
-
-### Our Lean Principles:
-- Single-schema database architectures with automated migration rollbacks.
-- Edge SSR with pre-built component systems for lightning fast iteration.
-- Real-time user feedback telemetry integrated directly into customer support streams.`,
-    cover_image:
-      "https://images.unsplash.com/photo-1519389950473-47ba0277781c?auto=format&fit=crop&w=1200&q=80",
-    author_name: "Kabir Rao",
-    author_role: "Lead Platform Architect",
-    author_avatar:
-      "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=200&q=80",
-    reading_time: "6 min read",
-    published_at: "2026-07-18T08:00:00Z",
-    is_featured: false,
-    status: "published",
-    order_index: 5,
-    created_at: "2026-07-12T14:00:00Z",
-    updated_at: "2026-07-18T08:00:00Z",
-  },
-];
+const MOCK_CAT_IDS_TO_PURGE = new Set([
+  "cat-ai",
+  "cat-cloud",
+  "cat-web",
+  "cat-mobile",
+  "cat-startups",
+  "cat-trends",
+]);
 
 class MemoryBlogStore {
   private posts: Map<string, BlogPostItem> = new Map();
@@ -260,8 +57,74 @@ class MemoryBlogStore {
   private categoryItems: Map<string, BlogCategoryItem> = new Map();
 
   constructor() {
-    INITIAL_POSTS.forEach((p) => this.posts.set(p.id, { ...p }));
+    this.hydrateFromStorage();
+  }
+
+  private hydrateFromStorage(): void {
+    this.categoryItems.clear();
     INITIAL_CATEGORIES.forEach((c) => this.categoryItems.set(c.id, { ...c }));
+
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        const storedPosts = localStorage.getItem("dimisi_blog_posts");
+        if (storedPosts) {
+          const parsed = JSON.parse(storedPosts);
+          if (Array.isArray(parsed)) {
+            this.posts.clear();
+            parsed.forEach((p: BlogPostItem) => {
+              if (
+                p &&
+                p.id &&
+                !MOCK_IDS_TO_PURGE.has(p.id) &&
+                !MOCK_IDS_TO_PURGE.has(p.slug)
+              ) {
+                this.posts.set(p.id, p);
+              }
+            });
+            // Overwrite storage to purge legacy mock items immediately
+            this.persistToStorage();
+          }
+        }
+
+        const storedCats = localStorage.getItem("dimisi_blog_categories");
+        if (storedCats) {
+          const parsed = JSON.parse(storedCats);
+          if (Array.isArray(parsed)) {
+            this.categoryItems.clear();
+            parsed.forEach((c: BlogCategoryItem) => {
+              if (c && c.id && !MOCK_CAT_IDS_TO_PURGE.has(c.id)) {
+                this.categoryItems.set(c.id, c);
+              }
+            });
+            this.persistToStorage();
+          }
+        }
+
+        const storedConfig = localStorage.getItem("dimisi_blog_config");
+        if (storedConfig) {
+          const parsed = JSON.parse(storedConfig);
+          if (parsed && typeof parsed === "object") {
+            this.config = { ...this.config, ...parsed };
+          }
+        }
+      } catch {}
+    }
+  }
+
+  private persistToStorage(): void {
+    if (typeof window !== "undefined" && window.localStorage) {
+      try {
+        localStorage.setItem(
+          "dimisi_blog_posts",
+          JSON.stringify(Array.from(this.posts.values()))
+        );
+        localStorage.setItem(
+          "dimisi_blog_categories",
+          JSON.stringify(Array.from(this.categoryItems.values()))
+        );
+        localStorage.setItem("dimisi_blog_config", JSON.stringify(this.config));
+      } catch {}
+    }
   }
 
   public getCategoryItems(): BlogCategoryItem[] {
@@ -334,6 +197,7 @@ class MemoryBlogStore {
       }
     }
 
+    this.persistToStorage();
     return item;
   }
 
@@ -343,6 +207,7 @@ class MemoryBlogStore {
 
     const postCount = this.getCategoryPostCount(cat.name);
     this.categoryItems.delete(id);
+    this.persistToStorage();
     return { success: true, postCount, category: cat };
   }
 
@@ -441,15 +306,19 @@ class MemoryBlogStore {
     }
 
     this.posts.set(id, item);
+    this.persistToStorage();
     return item;
   }
 
   public deletePost(id: string): boolean {
-    return this.posts.delete(id);
+    const res = this.posts.delete(id);
+    this.persistToStorage();
+    return res;
   }
 
   public updateConfig(partial: Partial<BlogConfig>): BlogConfig {
     this.config = { ...this.config, ...partial };
+    this.persistToStorage();
     return this.config;
   }
 
@@ -479,6 +348,7 @@ class MemoryBlogStore {
       }
     });
 
+    this.persistToStorage();
     return this.getCategoryNames();
   }
 }
