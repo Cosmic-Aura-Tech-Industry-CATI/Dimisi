@@ -323,7 +323,7 @@ export function AdminPanel() {
       under_development_notice_heading: "Publication Lab Under Active Development",
       under_development_notice_text: "Blog section under development. Please visit again after some time.",
     },
-    categories: ["All Posts", "Web", "Mobile", "AI", "Cloud", "Startups", "Technology Trends"],
+    categories: ["All Posts"],
     categoryItems: [],
   });
   const [error, setError] = useState<string | null>(null);
@@ -488,7 +488,7 @@ export function AdminPanel() {
 
   async function signOut() {
     try {
-      logoutAdmin();
+      await logoutAdmin();
     } catch {}
     void navigate({ to: "/", replace: true });
   }

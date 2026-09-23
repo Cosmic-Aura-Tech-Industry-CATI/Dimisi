@@ -134,7 +134,11 @@ export function validateBlogCategoryInput(input: Partial<BlogCategoryInput>): {
 } {
   const name = input.name?.trim() || "";
   if (name.length < 2) {
-    return { valid: false, error: "Category name must be at least 2 characters long.", field: "name" };
+    return {
+      valid: false,
+      error: "Category name must be at least 2 characters long.",
+      field: "name",
+    };
   }
   return { valid: true };
 }
@@ -154,19 +158,40 @@ export function validateBlogPostInput(input: Partial<BlogPostInput>): {
   const coverImage = input.cover_image?.trim() || "";
 
   if (title.length < 3) {
-    return { valid: false, error: "Blog post title must be at least 3 characters long.", field: "title" };
+    return {
+      valid: false,
+      error: "Blog post title must be at least 3 characters long.",
+      field: "title",
+    };
   }
   if (category.length < 2) {
     return { valid: false, error: "Category is required.", field: "category" };
   }
   if (excerpt.length < 10) {
-    return { valid: false, error: "Excerpt must be at least 10 characters long.", field: "excerpt" };
+    return {
+      valid: false,
+      error: "Excerpt must be at least 10 characters long.",
+      field: "excerpt",
+    };
   }
   if (content.length < 20) {
-    return { valid: false, error: "Article content must be at least 20 characters long.", field: "content" };
+    return {
+      valid: false,
+      error: "Article content must be at least 20 characters long.",
+      field: "content",
+    };
   }
-  if (!coverImage || (!coverImage.startsWith("http://") && !coverImage.startsWith("https://") && !coverImage.startsWith("data:image/"))) {
-    return { valid: false, error: "A valid cover image is required (URL or uploaded file).", field: "cover_image" };
+  if (
+    !coverImage ||
+    (!coverImage.startsWith("http://") &&
+      !coverImage.startsWith("https://") &&
+      !coverImage.startsWith("data:image/"))
+  ) {
+    return {
+      valid: false,
+      error: "A valid cover image is required (URL or uploaded file).",
+      field: "cover_image",
+    };
   }
 
   return { valid: true };

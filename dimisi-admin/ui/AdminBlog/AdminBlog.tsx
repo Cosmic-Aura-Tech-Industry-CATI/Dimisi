@@ -31,6 +31,7 @@ import {
   FileText,
   ChevronRight,
   ChevronLeft,
+  ChevronDown,
   UploadCloud,
   FileCheck,
   AlertCircle,
@@ -42,6 +43,16 @@ import {
   HelpCircle,
   Check,
   AlertTriangle,
+  MoveUp,
+  MoveDown,
+  Heading as HeadingIcon,
+  Type,
+  List as ListIcon,
+  ListOrdered,
+  Code as CodeIcon,
+  Quote as QuoteIcon,
+  Copy,
+  FileCode,
 } from "lucide-react";
 import {
   type BlogPostItem,
@@ -58,11 +69,29 @@ import {
 import {
   saveBlogPostFn,
   deleteBlogPostFn,
+  toggleBlogActiveFn,
+  setBlogFeaturedFn,
   saveBlogConfigFn,
   getBlogCategoriesFn,
   saveBlogCategoryFn,
   deleteBlogCategoryFn,
 } from "@/lib/blog.functions";
+import { getBlogByIdApi } from "@/services/blog.service";
+import {
+  parseMarkdownToBlocks,
+  serializeBlocksToMarkdown,
+  createEmptyBlock,
+  generateBlockId,
+  type ContentBlock,
+  type ContentBlockType,
+  type HeadingBlock,
+  type ParagraphBlock,
+  type ListBlock,
+  type CodeBlock,
+  type QuoteBlock,
+  type RawBlock,
+} from "@/lib/blogContent.parser";
+import { BlogContentRenderer } from "@/components/blog/BlogContentRenderer";
 import styles from "./AdminBlog.module.css";
 
 interface AdminBlogProps {
@@ -82,60 +111,25 @@ const MODAL_STEPS: { id: BlogModalTab; label: string; num: string }[] = [
   { id: "seo", label: "4. SEO & Social", num: "04" },
 ];
 
-const DEFAULT_CATEGORIES: BlogCategoryItem[] = [
-  {
-    id: "cat-ai",
-    name: "AI",
-    slug: "ai",
-    description: "Artificial Intelligence, Neural Perception, Multi-Agent Swarms & Applied ML",
-    status: "active",
-    order_index: 1,
-  },
-  {
-    id: "cat-cloud",
-    name: "Cloud",
-    slug: "cloud",
-    description: "Cloud Architecture, GPU Economics, DevOps & Distributed Infrastructure",
-    status: "active",
-    order_index: 2,
-  },
-  {
-    id: "cat-web",
-    name: "Web",
-    slug: "web",
-    description: "Modern Frontend, WebGL Shaders, Micro-Frontends & High Performance",
-    status: "active",
-    order_index: 3,
-  },
-  {
-    id: "cat-mobile",
-    name: "Mobile",
-    slug: "mobile",
-    description: "Cross-Platform Mobile Engineering, Edge Inference & Native Architectures",
-    status: "active",
-    order_index: 4,
-  },
-  {
-    id: "cat-startups",
-    name: "Startups",
-    slug: "startups",
-    description: "Lean Product Principles, Fast 14-Day MVP Velocity & Founder Strategy",
-    status: "active",
-    order_index: 5,
-  },
-  {
-    id: "cat-trends",
-    name: "Technology Trends",
-    slug: "technology-trends",
-    description: "Emerging Paradigms, Hardware Accelerators, Robotics & Future Tech",
-    status: "active",
-    order_index: 6,
-  },
+const CODE_LANGUAGES = [
+  { value: "typescript", label: "TypeScript" },
+  { value: "javascript", label: "JavaScript" },
+  { value: "python", label: "Python" },
+  { value: "bash", label: "Bash / Shell" },
+  { value: "html", label: "HTML" },
+  { value: "css", label: "CSS" },
+  { value: "json", label: "JSON" },
+  { value: "sql", label: "SQL" },
+  { value: "go", label: "Go" },
+  { value: "rust", label: "Rust" },
+  { value: "cpp", label: "C++" },
+  { value: "yaml", label: "YAML" },
 ];
 
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
-const FALLBACK_COVER = "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80";
+const FALLBACK_COVER =
+  "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80";
 
 export function AdminBlog({
   posts,
@@ -148,22 +142,50 @@ export function AdminBlog({
 
   // Sub-section tab
   const [activeSection, setActiveSection] = useState<"posts" | "settings">("posts");
-  const [categoryFilter, setCategoryFilter] = useState("All Posts");
+  const [categoryFilter, setCategoryFilter] = useState("All");
+  const [statusFilter, setStatusFilter] = useState<"All" | "published" | "draft">("All");
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Dynamic Categories State
+  // Dropdown Popover States
+  const [isCatDropdownOpen, setIsCatDropdownOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const catDropdownRef = useRef<HTMLDivElement>(null);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on click outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (catDropdownRef.current && !catDropdownRef.current.contains(e.target as Node)) {
+        setIsCatDropdownOpen(false);
+      }
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
+        setIsStatusDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  // Dynamic Categories State — loaded directly from live backend
   const [categoryList, setCategoryList] = useState<BlogCategoryItem[]>(() => {
-    if (initialCategoryItems && initialCategoryItems.length > 0) {
+    if (initialCategoryItems && Array.isArray(initialCategoryItems)) {
       return initialCategoryItems;
     }
-    return DEFAULT_CATEGORIES;
+    return [];
   });
 
-  // Load latest categories from store
+  // Sync when initialCategoryItems prop updates
+  useEffect(() => {
+    if (initialCategoryItems && Array.isArray(initialCategoryItems)) {
+      setCategoryList(initialCategoryItems);
+    }
+  }, [initialCategoryItems]);
+
+  // Load latest categories from backend API
   const refreshCategories = useCallback(async () => {
     try {
       const res = await getBlogCategoriesFn();
-      if (res && res.categories && res.categories.length > 0) {
+      if (res && Array.isArray(res.categories)) {
         setCategoryList(res.categories);
       }
     } catch (err) {
@@ -186,7 +208,7 @@ export function AdminBlog({
     return counts;
   }, [posts]);
 
-  // Active category items for filter pills & post selector
+  // Active category items for filter selector & post selector
   const activeCategories = useMemo(() => {
     return categoryList
       .filter((c) => c.status === "active")
@@ -197,7 +219,6 @@ export function AdminBlog({
   const [showCatModal, setShowCatModal] = useState(false);
   const [editingCatId, setEditingCatId] = useState<string | null>(null);
   const [catName, setCatName] = useState("");
-  const [catSlug, setCatSlug] = useState("");
   const [catDescription, setCatDescription] = useState("");
   const [catStatus, setCatStatus] = useState<"active" | "inactive">("active");
   const [catOrderIndex, setCatOrderIndex] = useState(1);
@@ -208,6 +229,10 @@ export function AdminBlog({
     name: string;
     count: number;
   } | null>(null);
+  const [postDeleteConfirm, setPostDeleteConfirm] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
 
   // Post Modal State
   const [showModal, setShowModal] = useState(false);
@@ -216,12 +241,15 @@ export function AdminBlog({
 
   // Post Form State
   const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
   const [category, setCategory] = useState("AI");
   const [tags, setTags] = useState<string[]>([]);
   const [newTag, setNewTag] = useState("");
   const [excerpt, setExcerpt] = useState("");
   const [content, setContent] = useState("");
+
+  // Block Builder State
+  const [blocks, setBlocks] = useState<ContentBlock[]>([]);
+  const [blockViewMode, setBlockViewMode] = useState<"builder" | "preview" | "raw">("builder");
 
   // Primary Cover Image State
   const [coverSourceType, setCoverSourceType] = useState<"upload" | "url">("upload");
@@ -234,7 +262,6 @@ export function AdminBlog({
   const [isDragOver, setIsDragOver] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
-  const catPillsBarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (showModal && modalTab && tabRefs.current[modalTab]) {
@@ -251,11 +278,11 @@ export function AdminBlog({
   const [coverAlt, setCoverAlt] = useState("");
   const [coverCredit, setCoverCredit] = useState("");
 
-  // Author & Metadata
+  // Preserved Author State (Default or existing values preserved)
   const [authorName, setAuthorName] = useState("DIMISI Editorial");
   const [authorRole, setAuthorRole] = useState("Engineering & Systems");
   const [authorAvatar, setAuthorAvatar] = useState(
-    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
+    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
   );
   const [readingTime, setReadingTime] = useState("6 min read");
   const [publishedAt, setPublishedAt] = useState("");
@@ -280,13 +307,15 @@ export function AdminBlog({
 
   // Body Lock & ESC Key Listener
   useEffect(() => {
-    if (!showModal && !showCatModal) return;
+    if (!showModal && !showCatModal && !postDeleteConfirm) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (showCatModal) {
+        if (postDeleteConfirm) {
+          setPostDeleteConfirm(null);
+        } else if (showCatModal) {
           setShowCatModal(false);
         } else if (showModal) {
           setShowModal(false);
@@ -299,75 +328,156 @@ export function AdminBlog({
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [showModal, showCatModal]);
+  }, [showModal, showCatModal, postDeleteConfirm]);
 
-  // Filtered Posts
+  // Synchronize Blocks ➔ Content
+  const updateBlocksAndSyncContent = useCallback((newBlocks: ContentBlock[]) => {
+    setBlocks(newBlocks);
+    const md = serializeBlocksToMarkdown(newBlocks);
+    setContent(md);
+  }, []);
+
+  // Block Builder Helpers
+  const handleAddBlock = (type: ContentBlockType, level: 2 | 3 | 4 = 2, afterIndex?: number) => {
+    const newBlock = createEmptyBlock(type, level);
+    const nextBlocks = [...blocks];
+    if (typeof afterIndex === "number" && afterIndex >= 0 && afterIndex < nextBlocks.length) {
+      nextBlocks.splice(afterIndex + 1, 0, newBlock);
+    } else {
+      nextBlocks.push(newBlock);
+    }
+    updateBlocksAndSyncContent(nextBlocks);
+  };
+
+  const handleUpdateBlock = (id: string, updates: Partial<ContentBlock>) => {
+    const nextBlocks = blocks.map((b) => {
+      if (b.id === id) {
+        return { ...b, ...updates } as ContentBlock;
+      }
+      return b;
+    });
+    updateBlocksAndSyncContent(nextBlocks);
+  };
+
+  const handleRemoveBlock = (id: string) => {
+    if (blocks.length <= 1) {
+      // Keep at least one empty paragraph block
+      updateBlocksAndSyncContent([createEmptyBlock("paragraph")]);
+      return;
+    }
+    const nextBlocks = blocks.filter((b) => b.id !== id);
+    updateBlocksAndSyncContent(nextBlocks);
+  };
+
+  const handleMoveBlock = (index: number, direction: "up" | "down") => {
+    const targetIndex = direction === "up" ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= blocks.length) return;
+    const nextBlocks = [...blocks];
+    const [moved] = nextBlocks.splice(index, 1);
+    nextBlocks.splice(targetIndex, 0, moved);
+    updateBlocksAndSyncContent(nextBlocks);
+  };
+
+  // List Item Block Helpers
+  const handleAddListItem = (blockId: string, afterItemIndex?: number) => {
+    const nextBlocks = blocks.map((b) => {
+      if (b.id === blockId && b.type === "list") {
+        const items = [...b.items];
+        if (typeof afterItemIndex === "number" && afterItemIndex >= 0) {
+          items.splice(afterItemIndex + 1, 0, "");
+        } else {
+          items.push("");
+        }
+        return { ...b, items };
+      }
+      return b;
+    });
+    updateBlocksAndSyncContent(nextBlocks);
+  };
+
+  const handleUpdateListItem = (blockId: string, itemIndex: number, text: string) => {
+    const nextBlocks = blocks.map((b) => {
+      if (b.id === blockId && b.type === "list") {
+        const items = [...b.items];
+        items[itemIndex] = text;
+        return { ...b, items };
+      }
+      return b;
+    });
+    updateBlocksAndSyncContent(nextBlocks);
+  };
+
+  const handleRemoveListItem = (blockId: string, itemIndex: number) => {
+    const nextBlocks = blocks.map((b) => {
+      if (b.id === blockId && b.type === "list") {
+        const items = b.items.filter((_, idx) => idx !== itemIndex);
+        return { ...b, items: items.length > 0 ? items : [""] };
+      }
+      return b;
+    });
+    updateBlocksAndSyncContent(nextBlocks);
+  };
+
+  // Filter Logic
   const filteredPosts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
-    return posts.filter((p) => {
+    return posts.filter((post) => {
       const matchCat =
-        categoryFilter === "All Posts" ||
-        p.category.toLowerCase() === categoryFilter.toLowerCase();
-
+        categoryFilter === "All" || post.category.toLowerCase() === categoryFilter.toLowerCase();
+      const matchStatus = statusFilter === "All" || post.status === statusFilter;
       const matchSearch =
         q === "" ||
-        p.title.toLowerCase().includes(q) ||
-        p.author_name.toLowerCase().includes(q) ||
-        p.category.toLowerCase().includes(q) ||
-        (p.tags && p.tags.some((t) => t.toLowerCase().includes(q)));
+        post.title.toLowerCase().includes(q) ||
+        post.excerpt.toLowerCase().includes(q) ||
+        post.author_name.toLowerCase().includes(q) ||
+        (post.tags && post.tags.some((t) => t.toLowerCase().includes(q)));
 
-      return matchCat && matchSearch;
+      return matchCat && matchStatus && matchSearch;
     });
-  }, [posts, categoryFilter, searchQuery]);
+  }, [posts, categoryFilter, statusFilter, searchQuery]);
 
-  // Handle Category Modal Actions
+  // Category Actions
   const handleOpenCatModal = (catToEdit?: BlogCategoryItem) => {
     setCatFormError(null);
     setCatSuccessMsg(null);
     setCatDeleteConfirm(null);
-
     if (catToEdit) {
       setEditingCatId(catToEdit.id);
       setCatName(catToEdit.name);
-      setCatSlug(catToEdit.slug);
       setCatDescription(catToEdit.description || "");
       setCatStatus(catToEdit.status);
       setCatOrderIndex(catToEdit.order_index);
     } else {
       setEditingCatId(null);
       setCatName("");
-      setCatSlug("");
       setCatDescription("");
       setCatStatus("active");
       setCatOrderIndex(categoryList.length + 1);
     }
-
     setShowCatModal(true);
   };
 
   const handleResetCatForm = () => {
     setEditingCatId(null);
     setCatName("");
-    setCatSlug("");
     setCatDescription("");
     setCatStatus("active");
     setCatOrderIndex(categoryList.length + 1);
     setCatFormError(null);
-    setCatSuccessMsg(null);
   };
 
-  const handleSaveCategory = async (e: React.FormEvent) => {
+  const handleSaveCategory = (e: React.FormEvent) => {
     e.preventDefault();
     setCatFormError(null);
     setCatSuccessMsg(null);
 
     const input: BlogCategoryInput = {
-      id: editingCatId || undefined,
+      id: editingCatId ?? undefined,
       name: catName.trim(),
-      slug: catSlug.trim() || slugifyBlogCategory(catName),
+      slug: slugifyBlogCategory(catName),
       description: catDescription.trim() || undefined,
       status: catStatus,
-      order_index: Number(catOrderIndex) || 1,
+      order_index: Number(catOrderIndex),
     };
 
     const validation = validateBlogCategoryInput(input);
@@ -381,13 +491,11 @@ export function AdminBlog({
         const res = await saveBlogCategoryFn({ data: input });
         if (res.success && res.category) {
           setCatSuccessMsg(
-            editingCatId
-              ? "Updated category \"" + res.category.name + "\" successfully."
-              : "Created new category \"" + res.category.name + "\"."
+            editingCatId ? "Category updated successfully!" : "Category created successfully!",
           );
-          handleResetCatForm();
           await refreshCategories();
           onRefresh();
+          handleResetCatForm();
         } else {
           setCatFormError(res.error || "Failed to save category.");
         }
@@ -456,18 +564,23 @@ export function AdminBlog({
   const handleOpenCreate = () => {
     setEditingPost(null);
     setTitle("");
-    setSlug("");
     const defaultCat = activeCategories[0]?.name || "AI";
     setCategory(defaultCat);
-    setTags(["Computer Vision", "Architecture"]);
+    setTags(["Architecture", "AI"]);
     setExcerpt("");
-    setContent(
-      "## Introduction\n\nWrite your rich technical essay or product architecture breakdown here..."
-    );
+    const initialMd =
+      "## Introduction\n\nWrite your rich technical essay or product architecture breakdown here...";
+    setContent(initialMd);
+    setBlocks(parseMarkdownToBlocks(initialMd));
+    setBlockViewMode("builder");
     setCoverSourceType("upload");
-    setCoverImage("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80");
+    setCoverImage(
+      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+    );
     setCoverFile(null);
-    setCoverPreviewUrl("https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80");
+    setCoverPreviewUrl(
+      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
+    );
     setImageError(null);
     setUploadProgress(0);
     setIsUploadingImage(false);
@@ -477,7 +590,7 @@ export function AdminBlog({
     setAuthorName("DIMISI Editorial");
     setAuthorRole("Engineering & Systems");
     setAuthorAvatar(
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80"
+      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
     );
     setReadingTime("6 min read");
     setPublishedAt(new Date().toISOString().slice(0, 10));
@@ -493,35 +606,49 @@ export function AdminBlog({
     setShowModal(true);
   };
 
-  const handleOpenEdit = (p: BlogPostItem) => {
-    setEditingPost(p);
-    setTitle(p.title);
-    setSlug(p.slug);
-    setCategory(p.category);
-    setTags(p.tags || []);
-    setExcerpt(p.excerpt);
-    setContent(p.content);
+  const handleOpenEdit = async (p: BlogPostItem) => {
+    let postData = p;
+    try {
+      if (p.id && !p.id.startsWith("post-")) {
+        postData = await getBlogByIdApi(p.id, categoryList);
+      }
+    } catch (err) {
+      console.warn("Could not fetch fresh post by ID, using row data:", err);
+    }
+    setEditingPost(postData);
+    setTitle(postData.title);
+    setCategory(postData.category);
+    setTags(postData.tags || []);
+    setExcerpt(postData.excerpt);
+    setContent(postData.content);
+    setBlocks(parseMarkdownToBlocks(postData.content));
+    setBlockViewMode("builder");
     setCoverSourceType("upload");
-    setCoverImage(p.cover_image);
+    setCoverImage(postData.cover_image);
     setCoverFile(null);
-    setCoverPreviewUrl(p.cover_image);
+    setCoverPreviewUrl(postData.cover_image);
     setImageError(null);
     setUploadProgress(0);
     setIsUploadingImage(false);
-    setCoverCaption(p.cover_caption || "");
-    setCoverAlt(p.cover_alt || "");
-    setCoverCredit(p.cover_credit || "");
-    setAuthorName(p.author_name);
-    setAuthorRole(p.author_role || "");
-    setAuthorAvatar(p.author_avatar || "");
-    setReadingTime(p.reading_time);
-    setPublishedAt(p.published_at.slice(0, 10));
-    setIsFeatured(p.is_featured);
-    setStatus(p.status);
-    setMetaTitle(p.meta_title || "");
-    setMetaDescription(p.meta_description || "");
-    setOgImage(p.og_image || "");
-    setOrderIndex(p.order_index);
+    setCoverCaption(postData.cover_caption || "");
+    setCoverAlt(postData.cover_alt || "");
+    setCoverCredit(postData.cover_credit || "");
+    setAuthorName(postData.author_name || "DIMISI Editorial");
+    setAuthorRole(postData.author_role || "Engineering & Systems");
+    setAuthorAvatar(
+      postData.author_avatar ||
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
+    );
+    setReadingTime(postData.reading_time || "6 min read");
+    setPublishedAt(
+      postData.published_at ? postData.published_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
+    );
+    setIsFeatured(postData.is_featured);
+    setStatus(postData.status);
+    setMetaTitle(postData.meta_title || "");
+    setMetaDescription(postData.meta_description || "");
+    setOgImage(postData.og_image || "");
+    setOrderIndex(postData.order_index);
     setModalTab("basic");
     setFormError(null);
     setFieldErrors({});
@@ -602,7 +729,7 @@ export function AdminBlog({
         }
       }
     },
-    [processImageFile]
+    [processImageFile],
   );
 
   const handleRemoveCoverImage = () => {
@@ -648,12 +775,15 @@ export function AdminBlog({
     }
 
     if (modalTab === "content") {
-      if (!content.trim() || content.trim().length < 20) {
+      const serialized =
+        blockViewMode === "raw" ? content.trim() : serializeBlocksToMarkdown(blocks).trim();
+      if (!serialized || serialized.length < 20) {
         errors.content = "Article content must be at least 20 characters long.";
         setFieldErrors(errors);
-        setFormError("Please provide substantial article content before proceeding.");
+        setFormError("Please add headings, paragraphs, or bullet points before proceeding.");
         return;
       }
+      setContent(serialized);
       setFieldErrors({});
       setModalTab("seo");
       return;
@@ -673,15 +803,17 @@ export function AdminBlog({
     setFieldErrors({});
 
     const finalStatus = statusOverride || status;
+    const finalContent =
+      blockViewMode === "raw" ? content.trim() : serializeBlocksToMarkdown(blocks).trim();
 
     const input: BlogPostInput = {
       id: editingPost?.id ?? undefined,
       title: title.trim(),
-      slug: slug.trim() || slugifyBlog(title),
+      slug: editingPost?.slug || slugifyBlog(title),
       category: category.trim(),
       tags,
       excerpt: excerpt.trim(),
-      content: content.trim(),
+      content: finalContent,
       cover_image: coverImage.trim(),
       cover_caption: coverCaption.trim() || undefined,
       cover_alt: coverAlt.trim() || undefined,
@@ -721,7 +853,7 @@ export function AdminBlog({
 
     startTransition(async () => {
       try {
-        const res = await saveBlogPostFn({ data: input });
+        const res = await saveBlogPostFn({ data: input, coverImageFile: coverFile });
         if (res.success) {
           setShowModal(false);
           onRefresh();
@@ -734,77 +866,54 @@ export function AdminBlog({
     });
   };
 
-  const handleDeletePost = (id: string, postTitle: string) => {
-    if (window.confirm("Are you sure you want to delete article \"" + postTitle + "\"?")) {
-      startTransition(async () => {
-        await deleteBlogPostFn({ data: { id } });
-        onRefresh();
-      });
-    }
+  const handleConfirmDeletePost = () => {
+    if (!postDeleteConfirm) return;
+    const { id } = postDeleteConfirm;
+    startTransition(async () => {
+      try {
+        const res = await deleteBlogPostFn({ data: { id } });
+        if (res.success) {
+          setPostDeleteConfirm(null);
+          onRefresh();
+        } else {
+          alert(res.error || "Failed to delete blog post.");
+        }
+      } catch (err) {
+        console.error("Failed to delete blog post", err);
+        alert(err instanceof Error ? err.message : "Failed to delete blog post.");
+      }
+    });
   };
 
   const handleToggleStatus = (p: BlogPostItem) => {
-    const nextStatus: BlogStatus = p.status === "published" ? "draft" : "published";
     startTransition(async () => {
-      await saveBlogPostFn({
-        data: {
-          id: p.id,
-          title: p.title,
-          slug: p.slug,
-          category: p.category,
-          tags: p.tags,
-          excerpt: p.excerpt,
-          content: p.content,
-          cover_image: p.cover_image,
-          cover_caption: p.cover_caption,
-          cover_alt: p.cover_alt,
-          cover_credit: p.cover_credit,
-          author_name: p.author_name,
-          author_role: p.author_role,
-          author_avatar: p.author_avatar,
-          reading_time: p.reading_time,
-          published_at: p.published_at,
-          is_featured: p.is_featured,
-          status: nextStatus,
-          meta_title: p.meta_title,
-          meta_description: p.meta_description,
-          og_image: p.og_image,
-          order_index: p.order_index,
-        },
-      });
-      onRefresh();
+      try {
+        const res = await toggleBlogActiveFn({ data: { id: p.id } });
+        if (res.success) {
+          onRefresh();
+        } else {
+          alert(res.error || "Failed to toggle blog status.");
+        }
+      } catch (err) {
+        console.error("Failed to toggle blog status", err);
+        alert(err instanceof Error ? err.message : "Failed to toggle blog status.");
+      }
     });
   };
 
   const handleToggleFeatured = (p: BlogPostItem) => {
     startTransition(async () => {
-      await saveBlogPostFn({
-        data: {
-          id: p.id,
-          title: p.title,
-          slug: p.slug,
-          category: p.category,
-          tags: p.tags,
-          excerpt: p.excerpt,
-          content: p.content,
-          cover_image: p.cover_image,
-          cover_caption: p.cover_caption,
-          cover_alt: p.cover_alt,
-          cover_credit: p.cover_credit,
-          author_name: p.author_name,
-          author_role: p.author_role,
-          author_avatar: p.author_avatar,
-          reading_time: p.reading_time,
-          published_at: p.published_at,
-          is_featured: !p.is_featured,
-          status: p.status,
-          meta_title: p.meta_title,
-          meta_description: p.meta_description,
-          og_image: p.og_image,
-          order_index: p.order_index,
-        },
-      });
-      onRefresh();
+      try {
+        const res = await setBlogFeaturedFn({ data: { id: p.id } });
+        if (res.success) {
+          onRefresh();
+        } else {
+          alert(res.error || "Failed to toggle blog featured status.");
+        }
+      } catch (err) {
+        console.error("Failed to toggle blog featured status", err);
+        alert(err instanceof Error ? err.message : "Failed to toggle blog featured status.");
+      }
     });
   };
 
@@ -829,9 +938,12 @@ export function AdminBlog({
           setConfigSuccess(true);
           onRefresh();
           setTimeout(() => setConfigSuccess(false), 3000);
+        } else {
+          alert(res.error || "Failed to save blog configuration.");
         }
       } catch (err) {
         console.error(err);
+        alert(err instanceof Error ? err.message : "Failed to save configuration.");
       }
     });
   };
@@ -843,7 +955,8 @@ export function AdminBlog({
         <div>
           <h2 className={styles.title}>Blog &amp; Editorial Publications</h2>
           <p className={styles.subtitle}>
-            Publish articles, tech breakdowns, AI research papers, and manage the dynamic Category Taxonomy &amp; Notice Banner.
+            Publish articles, tech breakdowns, AI research papers, and manage the dynamic Category
+            Taxonomy &amp; Notice Banner.
           </p>
         </div>
 
@@ -885,11 +998,7 @@ export function AdminBlog({
                 <span>Manage Categories ({categoryList.length})</span>
               </button>
 
-              <button
-                type="button"
-                className={styles.createBtn}
-                onClick={handleOpenCreate}
-              >
+              <button type="button" className={styles.createBtn} onClick={handleOpenCreate}>
                 <Plus size={16} />
                 <span>Create New Blog Post</span>
               </button>
@@ -901,64 +1010,248 @@ export function AdminBlog({
       {/* SECTION 1: ARTICLES LIST */}
       {activeSection === "posts" && (
         <div className={styles.postsSection}>
-          {/* Filters Bar & Dynamic Category Pills */}
+          {/* Filters Bar: Search + Status Dropdown + Category Dropdown */}
           <div className={styles.filtersBar}>
-            <div className={styles.searchBox}>
-              <Search size={15} className={styles.searchIcon} />
-              <input
-                type="text"
-                placeholder="Search by title, author, category, tags..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  className={styles.clearSearchBtn}
-                  onClick={() => setSearchQuery("")}
-                  title="Clear search"
-                >
-                  <X size={13} />
-                </button>
-              )}
-            </div>
+            <div className={styles.secondaryFiltersRow}>
+              {/* Search Box */}
+              <div className={styles.searchBox}>
+                <Search size={15} className={styles.searchIcon} />
+                <input
+                  type="text"
+                  placeholder="Search articles by title, author, category, or tags..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                {searchQuery && (
+                  <button
+                    type="button"
+                    className={styles.clearSearchBtn}
+                    onClick={() => setSearchQuery("")}
+                    title="Clear search"
+                  >
+                    <X size={13} />
+                  </button>
+                )}
+              </div>
 
-            {/* Dynamic Horizontally Scrollable Category Filter Pills */}
-            <div className={styles.catPillsContainer}>
-              <div className={styles.catPillsBar} ref={catPillsBarRef}>
-                {/* All Posts Pill */}
-                <button
-                  type="button"
-                  className={[
-                    styles.catPill,
-                    categoryFilter.toLowerCase() === "all posts" ? styles.catPillActive : "",
-                  ].join(" ")}
-                  onClick={() => setCategoryFilter("All Posts")}
-                >
-                  <span>All Posts</span>
-                  <span className={styles.catCountBadge}>{posts.length}</span>
-                </button>
+              {/* Right Filter Controls: Status Dropdown + Category Dropdown */}
+              <div className={styles.filterRightActions}>
+                {(categoryFilter !== "All" || statusFilter !== "All" || searchQuery) && (
+                  <button
+                    type="button"
+                    className={styles.resetFiltersBtn}
+                    onClick={() => {
+                      setCategoryFilter("All");
+                      setStatusFilter("All");
+                      setSearchQuery("");
+                    }}
+                  >
+                    Reset Filters
+                  </button>
+                )}
 
-                {/* Dynamic Category Pills */}
-                {activeCategories.map((c) => {
-                  const count = categoryPostCounts[c.name.toLowerCase()] || 0;
-                  const isActive = categoryFilter.toLowerCase() === c.name.toLowerCase();
-                  return (
-                    <button
-                      key={c.id}
-                      type="button"
+                {/* Status Dropdown */}
+                <div className={styles.statusDropdownWrapper} ref={statusDropdownRef}>
+                  <button
+                    type="button"
+                    className={[
+                      styles.statusDropdownTrigger,
+                      statusFilter !== "All" || isStatusDropdownOpen
+                        ? styles.statusDropdownTriggerActive
+                        : "",
+                    ].join(" ")}
+                    onClick={() => setIsStatusDropdownOpen((prev) => !prev)}
+                    aria-expanded={isStatusDropdownOpen}
+                    aria-haspopup="listbox"
+                    aria-label="Filter articles by status"
+                  >
+                    <div className={styles.catDropdownTriggerLeft}>
+                      <Eye size={13} className={styles.dropdownIcon} />
+                      <span className={styles.catDropdownTriggerText}>
+                        {statusFilter === "All"
+                          ? "All Status"
+                          : statusFilter === "published"
+                            ? "Live / Published"
+                            : "Draft"}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      size={14}
                       className={[
-                        styles.catPill,
-                        isActive ? styles.catPillActive : "",
+                        styles.catDropdownChevron,
+                        isStatusDropdownOpen ? styles.catDropdownChevronOpen : "",
                       ].join(" ")}
-                      onClick={() => setCategoryFilter(c.name)}
-                      title={c.description || c.name}
-                    >
-                      <span>{c.name}</span>
-                      <span className={styles.catCountBadge}>{count}</span>
-                    </button>
-                  );
-                })}
+                    />
+                  </button>
+
+                  {isStatusDropdownOpen && (
+                    <div className={styles.statusDropdownMenu} role="listbox">
+                      <button
+                        type="button"
+                        className={[
+                          styles.catDropdownItem,
+                          statusFilter === "All" ? styles.catDropdownItemActive : "",
+                        ].join(" ")}
+                        onClick={() => {
+                          setStatusFilter("All");
+                          setIsStatusDropdownOpen(false);
+                        }}
+                      >
+                        <div className={styles.catDropdownItemLeft}>
+                          {statusFilter === "All" ? (
+                            <Check size={14} className={styles.catDropdownCheck} />
+                          ) : (
+                            <span className={styles.catDropdownCheckPlaceholder} />
+                          )}
+                          <span>All Status</span>
+                        </div>
+                        <span className={styles.catDropdownItemCount}>({posts.length})</span>
+                      </button>
+
+                      <div className={styles.catDropdownDivider} />
+
+                      <button
+                        type="button"
+                        className={[
+                          styles.catDropdownItem,
+                          statusFilter === "published" ? styles.catDropdownItemActive : "",
+                        ].join(" ")}
+                        onClick={() => {
+                          setStatusFilter("published");
+                          setIsStatusDropdownOpen(false);
+                        }}
+                      >
+                        <div className={styles.catDropdownItemLeft}>
+                          {statusFilter === "published" ? (
+                            <Check size={14} className={styles.catDropdownCheck} />
+                          ) : (
+                            <span className={styles.catDropdownCheckPlaceholder} />
+                          )}
+                          <span>Live / Published</span>
+                        </div>
+                        <span className={styles.catDropdownItemCount}>
+                          ({posts.filter((p) => p.status === "published").length})
+                        </span>
+                      </button>
+
+                      <button
+                        type="button"
+                        className={[
+                          styles.catDropdownItem,
+                          statusFilter === "draft" ? styles.catDropdownItemActive : "",
+                        ].join(" ")}
+                        onClick={() => {
+                          setStatusFilter("draft");
+                          setIsStatusDropdownOpen(false);
+                        }}
+                      >
+                        <div className={styles.catDropdownItemLeft}>
+                          {statusFilter === "draft" ? (
+                            <Check size={14} className={styles.catDropdownCheck} />
+                          ) : (
+                            <span className={styles.catDropdownCheckPlaceholder} />
+                          )}
+                          <span>Drafts</span>
+                        </div>
+                        <span className={styles.catDropdownItemCount}>
+                          ({posts.filter((p) => p.status !== "published").length})
+                        </span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Category Dropdown */}
+                <div className={styles.catDropdownWrapper} ref={catDropdownRef}>
+                  <button
+                    type="button"
+                    className={[
+                      styles.catDropdownTrigger,
+                      categoryFilter !== "All" || isCatDropdownOpen
+                        ? styles.catDropdownTriggerActive
+                        : "",
+                    ].join(" ")}
+                    onClick={() => setIsCatDropdownOpen((prev) => !prev)}
+                    aria-expanded={isCatDropdownOpen}
+                    aria-haspopup="listbox"
+                    aria-label="Filter articles by category"
+                  >
+                    <div className={styles.catDropdownTriggerLeft}>
+                      {categoryFilter !== "All" ? (
+                        <Tag size={13} className={styles.dropdownIcon} />
+                      ) : (
+                        <SlidersHorizontal size={13} className={styles.dropdownIcon} />
+                      )}
+                      <span className={styles.catDropdownTriggerText}>
+                        {categoryFilter === "All" ? "All Categories" : categoryFilter}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      size={14}
+                      className={[
+                        styles.catDropdownChevron,
+                        isCatDropdownOpen ? styles.catDropdownChevronOpen : "",
+                      ].join(" ")}
+                    />
+                  </button>
+
+                  {isCatDropdownOpen && (
+                    <div className={styles.catDropdownMenu} role="listbox">
+                      <button
+                        type="button"
+                        className={[
+                          styles.catDropdownItem,
+                          categoryFilter === "All" ? styles.catDropdownItemActive : "",
+                        ].join(" ")}
+                        onClick={() => {
+                          setCategoryFilter("All");
+                          setIsCatDropdownOpen(false);
+                        }}
+                      >
+                        <div className={styles.catDropdownItemLeft}>
+                          {categoryFilter === "All" ? (
+                            <Check size={14} className={styles.catDropdownCheck} />
+                          ) : (
+                            <span className={styles.catDropdownCheckPlaceholder} />
+                          )}
+                          <span>All Categories</span>
+                        </div>
+                        <span className={styles.catDropdownItemCount}>({posts.length})</span>
+                      </button>
+
+                      <div className={styles.catDropdownDivider} />
+
+                      {activeCategories.map((c) => {
+                        const count = categoryPostCounts[c.name.toLowerCase()] || 0;
+                        const isSelected = categoryFilter.toLowerCase() === c.name.toLowerCase();
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className={[
+                              styles.catDropdownItem,
+                              isSelected ? styles.catDropdownItemActive : "",
+                            ].join(" ")}
+                            onClick={() => {
+                              setCategoryFilter(c.name);
+                              setIsCatDropdownOpen(false);
+                            }}
+                          >
+                            <div className={styles.catDropdownItemLeft}>
+                              {isSelected ? (
+                                <Check size={14} className={styles.catDropdownCheck} />
+                              ) : (
+                                <span className={styles.catDropdownCheckPlaceholder} />
+                              )}
+                              <span>{c.name}</span>
+                            </div>
+                            <span className={styles.catDropdownItemCount}>({count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -969,7 +1262,7 @@ export function AdminBlog({
               <colgroup>
                 <col style={{ width: "70px" }} />
                 <col style={{ width: "90px" }} />
-                <col style={{ width: "320px" }} />
+                <col style={{ width: "340px" }} />
                 <col style={{ width: "140px" }} />
                 <col style={{ width: "190px" }} />
                 <col style={{ width: "130px" }} />
@@ -980,7 +1273,7 @@ export function AdminBlog({
                 <tr>
                   <th className={styles.thCenter}>Order</th>
                   <th className={styles.thCenter}>Cover</th>
-                  <th>Article Title &amp; Slug</th>
+                  <th>Article Title</th>
                   <th>Category</th>
                   <th>Author</th>
                   <th className={styles.thCenter}>Reading Time</th>
@@ -991,10 +1284,7 @@ export function AdminBlog({
               <tbody>
                 {filteredPosts.length > 0 ? (
                   filteredPosts.map((p) => (
-                    <tr
-                      key={p.id}
-                      className={p.status !== "published" ? styles.inactiveRow : ""}
-                    >
+                    <tr key={p.id} className={p.status !== "published" ? styles.inactiveRow : ""}>
                       {/* Order Index */}
                       <td className={styles.orderCell}>{p.order_index}</td>
 
@@ -1013,29 +1303,19 @@ export function AdminBlog({
                         />
                       </td>
 
-                      {/* Title & Clickable URL Slug */}
+                      {/* Title only (No slug exposed) */}
                       <td>
                         <div className={styles.titleCol}>
                           <span className={styles.postTitle} title={p.title}>
                             {p.title}
                           </span>
-                          <div className={styles.slugRow}>
-                            <a
-                              href={"/blog/" + p.slug}
-                              target="_blank"
-                              rel="noreferrer"
-                              className={styles.slugCodeLink}
-                              title="Open Live Article"
-                            >
-                              <span className={styles.slugPrefix}>/blog/</span>
-                              <span>{p.slug}</span>
-                            </a>
-                            {p.is_featured && (
+                          {p.is_featured && (
+                            <div className={styles.titleMetaRow}>
                               <span className={styles.featuredSpotlightBadge}>
-                                <Star size={10} /> FEATURED
+                                <Star size={10} /> FEATURED SPOTLIGHT
                               </span>
-                            )}
-                          </div>
+                            </div>
+                          )}
                         </div>
                       </td>
 
@@ -1060,7 +1340,8 @@ export function AdminBlog({
                               onError={(e) => {
                                 e.currentTarget.style.display = "none";
                                 const next = e.currentTarget.nextElementSibling;
-                                if (next && "style" in next) (next as HTMLElement).style.display = "flex";
+                                if (next && "style" in next)
+                                  (next as HTMLElement).style.display = "flex";
                               }}
                             />
                           ) : null}
@@ -1148,19 +1429,19 @@ export function AdminBlog({
                             href={"/blog/" + p.slug}
                             target="_blank"
                             rel="noreferrer"
-                            className={styles.viewBtn}
-                            title="View Live Reader"
+                            className={styles.viewLiveBtn}
+                            title="View Public Article Page"
                           >
-                            <ExternalLink size={14} />
+                            <ExternalLink size={13} />
                           </a>
 
                           <button
                             type="button"
                             className={styles.delBtn}
-                            onClick={() => handleDeletePost(p.id, p.title)}
+                            onClick={() => setPostDeleteConfirm({ id: p.id, title: p.title })}
                             title="Delete Article"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       </td>
@@ -1168,34 +1449,16 @@ export function AdminBlog({
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={8} className={styles.emptyTableState}>
-                      <div className={styles.emptyContent}>
-                        <AlertCircle size={28} className={styles.emptyIcon} />
-                        <h4>No articles found matching criteria</h4>
+                    <td colSpan={8} className={styles.emptyStateRow}>
+                      <div className={styles.emptyStateContent}>
+                        <BookOpen size={36} className={styles.emptyStateIcon} />
+                        <h4>No Published Articles Found</h4>
                         <p>
-                          {searchQuery
-                            ? 'No results for "' + searchQuery + '" in category "' + categoryFilter + '".'
-                            : 'No articles in category "' + categoryFilter + '".'}
+                          {searchQuery || categoryFilter !== "All" || statusFilter !== "All"
+                            ? "No articles matched your active filters. Try clearing filters or searching for different keywords."
+                            : "Create your first editorial breakdown or tech essay using the button below."}
                         </p>
-                        <div className={styles.emptyActions}>
-                          {searchQuery && (
-                            <button
-                              type="button"
-                              className={styles.resetFilterBtn}
-                              onClick={() => setSearchQuery("")}
-                            >
-                              Clear Search
-                            </button>
-                          )}
-                          {categoryFilter !== "All Posts" && (
-                            <button
-                              type="button"
-                              className={styles.resetFilterBtn}
-                              onClick={() => setCategoryFilter("All Posts")}
-                            >
-                              Show All Categories
-                            </button>
-                          )}
+                        <div>
                           <button
                             type="button"
                             className={styles.createEmptyBtn}
@@ -1223,7 +1486,8 @@ export function AdminBlog({
             <div>
               <h3 className={styles.settingsTitle}>Under Development Notice &amp; Hero Settings</h3>
               <p className={styles.settingsSub}>
-                Toggle and configure the dynamic cyberpunk construction banner visible on the public Blog hub.
+                Toggle and configure the dynamic cyberpunk construction banner visible on the public
+                Blog hub.
               </p>
             </div>
           </div>
@@ -1318,7 +1582,7 @@ export function AdminBlog({
                 <div>
                   <h3 className={styles.modalTitle}>Blog Category Taxonomy &amp; Topics</h3>
                   <p className={styles.modalSub}>
-                    Manage dynamic editorial categories, slugs, descriptions, and filter display states.
+                    Manage dynamic editorial categories, descriptions, and filter display states.
                   </p>
                 </div>
               </div>
@@ -1355,8 +1619,10 @@ export function AdminBlog({
                   <h5>Delete Category: "{catDeleteConfirm.name}"?</h5>
                   <p>
                     {catDeleteConfirm.count > 0
-                      ? 'Warning: There are currently ' + catDeleteConfirm.count + ' published article(s) tagged with this category. Deleting this category will remove it from the taxonomy and active filters.'
-                      : 'Are you sure you want to permanently delete this category?'}
+                      ? "Warning: There are currently " +
+                        catDeleteConfirm.count +
+                        " published article(s) tagged with this category. Deleting this category will remove it from the taxonomy and active filters."
+                      : "Are you sure you want to permanently delete this category?"}
                   </p>
                   <div className={styles.deleteWarningActions}>
                     <button
@@ -1413,24 +1679,8 @@ export function AdminBlog({
                       type="text"
                       required
                       value={catName}
-                      onChange={(e) => {
-                        setCatName(e.target.value);
-                        if (!editingCatId) {
-                          setCatSlug(slugifyBlogCategory(e.target.value));
-                        }
-                      }}
+                      onChange={(e) => setCatName(e.target.value)}
                       placeholder="e.g. AI & Autonomy"
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>URL / Filter Slug *</label>
-                    <input
-                      type="text"
-                      required
-                      value={catSlug}
-                      onChange={(e) => setCatSlug(e.target.value)}
-                      placeholder="e.g. ai-autonomy"
                     />
                   </div>
 
@@ -1449,22 +1699,19 @@ export function AdminBlog({
                       <label>Display Order Index</label>
                       <input
                         type="number"
-                        min={1}
                         value={catOrderIndex}
                         onChange={(e) => setCatOrderIndex(Number(e.target.value))}
                       />
                     </div>
 
                     <div className={styles.formGroup}>
-                      <label>Taxonomy Status</label>
+                      <label>Status</label>
                       <select
                         value={catStatus}
-                        onChange={(e) =>
-                          setCatStatus(e.target.value as "active" | "inactive")
-                        }
+                        onChange={(e) => setCatStatus(e.target.value as "active" | "inactive")}
                         className={styles.selectInput}
                       >
-                        <option value="active">Active (Visible in Filter &amp; Posts)</option>
+                        <option value="active">Active (Visible in Filter)</option>
                         <option value="inactive">Inactive (Hidden)</option>
                       </select>
                     </div>
@@ -1480,11 +1727,7 @@ export function AdminBlog({
                         Cancel Edit
                       </button>
                     )}
-                    <button
-                      type="submit"
-                      disabled={isPending}
-                      className={styles.saveSubmitBtn}
-                    >
+                    <button type="submit" disabled={isPending} className={styles.saveSubmitBtn}>
                       <Save size={14} />
                       <span>{editingCatId ? "Update Category" : "Add Category"}</span>
                     </button>
@@ -1509,7 +1752,7 @@ export function AdminBlog({
                     <thead>
                       <tr>
                         <th style={{ width: "50px" }}>Order</th>
-                        <th>Category &amp; Slug</th>
+                        <th>Category Name</th>
                         <th style={{ width: "90px" }}>Articles</th>
                         <th style={{ width: "95px" }}>Status</th>
                         <th style={{ width: "110px", textAlign: "right" }}>Actions</th>
@@ -1533,11 +1776,8 @@ export function AdminBlog({
                               <td>
                                 <div className={styles.catItemMeta}>
                                   <span className={styles.catItemName}>{cat.name}</span>
-                                  <code className={styles.catItemSlug}>#{cat.slug}</code>
                                   {cat.description && (
-                                    <span className={styles.catItemDesc}>
-                                      {cat.description}
-                                    </span>
+                                    <span className={styles.catItemDesc}>{cat.description}</span>
                                   )}
                                 </div>
                               </td>
@@ -1578,15 +1818,16 @@ export function AdminBlog({
                                     onClick={() => handleOpenCatModal(cat)}
                                     title="Edit Category Details"
                                   >
-                                    <Edit2 size={13} />
+                                    <Edit2 size={12} />
+                                    <span>Edit</span>
                                   </button>
                                   <button
                                     type="button"
-                                    className={styles.delBtn}
+                                    className={styles.catDelBtn}
                                     onClick={() => handleDeleteCategoryClick(cat)}
                                     title="Delete Category"
                                   >
-                                    <Trash2 size={13} />
+                                    <Trash2 size={12} />
                                   </button>
                                 </div>
                               </td>
@@ -1598,30 +1839,12 @@ export function AdminBlog({
                 </div>
               </div>
             </div>
-
-            {/* Modal Footer */}
-            <div className={styles.modalFooter}>
-              <div className={styles.footerLeft}>
-                <span className={styles.modalFooterInfo}>
-                  <HelpCircle size={14} /> Changes to categories synchronize immediately with all editorial post forms.
-                </span>
-              </div>
-              <div className={styles.footerRight}>
-                <button
-                  type="button"
-                  className={styles.saveSubmitBtn}
-                  onClick={() => setShowCatModal(false)}
-                >
-                  Done Managing
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       )}
 
       {/* =========================================================================
-         APPLICATION-STYLE EDITORIAL BLOG POST MODAL
+         CREATE / EDIT ARTICLE MODAL (WIZARD STEPS)
          ========================================================================= */}
       {showModal && (
         <div
@@ -1637,14 +1860,14 @@ export function AdminBlog({
             onClick={(e) => e.stopPropagation()}
             onPaste={handlePaste}
           >
-            {/* Sticky Modal Header */}
+            {/* Modal Header */}
             <div className={styles.modalHeader}>
               <div>
                 <h3 className={styles.modalTitle}>
-                  {editingPost ? 'Edit Blog Post: ' + editingPost.title : "Create New Blog Post"}
+                  {editingPost ? "Edit Article: " + editingPost.title : "Create New Blog Post"}
                 </h3>
                 <p className={styles.modalSub}>
-                  Craft editorial essays, research notes, and tech breakdowns with full SEO support.
+                  Craft high-impact engineering breakdowns, AI whitepapers, and product updates.
                 </p>
               </div>
               <button
@@ -1657,41 +1880,38 @@ export function AdminBlog({
               </button>
             </div>
 
-            {/* Sticky Section Navigation Stepper */}
-            <div
-              className={styles.modalTabsBar}
-              role="tablist"
-              aria-label="Blog Post Form Steps"
-              data-lenis-prevent
-            >
-              {MODAL_STEPS.map((t) => (
-                <button
-                  key={t.id}
-                  ref={(el) => {
-                    tabRefs.current[t.id] = el;
-                  }}
-                  role="tab"
-                  aria-selected={modalTab === t.id}
-                  type="button"
-                  className={[
-                    styles.modalTabBtn,
-                    modalTab === t.id ? styles.modalTabBtnActive : "",
-                  ].join(" ")}
-                  onClick={() => setModalTab(t.id)}
-                >
-                  {t.label}
-                </button>
-              ))}
+            {/* Step Tabs Navigation */}
+            <div className={styles.modalTabsBar}>
+              {MODAL_STEPS.map((s) => {
+                const isActive = modalTab === s.id;
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    ref={(el) => {
+                      tabRefs.current[s.id] = el;
+                    }}
+                    className={[styles.modalTabBtn, isActive ? styles.modalTabBtnActive : ""].join(
+                      " ",
+                    )}
+                    onClick={() => setModalTab(s.id)}
+                  >
+                    <span className={styles.modalTabNum}>{s.num}</span>
+                    <span>{s.label}</span>
+                  </button>
+                );
+              })}
             </div>
 
-            {/* Global Error Alert */}
+            {/* Error Notifications */}
             {formError && (
-              <div className={styles.errorAlert}>
+              <div className={styles.errorAlert} style={{ margin: "1rem 1.75rem 0" }}>
                 <AlertCircle size={16} />
                 <span>{formError}</span>
               </div>
             )}
 
+            {/* Step Body */}
             <form
               onSubmit={(e) => {
                 e.preventDefault();
@@ -1704,42 +1924,29 @@ export function AdminBlog({
                 {/* STEP 1: BASIC INFO & META */}
                 {modalTab === "basic" && (
                   <div className={styles.tabPane}>
-                    <div className={styles.formGrid2}>
-                      <div className={styles.formGroup}>
-                        <label>Blog Post Title *</label>
-                        <input
-                          type="text"
-                          required
-                          value={title}
-                          className={fieldErrors.title ? styles.inputError : ""}
-                          onChange={(e) => {
-                            setTitle(e.target.value);
-                            if (fieldErrors.title) {
-                              setFieldErrors((prev) => {
-                                const copy = { ...prev };
-                                delete copy.title;
-                                return copy;
-                              });
-                            }
-                            if (!editingPost) setSlug(slugifyBlog(e.target.value));
-                          }}
-                          placeholder="e.g. Architecting Distributed AI Agents for Enterprise Scale"
-                        />
-                        {fieldErrors.title && (
-                          <span className={styles.fieldErrorText}>{fieldErrors.title}</span>
-                        )}
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label>URL Slug *</label>
-                        <input
-                          type="text"
-                          required
-                          value={slug}
-                          onChange={(e) => setSlug(e.target.value)}
-                          placeholder="e.g. architecting-distributed-ai-agents"
-                        />
-                      </div>
+                    {/* Title full width */}
+                    <div className={styles.formGroup}>
+                      <label>Blog Post Title *</label>
+                      <input
+                        type="text"
+                        required
+                        value={title}
+                        className={fieldErrors.title ? styles.inputError : ""}
+                        onChange={(e) => {
+                          setTitle(e.target.value);
+                          if (fieldErrors.title) {
+                            setFieldErrors((prev) => {
+                              const copy = { ...prev };
+                              delete copy.title;
+                              return copy;
+                            });
+                          }
+                        }}
+                        placeholder="e.g. Architecting Distributed AI Agents for Enterprise Scale"
+                      />
+                      {fieldErrors.title && (
+                        <span className={styles.fieldErrorText}>{fieldErrors.title}</span>
+                      )}
                     </div>
 
                     <div className={styles.formGrid3}>
@@ -1765,12 +1972,9 @@ export function AdminBlog({
                               {cat.name}
                             </option>
                           ))}
-                          {/* If current category is not in active list, preserve it */}
                           {!activeCategories.some(
-                            (c) => c.name.toLowerCase() === category.toLowerCase()
-                          ) && (
-                            <option value={category}>{category} (Custom / Inactive)</option>
-                          )}
+                            (c) => c.name.toLowerCase() === category.toLowerCase(),
+                          ) && <option value={category}>{category} (Custom / Inactive)</option>}
                         </select>
                       </div>
 
@@ -1794,34 +1998,27 @@ export function AdminBlog({
                       </div>
                     </div>
 
-                    <div className={styles.formGrid3}>
+                    <div className={styles.formGrid2}>
                       <div className={styles.formGroup}>
-                        <label>Author Name</label>
-                        <input
-                          type="text"
-                          value={authorName}
-                          onChange={(e) => setAuthorName(e.target.value)}
-                          placeholder="e.g. Dr. Ira Mehta"
-                        />
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label>Author Role</label>
-                        <input
-                          type="text"
-                          value={authorRole}
-                          onChange={(e) => setAuthorRole(e.target.value)}
-                          placeholder="e.g. Head of AI Research"
-                        />
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label>Display Order</label>
+                        <label>Display Order Index</label>
                         <input
                           type="number"
                           value={orderIndex}
                           onChange={(e) => setOrderIndex(Number(e.target.value))}
                         />
+                      </div>
+
+                      <div className={styles.formGroup}>
+                        <label>Publication Status</label>
+                        <select
+                          value={status}
+                          onChange={(e) => setStatus(e.target.value as BlogStatus)}
+                          className={styles.selectInput}
+                        >
+                          <option value="published">Published (Live)</option>
+                          <option value="draft">Draft (Unpublished)</option>
+                          <option value="archived">Archived</option>
+                        </select>
                       </div>
                     </div>
 
@@ -1890,7 +2087,7 @@ export function AdminBlog({
                             });
                           }
                         }}
-                        placeholder="Concise, high-impact summary displayed on blog cards and Google SERP snippets..."
+                        placeholder="Concise, high-impact summary displayed on blog cards and search snippets..."
                       />
                       {fieldErrors.excerpt && (
                         <span className={styles.fieldErrorText}>{fieldErrors.excerpt}</span>
@@ -1935,8 +2132,8 @@ export function AdminBlog({
                       </div>
 
                       <p className={styles.uploadInstruction}>
-                        Upload or paste a high-resolution hero cover image (16:9 recommended). Supported:{" "}
-                        <strong>JPG, PNG, WEBP</strong> (Max <strong>10 MB</strong>).
+                        Upload or paste a high-resolution hero cover image (16:9 recommended).
+                        Supported: <strong>JPG, PNG, WEBP</strong> (Max <strong>10 MB</strong>).
                       </p>
 
                       {/* Upload Mode */}
@@ -1974,7 +2171,10 @@ export function AdminBlog({
                                   <FileCheck size={14} className={styles.checkIcon} />
                                   <span>
                                     {coverFile
-                                      ? coverFile.name + " (" + (coverFile.size / (1024 * 1024)).toFixed(2) + " MB)"
+                                      ? coverFile.name +
+                                        " (" +
+                                        (coverFile.size / (1024 * 1024)).toFixed(2) +
+                                        " MB)"
                                       : "Active Cover Image"}
                                   </span>
                                 </div>
@@ -2009,8 +2209,8 @@ export function AdminBlog({
                               </div>
                               <h5 className={styles.dropzonePrompt}>
                                 Drag and drop cover image,{" "}
-                                <span className={styles.browseLink}>Choose Image</span>, or paste with{" "}
-                                <kbd className={styles.kbdShortcut}>Ctrl + V</kbd>
+                                <span className={styles.browseLink}>Choose Image</span>, or paste
+                                with <kbd className={styles.kbdShortcut}>Ctrl + V</kbd>
                               </h5>
                               <span className={styles.dropzoneSub}>
                                 Supports JPG, PNG, WEBP up to 10MB
@@ -2110,41 +2310,589 @@ export function AdminBlog({
                   </div>
                 )}
 
-                {/* STEP 3: ARTICLE CONTENT */}
+                {/* STEP 3: VISUAL MODULAR BLOCK BUILDER */}
                 {modalTab === "content" && (
                   <div className={styles.tabPane}>
-                    <div className={styles.editorNoticeBox}>
-                      <FileText size={15} className={styles.editorNoticeIcon} />
-                      <span>
-                        Supports Markdown headings (<code>##</code>), bullet points, blockquotes (
-                        <code>&gt;</code>), bold/italics, and code blocks (<code>```ts</code>).
-                      </span>
-                    </div>
+                    <div className={styles.blockBuilderContainer}>
+                      {/* Top Bar with Mode Switcher & Block Stats */}
+                      <div className={styles.blockBuilderTopBar}>
+                        <div className={styles.blockModeToggleGroup}>
+                          <button
+                            type="button"
+                            className={[
+                              styles.blockModeBtn,
+                              blockViewMode === "builder" ? styles.blockModeBtnActive : "",
+                            ].join(" ")}
+                            onClick={() => {
+                              if (blockViewMode === "raw") {
+                                setBlocks(parseMarkdownToBlocks(content));
+                              }
+                              setBlockViewMode("builder");
+                            }}
+                          >
+                            <Layers size={14} />
+                            <span>Visual Blocks ({blocks.length})</span>
+                          </button>
 
-                    <div className={styles.formGroup}>
-                      <label>Article Markdown Content *</label>
-                      <textarea
-                        rows={14}
-                        required
-                        value={content}
-                        className={[
-                          styles.articleTextarea,
-                          fieldErrors.content ? styles.inputError : "",
-                        ].join(" ")}
-                        onChange={(e) => {
-                          setContent(e.target.value);
-                          if (fieldErrors.content) {
-                            setFieldErrors((prev) => {
-                              const copy = { ...prev };
-                              delete copy.content;
-                              return copy;
-                            });
-                          }
-                        }}
-                        placeholder="Write your long-form article here..."
-                      />
-                      {fieldErrors.content && (
-                        <span className={styles.fieldErrorText}>{fieldErrors.content}</span>
+                          <button
+                            type="button"
+                            className={[
+                              styles.blockModeBtn,
+                              blockViewMode === "preview" ? styles.blockModeBtnActive : "",
+                            ].join(" ")}
+                            onClick={() => {
+                              if (blockViewMode === "raw") {
+                                setBlocks(parseMarkdownToBlocks(content));
+                              }
+                              setBlockViewMode("preview");
+                            }}
+                          >
+                            <Eye size={14} />
+                            <span>Live Preview</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={[
+                              styles.blockModeBtn,
+                              blockViewMode === "raw" ? styles.blockModeBtnActive : "",
+                            ].join(" ")}
+                            onClick={() => {
+                              setContent(serializeBlocksToMarkdown(blocks));
+                              setBlockViewMode("raw");
+                            }}
+                          >
+                            <FileCode size={14} />
+                            <span>Raw Markdown</span>
+                          </button>
+                        </div>
+
+                        <div className={styles.blockStatsSummary}>
+                          <span className={styles.blockStatsBadge}>
+                            <span>
+                              Blocks: <strong>{blocks.length}</strong>
+                            </span>
+                          </span>
+                          <span className={styles.blockStatsBadge}>
+                            <span>
+                              Est. Read:{" "}
+                              <strong>
+                                {Math.max(1, Math.round(content.split(/\s+/).length / 200))} min
+                              </strong>
+                            </span>
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Quick Add Toolbar (Visible in Builder Mode) */}
+                      {blockViewMode === "builder" && (
+                        <div className={styles.quickAddToolbar}>
+                          <span className={styles.quickAddLabel}>+ Add Block:</span>
+
+                          <button
+                            type="button"
+                            className={styles.quickAddBtn}
+                            onClick={() => handleAddBlock("heading", 2)}
+                          >
+                            <HeadingIcon size={13} />
+                            <span>+ H2 Heading</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={styles.quickAddBtn}
+                            onClick={() => handleAddBlock("heading", 3)}
+                          >
+                            <HeadingIcon size={13} />
+                            <span>+ H3 Heading</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={styles.quickAddBtn}
+                            onClick={() => handleAddBlock("heading", 4)}
+                          >
+                            <HeadingIcon size={13} />
+                            <span>+ H4 Heading</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={styles.quickAddBtn}
+                            onClick={() => handleAddBlock("paragraph")}
+                          >
+                            <Type size={13} />
+                            <span>+ Paragraph</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={styles.quickAddBtn}
+                            onClick={() => handleAddBlock("list")}
+                          >
+                            <ListIcon size={13} />
+                            <span>+ Bullet Points</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={styles.quickAddBtn}
+                            onClick={() => {
+                              const newBlock: ListBlock = {
+                                id: generateBlockId("list"),
+                                type: "list",
+                                style: "numbered",
+                                items: [""],
+                              };
+                              updateBlocksAndSyncContent([...blocks, newBlock]);
+                            }}
+                          >
+                            <ListOrdered size={13} />
+                            <span>+ Numbered List</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={styles.quickAddBtn}
+                            onClick={() => handleAddBlock("code")}
+                          >
+                            <CodeIcon size={13} />
+                            <span>+ Code Block</span>
+                          </button>
+
+                          <button
+                            type="button"
+                            className={styles.quickAddBtn}
+                            onClick={() => handleAddBlock("quote")}
+                          >
+                            <QuoteIcon size={13} />
+                            <span>+ Quote / Callout</span>
+                          </button>
+                        </div>
+                      )}
+
+                      {/* MODE 1: VISUAL BLOCK BUILDER CARDS */}
+                      {blockViewMode === "builder" && (
+                        <div className={styles.blocksList}>
+                          {blocks.length === 0 ? (
+                            <div className={styles.emptyBlocksState}>
+                              <Layers size={32} className={styles.emptyBlocksIcon} />
+                              <h4 className={styles.emptyBlocksTitle}>No Content Blocks Yet</h4>
+                              <p className={styles.emptyBlocksText}>
+                                Click any of the "+ Add Block" buttons above to start building your
+                                article structure.
+                              </p>
+                            </div>
+                          ) : (
+                            blocks.map((block, idx) => {
+                              return (
+                                <div key={block.id} className={styles.blockCard}>
+                                  {/* Block Header */}
+                                  <div className={styles.blockCardHeader}>
+                                    <div className={styles.blockHeaderLeft}>
+                                      <span className={styles.blockIndexNum}>
+                                        {String(idx + 1).padStart(2, "0")}
+                                      </span>
+
+                                      {/* Block Type Badges */}
+                                      {block.type === "heading" && (
+                                        <span
+                                          className={[
+                                            styles.blockTypeBadge,
+                                            styles.badgeHeading,
+                                          ].join(" ")}
+                                        >
+                                          <HeadingIcon size={12} />
+                                          <span>
+                                            {(block as HeadingBlock).level === 4
+                                              ? "H4 Minor Heading"
+                                              : (block as HeadingBlock).level === 3
+                                                ? "H3 Sub-Heading"
+                                                : "H2 Section Heading"}
+                                          </span>
+                                        </span>
+                                      )}
+
+                                      {block.type === "paragraph" && (
+                                        <span
+                                          className={[
+                                            styles.blockTypeBadge,
+                                            styles.badgeParagraph,
+                                          ].join(" ")}
+                                        >
+                                          <Type size={12} />
+                                          <span>Paragraph Block</span>
+                                        </span>
+                                      )}
+
+                                      {block.type === "list" && (
+                                        <span
+                                          className={[styles.blockTypeBadge, styles.badgeList].join(
+                                            " ",
+                                          )}
+                                        >
+                                          {(block as ListBlock).style === "numbered" ? (
+                                            <ListOrdered size={12} />
+                                          ) : (
+                                            <ListIcon size={12} />
+                                          )}
+                                          <span>
+                                            {(block as ListBlock).style === "numbered"
+                                              ? "Numbered List"
+                                              : "Bullet Points"}
+                                          </span>
+                                        </span>
+                                      )}
+
+                                      {block.type === "code" && (
+                                        <span
+                                          className={[styles.blockTypeBadge, styles.badgeCode].join(
+                                            " ",
+                                          )}
+                                        >
+                                          <CodeIcon size={12} />
+                                          <span>
+                                            Code Block (
+                                            {(block as CodeBlock).language || "typescript"})
+                                          </span>
+                                        </span>
+                                      )}
+
+                                      {block.type === "quote" && (
+                                        <span
+                                          className={[
+                                            styles.blockTypeBadge,
+                                            styles.badgeQuote,
+                                          ].join(" ")}
+                                        >
+                                          <QuoteIcon size={12} />
+                                          <span>Quote / Callout</span>
+                                        </span>
+                                      )}
+
+                                      {block.type === "raw" && (
+                                        <span
+                                          className={[styles.blockTypeBadge, styles.badgeRaw].join(
+                                            " ",
+                                          )}
+                                        >
+                                          <FileCode size={12} />
+                                          <span>Custom Markdown</span>
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Block Action Buttons */}
+                                    <div className={styles.blockHeaderActions}>
+                                      <button
+                                        type="button"
+                                        className={styles.blockActionBtn}
+                                        disabled={idx === 0}
+                                        onClick={() => handleMoveBlock(idx, "up")}
+                                        title="Move block up"
+                                      >
+                                        <MoveUp size={13} />
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        className={styles.blockActionBtn}
+                                        disabled={idx === blocks.length - 1}
+                                        onClick={() => handleMoveBlock(idx, "down")}
+                                        title="Move block down"
+                                      >
+                                        <MoveDown size={13} />
+                                      </button>
+
+                                      <button
+                                        type="button"
+                                        className={styles.blockDeleteBtn}
+                                        onClick={() => handleRemoveBlock(block.id)}
+                                        title="Delete block"
+                                      >
+                                        <Trash2 size={13} />
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  {/* Block Card Body */}
+                                  <div className={styles.blockCardBody}>
+                                    {/* 1. HEADING BLOCK */}
+                                    {block.type === "heading" && (
+                                      <div className={styles.headingControlsRow}>
+                                        <div className={styles.headingLevelGroup}>
+                                          <button
+                                            type="button"
+                                            className={[
+                                              styles.levelBtn,
+                                              (block as HeadingBlock).level === 2
+                                                ? styles.levelBtnActive
+                                                : "",
+                                            ].join(" ")}
+                                            onClick={() =>
+                                              handleUpdateBlock(block.id, { level: 2 })
+                                            }
+                                          >
+                                            H2
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className={[
+                                              styles.levelBtn,
+                                              (block as HeadingBlock).level === 3
+                                                ? styles.levelBtnActive
+                                                : "",
+                                            ].join(" ")}
+                                            onClick={() =>
+                                              handleUpdateBlock(block.id, { level: 3 })
+                                            }
+                                          >
+                                            H3
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className={[
+                                              styles.levelBtn,
+                                              (block as HeadingBlock).level === 4
+                                                ? styles.levelBtnActive
+                                                : "",
+                                            ].join(" ")}
+                                            onClick={() =>
+                                              handleUpdateBlock(block.id, { level: 4 })
+                                            }
+                                          >
+                                            H4
+                                          </button>
+                                        </div>
+
+                                        <input
+                                          type="text"
+                                          value={(block as HeadingBlock).text}
+                                          onChange={(e) =>
+                                            handleUpdateBlock(block.id, { text: e.target.value })
+                                          }
+                                          placeholder="Enter heading text..."
+                                          className={styles.headingTextInput}
+                                        />
+                                      </div>
+                                    )}
+
+                                    {/* 2. PARAGRAPH BLOCK */}
+                                    {block.type === "paragraph" && (
+                                      <>
+                                        <textarea
+                                          rows={3}
+                                          value={(block as ParagraphBlock).text}
+                                          onChange={(e) =>
+                                            handleUpdateBlock(block.id, { text: e.target.value })
+                                          }
+                                          placeholder="Write your paragraph content..."
+                                          className={styles.paragraphTextarea}
+                                        />
+                                        <div className={styles.paragraphFormatTips}>
+                                          <span>Formatting tips:</span>
+                                          <span className={styles.formatTipCode}>**bold**</span>
+                                          <span className={styles.formatTipCode}>*italic*</span>
+                                          <span className={styles.formatTipCode}>`code`</span>
+                                          <span className={styles.formatTipCode}>
+                                            [link](https://...)
+                                          </span>
+                                        </div>
+                                      </>
+                                    )}
+
+                                    {/* 3. LIST BLOCK */}
+                                    {block.type === "list" && (
+                                      <>
+                                        <div className={styles.listStyleToggleGroup}>
+                                          <button
+                                            type="button"
+                                            className={[
+                                              styles.levelBtn,
+                                              (block as ListBlock).style === "bullet"
+                                                ? styles.levelBtnActive
+                                                : "",
+                                            ].join(" ")}
+                                            onClick={() =>
+                                              handleUpdateBlock(block.id, { style: "bullet" })
+                                            }
+                                          >
+                                            • Bullet List
+                                          </button>
+                                          <button
+                                            type="button"
+                                            className={[
+                                              styles.levelBtn,
+                                              (block as ListBlock).style === "numbered"
+                                                ? styles.levelBtnActive
+                                                : "",
+                                            ].join(" ")}
+                                            onClick={() =>
+                                              handleUpdateBlock(block.id, { style: "numbered" })
+                                            }
+                                          >
+                                            1. Numbered List
+                                          </button>
+                                        </div>
+
+                                        <div className={styles.listItemsList}>
+                                          {(block as ListBlock).items.map((item, itIdx) => (
+                                            <div key={itIdx} className={styles.listItemRow}>
+                                              {(block as ListBlock).style === "numbered" ? (
+                                                <span className={styles.listItemNum}>
+                                                  {String(itIdx + 1).padStart(2, "0")}
+                                                </span>
+                                              ) : (
+                                                <span className={styles.listItemBullet}>•</span>
+                                              )}
+                                              <input
+                                                type="text"
+                                                value={item}
+                                                onChange={(e) =>
+                                                  handleUpdateListItem(
+                                                    block.id,
+                                                    itIdx,
+                                                    e.target.value,
+                                                  )
+                                                }
+                                                onKeyDown={(e) => {
+                                                  if (e.key === "Enter") {
+                                                    e.preventDefault();
+                                                    handleAddListItem(block.id, itIdx);
+                                                  }
+                                                }}
+                                                placeholder={`List item ${itIdx + 1}...`}
+                                                className={styles.listItemInput}
+                                              />
+                                              <button
+                                                type="button"
+                                                className={styles.removeListItemBtn}
+                                                onClick={() =>
+                                                  handleRemoveListItem(block.id, itIdx)
+                                                }
+                                                title="Remove item"
+                                              >
+                                                <X size={13} />
+                                              </button>
+                                            </div>
+                                          ))}
+                                        </div>
+
+                                        <button
+                                          type="button"
+                                          className={styles.addListItemBtn}
+                                          onClick={() => handleAddListItem(block.id)}
+                                        >
+                                          <Plus size={13} />
+                                          <span>Add List Item</span>
+                                        </button>
+                                      </>
+                                    )}
+
+                                    {/* 4. CODE BLOCK */}
+                                    {block.type === "code" && (
+                                      <>
+                                        <div className={styles.codeLangSelectRow}>
+                                          <label
+                                            style={{
+                                              fontSize: "0.76rem",
+                                              color: "rgba(255,255,255,0.6)",
+                                            }}
+                                          >
+                                            Language:
+                                          </label>
+                                          <select
+                                            value={(block as CodeBlock).language || "typescript"}
+                                            onChange={(e) =>
+                                              handleUpdateBlock(block.id, {
+                                                language: e.target.value,
+                                              })
+                                            }
+                                            className={styles.codeLangSelect}
+                                          >
+                                            {CODE_LANGUAGES.map((lang) => (
+                                              <option key={lang.value} value={lang.value}>
+                                                {lang.label}
+                                              </option>
+                                            ))}
+                                          </select>
+                                        </div>
+
+                                        <textarea
+                                          rows={5}
+                                          value={(block as CodeBlock).code}
+                                          onChange={(e) =>
+                                            handleUpdateBlock(block.id, { code: e.target.value })
+                                          }
+                                          placeholder="Paste or write code here..."
+                                          className={styles.codeEditorTextarea}
+                                        />
+                                      </>
+                                    )}
+
+                                    {/* 5. QUOTE BLOCK */}
+                                    {block.type === "quote" && (
+                                      <>
+                                        <textarea
+                                          rows={3}
+                                          value={(block as QuoteBlock).text}
+                                          onChange={(e) =>
+                                            handleUpdateBlock(block.id, { text: e.target.value })
+                                          }
+                                          placeholder="Enter quote or key takeaway text..."
+                                          className={styles.quoteTextarea}
+                                        />
+
+                                        <input
+                                          type="text"
+                                          value={(block as QuoteBlock).cite || ""}
+                                          onChange={(e) =>
+                                            handleUpdateBlock(block.id, { cite: e.target.value })
+                                          }
+                                          placeholder="Quote attribution / author cite (optional)..."
+                                          className={styles.quoteCiteInput}
+                                        />
+                                      </>
+                                    )}
+
+                                    {/* 6. RAW BLOCK */}
+                                    {block.type === "raw" && (
+                                      <textarea
+                                        rows={4}
+                                        value={(block as RawBlock).markdown}
+                                        onChange={(e) =>
+                                          handleUpdateBlock(block.id, { markdown: e.target.value })
+                                        }
+                                        placeholder="Enter custom markdown..."
+                                        className={styles.codeEditorTextarea}
+                                      />
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })
+                          )}
+                        </div>
+                      )}
+
+                      {/* MODE 2: LIVE PREVIEW PANE */}
+                      {blockViewMode === "preview" && (
+                        <div className={styles.previewPaneCard}>
+                          <BlogContentRenderer content={serializeBlocksToMarkdown(blocks)} />
+                        </div>
+                      )}
+
+                      {/* MODE 3: RAW MARKDOWN EDITOR */}
+                      {blockViewMode === "raw" && (
+                        <div className={styles.formGroup}>
+                          <textarea
+                            rows={16}
+                            value={content}
+                            onChange={(e) => setContent(e.target.value)}
+                            placeholder="Write or paste your full markdown article here..."
+                            className={styles.rawEditorTextarea}
+                          />
+                        </div>
                       )}
                     </div>
                   </div>
@@ -2158,9 +2906,7 @@ export function AdminBlog({
                         <label>Meta Title (Google SERP)</label>
                         <span
                           className={
-                            metaTitle.length > 60
-                              ? styles.charCounterWarning
-                              : styles.charCounter
+                            metaTitle.length > 60 ? styles.charCounterWarning : styles.charCounter
                           }
                         >
                           {metaTitle.length} / 60 characters
@@ -2197,68 +2943,29 @@ export function AdminBlog({
 
                     <div className={styles.formGroup}>
                       <div className={styles.labelCounterRow}>
-                        <label>Open Graph / Social Sharing Image</label>
-                        {coverImage && (
-                          <button
-                            type="button"
-                            className={styles.useCoverBtn}
-                            onClick={() => setOgImage(coverImage)}
-                          >
-                            <Share2 size={12} />
-                            <span>Use Cover Image</span>
-                          </button>
-                        )}
+                        <label>Open Graph / Social Sharing Image URL</label>
+                        <span className={styles.charCounter}>Defaults to Cover Image</span>
                       </div>
                       <input
-                        type="text"
+                        type="url"
                         value={ogImage}
                         onChange={(e) => setOgImage(e.target.value)}
-                        placeholder="https://images.unsplash.com/photo-..."
+                        placeholder={coverImage || "https://images.unsplash.com/photo-..."}
                       />
-                    </div>
-
-                    {/* Visibility & Status Settings */}
-                    <div className={styles.toggleRow} style={{ marginTop: "1rem" }}>
-                      <label className={styles.checkboxLabel}>
-                        <input
-                          type="checkbox"
-                          checked={status === "published"}
-                          onChange={(e) =>
-                            setStatus(e.target.checked ? "published" : "draft")
-                          }
-                        />
-                        <span>Published on Public Website</span>
-                      </label>
-
-                      <label className={styles.checkboxLabel}>
-                        <input
-                          type="checkbox"
-                          checked={isFeatured}
-                          onChange={(e) => setIsFeatured(e.target.checked)}
-                        />
-                        <span>Featured Hero Spotlight Badge</span>
-                      </label>
                     </div>
                   </div>
                 )}
               </div>
 
-              {/* Sticky Modal Footer */}
+              {/* Wizard Footer Navigation */}
               <div className={styles.modalFooter}>
                 <div className={styles.footerLeft}>
                   {modalTab !== "basic" && (
-                    <button
-                      type="button"
-                      className={styles.prevBtn}
-                      onClick={handlePrevStep}
-                    >
-                      <ChevronLeft size={16} />
-                      <span>Previous Step</span>
+                    <button type="button" className={styles.prevBtn} onClick={handlePrevStep}>
+                      <ChevronLeft size={15} />
+                      <span>Back</span>
                     </button>
                   )}
-                </div>
-
-                <div className={styles.footerRight}>
                   <button
                     type="button"
                     className={styles.cancelBtn}
@@ -2266,43 +2973,107 @@ export function AdminBlog({
                   >
                     Cancel
                   </button>
+                </div>
 
-                  <button
-                    type="button"
-                    disabled={isPending || isUploadingImage}
-                    className={styles.draftBtn}
-                    onClick={() => handleSavePost("draft")}
-                  >
-                    Save Draft
-                  </button>
-
+                <div className={styles.footerRight}>
                   {modalTab !== "seo" ? (
-                    <button
-                      type="button"
-                      className={styles.nextBtn}
-                      onClick={handleNextStep}
-                    >
-                      <span>Next Step</span>
-                      <ChevronRight size={16} />
+                    <button type="button" className={styles.nextBtn} onClick={handleNextStep}>
+                      <span>Continue to Next Step</span>
+                      <ChevronRight size={15} />
                     </button>
                   ) : (
-                    <button
-                      type="submit"
-                      disabled={isPending || isUploadingImage}
-                      className={styles.saveSubmitBtn}
-                    >
-                      {isUploadingImage
-                        ? "Uploading Image..."
-                        : isPending
-                        ? "Publishing..."
-                        : editingPost
-                        ? "Update Article"
-                        : "Publish Article"}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        className={styles.draftBtn}
+                        onClick={() => handleSavePost("draft")}
+                      >
+                        <Save size={14} />
+                        <span>Save as Draft</span>
+                      </button>
+                      <button
+                        type="button"
+                        disabled={isPending}
+                        className={styles.saveSubmitBtn}
+                        onClick={() => handleSavePost("published")}
+                      >
+                        <CheckCircle2 size={15} />
+                        <span>{editingPost ? "Update & Publish" : "Publish Article"}</span>
+                      </button>
+                    </>
                   )}
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+         DEDICATED ARTICLE DELETE CONFIRMATION MODAL
+         ========================================================================= */}
+      {postDeleteConfirm && (
+        <div
+          className={styles.modalBackdrop}
+          role="dialog"
+          aria-modal="true"
+          onClick={() => setPostDeleteConfirm(null)}
+        >
+          <div
+            className={styles.deleteConfirmModal}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.deleteModalHeader}>
+              <div className={styles.deleteIconWrapper}>
+                <Trash2 size={22} className={styles.deleteModalTrashIcon} />
+              </div>
+              <button
+                type="button"
+                className={styles.modalClose}
+                onClick={() => setPostDeleteConfirm(null)}
+                title="Close (Esc)"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className={styles.deleteModalBody}>
+              <h3 className={styles.deleteModalTitle}>Delete Article</h3>
+              <p className={styles.deleteModalDescription}>
+                Are you sure you want to permanently delete{" "}
+                <span className={styles.deleteHighlight}>
+                  "{postDeleteConfirm.title}"
+                </span>
+                ?
+              </p>
+              <div className={styles.deleteWarningBox}>
+                <AlertTriangle size={18} className={styles.deleteWarningBoxIcon} />
+                <span>
+                  This action is irreversible. The article will be immediately removed from the live database and public blog.
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.deleteModalFooter}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={() => setPostDeleteConfirm(null)}
+                disabled={isPending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.deleteConfirmBtn}
+                onClick={handleConfirmDeletePost}
+                disabled={isPending}
+              >
+                <Trash2 size={15} />
+                <span>{isPending ? "Deleting..." : "Delete Article"}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
