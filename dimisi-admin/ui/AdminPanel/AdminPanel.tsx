@@ -334,10 +334,26 @@ export function AdminPanel() {
       .catch((err) => console.warn("Failed to refresh reviews data", err));
   }, [loadReviewsData]);
 
-  const refreshEvents = useCallback(() => {
-    loadEventsData()
-      .then((res) => setEventsData(res))
-      .catch((err) => console.warn("Failed to refresh events data", err));
+  const refreshEvents = useCallback(async () => {
+    try {
+      if (import.meta.env?.DEV) {
+        console.debug("[EVENTS DEBUG] REFRESH START (AdminPanel)");
+      }
+      const res = await loadEventsData();
+      if (res) {
+        if (import.meta.env?.DEV) {
+          console.debug("[EVENTS DEBUG] PARENT STATE updated with:", {
+            eventsCount: res.events?.length ?? 0,
+            galleryCount: res.gallery?.length ?? 0,
+          });
+        }
+        setEventsData(res);
+      }
+      return res;
+    } catch (err) {
+      console.warn("Failed to refresh events data", err);
+      return null;
+    }
   }, [loadEventsData]);
 
   const refreshServices = useCallback(() => {
@@ -457,21 +473,21 @@ export function AdminPanel() {
         });
       }
 
-      // Background fetch remaining tabs
+      // Background fetch remaining tabs (skip the currently active tab to avoid race conditions)
       Promise.allSettled([
-        loadEventsData(),
-        loadServicesData(),
-        loadWorkData(),
-        loadCareersData(),
-        loadBlogData(),
+        tab !== "events" ? loadEventsData() : Promise.resolve(null),
+        tab !== "services" ? loadServicesData() : Promise.resolve(null),
+        tab !== "work" ? loadWorkData() : Promise.resolve(null),
+        tab !== "careers" ? loadCareersData() : Promise.resolve(null),
+        tab !== "blog" ? loadBlogData() : Promise.resolve(null),
       ])
         .then(([resEvents, resServices, resWork, resCareers, resBlog]) => {
           if (active) {
-            if (resEvents.status === "fulfilled") setEventsData(resEvents.value);
-            if (resServices.status === "fulfilled") setServicesData(resServices.value);
-            if (resWork.status === "fulfilled") setWorkData(resWork.value);
-            if (resCareers.status === "fulfilled") setCareersData(resCareers.value);
-            if (resBlog.status === "fulfilled") setBlogData(resBlog.value);
+            if (resEvents.status === "fulfilled" && resEvents.value) setEventsData(resEvents.value);
+            if (resServices.status === "fulfilled" && resServices.value) setServicesData(resServices.value);
+            if (resWork.status === "fulfilled" && resWork.value) setWorkData(resWork.value);
+            if (resCareers.status === "fulfilled" && resCareers.value) setCareersData(resCareers.value);
+            if (resBlog.status === "fulfilled" && resBlog.value) setBlogData(resBlog.value);
           }
         })
         .catch((err) => {

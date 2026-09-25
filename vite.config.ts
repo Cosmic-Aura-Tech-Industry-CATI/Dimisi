@@ -23,6 +23,22 @@ export default defineConfig(({ mode, command }) => {
           changeOrigin: true,
           secure: false,
           ws: true,
+          cookieDomainRewrite: "localhost",
+          cookiePathRewrite: "/",
+          configure: (proxy) => {
+            proxy.on("proxyRes", (proxyRes) => {
+              const setCookieHeaders = proxyRes.headers["set-cookie"];
+              if (setCookieHeaders) {
+                proxyRes.headers["set-cookie"] = (
+                  Array.isArray(setCookieHeaders) ? setCookieHeaders : [setCookieHeaders]
+                ).map((cookieStr) =>
+                  cookieStr
+                    .replace(/;\s*Secure/gi, "")
+                    .replace(/SameSite=None/gi, "SameSite=Lax")
+                );
+              }
+            });
+          },
         },
       },
     },

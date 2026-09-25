@@ -57,7 +57,14 @@ export function useAuth() {
       setLoading(false);
     }
 
-    const onAuthChange = () => {
+    const onAuthChange = (e?: Event) => {
+      const customEvt = e as CustomEvent<{ expired?: boolean; message?: string }>;
+      if (customEvt?.detail?.expired) {
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+        return;
+      }
       const found = checkLocalSession();
       if (!found) {
         setSession(null);
@@ -65,12 +72,12 @@ export function useAuth() {
         setLoading(false);
       }
     };
-    window.addEventListener("dimisi-auth-change", onAuthChange);
-    window.addEventListener("storage", onAuthChange);
+    window.addEventListener("dimisi-auth-change", onAuthChange as EventListener);
+    window.addEventListener("storage", onAuthChange as EventListener);
 
     return () => {
-      window.removeEventListener("dimisi-auth-change", onAuthChange);
-      window.removeEventListener("storage", onAuthChange);
+      window.removeEventListener("dimisi-auth-change", onAuthChange as EventListener);
+      window.removeEventListener("storage", onAuthChange as EventListener);
     };
   }, []);
 

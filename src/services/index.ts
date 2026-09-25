@@ -156,3 +156,38 @@ export {
   type BackendBlogSingleResponse,
   type BackendBlogConfigResponse,
 } from "./blog.service";
+
+// 11. Event Category Taxonomy API
+export {
+  getAllEventCategoriesApi,
+  createEventCategoryApi,
+  updateEventCategoryApi,
+  deleteEventCategoryApi,
+  normalizeBackendEventCategory,
+  resolveEventCategoryName,
+  resolveEventCategoryIdForPayload,
+  type BackendEventCategoryDoc,
+  type BackendEventCategoryListResponse,
+  type BackendEventCategorySingleResponse,
+  type CreateEventCategoryPayload,
+  type UpdateEventCategoryPayload,
+} from "./eventCategory.service";
+
+// 12. Event & Photo Gallery API
+export {
+  getPublicActiveEventsApi,
+  getPublicActiveGalleryApi,
+  getAllAdminEventsApi,
+  getAllAdminGalleryApi,
+  getEventByIdApi,
+  createEventApi,
+  createGalleryItemApi,
+  updateEventApi,
+  deleteEventApi,
+  normalizeBackendEvent,
+  normalizeBackendGalleryItem,
+  DEFAULT_EVENT_FALLBACK_IMAGE,
+  type BackendEventDoc,
+  type BackendEventListResponse,
+  type BackendEventSingleResponse,
+} from "./event.service";

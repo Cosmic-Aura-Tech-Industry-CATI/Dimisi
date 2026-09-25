@@ -74,17 +74,25 @@ interface CacheEntry {
 }
 const apiGetCache = new Map<string, CacheEntry>();
 const inFlightRequests = new Map<string, Promise<any>>();
+let cacheGeneration = 0;
 
 /** Clears all or matching cached GET responses. */
 export function clearApiCache(endpointPrefix?: string): void {
+  cacheGeneration++;
   if (!endpointPrefix) {
     apiGetCache.clear();
+    inFlightRequests.clear();
     return;
   }
   const norm = endpointPrefix.startsWith("/") ? endpointPrefix : `/${endpointPrefix}`;
   for (const key of apiGetCache.keys()) {
     if (key.includes(norm)) {
       apiGetCache.delete(key);
+    }
+  }
+  for (const key of inFlightRequests.keys()) {
+    if (key.includes(norm)) {
+      inFlightRequests.delete(key);
     }
   }
 }
@@ -97,7 +105,7 @@ export async function apiRequest<T = any>(
   endpoint: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { timeoutMs = 15000, token, cacheTtlMs = 30000, headers = {}, ...rest } = options;
+  const { timeoutMs = 30000, token, cacheTtlMs = 30000, headers = {}, ...rest } = options;
 
   // Normalize full URL
   const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
@@ -124,6 +132,8 @@ export async function apiRequest<T = any>(
     }
   }
 
+  const requestGeneration = cacheGeneration;
+
   const execute = async (): Promise<T> => {
     const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     const defaultHeaders: Record<string, string> = {
@@ -137,8 +147,10 @@ export async function apiRequest<T = any>(
         const raw = localStorage.getItem("dimisi_admin_session");
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed?.token && !parsed.token.includes("cookie")) {
+          if (parsed?.token && typeof parsed.token === "string" && !parsed.token.includes("cookie")) {
             authToken = parsed.token;
+          } else if (parsed?.accessToken && typeof parsed.accessToken === "string" && !parsed.accessToken.includes("cookie")) {
+            authToken = parsed.accessToken;
           }
         }
       } catch {}
@@ -233,6 +245,44 @@ export async function apiRequest<T = any>(
           }
         }
 
+        // On 401 Unauthorized for genuine protected admin panel endpoints, invalidate local stale session
+        const isPanelRoute = normalizedEndpoint.startsWith("/api/v1/admin-panel/");
+        const isAuthLoginRoute = normalizedEndpoint.includes("/auth/login");
+        const isVisitorRoute =
+          normalizedEndpoint.includes("/visitors/") ||
+          normalizedEndpoint.endsWith("/active") ||
+          normalizedEndpoint.includes("/public");
+
+        const isGenuineAuthExpiredError =
+          errorMessage.includes("logged in") ||
+          errorMessage.includes("expired") ||
+          errorMessage.includes("recently changed password") ||
+          errorMessage.includes("deactivated") ||
+          errorMessage.includes("revoked") ||
+          errorMessage.includes("no longer exist");
+
+        if (
+          response.status === 401 &&
+          isPanelRoute &&
+          !isAuthLoginRoute &&
+          !isVisitorRoute &&
+          isGenuineAuthExpiredError &&
+          typeof window !== "undefined"
+        ) {
+          try {
+            localStorage.removeItem("dimisi_admin_session");
+            clearApiCache();
+            window.dispatchEvent(
+              new CustomEvent("dimisi-auth-change", {
+                detail: {
+                  expired: true,
+                  message: "Your admin session has expired. Please sign in again.",
+                },
+              }),
+            );
+          } catch {}
+        }
+
         if (import.meta.env?.DEV && method === "DELETE") {
           console.error(`[DELETE FAILED] ${normalizedEndpoint} — ${errorMessage} (status: ${response.status})`);
         }
@@ -243,7 +293,7 @@ export async function apiRequest<T = any>(
       // Successful mutation: invalidate GET cache so subsequent fetches pull fresh data from backend
       if (method !== "GET") {
         clearApiCache();
-      } else if (cacheTtlMs > 0 && typeof window !== "undefined") {
+      } else if (cacheTtlMs > 0 && typeof window !== "undefined" && requestGeneration === cacheGeneration) {
         apiGetCache.set(cacheKey, { timestamp: Date.now(), data });
       }
 

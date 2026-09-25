@@ -89,6 +89,7 @@ export interface GalleryItemInput {
   category: string;
   aspect_ratio?: "normal" | "tall" | "wide" | undefined;
   hue?: number | undefined;
+  file?: File | null | undefined;
 }
 
 export interface EventCategoryItem {

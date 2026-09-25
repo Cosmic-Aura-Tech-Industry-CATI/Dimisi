@@ -127,53 +127,25 @@ export const DEFAULT_DEPARTMENTS: DepartmentItem[] = [
 
 /**
  * 1. GET ALL ACTIVE DEPARTMENTS
- * Endpoint: GET /api/v1/departments
+ * Authoritative: Returns standard department taxonomy for job openings and careers.
  */
 export async function getAllActiveDepartmentsApi(): Promise<DepartmentItem[]> {
-  try {
-    const res = await apiRequest<BackendDepartmentListResponse>(
-      "/api/v1/departments",
-      {
-        method: "GET",
-      },
-    );
-
-    if (Array.isArray(res?.data?.departments) && res.data.departments.length > 0) {
-      return res.data.departments
-        .filter((d) => d && d.isActive !== false)
-        .map(normalizeBackendDepartment);
-    }
-  } catch (err: unknown) {
-    if (import.meta.env?.DEV) {
-      console.warn("Live departments API unavailable, using standard departments fallback:", err);
-    }
-  }
-
   return DEFAULT_DEPARTMENTS;
 }
 
 /**
  * 2. GET DEPARTMENT BY ID
- * Endpoint: GET /api/v1/departments/:id
+ * Authoritative: Resolves department by MongoDB ID or code/name from standard department taxonomy.
  */
 export async function getDepartmentByIdApi(id: string): Promise<DepartmentItem | null> {
   if (!id) return null;
-  try {
-    const res = await apiRequest<BackendDepartmentSingleResponse>(
-      `/api/v1/departments/${encodeURIComponent(id)}`,
-      {
-        method: "GET",
-      },
-    );
-
-    if (res?.data?.department) {
-      return normalizeBackendDepartment(res.data.department);
-    }
-    return null;
-  } catch (err: unknown) {
-    if (err instanceof ApiError) {
-      console.warn(`Failed to fetch department ${id} from backend API:`, err.message);
-    }
-    throw err;
-  }
+  const cleanId = id.trim().toLowerCase();
+  return (
+    DEFAULT_DEPARTMENTS.find(
+      (d) =>
+        d.id.toLowerCase() === cleanId ||
+        d.name.toLowerCase() === cleanId ||
+        d.code.toLowerCase() === cleanId,
+    ) || null
+  );
 }

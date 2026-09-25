@@ -41,14 +41,33 @@ export function EventsPage() {
 
   const events = payload?.events || [];
   const featured = payload?.featuredEvent || events[0] || null;
-  const galleryItems = payload?.galleryItems || [];
-  const stats = payload?.stats || {
-    totalEvents: 4,
-    upcomingCount: 2,
-    completedCount: 2,
-    totalGalleryPhotos: 8,
-    attendeesServed: 2300,
-  };
+  const galleryItems = payload?.galleryItems || (payload as any)?.gallery || [];
+
+  const stats = useMemo(() => {
+    const totalEvents = payload?.stats?.totalEvents ?? events.length;
+    const upcomingCount =
+      payload?.stats?.upcomingCount ??
+      (payload?.stats as any)?.upcomingEvents ??
+      events.filter((e) => e.status === "upcoming").length;
+    const completedCount =
+      payload?.stats?.completedCount ??
+      (payload?.stats as any)?.completedEvents ??
+      events.filter((e) => e.status === "completed").length;
+    const totalGalleryPhotos =
+      payload?.stats?.totalGalleryPhotos ?? galleryItems.length;
+    const attendeesServed =
+      payload?.stats?.attendeesServed ??
+      events.reduce((acc, ev) => acc + (Number(ev.attendees_count) || 0), 0) ??
+      0;
+
+    return {
+      totalEvents,
+      upcomingCount,
+      completedCount,
+      totalGalleryPhotos,
+      attendeesServed,
+    };
+  }, [payload?.stats, events, galleryItems]);
 
   // State
   const [statusFilter, setStatusFilter] = useState<string>("All");
@@ -59,6 +78,20 @@ export function EventsPage() {
   const [activeModalEvent, setActiveModalEvent] = useState<CompanyEvent | null>(null);
   const [activeLightboxItem, setActiveLightboxItem] = useState<EventGalleryItem | null>(null);
   const [activeModalImageIdx, setActiveModalImageIdx] = useState(0);
+
+  // Dynamic Event Categories from backend
+  const eventCategories = useMemo(() => {
+    const cats = new Set<string>(["All"]);
+    if (payload?.categories && Array.isArray(payload.categories)) {
+      payload.categories.forEach((c) => {
+        if (c && c.trim()) cats.add(c.trim());
+      });
+    }
+    events.forEach((ev) => {
+      if (ev.category && ev.category.trim()) cats.add(ev.category.trim());
+    });
+    return Array.from(cats);
+  }, [payload?.categories, events]);
 
   // Keyboard accessibility for modals
   useEffect(() => {
@@ -85,17 +118,27 @@ export function EventsPage() {
   const filteredGallery = useMemo(() => {
     return galleryItems.filter((g) => {
       if (galleryFilter === "All") return true;
-      return g.category === galleryFilter || g.event_title === galleryFilter;
+      const targetCat = galleryFilter.trim().toLowerCase();
+      const gCat = (g.category || "").trim().toLowerCase();
+      const gEvent = (g.event_title || "").trim().toLowerCase();
+      return gCat === targetCat || gEvent === targetCat;
     });
   }, [galleryItems, galleryFilter]);
 
   const galleryCategories = useMemo(() => {
     const cats = new Set<string>(["All"]);
+    if (payload?.categoryItems && Array.isArray(payload.categoryItems)) {
+      payload.categoryItems.forEach((c) => {
+        if (c.status === "active" && c.name?.trim()) {
+          cats.add(c.name.trim());
+        }
+      });
+    }
     galleryItems.forEach((g) => {
-      if (g.category) cats.add(g.category);
+      if (g.category && g.category.trim()) cats.add(g.category.trim());
     });
     return Array.from(cats);
-  }, [galleryItems]);
+  }, [payload?.categoryItems, galleryItems]);
 
   return (
     <div className={pageStyles.page}>
@@ -127,22 +170,22 @@ export function EventsPage() {
           <Reveal variant="up" delay={160}>
             <div className={styles.metricsBar}>
               <div className={styles.metricItem}>
-                <span className={styles.metricNum}>{stats.upcomingCount}</span>
+                <span className={styles.metricNum}>{stats.upcomingCount ?? 0}</span>
                 <span className={styles.metricLabel}>Upcoming Summits</span>
               </div>
               <div className={styles.metricDivider} aria-hidden="true" />
               <div className={styles.metricItem}>
-                <span className={styles.metricNum}>{stats.totalEvents}</span>
+                <span className={styles.metricNum}>{stats.totalEvents ?? 0}</span>
                 <span className={styles.metricLabel}>Total Events</span>
               </div>
               <div className={styles.metricDivider} aria-hidden="true" />
               <div className={styles.metricItem}>
-                <span className={styles.metricNum}>{stats.attendeesServed.toLocaleString()}+</span>
+                <span className={styles.metricNum}>{(stats.attendeesServed ?? 0).toLocaleString()}+</span>
                 <span className={styles.metricLabel}>Global Attendees</span>
               </div>
               <div className={styles.metricDivider} aria-hidden="true" />
               <div className={styles.metricItem}>
-                <span className={styles.metricNum}>{stats.totalGalleryPhotos}</span>
+                <span className={styles.metricNum}>{stats.totalGalleryPhotos ?? 0}</span>
                 <span className={styles.metricLabel}>Visual Plates</span>
               </div>
             </div>
@@ -298,13 +341,7 @@ export function EventsPage() {
 
             {/* Category Pills */}
             <div className={styles.categoryPills}>
-              {[
-                "All",
-                "Product Launch",
-                "Tech Summit",
-                "Hackathon",
-                "Team Retreat",
-              ].map((cat) => (
+              {eventCategories.map((cat) => (
                 <button
                   key={cat}
                   type="button"

@@ -10,7 +10,16 @@ export function AdminLogin() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      const expiredReason = sessionStorage.getItem("dimisi_admin_session_expired");
+      if (expiredReason) {
+        sessionStorage.removeItem("dimisi_admin_session_expired");
+        return expiredReason;
+      }
+    }
+    return null;
+  });
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

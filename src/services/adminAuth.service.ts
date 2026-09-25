@@ -127,7 +127,8 @@ export async function loginAdmin(
 
   if (typeof window !== "undefined") {
     localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(sessionData));
-    window.dispatchEvent(new Event("dimisi-auth-change"));
+    sessionStorage.removeItem("dimisi_admin_session_expired");
+    window.dispatchEvent(new CustomEvent("dimisi-auth-change", { detail: { user } }));
   }
 
   return {
@@ -153,12 +154,32 @@ export async function logoutAdmin(): Promise<void> {
       error,
     );
   } finally {
-    if (typeof window !== "undefined") {
-      localStorage.removeItem(ADMIN_SESSION_KEY);
-      clearApiCache();
-      window.dispatchEvent(new Event("dimisi-auth-change"));
-    }
+    clearAdminSession();
   }
+}
+
+/**
+ * Explicitly clears the local admin session and emits auth state change.
+ */
+export function clearAdminSession(reason?: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(ADMIN_SESSION_KEY);
+    clearApiCache();
+    if (reason) {
+      sessionStorage.setItem("dimisi_admin_session_expired", reason);
+    } else {
+      sessionStorage.removeItem("dimisi_admin_session_expired");
+    }
+    window.dispatchEvent(
+      new CustomEvent("dimisi-auth-change", {
+        detail: {
+          expired: Boolean(reason),
+          message: reason || "Logged out",
+        },
+      }),
+    );
+  } catch {}
 }
 
 /**
@@ -180,3 +201,4 @@ export function getStoredAdminSession(): AdminAuthSession | null {
     return null;
   }
 }
+
