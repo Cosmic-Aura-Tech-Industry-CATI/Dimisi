@@ -433,3 +433,57 @@ describe("End-to-End Review Pipeline (Submit -> Pending -> Approve -> Public)", 
   });
 });
 
+describe("Client-Side Image Optimization & Public Campaign Resolution", () => {
+  it("validates allowed image formats and enforces 3MB max size limit", async () => {
+    const { validateImageFile, MAX_ORIGINAL_SIZE_BYTES } = await import("../image-optimizer");
+
+    const validJpg = new File(["fake-data"], "avatar.jpg", { type: "image/jpeg" });
+    assert.equal(validateImageFile(validJpg).valid, true);
+
+    const validPng = new File(["fake-data"], "avatar.png", { type: "image/png" });
+    assert.equal(validateImageFile(validPng).valid, true);
+
+    const validWebp = new File(["fake-data"], "avatar.webp", { type: "image/webp" });
+    assert.equal(validateImageFile(validWebp).valid, true);
+
+    const invalidGif = new File(["fake-data"], "avatar.gif", { type: "image/gif" });
+    const gifResult = validateImageFile(invalidGif);
+    assert.equal(gifResult.valid, false);
+    assert.match(gifResult.error || "", /Unsupported image format/);
+
+    const hugeFile = new File([new Uint8Array(MAX_ORIGINAL_SIZE_BYTES + 1024)], "huge.jpg", { type: "image/jpeg" });
+    const hugeResult = validateImageFile(hugeFile);
+    assert.equal(hugeResult.valid, false);
+    assert.match(hugeResult.error || "", /exceeds 3 MB/);
+  });
+
+  it("calculates scaled target dimensions preserving aspect ratio under 1200px", async () => {
+    const { calculateTargetDimensions } = await import("../image-optimizer");
+
+    // Landscape image: 2400 x 1200 -> 1200 x 600
+    const landscape = calculateTargetDimensions(2400, 1200, 1200);
+    assert.equal(landscape.width, 1200);
+    assert.equal(landscape.height, 600);
+
+    // Portrait image: 1000 x 2000 -> 600 x 1200
+    const portrait = calculateTargetDimensions(1000, 2000, 1200);
+    assert.equal(portrait.width, 600);
+    assert.equal(portrait.height, 1200);
+
+    // Already smaller: 800 x 600 -> unchanged
+    const small = calculateTargetDimensions(800, 600, 1200);
+    assert.equal(small.width, 800);
+    assert.equal(small.height, 600);
+  });
+
+  it("resolves public campaign information from slug without admin auth", async () => {
+    const { getPublicCampaignBySlugApi } = await import("@/services/campaign.service");
+
+    const campaign = await getPublicCampaignBySlugApi("ai-launch-q3");
+    assert.ok(campaign);
+    assert.equal(campaign.slug, "ai-launch-q3");
+    assert.equal(campaign.campaign_name, "Ai Launch Q3");
+    assert.equal(campaign.is_active, true);
+  });
+});
+

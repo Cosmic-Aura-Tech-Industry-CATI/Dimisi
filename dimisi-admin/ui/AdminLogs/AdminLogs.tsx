@@ -39,7 +39,7 @@ import type {
   SortField,
   SortOrder,
 } from "../../lib/adminLogs.types";
-import { INITIAL_ADMIN_LOGS } from "../../data/adminLogs.mock";
+import { getPanelActivityLogsApi } from "@/services/activity.service";
 import styles from "./AdminLogs.module.css";
 
 const MODULE_LIST: ActivityModule[] = [
@@ -98,8 +98,10 @@ interface AdminLogsProps {
   currentUserRole?: AdminRole | string;
 }
 
-export function AdminLogs({ currentUserRole = "super_admin" }: AdminLogsProps) {
-  const [logs, setLogs] = useState<AdminLog[]>(INITIAL_ADMIN_LOGS);
+export function AdminLogs({ currentUserRole }: AdminLogsProps) {
+  const [logs, setLogs] = useState<AdminLog[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Filters State
   const [search, setSearch] = useState("");
@@ -120,6 +122,30 @@ export function AdminLogs({ currentUserRole = "super_admin" }: AdminLogsProps) {
   const [selectedLog, setSelectedLog] = useState<AdminLog | null>(null);
   const [copiedId, setCopiedId] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const loadLiveLogs = useCallback(async () => {
+    setIsLoading(true);
+    setErrorMessage(null);
+    try {
+      const res = await getPanelActivityLogsApi({ page: 1, limit: 100 });
+      if (Array.isArray(res.adminLogs)) {
+        setLogs(res.adminLogs);
+      }
+    } catch (err: any) {
+      console.warn("Failed to load activity logs:", err);
+      if (err?.status === 401 || err?.message?.includes("token") || err?.message?.includes("valid for this panel")) {
+        setErrorMessage("Authentication mismatch: Panel authentication token required. (Backend activity route requires protectPanel)");
+      } else {
+        setErrorMessage(err instanceof Error ? err.message : "Failed to fetch activity logs from server.");
+      }
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    void loadLiveLogs();
+  }, [loadLiveLogs]);
 
   // Reset pagination on filter change
   useEffect(() => {
@@ -170,12 +196,12 @@ export function AdminLogs({ currentUserRole = "super_admin" }: AdminLogsProps) {
       if (query) {
         const nameMatch = log.adminName?.toLowerCase().includes(query);
         const emailMatch = log.email?.toLowerCase().includes(query);
-        const accountMatch = log.accountId?.toLowerCase().includes(query);
+        const empMatch = (log.employeeId || log.accountId)?.toLowerCase().includes(query);
         const activityMatch = log.activity?.toLowerCase().includes(query);
         const moduleMatch = log.module?.toLowerCase().includes(query);
         const detailsMatch = log.details?.toLowerCase().includes(query);
 
-        if (!nameMatch && !emailMatch && !accountMatch && !activityMatch && !moduleMatch && !detailsMatch) {
+        if (!nameMatch && !emailMatch && !empMatch && !activityMatch && !moduleMatch && !detailsMatch) {
           return false;
         }
       }
@@ -257,15 +283,16 @@ export function AdminLogs({ currentUserRole = "super_admin" }: AdminLogsProps) {
     }
   };
 
-  const handleRefresh = useCallback(() => {
+  const handleRefresh = useCallback(async () => {
     setIsRefreshing(true);
-    setTimeout(() => {
-      setLogs(INITIAL_ADMIN_LOGS);
+    try {
+      await loadLiveLogs();
+    } finally {
       setIsRefreshing(false);
-    }, 450);
-  }, []);
+    }
+  }, [loadLiveLogs]);
 
-  const handleCopyAccountId = (id: string, e: React.MouseEvent) => {
+  const handleCopyEmployeeId = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       void navigator.clipboard.writeText(id);
@@ -275,14 +302,14 @@ export function AdminLogs({ currentUserRole = "super_admin" }: AdminLogsProps) {
   };
 
   const handleExportCsv = () => {
-    const headers = ["ID", "Date", "Time", "Admin", "Email", "Account ID", "Role", "Activity", "Module", "Status", "Details"];
+    const headers = ["ID", "Date", "Time", "Admin", "Email", "Employee ID", "Role", "Activity", "Module", "Status", "Details"];
     const rows = filteredLogs.map((l) => [
       l.id,
       l.date,
       l.time,
       `"${(l.adminName || "").replace(/"/g, '""')}"`,
       l.email,
-      l.accountId,
+      l.employeeId || l.accountId || "—",
       l.role,
       `"${(l.activity || "").replace(/"/g, '""')}"`,
       l.module,
@@ -409,7 +436,7 @@ export function AdminLogs({ currentUserRole = "super_admin" }: AdminLogsProps) {
             <input
               type="text"
               className={styles.searchInput}
-              placeholder="Search by admin, email, account ID, activity, or module…"
+              placeholder="Search by admin, email, employee ID, activity, or module…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -553,9 +580,9 @@ export function AdminLogs({ currentUserRole = "super_admin" }: AdminLogsProps) {
                   <span>Email</span>
                 </th>
 
-                {/* 5. ACCOUNT ID */}
+                {/* 5. EMPLOYEE ID */}
                 <th className={styles.colAccountId}>
-                  <span>Account ID</span>
+                  <span>Employee ID</span>
                 </th>
 
                 {/* 6. ROLE */}
@@ -586,7 +613,42 @@ export function AdminLogs({ currentUserRole = "super_admin" }: AdminLogsProps) {
               </tr>
             </thead>
             <tbody>
-              {paginatedLogs.length === 0 ? (
+              {isLoading && paginatedLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={9}>
+                    <div className={styles.emptyState}>
+                      <div className={styles.emptyIconBox} style={{ animation: "spin 1s linear infinite" }}>
+                        <RefreshCw size={28} />
+                      </div>
+                      <h4 className={styles.emptyTitle}>Loading Activity Logs...</h4>
+                      <p className={styles.emptyText}>
+                        Fetching real-time administrative telemetry from database.
+                      </p>
+                    </div>
+                  </td>
+                </tr>
+              ) : errorMessage && paginatedLogs.length === 0 ? (
+                <tr>
+                  <td colSpan={9}>
+                    <div className={styles.emptyState}>
+                      <div className={styles.emptyIconBox} style={{ borderColor: "#ef4444", color: "#ef4444" }}>
+                        <AlertTriangle size={28} />
+                      </div>
+                      <h4 className={styles.emptyTitle}>Unable to Load Activity Logs</h4>
+                      <p className={styles.emptyText}>{errorMessage}</p>
+                      <button
+                        type="button"
+                        className={styles.resetBtn}
+                        onClick={loadLiveLogs}
+                        style={{ marginTop: "0.5rem" }}
+                      >
+                        <RefreshCw size={12} />
+                        <span>Retry</span>
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ) : paginatedLogs.length === 0 ? (
                 <tr>
                   <td colSpan={9}>
                     <div className={styles.emptyState}>
@@ -650,13 +712,13 @@ export function AdminLogs({ currentUserRole = "super_admin" }: AdminLogsProps) {
                         </span>
                       </td>
 
-                      {/* 5. ACCOUNT ID */}
+                      {/* 5. EMPLOYEE ID */}
                       <td className={styles.colAccountId}>
                         <span
                           className={styles.accountBadge}
-                          title={`Full Account ID: ${log.accountId}\n(Click row to view full details)`}
+                          title={`Employee ID: ${log.employeeId || log.accountId || "—"}\n(Click row to view full details)`}
                         >
-                          {log.accountId ? `${log.accountId.slice(0, 10)}…` : "—"}
+                          {log.employeeId || (log.accountId ? `${log.accountId.slice(0, 10)}…` : "—")}
                         </span>
                       </td>
 
@@ -817,22 +879,22 @@ export function AdminLogs({ currentUserRole = "super_admin" }: AdminLogsProps) {
 
                 {/* Email */}
                 <div className={styles.modalField}>
-                  <span className={styles.modalFieldLabel}>Account Email</span>
+                  <span className={styles.modalFieldLabel}>Admin Email</span>
                   <div className={styles.modalFieldValue}>{selectedLog.email}</div>
                 </div>
 
-                {/* Account ID */}
+                {/* Employee ID */}
                 <div className={styles.modalField}>
-                  <span className={styles.modalFieldLabel}>Account ID</span>
+                  <span className={styles.modalFieldLabel}>Employee ID</span>
                   <div className={styles.modalFieldValue}>
-                    <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.8rem" }}>
-                      {selectedLog.accountId}
+                    <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.8rem", color: "var(--dm-amber, #ff9f1c)", fontWeight: 600 }}>
+                      {selectedLog.employeeId || selectedLog.accountId}
                     </span>
                     <button
                       type="button"
                       className={styles.copyIdBtn}
-                      onClick={(e) => handleCopyAccountId(selectedLog.accountId, e)}
-                      title="Copy Account ID"
+                      onClick={(e) => handleCopyEmployeeId(selectedLog.employeeId || selectedLog.accountId || "", e)}
+                      title="Copy Employee ID"
                     >
                       {copiedId ? <Check size={14} color="#4ade80" /> : <Copy size={14} />}
                     </button>

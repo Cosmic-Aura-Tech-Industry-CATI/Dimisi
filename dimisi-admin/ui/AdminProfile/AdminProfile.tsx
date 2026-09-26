@@ -14,7 +14,8 @@ export interface AdminProfileProps {
   fullName: string | null;
   designation: string | null;
   role?: AdminRole | undefined;
-  userId: string;
+  userId?: string;
+  employeeId?: string | null | undefined;
   memberSince?: string | undefined;
 }
 
@@ -25,6 +26,7 @@ export function AdminProfile({
   designation,
   role = "super_admin",
   userId,
+  employeeId,
   memberSince,
 }: AdminProfileProps) {
   const [open, setOpen] = useState(false);
@@ -47,6 +49,19 @@ export function AdminProfile({
   }, [open]);
 
   const roleMeta = getRoleMeta(role);
+
+  // Clean designation if it's a raw Mongo 24-hex ObjectId
+  const cleanDesignation =
+    designation && !/^[0-9a-fA-F]{24}$/.test(designation.trim())
+      ? designation.trim()
+      : role === "super_admin"
+        ? "Super Admin"
+        : "Administrator";
+
+  // Sourced Employee ID from backend
+  const displayEmpId =
+    employeeId?.trim() ||
+    (userId && !/^[0-9a-fA-F]{24}$/.test(userId) ? userId : "EMP-001");
 
   return (
     <div className={styles.wrap} ref={box}>
@@ -85,7 +100,7 @@ export function AdminProfile({
                 >
                   {roleMeta.shortLabel}
                 </span>
-                <span className={styles.role}>{designation || "Staff"}</span>
+                <span className={styles.role}>{cleanDesignation}</span>
               </div>
             </div>
           </div>
@@ -97,7 +112,7 @@ export function AdminProfile({
             </div>
             <div className={styles.row}>
               <span className={styles.key}>Designation</span>
-              <span className={styles.val}>{designation || "Not set"}</span>
+              <span className={styles.val}>{cleanDesignation}</span>
             </div>
             <div className={styles.row}>
               <span className={styles.key}>System Role</span>
@@ -112,8 +127,10 @@ export function AdminProfile({
               </div>
             ) : null}
             <div className={styles.row}>
-              <span className={styles.key}>Account ID</span>
-              <span className={styles.val}>{userId.slice(0, 8)}…</span>
+              <span className={styles.key}>Employee ID</span>
+              <span className={styles.val} style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.78rem", color: "var(--dm-amber, #ff9f1c)", fontWeight: 600 }}>
+                {displayEmpId}
+              </span>
             </div>
           </div>
         </div>

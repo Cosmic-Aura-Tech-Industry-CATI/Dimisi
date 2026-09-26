@@ -97,7 +97,7 @@ export function normalizeBackendEvent(
       description: "Company event description.",
       full_description: "Company event description.",
       cover_image: DEFAULT_EVENT_FALLBACK_IMAGE,
-      gallery_images: [],
+      images: [],
       highlights: [],
       attendees_count: 0,
       registration_url: "",
@@ -141,7 +141,7 @@ export function normalizeBackendEvent(
     description: doc.description || "",
     full_description: doc.description || "",
     cover_image: coverImage,
-    gallery_images: Array.isArray(doc.images) ? doc.images.map((img) => img.url).filter(Boolean) : [],
+    images: Array.isArray(doc.images) ? doc.images.map((img) => img.url).filter(Boolean) : [],
     highlights: Array.isArray(doc.highlights) ? doc.highlights : [],
     attendees_count: typeof doc.attendeesCount === "number" ? doc.attendeesCount : 0,
     registration_url: doc.registrationUrl || "",
@@ -167,7 +167,6 @@ export function normalizeBackendGalleryItem(
       caption: "",
       category: "General",
       aspect_ratio: "normal",
-      aspect: "normal",
       created_at: new Date().toISOString(),
     };
   }
@@ -183,7 +182,6 @@ export function normalizeBackendGalleryItem(
     caption: doc.description || "",
     category: resolvedCategory,
     aspect_ratio: "normal",
-    aspect: "normal",
     created_at: doc.createdAt || new Date().toISOString(),
   };
 }
@@ -510,13 +508,14 @@ export async function createEventApi(
     if (res?.data?.event) {
       let createdDoc = res.data.event;
       if (!isFormData && typeof payload === "object" && payload !== null) {
-        const rawCover = payload.coverImage || payload.cover_image;
+        const obj = payload as Record<string, any>;
+        const rawCover = obj.coverImage || obj.cover_image;
         const validCover =
           rawCover && typeof rawCover === "string" && (rawCover.startsWith("http://") || rawCover.startsWith("https://") || rawCover.startsWith("/")) && rawCover.length <= 500
             ? rawCover
             : DEFAULT_EVENT_FALLBACK_IMAGE;
-        const imagesList = Array.isArray(payload.images)
-          ? payload.images
+        const imagesList = Array.isArray(obj.images)
+          ? obj.images
               .map((img: any, idx: number) => {
                 if (typeof img === "string" && img.trim()) {
                   const url = img.trim();
@@ -597,13 +596,14 @@ export async function createGalleryItemApi(
     if (res?.data?.event) {
       let createdDoc = res.data.event;
       if (!isFormData && typeof payload === "object" && payload !== null) {
-        const rawCover = payload.coverImage || payload.cover_image || payload.image_url;
+        const obj = payload as Record<string, any>;
+        const rawCover = obj.coverImage || obj.cover_image || obj.image_url;
         const validCover =
           rawCover && typeof rawCover === "string" && (rawCover.startsWith("http://") || rawCover.startsWith("https://") || rawCover.startsWith("/")) && rawCover.length <= 500
             ? rawCover
             : DEFAULT_EVENT_FALLBACK_IMAGE;
-        const imagesList = Array.isArray(payload.images)
-          ? payload.images
+        const imagesList = Array.isArray(obj.images)
+          ? obj.images
               .map((img: any, idx: number) => {
                 if (typeof img === "string" && img.trim()) {
                   const url = img.trim();
@@ -669,9 +669,10 @@ export async function updateEventApi(
   if (!id) throw new Error("Event ID is required for update.");
   const isFormData = typeof FormData !== "undefined" && payload instanceof FormData;
 
-  let updatePayload = payload;
+  let updatePayload: FormData | string = isFormData ? payload : "";
   if (!isFormData && typeof payload === "object" && payload !== null) {
-    const rawExistingImages = payload.existingImages ?? payload.images;
+    const obj = payload as Record<string, any>;
+    const rawExistingImages = obj.existingImages ?? obj.images;
     const sanitizedImages = Array.isArray(rawExistingImages)
       ? rawExistingImages
           .map((img: any, idx: number) => {
@@ -694,17 +695,18 @@ export async function updateEventApi(
           .filter(Boolean)
       : undefined;
 
-    const rawCover = payload.existingCoverImage ?? payload.coverImage ?? payload.cover_image;
+    const rawCover = obj.existingCoverImage ?? obj.coverImage ?? obj.cover_image;
     const sanitizedCover =
       rawCover && typeof rawCover === "string" && (rawCover.startsWith("http://") || rawCover.startsWith("https://") || rawCover.startsWith("/")) && rawCover.length <= 500
         ? rawCover
         : undefined;
 
-    updatePayload = {
-      ...payload,
+    const mergedObj = {
+      ...obj,
       ...(sanitizedCover ? { existingCoverImage: sanitizedCover, coverImage: sanitizedCover } : {}),
       ...(sanitizedImages !== undefined ? { existingImages: sanitizedImages, images: sanitizedImages } : {}),
     };
+    updatePayload = JSON.stringify(mergedObj);
   }
 
   try {
@@ -713,7 +715,7 @@ export async function updateEventApi(
       {
         method: "PATCH",
         headers: isFormData ? undefined : { "Content-Type": "application/json" },
-        body: isFormData ? updatePayload : JSON.stringify(updatePayload),
+        body: updatePayload,
         timeoutMs: 30000,
       },
     );

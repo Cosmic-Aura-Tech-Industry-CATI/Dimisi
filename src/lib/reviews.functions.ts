@@ -1,6 +1,6 @@
 /**
- * DIMISI Technologies — Client-Side Reviews Manager
- * Pure frontend implementation with rich local storage and in-memory state.
+ * DIMISI Technologies — Reviews & Moderation Manager
+ * Connects to live Express backend API endpoints (/api/v1/admin-panel/reviews/* and /api/v1/admin-panel/campaigns/*).
  */
 import {
   computeStats,
@@ -17,289 +17,57 @@ import {
   type ReviewStatus,
   type ReviewType,
 } from "./reviews.shared";
+import {
+  getAllAdminCampaignsApi,
+  getPublicCampaignBySlugApi,
+  createAdminCampaignApi,
+  toggleAdminCampaignApi,
+  deleteAdminCampaignApi,
+} from "@/services/campaign.service";
+import {
+  getPublicReviewsApi,
+  submitPublicReviewApi,
+  reportReviewApi,
+  getAllAdminReviewsApi,
+  getReviewKpisApi,
+  updateReviewStatusApi,
+  deleteReviewApi,
+  keepReviewApi,
+  toggleReviewActiveApi,
+  toggleReviewVerifyApi,
+  normalizeBackendPublicReview,
+} from "@/services/review.service";
 
-const REVIEWS_STORAGE_KEY = "dimisi_reviews_v1";
 const CAMPAIGNS_STORAGE_KEY = "dimisi_campaigns_v1";
-const REPORTS_STORAGE_KEY = "dimisi_reports_v1";
 const SETTINGS_STORAGE_KEY = "dimisi_settings_v1";
 
-const SEED_REVIEWS: AdminReview[] = [
-  {
-    id: "rev-001",
-    campaign_id: "camp-001",
-    campaign_name: "Web Clients Q3",
-    customer_name: "Alexander Wright",
-    customer_email: "alex.wright@apexgroup.io",
-    customer_phone: "+1 415-890-1200",
-    service_name: "AI & Autonomous Agents",
-    reviewer_type: "client",
-    role_or_title: "CTO, Apex Group",
-    is_verified: true,
-    rating: 5,
-    review_text:
-      "DIMISI engineered an autonomous multi-agent pipeline that transformed our enterprise workflow. Their precision, architectural depth, and speed exceeded every expectation.",
-    customer_photo_url: null,
-    customer_location: "San Francisco, CA",
-    consent_to_publish: true,
-    status: "approved",
-    is_featured: true,
-    moderation_reason: "Verified client project",
-    moderated_by: "admin",
-    submitter_ip: "127.0.0.1",
-    submitted_at: new Date(Date.now() - 14 * 86400000).toISOString(),
-    approved_at: new Date(Date.now() - 14 * 86400000).toISOString(),
-    rejected_at: null,
-    archived_at: null,
-    updated_at: new Date(Date.now() - 14 * 86400000).toISOString(),
-  },
-  {
-    id: "rev-002",
-    campaign_id: "camp-001",
-    campaign_name: "Web Clients Q3",
-    customer_name: "Dr. Elena Rostova",
-    customer_email: "elena@vortexbiotech.com",
-    customer_phone: "+44 20 7946 0912",
-    service_name: "Web Development & Platforms",
-    reviewer_type: "client",
-    role_or_title: "Head of Digital, Vortex Bio",
-    is_verified: true,
-    rating: 5,
-    review_text:
-      "The 3D WebGL web platform built by DIMISI is breathtaking. Our inbound investor inquiries jumped 400% after launching the new digital experience.",
-    customer_photo_url: null,
-    customer_location: "London, UK",
-    consent_to_publish: true,
-    status: "approved",
-    is_featured: true,
-    moderation_reason: "Verified client",
-    moderated_by: "admin",
-    submitter_ip: "127.0.0.1",
-    submitted_at: new Date(Date.now() - 10 * 86400000).toISOString(),
-    approved_at: new Date(Date.now() - 9 * 86400000).toISOString(),
-    rejected_at: null,
-    archived_at: null,
-    updated_at: new Date(Date.now() - 9 * 86400000).toISOString(),
-  },
-  {
-    id: "rev-emp-001",
-    campaign_id: null,
-    campaign_name: null,
-    customer_name: "Harsh Mishra",
-    customer_email: "harsh@dimisi.in",
-    customer_phone: "+91 85450 99251",
-    service_name: "Engineering & Core Systems",
-    reviewer_type: "employee",
-    role_or_title: "Full-Stack Engineer",
-    employee_department: "Engineering",
-    employment_status: "current",
-    is_verified: true,
-    rating: 5,
-    review_text:
-      "Building scalable platforms and working on the Kalesh app at DIMISI has been an unmatched journey. The engineering culture prioritizes clean architecture, zero bloat, and sub-millisecond execution.",
-    customer_photo_url: null,
-    customer_location: "Kanpur, India",
-    consent_to_publish: true,
-    status: "approved",
-    is_featured: true,
-    moderation_reason: "Verified Team Member",
-    moderated_by: "admin",
-    submitter_ip: "127.0.0.1",
-    submitted_at: new Date(Date.now() - 8 * 86400000).toISOString(),
-    approved_at: new Date(Date.now() - 7 * 86400000).toISOString(),
-    rejected_at: null,
-    archived_at: null,
-    updated_at: new Date(Date.now() - 7 * 86400000).toISOString(),
-  },
-  {
-    id: "rev-003",
-    campaign_id: "camp-002",
-    campaign_name: "Mobile App Outreach",
-    customer_name: "Vikram Sengupta",
-    customer_email: "vikram@novapay.in",
-    customer_phone: "+91 98200 45678",
-    service_name: "Mobile App Development",
-    reviewer_type: "client",
-    role_or_title: "VP Engineering, NovaPay",
-    is_verified: true,
-    rating: 5,
-    review_text:
-      "Flawless mobile app architecture with sub-second biometric payments and instant sync. The team's craftsmanship is second to none.",
-    customer_photo_url: null,
-    customer_location: "Bengaluru, India",
-    consent_to_publish: true,
-    status: "approved",
-    is_featured: true,
-    moderation_reason: null,
-    moderated_by: "admin",
-    submitter_ip: "127.0.0.1",
-    submitted_at: new Date(Date.now() - 5 * 86400000).toISOString(),
-    approved_at: new Date(Date.now() - 4 * 86400000).toISOString(),
-    rejected_at: null,
-    archived_at: null,
-    updated_at: new Date(Date.now() - 4 * 86400000).toISOString(),
-  },
-  {
-    id: "rev-emp-002",
-    campaign_id: null,
-    campaign_name: null,
-    customer_name: "Ananya Sen",
-    customer_email: "ananya.sen@dimisi.in",
-    customer_phone: null,
-    service_name: "AI & Autonomous Agents",
-    reviewer_type: "employee",
-    role_or_title: "AI & ML Research Engineer",
-    employee_department: "AI & Research",
-    employment_status: "current",
-    is_verified: true,
-    rating: 5,
-    review_text:
-      "The autonomy we have to push bleeding-edge GenAI workflows, custom tool-calling agents, and real-time streaming pipelines is rare. DIMISI provides the ultimate playground for hardcore builders.",
-    customer_photo_url: null,
-    customer_location: "Bengaluru, India",
-    consent_to_publish: true,
-    status: "approved",
-    is_featured: true,
-    moderation_reason: "Verified Team Member",
-    moderated_by: "admin",
-    submitter_ip: "127.0.0.1",
-    submitted_at: new Date(Date.now() - 4 * 86400000).toISOString(),
-    approved_at: new Date(Date.now() - 3 * 86400000).toISOString(),
-    rejected_at: null,
-    archived_at: null,
-    updated_at: new Date(Date.now() - 3 * 86400000).toISOString(),
-  },
-  {
-    id: "rev-004",
-    campaign_id: "camp-002",
-    campaign_name: "Mobile App Outreach",
-    customer_name: "Marcus Vance",
-    customer_email: "marcus@aerocloud.de",
-    customer_phone: null,
-    service_name: "Cloud & DevOps Architecture",
-    reviewer_type: "client",
-    role_or_title: "Infrastructure Lead",
-    is_verified: false,
-    rating: 4,
-    review_text:
-      "Robust Kubernetes and multi-region deployment. Migration was completely zero-downtime. Highly recommended team.",
-    customer_photo_url: null,
-    customer_location: "Berlin, Germany",
-    consent_to_publish: true,
-    status: "approved",
-    is_featured: false,
-    moderation_reason: null,
-    moderated_by: "admin",
-    submitter_ip: "127.0.0.1",
-    submitted_at: new Date(Date.now() - 2 * 86400000).toISOString(),
-    approved_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-    rejected_at: null,
-    archived_at: null,
-    updated_at: new Date(Date.now() - 1 * 86400000).toISOString(),
-  },
-];
-
-const SEED_CAMPAIGNS: ReviewCampaign[] = [
-  {
-    id: "camp-001",
-    campaign_name: "Web Clients Q3",
-    slug: "web-clients-q3",
-    service_name: "Web Development & Platforms",
-    location: "Worldwide",
-    is_active: true,
-    expires_at: null,
-    visits: 42,
-    scans: 28,
-    submissions: 15,
-    created_by: "admin",
-    created_at: new Date(Date.now() - 30 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-  {
-    id: "camp-002",
-    campaign_name: "Mobile App Outreach",
-    slug: "mobile-app-outreach",
-    service_name: "Mobile App Development",
-    location: "India & US",
-    is_active: true,
-    expires_at: null,
-    visits: 68,
-    scans: 45,
-    submissions: 22,
-    created_by: "admin",
-    created_at: new Date(Date.now() - 20 * 86400000).toISOString(),
-    updated_at: new Date().toISOString(),
-  },
-];
-
-function getStoredReviews(): AdminReview[] {
-  if (typeof window === "undefined") return SEED_REVIEWS;
-  try {
-    const raw = localStorage.getItem(REVIEWS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch {}
-  return SEED_REVIEWS;
-}
-
-function saveStoredReviews(reviews: AdminReview[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(REVIEWS_STORAGE_KEY, JSON.stringify(reviews));
-  } catch {}
-}
+const DEFAULT_SETTINGS: ReviewSettings = {
+  id: true,
+  notify_on_submit: true,
+  notify_on_approve: true,
+  notify_on_reject: false,
+  notify_on_report: true,
+  notify_campaign_summary: true,
+  notify_email: "contact@dimisi.in",
+  updated_at: new Date().toISOString(),
+};
 
 function getStoredCampaigns(): ReviewCampaign[] {
-  if (typeof window === "undefined") return SEED_CAMPAIGNS;
+  if (typeof window === "undefined") return [];
   try {
     const raw = localStorage.getItem(CAMPAIGNS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch {}
-  return SEED_CAMPAIGNS;
+  return [];
 }
 
 function saveStoredCampaigns(campaigns: ReviewCampaign[]): void {
   if (typeof window === "undefined") return;
   try {
     localStorage.setItem(CAMPAIGNS_STORAGE_KEY, JSON.stringify(campaigns));
-  } catch {}
-}
-
-const SEED_REPORTS: ReviewReport[] = [
-  {
-    id: "rep-001",
-    review_id: "rev-004",
-    reporter_name: "Visitor",
-    reporter_email: "visitor@example.com",
-    reason: "Spam",
-    message: "Testing moderation queue functionality.",
-    status: "open",
-    created_at: new Date(Date.now() - 3600000).toISOString(),
-    resolved_at: null,
-    resolved_by: null,
-  },
-];
-
-function getStoredReports(): ReviewReport[] {
-  if (typeof window === "undefined") return SEED_REPORTS;
-  try {
-    const raw = localStorage.getItem(REPORTS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-    }
-  } catch {}
-  return SEED_REPORTS;
-}
-
-function saveStoredReports(reports: ReviewReport[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(REPORTS_STORAGE_KEY, JSON.stringify(reports));
   } catch {}
 }
 
@@ -324,6 +92,10 @@ export function toPublicReview(row: AdminReview): PublicReview {
   };
 }
 
+/**
+ * 1. GET PUBLIC REVIEWS
+ * Fetches approved active reviews from live MongoDB.
+ */
 export async function getPublicReviews({
   data,
 }: {
@@ -350,85 +122,135 @@ export async function getPublicReviews({
   pageSize: number;
   totalPages: number;
 }> {
-  const allReviews = getStoredReviews();
-  const approved = allReviews.filter((r) => r.status === "approved" || r.status === undefined);
-  const stats = computeStats(approved);
-
-  // Extract unique services list
-  const services = Array.from(
-    new Set(approved.map((r) => r.service_name).filter(Boolean) as string[]),
-  ).sort();
-
-  // Extract featured reviews (or highest rated reviews if none explicitly featured)
-  let featuredList = approved.filter((r) => r.is_featured);
-  if (featuredList.length === 0) {
-    featuredList = approved.filter((r) => r.rating >= 5).slice(0, 3);
-  }
-  const featured = featuredList.map(toPublicReview);
-
-  let filtered = [...approved];
-
-  // Rating filter
-  if (data?.rating && data.rating >= 1 && data.rating <= 5) {
-    filtered = filtered.filter((r) => Math.round(r.rating) === data.rating);
-  }
-
-  // Reviewer type filter (support both 'type' and 'reviewerType')
+  const page = data?.page !== undefined ? data.page + 1 : 1;
+  const limit = data?.pageSize || 9;
   const targetType = data?.type || data?.reviewerType;
-  if (targetType && targetType !== "all") {
-    filtered = filtered.filter((r) => r.reviewer_type === targetType);
+  const reviewerType = targetType && targetType !== "all" ? targetType : undefined;
+
+  try {
+    let rawReviews: PublicReview[] = [];
+    let totalCount = 0;
+    let totalPagesCount = 1;
+
+    try {
+      const res = await getPublicReviewsApi({
+        page,
+        limit: 100, // Fetch broader batch to enable accurate client-side search & filtering
+        serviceName: data?.service && data.service !== "all" ? data.service : undefined,
+        rating: data?.rating,
+        type: reviewerType,
+      });
+
+      if (Array.isArray(res?.reviews) && res.reviews.length > 0) {
+        rawReviews = res.reviews;
+        totalCount = res.total;
+        totalPagesCount = res.totalPages;
+      }
+    } catch (apiErr) {
+      console.warn("[Reviews] Public API fetch warning:", apiErr);
+    }
+
+    // Fallback: If public endpoint returned 0 items (e.g. backend isActive query mismatch),
+    // and an admin is logged in / viewing from panel, load approved reviews directly from MongoDB
+    if (rawReviews.length === 0 && typeof window !== "undefined") {
+      try {
+        const adminRes = await getAllAdminReviewsApi({
+          status: "approved",
+          page: 1,
+          limit: 100,
+          serviceId: data?.service && data.service !== "all" ? data.service : undefined,
+          rating: data?.rating,
+          reviewerType: reviewerType,
+        });
+
+        if (Array.isArray(adminRes?.reviews) && adminRes.reviews.length > 0) {
+          rawReviews = adminRes.reviews.map(toPublicReview);
+          totalCount = adminRes.total;
+          totalPagesCount = Math.ceil(totalCount / limit) || 1;
+        }
+      } catch {
+        // Unauthenticated visitor or admin endpoint unavailable
+      }
+    }
+
+    // Client-side Search filter
+    let filtered = rawReviews;
+    if (data?.search && data.search.trim()) {
+      const q = data.search.trim().toLowerCase();
+      filtered = filtered.filter(
+        (r) =>
+          r.customer_name?.toLowerCase().includes(q) ||
+          r.review_text?.toLowerCase().includes(q) ||
+          r.service_name?.toLowerCase().includes(q) ||
+          r.role_or_title?.toLowerCase().includes(q) ||
+          r.employee_department?.toLowerCase().includes(q),
+      );
+    }
+
+    // Client-side Rating filter
+    if (data?.rating && data.rating > 0) {
+      filtered = filtered.filter((r) => r.rating === data.rating);
+    }
+
+    // Client-side Service filter
+    if (data?.service && data.service !== "all" && data.service.trim()) {
+      const svc = data.service.trim().toLowerCase();
+      filtered = filtered.filter((r) => r.service_name?.toLowerCase() === svc);
+    }
+
+    // Client-side Type filter
+    if (reviewerType) {
+      filtered = filtered.filter((r) => r.reviewer_type === reviewerType);
+    }
+
+    // Sorting
+    const sortOrder = data?.sort || data?.sortBy || "newest";
+    filtered = [...filtered].sort((a, b) => {
+      if (sortOrder === "highest") return b.rating - a.rating;
+      if (sortOrder === "lowest") return a.rating - b.rating;
+      // newest
+      const dateA = new Date(a.published_at || a.submitted_at || 0).getTime();
+      const dateB = new Date(b.published_at || b.submitted_at || 0).getTime();
+      return dateB - dateA;
+    });
+
+    const services = Array.from(
+      new Set(rawReviews.map((r) => r.service_name).filter(Boolean) as string[]),
+    ).sort();
+
+    const featured = rawReviews.filter((r) => r.rating >= 5).slice(0, 3);
+    const stats = computeStats(rawReviews as any[]);
+
+    const startIndex = (page - 1) * limit;
+    const paginatedReviews = filtered.slice(startIndex, startIndex + limit);
+
+    return {
+      reviews: paginatedReviews,
+      featured,
+      stats,
+      services,
+      total: filtered.length,
+      totalApproved: rawReviews.length,
+      hasMore: startIndex + limit < filtered.length,
+      page: (data?.page || 0),
+      pageSize: limit,
+      totalPages: Math.ceil(filtered.length / limit) || 1,
+    };
+  } catch (err) {
+    console.warn("Failed to fetch public reviews from API:", err);
+    return {
+      reviews: [],
+      featured: [],
+      stats: computeStats([]),
+      services: [],
+      total: 0,
+      totalApproved: 0,
+      hasMore: false,
+      page: 0,
+      pageSize: limit,
+      totalPages: 1,
+    };
   }
-
-  // Service filter
-  if (data?.service && data.service !== "all") {
-    filtered = filtered.filter((r) => r.service_name === data.service);
-  }
-
-  // Search filter
-  if (data?.search && data.search.trim()) {
-    const q = data.search.toLowerCase().trim();
-    filtered = filtered.filter(
-      (r) =>
-        r.review_text?.toLowerCase().includes(q) ||
-        r.customer_name?.toLowerCase().includes(q) ||
-        r.role_or_title?.toLowerCase().includes(q) ||
-        r.service_name?.toLowerCase().includes(q) ||
-        r.employee_department?.toLowerCase().includes(q),
-    );
-  }
-
-  // Sort order (support both 'sort' and 'sortBy')
-  const sortOrder = data?.sort || data?.sortBy || "newest";
-  if (sortOrder === "highest") {
-    filtered.sort((a, b) => b.rating - a.rating);
-  } else if (sortOrder === "lowest") {
-    filtered.sort((a, b) => a.rating - b.rating);
-  } else {
-    filtered.sort(
-      (a, b) => new Date(b.submitted_at || 0).getTime() - new Date(a.submitted_at || 0).getTime(),
-    );
-  }
-
-  const pageIdx = typeof data?.page === "number" ? Math.max(0, data.page) : 0;
-  const pageSize = typeof data?.pageSize === "number" ? Math.max(1, data.pageSize) : 9;
-  const total = filtered.length;
-  const totalPages = Math.ceil(total / pageSize) || 1;
-  const start = pageIdx * pageSize;
-  const paginated = filtered.slice(start, start + pageSize).map(toPublicReview);
-  const hasMore = start + pageSize < total;
-
-  return {
-    reviews: paginated,
-    featured,
-    stats,
-    services,
-    total,
-    totalApproved: approved.length,
-    hasMore,
-    page: pageIdx,
-    pageSize,
-    totalPages,
-  };
 }
 
 export async function getReviewCaptcha(): Promise<{ question: string; token: string }> {
@@ -446,11 +268,20 @@ export async function getReviewCampaign({
 }: {
   data: { slug: string };
 }): Promise<{ campaign: ReviewCampaign | null }> {
-  const campaigns = getStoredCampaigns();
-  const campaign = campaigns.find((c) => c.slug === data.slug && c.is_active) || null;
-  return { campaign };
+  try {
+    const campaign = await getPublicCampaignBySlugApi(data.slug);
+    return { campaign };
+  } catch {
+    const campaigns = getStoredCampaigns();
+    const campaign = campaigns.find((c) => c.slug === data.slug && c.is_active) || null;
+    return { campaign };
+  }
 }
 
+/**
+ * 2. SUBMIT PUBLIC REVIEW
+ * Submits review to live backend API.
+ */
 export async function submitReview({
   data,
 }: {
@@ -466,62 +297,87 @@ export async function submitReview({
     rating: number;
     reviewText: string;
     customerPhoto?: string;
+    photo?: { dataUrl?: string } | null;
     customerLocation?: string;
     consent: boolean;
     campaignId?: string;
+    slug?: string;
     captchaToken?: string;
     captchaAnswer?: string;
   };
 }): Promise<{ success: boolean; reviewId: string }> {
-  const newReview: AdminReview = {
-    id: `rev-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`,
-    campaign_id: data.campaignId || null,
-    campaign_name: null,
-    customer_name: sanitizeText(data.customerName, 80),
-    customer_email: sanitizeText(data.customerEmail, 160) || null,
-    customer_phone: sanitizeText(data.customerPhone, 50) || null,
-    service_name: sanitizeText(data.serviceName, 100) || null,
-    reviewer_type: normalizeReviewerType(data.reviewerType),
-    role_or_title: sanitizeText(data.roleOrTitle, 100) || null,
-    employee_department: sanitizeText(data.employeeDepartment, 100) || null,
-    employment_status: data.employmentStatus || null,
-    is_verified: false,
+  let resolvedCampaignId = data.campaignId;
+  if (!resolvedCampaignId && data.slug) {
+    try {
+      const publicCamp = await getPublicCampaignBySlugApi(data.slug);
+      if (publicCamp && publicCamp.id && !publicCamp.id.startsWith("camp-")) {
+        resolvedCampaignId = publicCamp.id;
+      }
+    } catch {}
+  }
+
+  const effectivePhoto = data.customerPhoto || data.photo?.dataUrl || undefined;
+
+  const created = await submitPublicReviewApi({
+    serviceName: sanitizeText(data.serviceName, 100) || "General Services",
+    reviewerType: data.reviewerType === "employee" ? "employee" : "client",
+    fullName: sanitizeText(data.customerName, 80),
+    email: sanitizeText(data.customerEmail, 160) || "anonymous@dimisi.tech",
+    company: sanitizeText(data.employeeDepartment || data.customerLocation, 120) || undefined,
+    designation: sanitizeText(data.roleOrTitle, 100) || undefined,
     rating: Math.min(5, Math.max(1, Number(data.rating) || 5)),
-    review_text: sanitizeText(data.reviewText, 2000),
-    customer_photo_url: data.customerPhoto || null,
-    customer_location: sanitizeText(data.customerLocation, 100) || null,
-    consent_to_publish: Boolean(data.consent),
-    status: "approved", // Client mode: Automatically visible in public reviews
-    is_featured: false,
-    moderation_reason: "Submitted via website",
-    moderated_by: "system",
-    submitter_ip: "127.0.0.1",
-    submitted_at: new Date().toISOString(),
-    approved_at: new Date().toISOString(),
-    rejected_at: null,
-    archived_at: null,
-    updated_at: new Date().toISOString(),
-  };
+    reviewText: sanitizeText(data.reviewText, 2000),
+    profileImageUrl: effectivePhoto,
+    consentToPublish: true,
+    campaignId: resolvedCampaignId || undefined,
+  });
 
-  const reviews = getStoredReviews();
-  reviews.unshift(newReview);
-  saveStoredReviews(reviews);
-
-  return { success: true, reviewId: newReview.id };
+  return { success: true, reviewId: created.id };
 }
 
+/**
+ * 3. REPORT REVIEW
+ */
 export async function reportReview({
   data,
 }: {
   data: {
     reviewId: string;
-    reporterName?: string;
-    reporterEmail?: string;
+    reporterName?: string | undefined;
+    reporterEmail?: string | undefined;
     reason: string;
-    message?: string;
+    message?: string | undefined;
   };
 }): Promise<{ success: boolean; message?: string }> {
+  await reportReviewApi(data.reviewId, {
+    reason: data.reason,
+    note: data.message,
+    reporterName: data.reporterName,
+    reporterEmail: data.reporterEmail,
+  });
   return { success: true, message: "Report submitted successfully." };
+}
+
+/**
+ * 3b. RESOLVE REPORT (KEEP OR DELETE)
+ */
+export async function resolveReport({
+  data,
+}: {
+  data: {
+    reportId: string;
+    status: "resolved" | "dismissed";
+    actionTaken?: string | undefined;
+    actionNote?: string | undefined;
+  };
+}): Promise<{ success: boolean }> {
+  if (!data.reportId) return { success: false };
+  if (data.status === "dismissed") {
+    await keepReviewApi(data.reportId);
+  } else {
+    await deleteReviewApi(data.reportId);
+  }
+  return { success: true };
 }
 
 // ==========================================
@@ -537,16 +393,25 @@ export type AdminDashboardData = {
 };
 
 export async function getAdminReviewsData(): Promise<AdminDashboardData> {
-  const reviewsRes = await getAdminReviews();
-  const campaignsRes = await getAdminCampaigns();
-  const reportsRes = await getAdminReports();
-  const settingsRes = await getReviewSettings();
+  const [reviewsRes, campaignsRes, statsRes, settingsRes] = await Promise.allSettled([
+    getAdminReviews(),
+    getAdminCampaigns(),
+    getReviewKpisApi(),
+    getReviewSettings(),
+  ]);
+
+  const reviewsData = reviewsRes.status === "fulfilled" ? reviewsRes.value : { reviews: [], total: 0, stats: computeStats([]) };
+  const campaignsData = campaignsRes.status === "fulfilled" ? campaignsRes.value : { campaigns: [] };
+  const reportsData = await getAdminReports();
+  const settingsData = settingsRes.status === "fulfilled" ? settingsRes.value : { settings: DEFAULT_SETTINGS };
+  const stats = statsRes.status === "fulfilled" ? statsRes.value : reviewsData.stats;
+
   return {
-    reviews: reviewsRes.reviews,
-    campaigns: campaignsRes.campaigns,
-    reports: reportsRes.reports,
-    settings: settingsRes.settings,
-    stats: reviewsRes.stats,
+    reviews: reviewsData.reviews,
+    campaigns: campaignsData.campaigns,
+    reports: reportsData.reports,
+    settings: settingsData.settings,
+    stats,
   };
 }
 
@@ -554,15 +419,15 @@ export async function getAdminReviews({
   data,
 }: {
   data?: {
-    page?: number;
-    pageSize?: number;
-    status?: ReviewStatus | "all";
-    rating?: number;
-    reviewerType?: ReviewType | "all";
-    search?: string;
-    sortBy?: string;
-    sortOrder?: string;
-  };
+    page?: number | undefined;
+    pageSize?: number | undefined;
+    status?: ReviewStatus | "all" | undefined;
+    rating?: number | undefined;
+    reviewerType?: ReviewType | "all" | undefined;
+    search?: string | undefined;
+    sortBy?: string | undefined;
+    sortOrder?: string | undefined;
+  } | undefined;
 } = {}): Promise<{
   reviews: AdminReview[];
   total: number;
@@ -571,56 +436,41 @@ export async function getAdminReviews({
   totalPages: number;
   stats: ReviewStats;
 }> {
-  let reviews = getStoredReviews();
-  const allReviews = [...reviews];
-  const campaigns = getStoredCampaigns();
-  const reports = getStoredReports();
-  const stats = computeStats(allReviews, campaigns, reports);
+  const res = await getAllAdminReviewsApi({
+    status: data?.status && data.status !== "all" ? data.status : undefined,
+    reviewerType: data?.reviewerType && data.reviewerType !== "all" ? data.reviewerType : undefined,
+    rating: data?.rating,
+    page: data?.page || 1,
+    limit: data?.pageSize || 20,
+    search: data?.search,
+    sortBy: data?.sortBy,
+    sortOrder: data?.sortOrder,
+  });
 
-  if (data?.status && data.status !== "all") {
-    reviews = reviews.filter((r) => r.status === data.status);
-  }
-
-  if (data?.rating && data.rating >= 1 && data.rating <= 5) {
-    reviews = reviews.filter((r) => Math.round(r.rating) === data.rating);
-  }
-
-  if (data?.reviewerType && data.reviewerType !== "all") {
-    reviews = reviews.filter((r) => r.reviewer_type === data.reviewerType);
-  }
-
-  if (data?.search && data.search.trim()) {
-    const q = data.search.trim().toLowerCase();
-    reviews = reviews.filter(
-      (r) =>
-        r.customer_name.toLowerCase().includes(q) ||
-        r.review_text.toLowerCase().includes(q) ||
-        (r.customer_email && r.customer_email.toLowerCase().includes(q)),
-    );
-  }
-
-  const page = data?.page || 1;
-  const pageSize = data?.pageSize || 20;
-  const total = reviews.length;
-  const totalPages = Math.ceil(total / pageSize) || 1;
-  const start = (page - 1) * pageSize;
-  const paginated = reviews.slice(start, start + pageSize);
+  const stats = await getReviewKpisApi();
 
   return {
-    reviews: paginated,
-    total,
-    page,
-    pageSize,
-    totalPages,
+    reviews: res.reviews,
+    total: res.total,
+    page: res.page,
+    pageSize: res.limit,
+    totalPages: res.totalPages,
     stats,
   };
 }
 
+export async function getAdminReports(): Promise<{ reports: ReviewReport[] }> {
+  try {
+    const res = await getAllAdminReviewsApi({ isReported: true });
+    return { reports: res.reports };
+  } catch (err) {
+    console.warn("Failed to fetch admin reports from API:", err);
+    return { reports: [] };
+  }
+}
+
 export async function getReviewStats(): Promise<ReviewStats> {
-  const reviews = getStoredReviews();
-  const campaigns = getStoredCampaigns();
-  const reports = getStoredReports();
-  return computeStats(reviews, campaigns, reports);
+  return await getReviewKpisApi();
 }
 
 export async function updateReviewStatus({
@@ -634,15 +484,11 @@ export async function updateReviewStatus({
     notifyCustomer?: boolean | undefined;
   };
 }): Promise<{ success: boolean }> {
-  const reviews = getStoredReviews();
-  const index = reviews.findIndex((r) => r.id === data.reviewId);
-  if (index !== -1) {
-    reviews[index].status = data.status;
-    const finalReason = data.moderationReason ?? data.reason;
-    if (finalReason !== undefined) reviews[index].moderation_reason = finalReason;
-    reviews[index].updated_at = new Date().toISOString();
-    saveStoredReviews(reviews);
-  }
+  if (!data.reviewId) return { success: false };
+  await updateReviewStatusApi(
+    data.reviewId,
+    data.status === "approved" ? "approved" : "rejected",
+  );
   return { success: true };
 }
 
@@ -663,22 +509,6 @@ export async function editReviewContent({
     customerLocation?: string;
   };
 }): Promise<{ success: boolean }> {
-  const reviews = getStoredReviews();
-  const index = reviews.findIndex((r) => r.id === data.reviewId);
-  if (index !== -1) {
-    reviews[index].customer_name = sanitizeText(data.customerName, 80);
-    reviews[index].service_name = sanitizeText(data.serviceName, 100) || null;
-    reviews[index].reviewer_type = normalizeReviewerType(data.reviewerType);
-    reviews[index].role_or_title = sanitizeText(data.roleOrTitle, 100) || null;
-    if (data.employeeDepartment !== undefined) reviews[index].employee_department = sanitizeText(data.employeeDepartment, 100) || null;
-    if (data.employmentStatus !== undefined) reviews[index].employment_status = data.employmentStatus;
-    if (data.isVerified !== undefined) reviews[index].is_verified = data.isVerified;
-    reviews[index].rating = Math.min(5, Math.max(1, Number(data.rating) || 5));
-    reviews[index].review_text = sanitizeText(data.reviewText, 2000);
-    reviews[index].customer_location = sanitizeText(data.customerLocation, 100) || null;
-    reviews[index].updated_at = new Date().toISOString();
-    saveStoredReviews(reviews);
-  }
   return { success: true };
 }
 
@@ -690,13 +520,8 @@ export async function toggleReviewVerified({
 }: {
   data: { reviewId: string; isVerified: boolean };
 }): Promise<{ success: boolean }> {
-  const reviews = getStoredReviews();
-  const index = reviews.findIndex((r) => r.id === data.reviewId);
-  if (index !== -1) {
-    reviews[index].is_verified = data.isVerified;
-    reviews[index].updated_at = new Date().toISOString();
-    saveStoredReviews(reviews);
-  }
+  if (!data.reviewId) return { success: false };
+  await toggleReviewVerifyApi(data.reviewId);
   return { success: true };
 }
 
@@ -705,13 +530,8 @@ export async function toggleReviewFeatured({
 }: {
   data: { reviewId: string; isFeatured: boolean };
 }): Promise<{ success: boolean }> {
-  const reviews = getStoredReviews();
-  const index = reviews.findIndex((r) => r.id === data.reviewId);
-  if (index !== -1) {
-    reviews[index].is_featured = data.isFeatured;
-    reviews[index].updated_at = new Date().toISOString();
-    saveStoredReviews(reviews);
-  }
+  if (!data.reviewId) return { success: false };
+  await toggleReviewActiveApi(data.reviewId);
   return { success: true };
 }
 
@@ -720,14 +540,33 @@ export async function deleteReviewAdmin({
 }: {
   data: { reviewId: string };
 }): Promise<{ success: boolean }> {
-  let reviews = getStoredReviews();
-  reviews = reviews.filter((r) => r.id !== data.reviewId);
-  saveStoredReviews(reviews);
+  if (!data.reviewId) return { success: false };
+  await deleteReviewApi(data.reviewId);
+  return { success: true };
+}
+
+export async function keepReviewAdmin({
+  data,
+}: {
+  data: { reviewId: string };
+}): Promise<{ success: boolean }> {
+  if (!data.reviewId) return { success: false };
+  await keepReviewApi(data.reviewId);
   return { success: true };
 }
 
 export async function getAdminCampaigns(): Promise<{ campaigns: ReviewCampaign[] }> {
-  return { campaigns: getStoredCampaigns() };
+  try {
+    const campaigns = await getAllAdminCampaignsApi();
+    if (Array.isArray(campaigns)) {
+      saveStoredCampaigns(campaigns);
+      return { campaigns };
+    }
+    return { campaigns: [] };
+  } catch (err) {
+    console.warn("Failed to fetch campaigns from backend API, falling back to cached list:", err);
+    return { campaigns: getStoredCampaigns() };
+  }
 }
 
 export async function createCampaign({
@@ -735,34 +574,32 @@ export async function createCampaign({
 }: {
   data: {
     campaignName: string;
+    slug?: string;
+    serviceId?: string;
     serviceName?: string;
     location?: string;
     expiresAt?: string;
   };
 }): Promise<{ success: boolean; campaign: ReviewCampaign }> {
-  const name = sanitizeText(data.campaignName, 100);
-  const slug = slugify(name);
-  const campaign: ReviewCampaign = {
-    id: `camp-${Date.now().toString(36)}`,
-    campaign_name: name,
+  const name = sanitizeText(data.campaignName, 120);
+  const location = sanitizeText(data.location, 200) || "DIMISI HQ, New Delhi";
+  const slug = data.slug?.trim() ? slugify(data.slug) : slugify(name);
+
+  const created = await createAdminCampaignApi({
+    name,
     slug,
-    service_name: sanitizeText(data.serviceName, 100) || null,
-    location: sanitizeText(data.location, 100) || null,
-    is_active: true,
-    expires_at: data.expiresAt || null,
-    visits: 0,
-    scans: 0,
-    submissions: 0,
-    created_by: "admin",
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-  };
+    location,
+    serviceId: data.serviceId || undefined,
+    serviceName: data.serviceName ? sanitizeText(data.serviceName, 150) : undefined,
+    expiresAt: data.expiresAt || undefined,
+    isActive: true,
+  });
 
   const campaigns = getStoredCampaigns();
-  campaigns.unshift(campaign);
+  campaigns.unshift(created);
   saveStoredCampaigns(campaigns);
 
-  return { success: true, campaign };
+  return { success: true, campaign: created };
 }
 
 export async function updateCampaign({
@@ -776,19 +613,9 @@ export async function updateCampaign({
     isActive?: boolean;
     expiresAt?: string;
   };
-}): Promise<{ success: boolean }> {
-  const campaigns = getStoredCampaigns();
-  const index = campaigns.findIndex((c) => c.id === data.campaignId);
-  if (index !== -1) {
-    if (data.campaignName) campaigns[index].campaign_name = sanitizeText(data.campaignName, 100);
-    if (data.serviceName !== undefined) campaigns[index].service_name = sanitizeText(data.serviceName, 100) || null;
-    if (data.location !== undefined) campaigns[index].location = sanitizeText(data.location, 100) || null;
-    if (data.isActive !== undefined) campaigns[index].is_active = data.isActive;
-    if (data.expiresAt !== undefined) campaigns[index].expires_at = data.expiresAt || null;
-    campaigns[index].updated_at = new Date().toISOString();
-    saveStoredCampaigns(campaigns);
-  }
-  return { success: true };
+}): Promise<{ success: boolean; campaign?: ReviewCampaign }> {
+  const updated = await toggleAdminCampaignApi(data.campaignId);
+  return { success: true, campaign: updated };
 }
 
 export async function deleteCampaign({
@@ -796,52 +623,37 @@ export async function deleteCampaign({
 }: {
   data: { campaignId: string };
 }): Promise<{ success: boolean }> {
+  await deleteAdminCampaignApi(data.campaignId);
   let campaigns = getStoredCampaigns();
   campaigns = campaigns.filter((c) => c.id !== data.campaignId);
   saveStoredCampaigns(campaigns);
   return { success: true };
 }
 
-export async function getAdminReports(): Promise<{ reports: ReviewReport[] }> {
-  return {
-    reports: getStoredReports(),
-  };
-}
-
-export async function resolveReport({
-  data,
-}: {
-  data: { reportId: string; status: "resolved" | "dismissed" };
-}): Promise<{ success: boolean }> {
-  let reports = getStoredReports();
-  reports = reports.map((r) =>
-    r.id === data.reportId
-      ? { ...r, status: data.status, resolved_at: new Date().toISOString(), resolved_by: "admin" }
-      : r,
-  );
-  saveStoredReports(reports);
-  return { success: true };
-}
-
 export async function getReviewSettings(): Promise<{ settings: ReviewSettings }> {
-  return {
-    settings: {
-      id: true,
-      notify_on_submit: true,
-      notify_on_approve: true,
-      notify_on_reject: false,
-      notify_on_report: true,
-      notify_campaign_summary: true,
-      notify_email: "hello@dimisi.in",
-      updated_at: new Date().toISOString(),
-    },
-  };
+  if (typeof window === "undefined") return { settings: DEFAULT_SETTINGS };
+  try {
+    const raw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+    if (raw) return { settings: JSON.parse(raw) };
+  } catch {}
+  return { settings: DEFAULT_SETTINGS };
 }
 
 export async function updateReviewSettings({
   data,
 }: {
   data: Partial<ReviewSettings>;
-}): Promise<{ success: boolean; message?: string }> {
-  return { success: true, message: "Settings updated successfully." };
+}): Promise<{ success: boolean; settings: ReviewSettings }> {
+  const current = (await getReviewSettings()).settings;
+  const merged: ReviewSettings = {
+    ...current,
+    ...data,
+    updated_at: new Date().toISOString(),
+  };
+  if (typeof window !== "undefined") {
+    try {
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(merged));
+    } catch {}
+  }
+  return { success: true, settings: merged };
 }

@@ -4,6 +4,7 @@ import { MagneticButton } from "@/components/common/MagneticButton/MagneticButto
 import { useAuth } from "@/hooks/useAuth";
 import { submitLeadFn } from "@/lib/leads.functions";
 import { signInWithGoogleOAuth, handleGoogleOAuthCallback } from "@/lib/google-auth";
+import { loginAdmin } from "@/services/adminAuth.service";
 import styles from "@/styles/auth.module.css";
 
 type Mode = "signin" | "signup";
@@ -44,32 +45,17 @@ export function AuthPage() {
     setNotice(null);
 
     const cleanEmail = email.trim().toLowerCase();
+    const cleanPassword = password.trim();
 
-    // Check for Super Admin
-    if (
-      cleanEmail === "swatantrasingh308@gmail.com" &&
-      password.trim() === "ss123&&&"
-    ) {
-      localStorage.setItem(
-        "dimisi_admin_session",
-        JSON.stringify({
-          user: {
-            id: "usr-swatantra-001",
-            email: "swatantrasingh308@gmail.com",
-            user_metadata: { full_name: "Swatantra Singh", admin_role: "super_admin" },
-          },
-          token: "mock-super-admin-token",
-          expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
-        }),
-      );
-      window.dispatchEvent(new Event("dimisi-auth-change"));
+    if (!cleanEmail || !cleanPassword) {
+      setError("Please enter your email and password.");
       setBusy(false);
-      void navigate({ to: "/account", replace: true });
       return;
     }
 
     try {
       if (mode === "signup") {
+        // 1. Record registration inquiry in MongoDB leads collection
         await submitLeadFn({
           data: {
             email: cleanEmail,
@@ -80,44 +66,31 @@ export function AuthPage() {
           },
         });
 
-        localStorage.setItem(
-          "dimisi_admin_session",
-          JSON.stringify({
-            user: {
-              id: `usr-${Date.now()}`,
-              email: cleanEmail,
-              user_metadata: { full_name: name },
-            },
-            token: `token-${Date.now()}`,
-            expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
-          }),
-        );
-        window.dispatchEvent(new Event("dimisi-auth-change"));
+        // 2. Attempt authentication with backend
+        try {
+          await loginAdmin({ email: cleanEmail, password: cleanPassword });
+        } catch {
+          // If public user is registered via leads
+        }
 
-        setNotice(
-          "Account created successfully. Welcome to DIMISI!",
-        );
+        setNotice("Account registration received! Welcome to DIMISI.");
         setTimeout(() => {
           void navigate({ to: "/account", replace: true });
-        }, 1200);
+        }, 1000);
       } else {
-        localStorage.setItem(
-          "dimisi_admin_session",
-          JSON.stringify({
-            user: {
-              id: `usr-${Date.now()}`,
-              email: cleanEmail,
-              user_metadata: { full_name: name || cleanEmail.split("@")[0] },
-            },
-            token: `token-${Date.now()}`,
-            expires_at: Date.now() + 7 * 24 * 60 * 60 * 1000,
-          }),
-        );
-        window.dispatchEvent(new Event("dimisi-auth-change"));
-        void navigate({ to: "/account", replace: true });
+        // Sign in against Express backend authentication
+        await loginAdmin({
+          email: cleanEmail,
+          password: cleanPassword,
+        });
+
+        setNotice("Signed in successfully. Redirecting…");
+        setTimeout(() => {
+          void navigate({ to: "/account", replace: true });
+        }, 500);
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Something went wrong. Try again.");
+    } catch (err: any) {
+      setError(err?.message || "Invalid email or password. Please try again.");
     } finally {
       setBusy(false);
     }

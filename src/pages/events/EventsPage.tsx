@@ -116,7 +116,7 @@ export function EventsPage() {
 
   // Filtered Gallery Items
   const filteredGallery = useMemo(() => {
-    return galleryItems.filter((g) => {
+    return galleryItems.filter((g: EventGalleryItem) => {
       if (galleryFilter === "All") return true;
       const targetCat = galleryFilter.trim().toLowerCase();
       const gCat = (g.category || "").trim().toLowerCase();
@@ -128,13 +128,13 @@ export function EventsPage() {
   const galleryCategories = useMemo(() => {
     const cats = new Set<string>(["All"]);
     if (payload?.categoryItems && Array.isArray(payload.categoryItems)) {
-      payload.categoryItems.forEach((c) => {
+      payload.categoryItems.forEach((c: EventCategoryItem) => {
         if (c.status === "active" && c.name?.trim()) {
           cats.add(c.name.trim());
         }
       });
     }
-    galleryItems.forEach((g) => {
+    galleryItems.forEach((g: EventGalleryItem) => {
       if (g.category && g.category.trim()) cats.add(g.category.trim());
     });
     return Array.from(cats);
@@ -502,7 +502,7 @@ export function EventsPage() {
 
           {/* Masonry / Responsive Grid */}
           <div className={styles.mosaicGrid}>
-            {filteredGallery.map((item, idx) => (
+            {filteredGallery.map((item: EventGalleryItem, idx: number) => (
               <Reveal
                 key={item.id}
                 delay={idx * 50}

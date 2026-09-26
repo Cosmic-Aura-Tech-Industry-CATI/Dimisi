@@ -608,6 +608,14 @@ export function AdminPanel() {
         profile={
           <AdminProfile
             userId={currentData.selfId}
+            employeeId={
+              self?.employee_id ||
+              self?.emp_id ||
+              (self as any)?.empId ||
+              (user as any)?.user_metadata?.employee_id ||
+              (user as any)?.user_metadata?.emp_id ||
+              (user as any)?.empId
+            }
             email={user.email}
             fullName={self?.full_name ?? null}
             designation={self?.designation ?? null}

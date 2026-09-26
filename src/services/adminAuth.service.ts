@@ -107,6 +107,26 @@ export async function loginAdmin(
 
   const adminRole = backendPanelUser?.role || "super_admin";
 
+  const empId =
+    (typeof backendBaseUser === "object" ? backendBaseUser?.empId || backendBaseUser?.employeeId : null) ||
+    backendPanelUser?.empId ||
+    backendPanelUser?.employeeId ||
+    null;
+
+  const rawDesignation =
+    typeof backendBaseUser === "object"
+      ? typeof backendBaseUser?.designation === "string"
+        ? backendBaseUser.designation
+        : backendBaseUser?.designation?.title || backendBaseUser?.designation?.name
+      : null;
+
+  const cleanDesignation =
+    rawDesignation && !/^[0-9a-fA-F]{24}$/.test(String(rawDesignation).trim())
+      ? String(rawDesignation).trim()
+      : adminRole === "super_admin"
+        ? "Super Admin"
+        : "Administrator";
+
   const expiresAt = payload?.exp ? payload.exp * 1000 : Date.now() + 7 * 24 * 60 * 60 * 1000;
 
   const user: AuthUser = {
@@ -115,6 +135,9 @@ export async function loginAdmin(
     user_metadata: {
       full_name: userName,
       admin_role: adminRole,
+      employee_id: empId ? String(empId) : null,
+      emp_id: empId ? String(empId) : null,
+      designation: cleanDesignation,
     },
   };
 

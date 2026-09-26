@@ -49,6 +49,8 @@ export interface GrantAdminPayload {
 
 export interface NormalizedAdminUser {
   user_id: string;
+  employee_id?: string | null;
+  emp_id?: string | null;
   email: string | null;
   full_name: string | null;
   designation: string | null;
@@ -64,6 +66,8 @@ export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | unde
   if (!doc) {
     return {
       user_id: "usr-" + Date.now().toString(36),
+      employee_id: null,
+      emp_id: null,
       email: null,
       full_name: "Unknown",
       designation: "Not set",
@@ -75,6 +79,13 @@ export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | unde
 
   const populatedUser = typeof doc.user === "object" && doc.user !== null ? doc.user : null;
   const rawUserId = populatedUser?._id || (typeof doc.user === "string" ? doc.user : "") || doc._id;
+  const empId =
+    populatedUser?.empId ||
+    (populatedUser as any)?.employeeId ||
+    (populatedUser as any)?.emp_id ||
+    (doc as any)?.empId ||
+    (doc as any)?.employeeId ||
+    null;
 
   const email = populatedUser?.email || null;
   const fullName =
@@ -85,7 +96,13 @@ export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | unde
   let designationStr = "Not set";
   if (populatedUser?.designation) {
     if (typeof populatedUser.designation === "string") {
-      designationStr = populatedUser.designation.trim() || "Not set";
+      const trimmed = populatedUser.designation.trim();
+      // If backend stored raw 24-hex Mongo ObjectId for designation, provide clean title
+      if (/^[0-9a-fA-F]{24}$/.test(trimmed)) {
+        designationStr = doc.role === "super_admin" ? "Super Admin" : "Administrator";
+      } else {
+        designationStr = trimmed || "Not set";
+      }
     } else if (typeof populatedUser.designation === "object") {
       designationStr =
         populatedUser.designation.title || populatedUser.designation.name || "Not set";
@@ -94,6 +111,8 @@ export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | unde
 
   return {
     user_id: String(rawUserId),
+    employee_id: empId ? String(empId) : null,
+    emp_id: empId ? String(empId) : null,
     email: email,
     full_name: fullName,
     designation: designationStr,
@@ -249,6 +268,29 @@ export async function deactivatePanelAdmin(userId: string): Promise<{
   };
 }
 
+/**
+ * 7. REVOKE / DELETE PANEL ADMIN ACCESS
+ * Endpoint: DELETE /api/v1/admin-panel/users/:userId/revoke
+ */
+export async function revokePanelAdmin(userId: string): Promise<{
+  success: boolean;
+  message: string;
+}> {
+  if (!userId) throw new Error("User ID is required.");
+
+  const res = await apiRequest<{ success: boolean; message: string }>(
+    `/api/v1/admin-panel/users/${encodeURIComponent(userId)}/revoke`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  return {
+    success: true,
+    message: res?.message || "Administrator access revoked successfully.",
+  };
+}
+
 // Aliases for compatibility
 export const fetchAdminsApi = getAllPanelAdmins;
 export const grantAdminAccessApi = async (payload: { email: string; role: AdminRole | string }) => {
@@ -267,7 +309,6 @@ export const updateAdminActiveApi = async (userId: string, isActive: boolean) =>
   return deactivatePanelAdmin(userId);
 };
 export const deleteAdminApi = async (userId: string): Promise<{ success: boolean }> => {
-  // Backend does not expose a DELETE endpoint; deactivate the user instead.
-  await deactivatePanelAdmin(userId);
+  await revokePanelAdmin(userId);
   return { success: true };
 };

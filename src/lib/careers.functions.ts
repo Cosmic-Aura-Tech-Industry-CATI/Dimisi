@@ -33,6 +33,7 @@ import {
 } from "../services/apiClient";
 import {
   DEFAULT_DEPARTMENTS,
+  getAllActiveDepartmentsApi,
   type DepartmentItem,
 } from "../services/department.service";
 

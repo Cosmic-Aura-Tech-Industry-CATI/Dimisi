@@ -60,11 +60,12 @@ export class ApiError extends Error {
   }
 }
 
-export interface RequestOptions extends RequestInit {
-  timeoutMs?: number;
-  token?: string;
+export interface RequestOptions extends Omit<RequestInit, "headers"> {
+  headers?: HeadersInit | undefined;
+  timeoutMs?: number | undefined;
+  token?: string | undefined;
   /** In-memory cache TTL in ms for GET requests. Default: 30000ms. Set 0 to disable. */
-  cacheTtlMs?: number;
+  cacheTtlMs?: number | undefined;
 }
 
 // In-memory cache & in-flight promise deduplication map

@@ -236,7 +236,7 @@ export async function getAllEventCategoriesApi(): Promise<EventCategoryItem[]> {
       : [];
 
     const normalized = rawList.map(normalizeBackendEventCategory);
-    rememberCategoryIds(normalized.map((c) => c.id));
+    rememberCategoryIds(normalized.map((c: EventCategoryItem) => c.id));
     return normalized;
   } catch (err) {
     console.warn("Failed to fetch event categories from Express backend:", err);

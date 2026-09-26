@@ -191,3 +191,74 @@ export {
   type BackendEventListResponse,
   type BackendEventSingleResponse,
 } from "./event.service";
+
+// 13. Campaign & QR API
+export {
+  getAllAdminCampaignsApi,
+  createAdminCampaignApi,
+  toggleAdminCampaignApi,
+  deleteAdminCampaignApi,
+  normalizeBackendCampaign,
+  type BackendCampaignDoc,
+  type BackendCampaignListResponse,
+  type BackendCampaignSingleResponse,
+  type CreateCampaignPayload,
+} from "./campaign.service";
+
+// 14. Reviews & Testimonials API
+export {
+  getPublicReviewsApi,
+  submitPublicReviewApi,
+  reportReviewApi,
+  getAllAdminReviewsApi,
+  getReviewKpisApi,
+  updateReviewStatusApi,
+  deleteReviewApi,
+  keepReviewApi,
+  toggleReviewActiveApi,
+  toggleReviewVerifyApi,
+  normalizeBackendReview,
+  normalizeBackendPublicReview,
+  normalizeBackendReport,
+  type BackendReviewDoc,
+  type BackendReviewListResponse,
+  type BackendReviewSingleResponse,
+  type BackendReviewKpiResponse,
+  type SubmitReviewPayload,
+  type ReportReviewPayload,
+} from "./review.service";
+
+// 15. Leads CRM & Contact Inquiries API
+export {
+  submitLeadApi,
+  getAllAdminLeadsApi,
+  getLeadDetailsApi,
+  updateLeadApi,
+  deleteLeadApi,
+  normalizeBackendLead,
+  type BackendLeadDoc,
+  type BackendVisitorSessionDoc,
+  type BackendLeadListResponse,
+  type BackendLeadSingleResponse,
+  type SubmitLeadPayload,
+  type UpdateLeadPayload,
+} from "./lead.service";
+
+// 16. Admin Activity & Audit Logs API
+export {
+  getPanelActivityLogsApi,
+  normalizeBackendActivityLog,
+  type BackendActivityLogDoc,
+  type BackendActivityLogsResponse,
+  type AdminActivityLogItem,
+} from "./activity.service";
+
+// 17. Application Configuration & Settings API
+export {
+  getFullAppConfigApi,
+  getSectionConfigApi,
+  updateAppConfigApi,
+  updateSectionConfigApi,
+  type BackendAppConfigResponse,
+} from "./config.service";
+

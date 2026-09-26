@@ -29,6 +29,8 @@ export type AdminLead = {
 
 export type AdminUser = {
   user_id: string;
+  employee_id?: string | null;
+  emp_id?: string | null;
   email: string | null;
   full_name: string | null;
   designation: string | null;
@@ -52,6 +54,8 @@ export function normalizeAdminUser(raw: any): AdminUser {
   if (!raw) {
     return {
       user_id: "usr-" + Date.now().toString(36),
+      employee_id: null,
+      emp_id: null,
       email: null,
       full_name: "Unknown",
       designation: "Not set",
@@ -68,11 +72,17 @@ export function normalizeAdminUser(raw: any): AdminUser {
 
   const email = typeof raw.email === "string" ? raw.email.trim().toLowerCase() : null;
   const fullName = raw.full_name || raw.fullName || raw.name || (email ? email.split("@")[0].replace(/[._-]/g, " ") : "Administrator");
+  const empId = raw.employee_id || raw.employeeId || raw.emp_id || raw.empId || null;
 
   let designationStr = "Not set";
   if (raw.designation) {
     if (typeof raw.designation === "string") {
-      designationStr = raw.designation.trim() || "Not set";
+      const trimmed = raw.designation.trim();
+      if (/^[0-9a-fA-F]{24}$/.test(trimmed)) {
+        designationStr = raw.role === "super_admin" ? "Super Admin" : "Administrator";
+      } else {
+        designationStr = trimmed || "Not set";
+      }
     } else if (typeof raw.designation === "object") {
       designationStr = raw.designation.title || raw.designation.name || "Not set";
     }
@@ -80,6 +90,8 @@ export function normalizeAdminUser(raw: any): AdminUser {
 
   return {
     user_id: String(raw.user_id || raw.id || raw._id || ("usr-" + Date.now().toString(36))),
+    employee_id: empId ? String(empId) : null,
+    emp_id: empId ? String(empId) : null,
     email: email,
     full_name: fullName,
     designation: designationStr,

@@ -23,15 +23,16 @@ export interface AdminLog {
   timestamp: number; // Unix timestamp in ms
   adminName: string;
   email: string;
-  accountId: string;
+  employeeId: string;
+  accountId?: string | undefined;
   role: AdminRole;
   activity: string;
   module: ActivityModule;
   status: LogStatus;
-  details?: string;
-  targetResource?: string;
-  ipAddress?: string;
-  userAgent?: string;
+  details?: string | undefined;
+  targetResource?: string | undefined;
+  ipAddress?: string | undefined;
+  userAgent?: string | undefined;
 }
 
 export interface AdminLogFilters {
