@@ -371,6 +371,6 @@ export async function loginAdminFn({
   data,
 }: {
   data: { email: string; password: string };
-}): Promise<{ success: boolean; token: string; user: any; expires_at: number }> {
+}): Promise<{ success: boolean; user: any; session: any }> {
   return loginAdmin(data);
 }

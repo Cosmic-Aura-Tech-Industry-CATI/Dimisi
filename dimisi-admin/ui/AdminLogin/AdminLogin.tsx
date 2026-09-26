@@ -43,7 +43,7 @@ export function AdminLogin() {
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
-          setError("Invalid administrator credentials.");
+          setError(err.message && !err.message.includes("status 401") ? err.message : "Invalid administrator credentials.");
         } else if (err.status === 403) {
           setError(err.message || "You do not have permission to access the control room.");
         } else if (err.status === 408) {

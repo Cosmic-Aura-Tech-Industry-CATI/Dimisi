@@ -1,66 +1,83 @@
 /**
- * DIMISI Admin Panel — Express Authentication Service
- * Connects the Admin Panel frontend directly to the Express backend API.
- *
- * Backend route: POST /api/v1/admin-panel/auth/login
+ * DIMISI Admin Panel — Clean Authentication Service
+ * Seamlessly interfaces with Express Backend:
+ * - Login:  POST /api/v1/admin-panel/auth/login
+ * - Logout: POST /api/v1/admin-panel/auth/logout
+ * - Refresh: POST /api/v1/auth/refresh
  */
-import { apiRequest, clearApiCache, ApiError } from "./apiClient";
-import type { AuthUser } from "@/hooks/useAuth";
+import { apiRequest, clearApiCache, API_BASE_URL } from "./apiClient";
+import type {
+  AdminRole,
+  AdminAuthUser,
+  AdminAuthSession,
+  BackendLoginResponse,
+  IPanelUserBackend,
+} from "@/types/adminAuth.types";
+
+export type { AdminRole, AdminAuthUser, AdminAuthSession, BackendLoginResponse, IPanelUserBackend };
 
 export interface AdminLoginCredentials {
   email: string;
   password: string;
 }
 
-export interface BackendLoginResponse {
-  success: boolean;
-  message: string;
-  data?: {
-    token?: string;
-    accessToken?: string;
-    refreshToken?: string;
-    user?: any;
-  };
-  token?: string;
-  accessToken?: string;
-  refreshToken?: string;
-  user?: any;
-}
-
-export interface AdminAuthSession {
-  token: string;
-  user: AuthUser;
-  expires_at: number;
-}
-
-const ADMIN_SESSION_KEY = "dimisi_admin_session";
+export const ADMIN_SESSION_KEY = "dimisi_admin_session";
+export const ADMIN_EXPIRED_NOTICE_KEY = "dimisi_admin_session_expired";
 
 /**
- * Safely decodes a JWT payload on the client without external dependencies.
+ * Normalizes backend IPanelUser into client-safe AdminAuthUser
  */
-export function decodeJwtPayload(token: string): { id?: string; exp?: number; [key: string]: any } | null {
-  try {
-    const parts = token.split(".");
-    if (parts.length < 2) return null;
-    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
-    const jsonPayload = decodeURIComponent(
-      atob(base64)
-        .split("")
-        .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
-        .join(""),
-    );
-    return JSON.parse(jsonPayload);
-  } catch {
-    return null;
-  }
+export function transformBackendPanelUser(backendUser: IPanelUserBackend, fallbackEmail?: string): AdminAuthUser {
+  const baseUser = typeof backendUser.user === "object" ? backendUser.user : null;
+  const userId = baseUser?._id || (typeof backendUser.user === "string" ? backendUser.user : backendUser._id);
+  const userEmail = (baseUser?.email || fallbackEmail || "").trim().toLowerCase();
+  const userName = baseUser?.name || userEmail.split("@")[0].replace(/[._-]/g, " ") || "Administrator";
+  const userRole: AdminRole = backendUser.role || "admin";
+
+  const rawDesignation =
+    typeof baseUser?.designation === "string"
+      ? baseUser.designation
+      : baseUser?.designation?.title || baseUser?.designation?.name || null;
+
+  const cleanDesignation =
+    rawDesignation && !/^[0-9a-fA-F]{24}$/.test(String(rawDesignation).trim())
+      ? String(rawDesignation).trim()
+      : userRole === "super_admin"
+        ? "Super Admin"
+        : userRole.charAt(0).toUpperCase() + userRole.slice(1);
+
+  const empId = baseUser?.empId || baseUser?.employeeId ? String(baseUser.empId || baseUser.employeeId) : null;
+  const avatarUrl = baseUser?.avatar || null;
+  const permissions = Array.isArray(backendUser.permissions) ? backendUser.permissions : [];
+
+  return {
+    id: String(userId),
+    email: userEmail,
+    name: userName,
+    role: userRole,
+    isActive: backendUser.isActive !== false,
+    designation: cleanDesignation,
+    empId,
+    permissions,
+    avatarUrl,
+    user_metadata: {
+      full_name: userName,
+      admin_role: userRole,
+      designation: cleanDesignation,
+      emp_id: empId,
+      employee_id: empId,
+      avatar_url: avatarUrl,
+    },
+  };
 }
 
 /**
  * Perform login against the Express backend API: POST /api/v1/admin-panel/auth/login
+ * Tokens (accessToken & refreshToken) are transmitted and stored in HttpOnly secure cookies.
  */
 export async function loginAdmin(
   credentials: AdminLoginCredentials,
-): Promise<{ success: boolean; token: string; user: AuthUser; expires_at: number }> {
+): Promise<{ success: boolean; user: AdminAuthUser; session: AdminAuthSession }> {
   const cleanEmail = credentials.email.trim().toLowerCase();
   const cleanPassword = credentials.password.trim();
 
@@ -68,7 +85,7 @@ export async function loginAdmin(
     throw new Error("Email and password are required.");
   }
 
-  // Call Express backend endpoint
+  // 1. Send Login Request to Express Backend
   const response = await apiRequest<BackendLoginResponse>("/api/v1/admin-panel/auth/login", {
     method: "POST",
     body: JSON.stringify({
@@ -77,88 +94,38 @@ export async function loginAdmin(
     }),
   });
 
-  if (!response || (!response.success && response.user === undefined && response.data?.user === undefined)) {
-    throw new Error(response?.message || "Unexpected authentication response.");
+  const rawUser = response?.user || response?.data?.user;
+  if (!response || (!response.success && !rawUser)) {
+    throw new Error(response?.message || "Invalid email or password.");
   }
 
-  // Extract token if present in JSON payload; otherwise backend set HttpOnly cookies
-  const rawToken =
-    response?.data?.token ||
-    response?.data?.accessToken ||
-    response?.token ||
-    response?.accessToken ||
-    "cookie-session";
+  if (!rawUser) {
+    throw new Error("Invalid response format: Missing user payload.");
+  }
 
-  // Extract user details from backend response or decode JWT payload if available
-  const payload = rawToken !== "cookie-session" ? decodeJwtPayload(rawToken) : null;
-  const backendPanelUser = response?.user || response?.data?.user;
-  const backendBaseUser = backendPanelUser?.user;
+  // 2. Transform User Model
+  const user = transformBackendPanelUser(rawUser, cleanEmail);
 
-  const userId =
-    (typeof backendBaseUser === "object" ? backendBaseUser?._id : backendBaseUser) ||
-    backendPanelUser?._id ||
-    payload?.id ||
-    `admin-${Date.now()}`;
-
-  const userName =
-    (typeof backendBaseUser === "object" ? backendBaseUser?.name : null) ||
-    backendPanelUser?.name ||
-    cleanEmail.split("@")[0].replace(/[._-]/g, " ");
-
-  const adminRole = backendPanelUser?.role || "super_admin";
-
-  const empId =
-    (typeof backendBaseUser === "object" ? backendBaseUser?.empId || backendBaseUser?.employeeId : null) ||
-    backendPanelUser?.empId ||
-    backendPanelUser?.employeeId ||
-    null;
-
-  const rawDesignation =
-    typeof backendBaseUser === "object"
-      ? typeof backendBaseUser?.designation === "string"
-        ? backendBaseUser.designation
-        : backendBaseUser?.designation?.title || backendBaseUser?.designation?.name
-      : null;
-
-  const cleanDesignation =
-    rawDesignation && !/^[0-9a-fA-F]{24}$/.test(String(rawDesignation).trim())
-      ? String(rawDesignation).trim()
-      : adminRole === "super_admin"
-        ? "Super Admin"
-        : "Administrator";
-
-  const expiresAt = payload?.exp ? payload.exp * 1000 : Date.now() + 7 * 24 * 60 * 60 * 1000;
-
-  const user: AuthUser = {
-    id: String(userId),
-    email: cleanEmail,
-    user_metadata: {
-      full_name: userName,
-      admin_role: adminRole,
-      employee_id: empId ? String(empId) : null,
-      emp_id: empId ? String(empId) : null,
-      designation: cleanDesignation,
-    },
-  };
-
-  // Save session to localStorage for persistent state across refreshes
-  const sessionData: AdminAuthSession = {
-    token: rawToken,
+  // 3. Create Session (Rolling 30-day session)
+  const now = Date.now();
+  const session: AdminAuthSession = {
     user,
-    expires_at: expiresAt,
+    authenticated_at: now,
+    expires_at: now + 30 * 24 * 60 * 60 * 1000,
+    token: "cookie-session",
   };
 
+  // 4. Save to localStorage and notify UI subscribers
   if (typeof window !== "undefined") {
-    localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(sessionData));
-    sessionStorage.removeItem("dimisi_admin_session_expired");
+    localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
+    sessionStorage.removeItem(ADMIN_EXPIRED_NOTICE_KEY);
     window.dispatchEvent(new CustomEvent("dimisi-auth-change", { detail: { user } }));
   }
 
   return {
     success: true,
-    token: rawToken,
     user,
-    expires_at: expiresAt,
+    session,
   };
 }
 
@@ -172,10 +139,9 @@ export async function logoutAdmin(): Promise<void> {
       method: "POST",
     });
   } catch (error) {
-    console.warn(
-      "Backend admin logout request failed, proceeding with local cleanup:",
-      error,
-    );
+    if (import.meta.env?.DEV) {
+      console.warn("Backend admin logout request note:", error);
+    }
   } finally {
     clearAdminSession();
   }
@@ -190,9 +156,9 @@ export function clearAdminSession(reason?: string): void {
     localStorage.removeItem(ADMIN_SESSION_KEY);
     clearApiCache();
     if (reason) {
-      sessionStorage.setItem("dimisi_admin_session_expired", reason);
+      sessionStorage.setItem(ADMIN_EXPIRED_NOTICE_KEY, reason);
     } else {
-      sessionStorage.removeItem("dimisi_admin_session_expired");
+      sessionStorage.removeItem(ADMIN_EXPIRED_NOTICE_KEY);
     }
     window.dispatchEvent(
       new CustomEvent("dimisi-auth-change", {
@@ -206,7 +172,7 @@ export function clearAdminSession(reason?: string): void {
 }
 
 /**
- * Retrieve current active admin session if not expired.
+ * Retrieve current active admin session.
  */
 export function getStoredAdminSession(): AdminAuthSession | null {
   if (typeof window === "undefined") return null;
@@ -214,14 +180,68 @@ export function getStoredAdminSession(): AdminAuthSession | null {
     const raw = localStorage.getItem(ADMIN_SESSION_KEY);
     if (!raw) return null;
     const session = JSON.parse(raw) as AdminAuthSession;
-    if (!session.token || !session.user) return null;
-    if (session.expires_at && session.expires_at <= Date.now()) {
-      localStorage.removeItem(ADMIN_SESSION_KEY);
-      return null;
-    }
+    if (!session.user || !session.user.id) return null;
     return session;
   } catch {
     return null;
   }
 }
 
+// Mutex lock state to prevent race conditions across concurrent refresh calls
+let isRefreshing = false;
+let refreshPromise: Promise<boolean> | null = null;
+
+/**
+ * Calls backend POST /api/v1/auth/refresh with HttpOnly cookies.
+ * Uses a Mutex Lock to deduplicate concurrent refresh requests across the application.
+ */
+export async function refreshAdminTokenApi(): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+
+  if (isRefreshing && refreshPromise) {
+    return refreshPromise;
+  }
+
+  isRefreshing = true;
+  refreshPromise = (async () => {
+    try {
+      const targetUrl = API_BASE_URL ? `${API_BASE_URL}/api/v1/auth/refresh` : `/api/v1/auth/refresh`;
+      const response = await fetch(targetUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+        },
+        credentials: "include", // Sends the 30-day refreshToken HttpOnly cookie
+      });
+
+      if (!response.ok) {
+        throw new Error(`Token refresh failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data?.status === "success" || data?.success) {
+        const session = getStoredAdminSession();
+        if (session) {
+          session.expires_at = Date.now() + 30 * 24 * 60 * 60 * 1000;
+          localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
+        }
+        if (import.meta.env?.DEV) {
+          console.debug("[AUTH REFRESH] Session tokens successfully refreshed on backend.");
+        }
+        return true;
+      }
+      return false;
+    } catch (err) {
+      if (import.meta.env?.DEV) {
+        console.warn("[AUTH REFRESH FAILED]", err);
+      }
+      return false;
+    } finally {
+      isRefreshing = false;
+      refreshPromise = null;
+    }
+  })();
+
+  return refreshPromise;
+}

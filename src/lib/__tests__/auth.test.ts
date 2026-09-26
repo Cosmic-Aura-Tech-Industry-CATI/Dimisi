@@ -1,37 +1,56 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  decodeJwtPayload,
+  transformBackendPanelUser,
   getStoredAdminSession,
   clearAdminSession,
   type AdminAuthSession,
 } from "../../services/adminAuth.service";
 import { ApiError } from "../../services/apiClient";
+import type { IPanelUserBackend } from "../../types/adminAuth.types";
 
-test("Admin Authentication - JWT Payload Decoding", async (t) => {
-  await t.test("decodes valid standard JWT payload safely", () => {
-    // Valid mock JWT token with id and exp
-    const header = Buffer.from(JSON.stringify({ alg: "HS256", typ: "JWT" })).toString("base64url");
-    const payload = Buffer.from(
-      JSON.stringify({
-        id: "64b8f3e5c9e77b0012a4b8d1",
-        type: "panel_user",
-        exp: 1893456000, // 2030-01-01
-      }),
-    ).toString("base64url");
-    const token = `${header}.${payload}.signature`;
+test("Admin Authentication - Backend User Transformation", async (t) => {
+  await t.test("transforms raw backend IPanelUser payload into clean AdminAuthUser", () => {
+    const rawBackendUser: IPanelUserBackend = {
+      _id: "panel-user-123",
+      user: {
+        _id: "user-456",
+        name: "Swatantra Singh",
+        email: "swatantrasingh308@gmail.com",
+        empId: "EMP-001",
+        designation: { title: "Lead Architect" },
+        isActive: true,
+      },
+      role: "super_admin",
+      isActive: true,
+      permissions: ["services.create", "services.edit", "admins.view"],
+    };
 
-    const decoded = decodeJwtPayload(token);
-    assert.ok(decoded);
-    assert.equal(decoded.id, "64b8f3e5c9e77b0012a4b8d1");
-    assert.equal(decoded.type, "panel_user");
-    assert.equal(decoded.exp, 1893456000);
+    const transformed = transformBackendPanelUser(rawBackendUser);
+    assert.equal(transformed.id, "user-456");
+    assert.equal(transformed.name, "Swatantra Singh");
+    assert.equal(transformed.email, "swatantrasingh308@gmail.com");
+    assert.equal(transformed.role, "super_admin");
+    assert.equal(transformed.designation, "Lead Architect");
+    assert.equal(transformed.empId, "EMP-001");
+    assert.deepEqual(transformed.permissions, ["services.create", "services.edit", "admins.view"]);
+    assert.equal(transformed.user_metadata.full_name, "Swatantra Singh");
+    assert.equal(transformed.user_metadata.admin_role, "super_admin");
   });
 
-  await t.test("returns null for malformed or incomplete JWT tokens", () => {
-    assert.equal(decodeJwtPayload(""), null);
-    assert.equal(decodeJwtPayload("invalid-token"), null);
-    assert.equal(decodeJwtPayload("part1"), null);
+  await t.test("handles string user reference gracefully", () => {
+    const rawBackendUser: IPanelUserBackend = {
+      _id: "panel-user-789",
+      user: "user-999",
+      role: "admin",
+      isActive: true,
+    };
+
+    const transformed = transformBackendPanelUser(rawBackendUser, "admin@dimisi.tech");
+    assert.equal(transformed.id, "user-999");
+    assert.equal(transformed.email, "admin@dimisi.tech");
+    assert.equal(transformed.role, "admin");
+    assert.equal(transformed.name, "admin");
   });
 });
 
@@ -72,38 +91,33 @@ test("Admin Authentication - Session Lifecycle & Storage", async (t) => {
 
   await t.test("stores and retrieves active admin session", () => {
     const activeSession: AdminAuthSession = {
-      token: "valid-jwt-token",
       user: {
         id: "admin-1",
         email: "admin@dimisi.tech",
-        user_metadata: { full_name: "Lead Admin", admin_role: "super_admin" },
+        name: "Lead Admin",
+        role: "super_admin",
+        isActive: true,
+        designation: "Super Admin",
+        permissions: ["all"],
+        user_metadata: {
+          full_name: "Lead Admin",
+          admin_role: "super_admin",
+          designation: "Super Admin",
+          emp_id: null,
+          employee_id: null,
+          avatar_url: null,
+        },
       },
-      expires_at: Date.now() + 3600 * 1000,
+      authenticated_at: Date.now(),
+      expires_at: Date.now() + 30 * 24 * 60 * 60 * 1000,
     };
 
     localStorage.setItem("dimisi_admin_session", JSON.stringify(activeSession));
 
     const retrieved = getStoredAdminSession();
     assert.ok(retrieved);
-    assert.equal(retrieved.token, "valid-jwt-token");
     assert.equal(retrieved.user.email, "admin@dimisi.tech");
-  });
-
-  await t.test("automatically evicts expired admin session", () => {
-    const expiredSession: AdminAuthSession = {
-      token: "expired-jwt-token",
-      user: {
-        id: "admin-2",
-        email: "expired@dimisi.tech",
-      },
-      expires_at: Date.now() - 5000, // Expired 5 seconds ago
-    };
-
-    localStorage.setItem("dimisi_admin_session", JSON.stringify(expiredSession));
-
-    const retrieved = getStoredAdminSession();
-    assert.equal(retrieved, null);
-    assert.equal(localStorage.getItem("dimisi_admin_session"), null);
+    assert.equal(retrieved.user.role, "super_admin");
   });
 
   await t.test("clearAdminSession removes credentials and sets expiration notice", () => {

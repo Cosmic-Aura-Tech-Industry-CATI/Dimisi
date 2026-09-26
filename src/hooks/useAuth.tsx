@@ -1,55 +1,54 @@
-import { useEffect, useState } from "react";
+/**
+ * DIMISI Technologies — Unified Admin Authentication Hook
+ * Manages reactive admin session state, cross-tab synchronization,
+ * 10-minute proactive heartbeats, and tab visibility recovery.
+ */
+import { useEffect, useState, useCallback } from "react";
+import {
+  getStoredAdminSession,
+  refreshAdminTokenApi,
+  logoutAdmin,
+  type AdminAuthUser,
+  type AdminAuthSession,
+  type AdminRole,
+} from "@/services/adminAuth.service";
 
-export type AuthUser = {
-  id: string;
-  email?: string | null;
-  user_metadata?: {
-    full_name?: string | null;
-    admin_role?: string;
-    [key: string]: any;
-  };
-};
+export type { AdminAuthUser, AdminAuthSession, AdminRole };
+// Legacy alias for backward compatibility across components
+export type AuthUser = AdminAuthUser;
+export type AuthSession = AdminAuthSession;
 
-export type AuthSession = {
-  access_token: string;
-  token_type: string;
-  expires_in: number;
-  expires_at: number;
-  refresh_token?: string;
-  user: AuthUser;
-};
+export interface UseAuthReturn {
+  user: AdminAuthUser | null;
+  session: AdminAuthSession | null;
+  isAuthenticated: boolean;
+  role: AdminRole | null;
+  loading: boolean;
+  signOut: () => Promise<void>;
+  refreshSession: () => Promise<boolean>;
+}
 
-export function useAuth() {
-  const [session, setSession] = useState<AuthSession | null>(null);
-  const [user, setUser] = useState<AuthUser | null>(null);
-  const [loading, setLoading] = useState(true);
+export function useAuth(): UseAuthReturn {
+  const [session, setSession] = useState<AdminAuthSession | null>(null);
+  const [user, setUser] = useState<AdminAuthUser | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  const checkLocalSession = useCallback((): boolean => {
+    if (typeof window === "undefined") return false;
+    try {
+      const stored = getStoredAdminSession();
+      if (stored && stored.user) {
+        setUser(stored.user);
+        setSession(stored);
+        setLoading(false);
+        return true;
+      }
+    } catch {}
+    return false;
+  }, []);
 
   useEffect(() => {
-    function checkLocalSession(): boolean {
-      if (typeof window === "undefined") return false;
-      try {
-        const raw = localStorage.getItem("dimisi_admin_session");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (parsed?.user && (!parsed.expires_at || parsed.expires_at > Date.now())) {
-            setUser(parsed.user as AuthUser);
-            setSession({
-              access_token: parsed.token || "cookie-session",
-              token_type: "bearer",
-              expires_in: 3600 * 24 * 7,
-              expires_at: Math.floor((parsed.expires_at || Date.now() + 86400000 * 7) / 1000),
-              refresh_token: "cookie-refresh",
-              user: parsed.user as AuthUser,
-            });
-            setLoading(false);
-            return true;
-          }
-        }
-      } catch {}
-      return false;
-    }
-
-    // Check local session
+    // 1. Initial local session check
     const hasSession = checkLocalSession();
     if (!hasSession) {
       setSession(null);
@@ -57,6 +56,7 @@ export function useAuth() {
       setLoading(false);
     }
 
+    // 2. Event listener for auth changes (same window & cross-tab)
     const onAuthChange = (e?: Event) => {
       const customEvt = e as CustomEvent<{ expired?: boolean; message?: string }>;
       if (customEvt?.detail?.expired) {
@@ -72,14 +72,57 @@ export function useAuth() {
         setLoading(false);
       }
     };
+
     window.addEventListener("dimisi-auth-change", onAuthChange as EventListener);
     window.addEventListener("storage", onAuthChange as EventListener);
+
+    // 3. Proactive Heartbeat every 10 minutes (600,000 ms) to keep tokens fresh
+    const heartbeatTimer = setInterval(async () => {
+      if (typeof window !== "undefined" && document.visibilityState === "visible") {
+        const hasActive = checkLocalSession();
+        if (hasActive) {
+          await refreshAdminTokenApi();
+        }
+      }
+    }, 10 * 60 * 1000);
+
+    // 4. Tab Focus / Resume Handler (refresh when user returns to tab)
+    const handleVisibilityChange = async () => {
+      if (typeof window !== "undefined" && document.visibilityState === "visible") {
+        const hasActive = checkLocalSession();
+        if (hasActive) {
+          await refreshAdminTokenApi();
+        }
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    window.addEventListener("focus", handleVisibilityChange);
 
     return () => {
       window.removeEventListener("dimisi-auth-change", onAuthChange as EventListener);
       window.removeEventListener("storage", onAuthChange as EventListener);
+      clearInterval(heartbeatTimer);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+      window.removeEventListener("focus", handleVisibilityChange);
     };
+  }, [checkLocalSession]);
+
+  const signOut = useCallback(async () => {
+    await logoutAdmin();
   }, []);
 
-  return { session, user, loading };
+  const refreshSession = useCallback(async () => {
+    return await refreshAdminTokenApi();
+  }, []);
+
+  return {
+    user,
+    session,
+    isAuthenticated: Boolean(user),
+    role: user?.role || null,
+    loading,
+    signOut,
+    refreshSession,
+  };
 }

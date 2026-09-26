@@ -224,23 +224,24 @@ export function AdminPanel() {
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed?.user) {
+            const u = parsed.user;
             return {
               isAdmin: true,
-              role: (parsed.user.role as AdminRole) || "admin",
+              role: (u.role as AdminRole) || "admin",
               stats: { users: 1, leads: 0, leadsToday: 0, notifyOptIn: 0 },
               leads: [],
               admins: [
                 {
-                  user_id: parsed.user.id || "usr-me",
-                  email: parsed.user.email || null,
-                  full_name: parsed.user.full_name || parsed.user.name || "Administrator",
-                  designation: "Administrator",
-                  role: (parsed.user.role as AdminRole) || "admin",
-                  is_active: true,
+                  user_id: u.id,
+                  email: u.email || null,
+                  full_name: u.name || u.user_metadata?.full_name || "Administrator",
+                  designation: u.designation || u.user_metadata?.designation || "Administrator",
+                  role: (u.role as AdminRole) || "admin",
+                  is_active: u.isActive !== false,
                   created_at: new Date().toISOString(),
                 },
               ],
-              selfId: parsed.user.id || "",
+              selfId: u.id,
             };
           }
         }
@@ -569,23 +570,23 @@ export function AdminPanel() {
 
   const currentData: AdminOverview = data ?? {
     isAdmin: true,
-    role: "super_admin",
+    role: user?.role || "super_admin",
     stats: { users: 1, leads: 0, leadsToday: 0, notifyOptIn: 0 },
     leads: [],
     admins: user
       ? [
           {
-            user_id: user.id || "usr-me",
+            user_id: user.id,
             email: user.email || null,
-            full_name: (user as any).user_metadata?.full_name || (user as any).name || "Administrator",
-            designation: "Administrator",
-            role: "super_admin",
-            is_active: true,
+            full_name: user.name || user.user_metadata?.full_name || "Administrator",
+            designation: user.designation || user.user_metadata?.designation || "Administrator",
+            role: user.role || "super_admin",
+            is_active: user.isActive !== false,
             created_at: new Date().toISOString(),
           },
         ]
       : [],
-    selfId: user?.id || "usr-me",
+    selfId: user?.id || "",
   };
 
   const userRole = currentData.role ?? "admin";

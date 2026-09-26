@@ -16,36 +16,15 @@ export const API_BASE_URL = (() => {
       process.env.VITE_API_BASE_URL.trim()) ||
     "";
 
-  // In local browser development (localhost/127.0.0.1 or DEV mode):
-  if (
-    typeof window !== "undefined" &&
-    (window.location.hostname === "localhost" ||
-      window.location.hostname === "127.0.0.1" ||
-      window.location.port === "8080" ||
-      import.meta.env?.DEV)
-  ) {
-    // If the developer explicitly specified a local server URL (e.g. http://localhost:5000), use that directly
-    if (envUrl && (envUrl.includes("localhost:") || envUrl.includes("127.0.0.1:"))) {
-      return envUrl;
-    }
-    // For remote backends (https://api.dimisi.tech), ALWAYS return "" (relative path)
-    // so Vite dev server proxies /api requests server-to-server, eliminating CORS preflight errors.
-    return "";
-  }
-
-  // In production or SSR environments:
   if (envUrl) {
-    return envUrl;
+    return envUrl.replace(/\/+$/, "");
   }
 
   return "https://api.dimisi.tech";
 })();
 
 if (typeof window !== "undefined" && import.meta.env?.DEV) {
-  console.info(
-    "[API CONFIG]",
-    API_BASE_URL ? API_BASE_URL : "(Vite Dev Proxy -> https://api.dimisi.tech)"
-  );
+  console.info("[API CONFIG]", API_BASE_URL);
 }
 
 export class ApiError extends Error {
@@ -66,6 +45,8 @@ export interface RequestOptions extends Omit<RequestInit, "headers"> {
   token?: string | undefined;
   /** In-memory cache TTL in ms for GET requests. Default: 30000ms. Set 0 to disable. */
   cacheTtlMs?: number | undefined;
+  /** Internal flag for automatic retry after token refresh */
+  _isRetry?: boolean | undefined;
 }
 
 // In-memory cache & in-flight promise deduplication map
@@ -246,28 +227,41 @@ export async function apiRequest<T = any>(
           }
         }
 
-        // On 401 Unauthorized for genuine protected admin panel endpoints, invalidate local stale session
+        // 1. Automatic Silent Token Refresh & Request Retry Interceptor
+        const isAuthRoute =
+          normalizedEndpoint.includes("/auth/login") ||
+          normalizedEndpoint.includes("/auth/refresh") ||
+          normalizedEndpoint.includes("/verify-login");
+
+        if (response.status === 401 && !isAuthRoute && !rest._isRetry && typeof window !== "undefined") {
+          if (import.meta.env?.DEV) {
+            console.info(`[AUTH INTERCEPT] 401 on ${normalizedEndpoint}. Attempting silent token refresh...`);
+          }
+          const { refreshAdminTokenApi } = await import("./adminAuth.service");
+          const refreshOk = await refreshAdminTokenApi();
+          if (refreshOk) {
+            if (import.meta.env?.DEV) {
+              console.info(`[AUTH REFRESH SUCCESS] Replaying request: ${normalizedEndpoint}`);
+            }
+            return apiRequest<T>(endpoint, {
+              ...options,
+              _isRetry: true,
+            });
+          }
+        }
+
+        // 2. On persistent 401 (30-day refresh expired or banned), invalidate local stale session
         const isPanelRoute = normalizedEndpoint.startsWith("/api/v1/admin-panel/");
-        const isAuthLoginRoute = normalizedEndpoint.includes("/auth/login");
         const isVisitorRoute =
           normalizedEndpoint.includes("/visitors/") ||
           normalizedEndpoint.endsWith("/active") ||
           normalizedEndpoint.includes("/public");
 
-        const isGenuineAuthExpiredError =
-          errorMessage.includes("logged in") ||
-          errorMessage.includes("expired") ||
-          errorMessage.includes("recently changed password") ||
-          errorMessage.includes("deactivated") ||
-          errorMessage.includes("revoked") ||
-          errorMessage.includes("no longer exist");
-
         if (
           response.status === 401 &&
           isPanelRoute &&
-          !isAuthLoginRoute &&
+          !isAuthRoute &&
           !isVisitorRoute &&
-          isGenuineAuthExpiredError &&
           typeof window !== "undefined"
         ) {
           try {

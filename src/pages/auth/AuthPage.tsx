@@ -66,13 +66,6 @@ export function AuthPage() {
           },
         });
 
-        // 2. Attempt authentication with backend
-        try {
-          await loginAdmin({ email: cleanEmail, password: cleanPassword });
-        } catch {
-          // If public user is registered via leads
-        }
-
         setNotice("Account registration received! Welcome to DIMISI.");
         setTimeout(() => {
           void navigate({ to: "/account", replace: true });
@@ -86,7 +79,7 @@ export function AuthPage() {
 
         setNotice("Signed in successfully. Redirecting…");
         setTimeout(() => {
-          void navigate({ to: "/account", replace: true });
+          void navigate({ to: "/dimisi-admin", replace: true });
         }, 500);
       }
     } catch (err: any) {
