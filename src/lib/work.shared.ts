@@ -29,6 +29,7 @@ export interface ProjectItem {
   outcome: string;
   cover_image: string;
   gallery_images: ProjectGalleryImage[];
+  upload_status?: "pending" | "success" | "failed";
   website_url?: string | undefined;
   client_name?: string | undefined;
   timeline?: string | undefined;
@@ -55,6 +56,7 @@ export interface ProjectInput {
   outcome: string;
   cover_image: string;
   gallery_images?: ProjectGalleryImage[] | undefined;
+  upload_status?: "pending" | "success" | "failed";
   website_url?: string | undefined;
   client_name?: string | undefined;
   timeline?: string | undefined;
@@ -158,6 +160,11 @@ export function validateWorkCategoryInput(input: Partial<WorkCategoryInput>): {
 /**
  * Validates project input data for both create and update operations.
  */
+export const MAX_NARRATIVE_LENGTH = 2000;
+export const MAX_TITLE_LENGTH = 100;
+export const MIN_TITLE_LENGTH = 5;
+export const MAX_TAGLINE_LENGTH = 200;
+
 export function validateProjectInput(input: Partial<ProjectInput>): {
   valid: boolean;
   error?: string;
@@ -166,35 +173,51 @@ export function validateProjectInput(input: Partial<ProjectInput>): {
   const title = input.title?.trim() || "";
   const type = input.type;
   const category = input.category?.trim() || "";
+  const tagline = input.tagline?.trim() || "";
   const overview = input.overview?.trim() || "";
   const challenge = input.challenge?.trim() || "";
   const solution = input.solution?.trim() || "";
   const outcome = input.outcome?.trim() || "";
   const coverImage = input.cover_image?.trim() || "";
 
-  if (title.length < 2) {
-    return { valid: false, error: "Project title must be at least 2 characters long.", field: "title" };
+  if (title.length < MIN_TITLE_LENGTH) {
+    return { valid: false, error: `Project title must be at least ${MIN_TITLE_LENGTH} characters long (5-100 chars).`, field: "title" };
+  }
+  if (title.length > MAX_TITLE_LENGTH) {
+    return { valid: false, error: `Project title cannot exceed ${MAX_TITLE_LENGTH} characters.`, field: "title" };
   }
   if (!type || (type !== "work" && type !== "product")) {
     return { valid: false, error: "Project type must be either 'work' or 'product'.", field: "type" };
   }
   if (category.length < 2) {
-    return { valid: false, error: "Project category label is required.", field: "category" };
+    return { valid: false, error: "Project category selection is required.", field: "category" };
   }
-  if (overview.length < 10) {
-    return { valid: false, error: "Overview must be at least 10 characters long.", field: "overview" };
+  if (tagline.length > MAX_TAGLINE_LENGTH) {
+    return { valid: false, error: `Tagline cannot exceed ${MAX_TAGLINE_LENGTH} characters.`, field: "tagline" };
   }
-  if (challenge.length < 10) {
-    return { valid: false, error: "Challenge description must be at least 10 characters long.", field: "challenge" };
+  if (overview.length < 5) {
+    return { valid: false, error: "Overview must be at least 5 characters long.", field: "overview" };
   }
-  if (solution.length < 10) {
-    return { valid: false, error: "Solution description must be at least 10 characters long.", field: "solution" };
+  if (overview.length > MAX_NARRATIVE_LENGTH) {
+    return { valid: false, error: `Overview cannot exceed ${MAX_NARRATIVE_LENGTH} characters.`, field: "overview" };
   }
-  if (outcome.length < 10) {
-    return { valid: false, error: "Outcome description must be at least 10 characters long.", field: "outcome" };
+  if (challenge.length > MAX_NARRATIVE_LENGTH) {
+    return { valid: false, error: `Challenge narrative cannot exceed ${MAX_NARRATIVE_LENGTH} characters.`, field: "challenge" };
   }
-  if (!coverImage || (!coverImage.startsWith("http://") && !coverImage.startsWith("https://") && !coverImage.startsWith("data:image/"))) {
+  if (solution.length > MAX_NARRATIVE_LENGTH) {
+    return { valid: false, error: `Solution narrative cannot exceed ${MAX_NARRATIVE_LENGTH} characters.`, field: "solution" };
+  }
+  if (outcome.length > MAX_NARRATIVE_LENGTH) {
+    return { valid: false, error: `Outcome narrative cannot exceed ${MAX_NARRATIVE_LENGTH} characters.`, field: "outcome" };
+  }
+  if (!coverImage || (!coverImage.startsWith("http://") && !coverImage.startsWith("https://") && !coverImage.startsWith("data:image/") && !coverImage.startsWith("blob:"))) {
     return { valid: false, error: "A valid cover image is required (URL or uploaded file).", field: "cover_image" };
+  }
+  if (input.order_index !== undefined && input.order_index !== null) {
+    const num = Number(input.order_index);
+    if (!Number.isInteger(num) || num < 1 || num > 10000) {
+      return { valid: false, error: "Display order must be a whole number between 1 and 10000.", field: "order_index" };
+    }
   }
 
   return { valid: true };

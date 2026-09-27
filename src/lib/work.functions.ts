@@ -308,18 +308,44 @@ export const deleteCasestudyCategoryFn = deleteWorkCategoryFn;
  */
 export async function saveProjectFn({
   data,
+  id,
 }: {
-  data: ProjectInput;
+  data: ProjectInput | FormData;
+  id?: string | undefined;
 }): Promise<{ success: boolean; project?: ProjectItem; error?: string }> {
   try {
+    const categories = workStore.getCategoryItems();
+    let remoteSaved: ProjectItem | null = null;
+    let apiError: string | null = null;
+
+    if (data instanceof FormData) {
+      const formId = (data.get("id") as string) || id;
+      try {
+        if (formId && isMongoId(formId)) {
+          remoteSaved = await updateCasestudyApi(formId, data, categories);
+        } else {
+          remoteSaved = await createCasestudyApi(data, categories);
+        }
+      } catch (err: unknown) {
+        console.warn("Backend save FormData case study failed:", err);
+        apiError = err instanceof Error ? err.message : "Backend update failed.";
+      }
+
+      if (remoteSaved) {
+        workStore.saveProject(remoteSaved);
+      }
+
+      return {
+        success: !apiError && !!remoteSaved,
+        project: remoteSaved || undefined,
+        ...(apiError ? { error: apiError } : {}),
+      };
+    }
+
     const validation = validateProjectInput(data);
     if (!validation.valid) {
       return { success: false, error: validation.error || "Validation failed." };
     }
-
-    const categories = workStore.getCategoryItems();
-    let remoteSaved: ProjectItem | null = null;
-    let apiError: string | null = null;
 
     try {
       if (data.id && isMongoId(data.id)) {

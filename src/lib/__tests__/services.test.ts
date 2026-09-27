@@ -36,7 +36,7 @@ test("Services System - Validation", async (t) => {
       tech_stack: [],
     });
     assert.equal(check.valid, false);
-    assert.match(check.error || "", /title must be at least 3 characters/i);
+    assert.match(check.error || "", /title must be at least 5 characters/i);
     assert.equal(check.field, "title");
   });
 

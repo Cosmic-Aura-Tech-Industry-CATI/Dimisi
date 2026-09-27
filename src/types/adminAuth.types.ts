@@ -58,6 +58,8 @@ export interface AdminAuthUser {
   };
 }
 
+export const ADMIN_SESSION_LIFETIME_MS = 15 * 60 * 1000; // 15 Minutes JWT Expiry Policy
+
 /**
  * Persistent Admin session record in browser localStorage
  */

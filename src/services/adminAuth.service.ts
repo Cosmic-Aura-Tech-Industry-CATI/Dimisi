@@ -5,15 +5,17 @@
  * - Logout: POST /api/v1/admin-panel/auth/logout
  * - Refresh: POST /api/v1/auth/refresh
  */
-import { apiRequest, clearApiCache, API_BASE_URL } from "./apiClient";
-import type {
-  AdminRole,
-  AdminAuthUser,
-  AdminAuthSession,
-  BackendLoginResponse,
-  IPanelUserBackend,
+import { apiRequest, clearApiCache } from "./apiClient";
+import {
+  type AdminRole,
+  type AdminAuthUser,
+  type AdminAuthSession,
+  type BackendLoginResponse,
+  type IPanelUserBackend,
+  ADMIN_SESSION_LIFETIME_MS,
 } from "@/types/adminAuth.types";
 
+export { ADMIN_SESSION_LIFETIME_MS };
 export type { AdminRole, AdminAuthUser, AdminAuthSession, BackendLoginResponse, IPanelUserBackend };
 
 export interface AdminLoginCredentials {
@@ -74,6 +76,7 @@ export function transformBackendPanelUser(backendUser: IPanelUserBackend, fallba
 /**
  * Perform login against the Express backend API: POST /api/v1/admin-panel/auth/login
  * Tokens (accessToken & refreshToken) are transmitted and stored in HttpOnly secure cookies.
+ * Aligns session expiration with backend JWT 15-minute lifespan.
  */
 export async function loginAdmin(
   credentials: AdminLoginCredentials,
@@ -106,12 +109,12 @@ export async function loginAdmin(
   // 2. Transform User Model
   const user = transformBackendPanelUser(rawUser, cleanEmail);
 
-  // 3. Create Session (Rolling 30-day session)
+  // 3. Create Session with exact 15-minute expiration matching backend JWT policy
   const now = Date.now();
   const session: AdminAuthSession = {
     user,
     authenticated_at: now,
-    expires_at: now + 30 * 24 * 60 * 60 * 1000,
+    expires_at: now + ADMIN_SESSION_LIFETIME_MS,
     token: "cookie-session",
   };
 
@@ -172,7 +175,7 @@ export function clearAdminSession(reason?: string): void {
 }
 
 /**
- * Retrieve current active admin session.
+ * Retrieve current active admin session if not expired.
  */
 export function getStoredAdminSession(): AdminAuthSession | null {
   if (typeof window === "undefined") return null;
@@ -181,67 +184,32 @@ export function getStoredAdminSession(): AdminAuthSession | null {
     if (!raw) return null;
     const session = JSON.parse(raw) as AdminAuthSession;
     if (!session.user || !session.user.id) return null;
+
+    // Check if 15-minute session expired
+    if (typeof session.expires_at === "number" && Date.now() > session.expires_at) {
+      clearAdminSession("Security session expired (15m limit). Please sign in again.");
+      return null;
+    }
+
     return session;
   } catch {
     return null;
   }
 }
 
-// Mutex lock state to prevent race conditions across concurrent refresh calls
-let isRefreshing = false;
-let refreshPromise: Promise<boolean> | null = null;
-
 /**
- * Calls backend POST /api/v1/auth/refresh with HttpOnly cookies.
- * Uses a Mutex Lock to deduplicate concurrent refresh requests across the application.
+ * Get remaining session duration in seconds.
  */
-export async function refreshAdminTokenApi(): Promise<boolean> {
-  if (typeof window === "undefined") return false;
-
-  if (isRefreshing && refreshPromise) {
-    return refreshPromise;
+export function getRemainingSessionSeconds(): number {
+  if (typeof window === "undefined") return 0;
+  try {
+    const raw = localStorage.getItem(ADMIN_SESSION_KEY);
+    if (!raw) return 0;
+    const session = JSON.parse(raw) as AdminAuthSession;
+    if (!session.expires_at) return 0;
+    const remaining = Math.floor((session.expires_at - Date.now()) / 1000);
+    return Math.max(0, remaining);
+  } catch {
+    return 0;
   }
-
-  isRefreshing = true;
-  refreshPromise = (async () => {
-    try {
-      const targetUrl = API_BASE_URL ? `${API_BASE_URL}/api/v1/auth/refresh` : `/api/v1/auth/refresh`;
-      const response = await fetch(targetUrl, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Accept: "application/json",
-        },
-        credentials: "include", // Sends the 30-day refreshToken HttpOnly cookie
-      });
-
-      if (!response.ok) {
-        throw new Error(`Token refresh failed with status ${response.status}`);
-      }
-
-      const data = await response.json();
-      if (data?.status === "success" || data?.success) {
-        const session = getStoredAdminSession();
-        if (session) {
-          session.expires_at = Date.now() + 30 * 24 * 60 * 60 * 1000;
-          localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
-        }
-        if (import.meta.env?.DEV) {
-          console.debug("[AUTH REFRESH] Session tokens successfully refreshed on backend.");
-        }
-        return true;
-      }
-      return false;
-    } catch (err) {
-      if (import.meta.env?.DEV) {
-        console.warn("[AUTH REFRESH FAILED]", err);
-      }
-      return false;
-    } finally {
-      isRefreshing = false;
-      refreshPromise = null;
-    }
-  })();
-
-  return refreshPromise;
 }

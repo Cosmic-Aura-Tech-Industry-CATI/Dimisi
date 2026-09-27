@@ -30,9 +30,23 @@ export interface BackendPanelUserDoc {
   updatedAt: string;
 }
 
+export interface PanelUserFilters {
+  page?: number;
+  limit?: number;
+  role?: string;
+  isActive?: boolean;
+}
+
 export interface BackendAdminsListResponse {
   success: boolean;
   message: string;
+  results?: number;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
   admins: BackendPanelUserDoc[];
 }
 
@@ -61,6 +75,8 @@ export interface NormalizedAdminUser {
 
 /**
  * Safely normalizes backend IPanelUser documents into the clean frontend AdminUser model.
+ * Note: Backend queries PanelUser by `{ user: userId }` (Base User ID). Therefore,
+ * `user_id` MUST resolve to the Base User's MongoDB ObjectId.
  */
 export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | undefined): NormalizedAdminUser {
   if (!doc) {
@@ -78,6 +94,7 @@ export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | unde
   }
 
   const populatedUser = typeof doc.user === "object" && doc.user !== null ? doc.user : null;
+  // Always prioritize the base user's ID (`user._id`) since backend looks up by `{ user: userId }`
   const rawUserId = populatedUser?._id || (typeof doc.user === "string" ? doc.user : "") || doc._id;
   const empId =
     populatedUser?.empId ||
@@ -87,7 +104,7 @@ export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | unde
     (doc as any)?.employeeId ||
     null;
 
-  const email = populatedUser?.email || null;
+  const email = populatedUser?.email || (typeof (doc as any)?.email === "string" ? (doc as any).email : null);
   const fullName =
     populatedUser?.name ||
     populatedUser?.fullName ||
@@ -126,8 +143,17 @@ export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | unde
  * 1. GET ALL PANEL ADMINS
  * Endpoint: GET /api/v1/admin-panel/users/admins
  */
-export async function getAllPanelAdmins(): Promise<BackendPanelUserDoc[]> {
-  const res = await apiRequest<BackendAdminsListResponse>("/api/v1/admin-panel/users/admins", {
+export async function getAllPanelAdmins(filters?: PanelUserFilters): Promise<BackendPanelUserDoc[]> {
+  const queryParams = new URLSearchParams();
+  if (filters?.page) queryParams.append("page", String(filters.page));
+  if (filters?.limit) queryParams.append("limit", String(filters.limit));
+  if (filters?.role) queryParams.append("role", filters.role);
+  if (filters?.isActive !== undefined) queryParams.append("isActive", String(filters.isActive));
+
+  const qs = queryParams.toString();
+  const endpoint = `/api/v1/admin-panel/users/admins${qs ? `?${qs}` : ""}`;
+
+  const res = await apiRequest<BackendAdminsListResponse>(endpoint, {
     method: "GET",
   });
 
@@ -269,16 +295,17 @@ export async function deactivatePanelAdmin(userId: string): Promise<{
 }
 
 /**
- * 7. REVOKE / DELETE PANEL ADMIN ACCESS
+ * 7. REVOKE PANEL ADMIN ACCESS
  * Endpoint: DELETE /api/v1/admin-panel/users/:userId/revoke
  */
 export async function revokePanelAdmin(userId: string): Promise<{
   success: boolean;
   message: string;
+  admin?: BackendPanelUserDoc;
 }> {
   if (!userId) throw new Error("User ID is required.");
 
-  const res = await apiRequest<{ success: boolean; message: string }>(
+  const res = await apiRequest<{ success: boolean; message: string; admin?: BackendPanelUserDoc }>(
     `/api/v1/admin-panel/users/${encodeURIComponent(userId)}/revoke`,
     {
       method: "DELETE",
@@ -288,6 +315,7 @@ export async function revokePanelAdmin(userId: string): Promise<{
   return {
     success: true,
     message: res?.message || "Administrator access revoked successfully.",
+    admin: res?.admin,
   };
 }
 

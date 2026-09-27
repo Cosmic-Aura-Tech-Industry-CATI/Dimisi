@@ -1,20 +1,20 @@
 /**
  * DIMISI Technologies — Unified Admin Authentication Hook
  * Manages reactive admin session state, cross-tab synchronization,
- * 10-minute proactive heartbeats, and tab visibility recovery.
+ * and live 15-minute session countdown matching Backend JWT architecture.
  */
 import { useEffect, useState, useCallback } from "react";
 import {
   getStoredAdminSession,
-  refreshAdminTokenApi,
+  getRemainingSessionSeconds,
   logoutAdmin,
+  clearAdminSession,
   type AdminAuthUser,
   type AdminAuthSession,
   type AdminRole,
 } from "@/services/adminAuth.service";
 
 export type { AdminAuthUser, AdminAuthSession, AdminRole };
-// Legacy alias for backward compatibility across components
 export type AuthUser = AdminAuthUser;
 export type AuthSession = AdminAuthSession;
 
@@ -24,6 +24,8 @@ export interface UseAuthReturn {
   isAuthenticated: boolean;
   role: AdminRole | null;
   loading: boolean;
+  remainingSeconds: number;
+  isExpiringSoon: boolean;
   signOut: () => Promise<void>;
   refreshSession: () => Promise<boolean>;
 }
@@ -32,6 +34,7 @@ export function useAuth(): UseAuthReturn {
   const [session, setSession] = useState<AdminAuthSession | null>(null);
   const [user, setUser] = useState<AdminAuthUser | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [remainingSeconds, setRemainingSeconds] = useState<number>(() => getRemainingSessionSeconds());
 
   const checkLocalSession = useCallback((): boolean => {
     if (typeof window === "undefined") return false;
@@ -40,6 +43,7 @@ export function useAuth(): UseAuthReturn {
       if (stored && stored.user) {
         setUser(stored.user);
         setSession(stored);
+        setRemainingSeconds(getRemainingSessionSeconds());
         setLoading(false);
         return true;
       }
@@ -53,6 +57,7 @@ export function useAuth(): UseAuthReturn {
     if (!hasSession) {
       setSession(null);
       setUser(null);
+      setRemainingSeconds(0);
       setLoading(false);
     }
 
@@ -62,6 +67,7 @@ export function useAuth(): UseAuthReturn {
       if (customEvt?.detail?.expired) {
         setSession(null);
         setUser(null);
+        setRemainingSeconds(0);
         setLoading(false);
         return;
       }
@@ -69,6 +75,7 @@ export function useAuth(): UseAuthReturn {
       if (!found) {
         setSession(null);
         setUser(null);
+        setRemainingSeconds(0);
         setLoading(false);
       }
     };
@@ -76,35 +83,19 @@ export function useAuth(): UseAuthReturn {
     window.addEventListener("dimisi-auth-change", onAuthChange as EventListener);
     window.addEventListener("storage", onAuthChange as EventListener);
 
-    // 3. Proactive Heartbeat every 10 minutes (600,000 ms) to keep tokens fresh
-    const heartbeatTimer = setInterval(async () => {
-      if (typeof window !== "undefined" && document.visibilityState === "visible") {
-        const hasActive = checkLocalSession();
-        if (hasActive) {
-          await refreshAdminTokenApi();
-        }
+    // 3. Live 1-second countdown ticker for 15-minute security session
+    const countdownTimer = setInterval(() => {
+      const remaining = getRemainingSessionSeconds();
+      setRemainingSeconds(remaining);
+      if (remaining <= 0 && getStoredAdminSession()) {
+        clearAdminSession("Security session expired (15m limit). Please sign in again.");
       }
-    }, 10 * 60 * 1000);
-
-    // 4. Tab Focus / Resume Handler (refresh when user returns to tab)
-    const handleVisibilityChange = async () => {
-      if (typeof window !== "undefined" && document.visibilityState === "visible") {
-        const hasActive = checkLocalSession();
-        if (hasActive) {
-          await refreshAdminTokenApi();
-        }
-      }
-    };
-
-    document.addEventListener("visibilitychange", handleVisibilityChange);
-    window.addEventListener("focus", handleVisibilityChange);
+    }, 1000);
 
     return () => {
       window.removeEventListener("dimisi-auth-change", onAuthChange as EventListener);
       window.removeEventListener("storage", onAuthChange as EventListener);
-      clearInterval(heartbeatTimer);
-      document.removeEventListener("visibilitychange", handleVisibilityChange);
-      window.removeEventListener("focus", handleVisibilityChange);
+      clearInterval(countdownTimer);
     };
   }, [checkLocalSession]);
 
@@ -113,8 +104,12 @@ export function useAuth(): UseAuthReturn {
   }, []);
 
   const refreshSession = useCallback(async () => {
-    return await refreshAdminTokenApi();
-  }, []);
+    // Manual local session re-check
+    const found = checkLocalSession();
+    return found;
+  }, [checkLocalSession]);
+
+  const isExpiringSoon = remainingSeconds > 0 && remainingSeconds <= 120; // Under 2 minutes remaining
 
   return {
     user,
@@ -122,6 +117,8 @@ export function useAuth(): UseAuthReturn {
     isAuthenticated: Boolean(user),
     role: user?.role || null,
     loading,
+    remainingSeconds,
+    isExpiringSoon,
     signOut,
     refreshSession,
   };

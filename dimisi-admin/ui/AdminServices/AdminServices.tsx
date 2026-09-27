@@ -371,6 +371,7 @@ export function AdminServices({
 
   // Gallery Images State
   const [relatedImages, setRelatedImages] = useState<ServiceGalleryImage[]>([]);
+  const [galleryFiles, setGalleryFiles] = useState<Array<{ file: File; caption?: string; alt?: string }>>([]);
   const [galleryUrlInput, setGalleryUrlInput] = useState<string>("");
   const [galleryError, setGalleryError] = useState<string | null>(null);
   const [replacingGalleryIndex, setReplacingGalleryIndex] = useState<number | null>(null);
@@ -436,23 +437,25 @@ export function AdminServices({
       setCatStatus(catToEdit.status);
       setCatOrderIndex(catToEdit.order_index);
     } else {
+      const nextOrder = categoryList.length > 0 ? Math.max(...categoryList.map((c) => c.order_index || 0)) + 1 : 1;
       setEditingCatId(null);
       setCatName("");
       setCatSlug("");
       setCatDescription("");
       setCatStatus("active");
-      setCatOrderIndex(categoryList.length + 1);
+      setCatOrderIndex(nextOrder);
     }
     setShowCatModal(true);
   };
 
   const handleResetCatForm = () => {
+    const nextOrder = categoryList.length > 0 ? Math.max(...categoryList.map((c) => c.order_index || 0)) + 1 : 1;
     setEditingCatId(null);
     setCatName("");
     setCatSlug("");
     setCatDescription("");
     setCatStatus("active");
-    setCatOrderIndex(categoryList.length + 1);
+    setCatOrderIndex(nextOrder);
     setCatFormError(null);
     setCatSuccessMsg(null);
   };
@@ -703,6 +706,7 @@ export function AdminServices({
     setUploadProgress(0);
     setIsUploadingImage(false);
     setRelatedImages([]);
+    setGalleryFiles([]);
     setGalleryUrlInput("");
     setGalleryError(null);
     setReplacingGalleryIndex(null);
@@ -767,6 +771,7 @@ export function AdminServices({
     setUploadProgress(0);
     setIsUploadingImage(false);
     setRelatedImages(srv.related_images || []);
+    setGalleryFiles([]);
     setGalleryUrlInput("");
     setGalleryError(null);
     setReplacingGalleryIndex(null);
@@ -846,10 +851,19 @@ export function AdminServices({
           }
           return copy;
         });
+        setGalleryFiles((prev) => {
+          const copy = [...prev];
+          copy[replacingGalleryIndex] = {
+            file,
+            alt: file.name,
+            caption: "High-performance architecture preview",
+          };
+          return copy;
+        });
         setReplacingGalleryIndex(null);
       } else {
-        if (relatedImages.length >= 3) {
-          setGalleryError("Maximum 3 gallery images allowed.");
+        if (relatedImages.length >= 5) {
+          setGalleryError("Maximum 5 gallery images allowed.");
           return;
         }
         setRelatedImages((prev) => [
@@ -858,6 +872,14 @@ export function AdminServices({
             url: dataUrl,
             caption: `Feature workflow preview ${prev.length + 1}`,
             alt: file.name,
+          },
+        ]);
+        setGalleryFiles((prev) => [
+          ...prev,
+          {
+            file,
+            alt: file.name,
+            caption: `Feature workflow preview ${prev.length + 1}`,
           },
         ]);
       }
@@ -1065,7 +1087,9 @@ export function AdminServices({
 
     startTransition(async () => {
       try {
-        const res = await saveService({ data: input });
+        // Send clean ServiceInput JSON payload so processSteps, benefits, faqs are native object arrays
+        const res = await saveService({ data: input, serviceId: editingService?.id });
+
         if (res.success) {
           setShowServiceModal(false);
           await refreshCategories();
@@ -1122,23 +1146,47 @@ export function AdminServices({
   };
 
   const handleToggleActive = (srv: CompanyService) => {
+    setActionAlert(null);
     startTransition(async () => {
       try {
-        await toggleServiceActivationFn({ data: { id: srv.id } });
-        onRefresh();
+        const res = await toggleServiceActivationFn({ data: { id: srv.id } });
+        if (res.success) {
+          onRefresh();
+        } else {
+          setActionAlert({
+            type: "error",
+            message: res.error || "Failed to toggle service activation.",
+          });
+        }
       } catch (err) {
         console.warn("Failed to toggle service activation:", err);
+        setActionAlert({
+          type: "error",
+          message: err instanceof Error ? err.message : "Failed to toggle service activation.",
+        });
       }
     });
   };
 
   const handleToggleFeatured = (srv: CompanyService) => {
+    setActionAlert(null);
     startTransition(async () => {
       try {
-        await toggleServiceFeaturedFn({ data: { id: srv.id } });
-        onRefresh();
+        const res = await toggleServiceFeaturedFn({ data: { id: srv.id } });
+        if (res.success) {
+          onRefresh();
+        } else {
+          setActionAlert({
+            type: "error",
+            message: res.error || "Failed to toggle service featured status.",
+          });
+        }
       } catch (err) {
         console.warn("Failed to toggle service featured status:", err);
+        setActionAlert({
+          type: "error",
+          message: err instanceof Error ? err.message : "Failed to toggle service featured status.",
+        });
       }
     });
   };
@@ -1493,6 +1541,16 @@ export function AdminServices({
                             <div className={styles.titleCol}>
                               <span className={styles.srvTitle}>{srv.title}</span>
                               <span className={styles.srvTagline}>{srv.tagline || srv.summary?.slice(0, 80) || "Comprehensive engineering service"}</span>
+                              {srv.upload_status === "pending" && (
+                                <span className={styles.pendingUploadBadge} title="Cloudinary worker is processing assets...">
+                                  <Clock size={11} /> Processing Assets...
+                                </span>
+                              )}
+                              {srv.upload_status === "failed" && (
+                                <span className={styles.failedUploadBadge} title="Asset upload encountered an issue.">
+                                  <AlertCircle size={11} /> Asset Upload Issue
+                                </span>
+                              )}
                             </div>
                           </td>
                           <td>
@@ -1747,13 +1805,14 @@ export function AdminServices({
               <div className={styles.deleteWarningAlert}>
                 <AlertTriangle size={18} className={styles.deleteWarningIcon} />
                 <div className={styles.deleteWarningText}>
-                  <h5>Confirm Category Deletion</h5>
+                  <h5>⚠️ Category Cascade Deletion Warning</h5>
                   <p>
                     Are you sure you want to delete category{" "}
                     <strong>"{catDeleteConfirm.name}"</strong>?{" "}
                     {catDeleteConfirm.count > 0 ? (
                       <span style={{ color: "#fca5a5" }}>
                         It is currently associated with <strong>{catDeleteConfirm.count} service(s)</strong>.
+                        In accordance with database integrity rules, deleting this category will <strong>PERMANENTLY CASCADE-DELETE all {catDeleteConfirm.count} associated service(s)</strong> from the database.
                       </span>
                     ) : (
                       "No services are currently assigned to this category."
@@ -1766,12 +1825,17 @@ export function AdminServices({
                       onClick={handleConfirmDeleteCategory}
                       disabled={isPending}
                     >
-                      {isPending ? "Deleting..." : "Confirm & Delete"}
+                      {isPending
+                        ? "Deleting..."
+                        : catDeleteConfirm.count > 0
+                          ? `Confirm & Cascade Delete (${catDeleteConfirm.count} Services)`
+                          : "Confirm & Delete"}
                     </button>
                     <button
                       type="button"
                       className={styles.cancelDeleteBtn}
                       onClick={() => setCatDeleteConfirm(null)}
+                      disabled={isPending}
                     >
                       Cancel
                     </button>
@@ -1810,25 +1874,38 @@ export function AdminServices({
 
                 <form onSubmit={handleSaveCategory} style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
                   <div className={styles.formGroup}>
-                    <label>Category Name *</label>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <label>Category Name *</label>
+                      <span style={{ fontSize: "0.75rem", color: catName.trim().length >= 5 && catName.trim().length <= 50 ? "#4ade80" : "#94a3b8" }}>
+                        {catName.trim().length}/50 (min 5)
+                      </span>
+                    </div>
                     <input
                       type="text"
                       required
+                      minLength={5}
+                      maxLength={50}
                       value={catName}
                       onChange={(e) => {
                         setCatName(e.target.value);
                       }}
-                      placeholder="e.g. Autonomous Systems"
+                      placeholder="e.g. Autonomous Systems (5-50 chars)"
                     />
                   </div>
 
                   <div className={styles.formGroup}>
-                    <label>Description (Optional)</label>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <label>Description (Optional)</label>
+                      <span style={{ fontSize: "0.75rem", color: catDescription.trim().length === 0 || (catDescription.trim().length >= 5 && catDescription.trim().length <= 200) ? "#94a3b8" : "#f87171" }}>
+                        {catDescription.trim().length}/200 (min 5 if entered)
+                      </span>
+                    </div>
                     <textarea
                       rows={2}
+                      maxLength={200}
                       value={catDescription}
                       onChange={(e) => setCatDescription(e.target.value)}
-                      placeholder="High-level definition for internal taxonomy..."
+                      placeholder="High-level definition for internal taxonomy (5-200 chars)..."
                     />
                   </div>
 
@@ -2297,9 +2374,14 @@ export function AdminServices({
                         }}
                         placeholder="e.g. Artificial Intelligence & Multi-Agent Systems"
                       />
-                      {fieldErrors.title && (
-                        <span className={styles.fieldErrorText}>{fieldErrors.title}</span>
-                      )}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        {fieldErrors.title ? (
+                          <span className={styles.fieldErrorText}>{fieldErrors.title}</span>
+                        ) : <span />}
+                        <span className={[styles.charCount, title.length > 50 ? styles.charCountWarning : ""].join(" ")}>
+                          {title.length}/50 chars (min 5)
+                        </span>
+                      </div>
                     </div>
 
                     <div className={styles.formGrid2}>
@@ -2366,6 +2448,11 @@ export function AdminServices({
                         onChange={(e) => setTagline(e.target.value)}
                         placeholder="e.g. Scalable, high-performance web systems built for business scale."
                       />
+                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <span className={[styles.charCount, tagline.length > 100 ? styles.charCountWarning : ""].join(" ")}>
+                          {tagline.length}/100 chars
+                        </span>
+                      </div>
                     </div>
 
                     <div className={styles.formGroup}>
@@ -2390,9 +2477,14 @@ export function AdminServices({
                         }}
                         placeholder="Detailed high-level summary of the service offering..."
                       />
-                      {fieldErrors.summary && (
-                        <span className={styles.fieldErrorText}>{fieldErrors.summary}</span>
-                      )}
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        {fieldErrors.summary ? (
+                          <span className={styles.fieldErrorText}>{fieldErrors.summary}</span>
+                        ) : <span />}
+                        <span className={[styles.charCount, (summary.length > 200 || (summary.length > 0 && summary.length < 10)) ? styles.charCountWarning : ""].join(" ")}>
+                          {summary.length}/200 chars (min 10)
+                        </span>
+                      </div>
                     </div>
 
                     {/* 4-Pillar Architecture Overview Fields */}
@@ -2423,9 +2515,14 @@ export function AdminServices({
                           }}
                           placeholder="Explain what the service is from an engineering & architecture standpoint..."
                         />
-                        {fieldErrors.what_is_it && (
-                          <span className={styles.fieldErrorText}>{fieldErrors.what_is_it}</span>
-                        )}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                          {fieldErrors.what_is_it ? (
+                            <span className={styles.fieldErrorText}>{fieldErrors.what_is_it}</span>
+                          ) : <span />}
+                          <span className={[styles.charCount, (whatIsIt.length > 500 || (whatIsIt.length > 0 && whatIsIt.length < 10)) ? styles.charCountWarning : ""].join(" ")}>
+                            {whatIsIt.length}/500 chars (min 10)
+                          </span>
+                        </div>
                       </div>
 
                       <div className={styles.formGroup}>
@@ -2436,6 +2533,11 @@ export function AdminServices({
                           onChange={(e) => setWhoIsFor(e.target.value)}
                           placeholder="e.g. Startups building MVP products, scale-ups, and enterprises modernizing legacy systems."
                         />
+                        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                          <span className={[styles.charCount, whoIsFor.length > 500 ? styles.charCountWarning : ""].join(" ")}>
+                            {whoIsFor.length}/500 chars
+                          </span>
+                        </div>
                       </div>
 
                       <div className={styles.formGroup}>
@@ -2446,6 +2548,11 @@ export function AdminServices({
                           onChange={(e) => setProblemSolved(e.target.value)}
                           placeholder="e.g. Eliminates slow load times, high server costs, and poor user retention."
                         />
+                        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                          <span className={[styles.charCount, problemSolved.length > 500 ? styles.charCountWarning : ""].join(" ")}>
+                            {problemSolved.length}/500 chars
+                          </span>
+                        </div>
                       </div>
 
                       <div className={styles.formGroup}>
@@ -2456,6 +2563,11 @@ export function AdminServices({
                           onChange={(e) => setWhyItMatters(e.target.value)}
                           placeholder="e.g. Increases customer conversion rates by 35% and guarantees 99.99% uptime."
                         />
+                        <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                          <span className={[styles.charCount, whyItMatters.length > 500 ? styles.charCountWarning : ""].join(" ")}>
+                            {whyItMatters.length}/500 chars
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>

@@ -38,7 +38,6 @@ export interface BackendServiceCategorySingleResponse {
 
 export interface CreateServiceCategoryPayload {
   name: string;
-  slug?: string | undefined;
   description?: string | undefined;
   displayOrder: number;
   status?: "active" | "inactive" | undefined;
@@ -46,7 +45,6 @@ export interface CreateServiceCategoryPayload {
 
 export interface UpdateServiceCategoryPayload {
   name?: string | undefined;
-  slug?: string | undefined;
   description?: string | undefined;
   displayOrder?: number | undefined;
   status?: "active" | "inactive" | undefined;
@@ -54,6 +52,7 @@ export interface UpdateServiceCategoryPayload {
 
 /**
  * Normalizes backend IServiceCategory document into the clean frontend ServiceCategoryItem model.
+ * Directly maps live dynamic counts (totalServiceCount and activeServiceCount) aggregated by MongoDB.
  */
 export function normalizeBackendServiceCategory(
   doc: BackendServiceCategoryDoc | null | undefined,
@@ -66,12 +65,31 @@ export function normalizeBackendServiceCategory(
       description: "",
       status: "active",
       order_index: 1,
+      total_service_count: 0,
+      active_service_count: 0,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
   }
 
-  const cleanSlug = doc.slug || doc.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "category";
+  const cleanSlug =
+    doc.slug ||
+    doc.name?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ||
+    "category";
+
+  const totalCount =
+    typeof doc.totalServiceCount === "number"
+      ? doc.totalServiceCount
+      : typeof (doc as any).total_service_count === "number"
+        ? (doc as any).total_service_count
+        : 0;
+
+  const activeCount =
+    typeof doc.activeServiceCount === "number"
+      ? doc.activeServiceCount
+      : typeof (doc as any).active_service_count === "number"
+        ? (doc as any).active_service_count
+        : 0;
 
   return {
     id: String(doc._id),
@@ -80,8 +98,8 @@ export function normalizeBackendServiceCategory(
     description: doc.description || "",
     status: doc.status === "inactive" ? "inactive" : "active",
     order_index: typeof doc.displayOrder === "number" ? doc.displayOrder : 1,
-    total_service_count: typeof doc.totalServiceCount === "number" ? doc.totalServiceCount : undefined,
-    active_service_count: typeof doc.activeServiceCount === "number" ? doc.activeServiceCount : undefined,
+    total_service_count: totalCount,
+    active_service_count: activeCount,
     created_at: doc.createdAt || new Date().toISOString(),
     updated_at: doc.updatedAt || new Date().toISOString(),
   };
@@ -115,7 +133,7 @@ export async function getAllServiceCategoriesApi(): Promise<ServiceCategoryItem[
 /**
  * 2. CREATE SERVICE CATEGORY
  * Endpoint: POST /api/v1/admin-panel/service-category/create
- * Body: { name, slug, description?, displayOrder, status? }
+ * Body: { name, description?, displayOrder, status? }
  */
 export async function createServiceCategoryApi(
   payload: CreateServiceCategoryPayload,
@@ -133,17 +151,15 @@ export async function createServiceCategoryApi(
     throw new Error("Category description must be between 5 and 200 characters.");
   }
 
-  const cleanSlug =
-    payload.slug?.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ||
-    cleanName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-
-  const displayOrder = Number(payload.displayOrder) || 1;
+  const orderNum = Number(payload.displayOrder);
+  if (!Number.isInteger(orderNum) || orderNum < 1 || orderNum > 10000) {
+    throw new Error("Display order must be an integer between 1 and 10000.");
+  }
 
   const requestBody: Record<string, any> = {
     name: cleanName,
-    slug: cleanSlug,
-    displayOrder,
-    status: payload.status || "active",
+    displayOrder: orderNum,
+    status: payload.status === "inactive" ? "inactive" : "active",
   };
 
   if (cleanDescription) {
@@ -186,13 +202,6 @@ export async function updateServiceCategoryApi(
       throw new Error("Category name must be between 5 and 50 characters.");
     }
     updateBody.name = cleanName;
-  }
-
-  if (payload.slug !== undefined) {
-    const cleanSlug = payload.slug.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-    if (cleanSlug) {
-      updateBody.slug = cleanSlug;
-    }
   }
 
   if (payload.description !== undefined) {
@@ -239,6 +248,7 @@ export async function updateServiceCategoryApi(
 /**
  * 4. DELETE SERVICE CATEGORY
  * Endpoint: DELETE /api/v1/admin-panel/service-category/:id/delete
+ * Note: Deletes category and cascades deletion of all associated services in MongoDB ACID transaction.
  */
 export async function deleteServiceCategoryApi(id: string): Promise<boolean> {
   if (!id) {

@@ -18,11 +18,15 @@ export interface BackendServiceDoc {
   slug: string;
   summary?: string;
   heroImage?: string;
+  heroImagePublicId?: string;
   relatedImages?: Array<{
     url: string;
     caption?: string;
     alt?: string;
+    publicId?: string;
   }>;
+  uploadStatus?: "pending" | "success" | "failed";
+  failReason?: string;
   whatIsIt?: string;
   whoIsFor?: string;
   problemSolved?: string;
@@ -52,6 +56,13 @@ export interface BackendServiceDoc {
 
 export interface BackendServiceListResponse {
   status: string;
+  results?: number;
+  pagination?: {
+    total: number;
+    page: number;
+    limit: number;
+    pages: number;
+  };
   services: BackendServiceDoc[];
 }
 
@@ -143,6 +154,7 @@ export function normalizeBackendService(
       order_index: 1,
       is_featured: false,
       is_active: true,
+      upload_status: "success",
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     };
@@ -179,6 +191,7 @@ export function normalizeBackendService(
     order_index: typeof doc.orderIndex === "number" ? doc.orderIndex : 1,
     is_featured: Boolean(doc.isFeatured),
     is_active: doc.isActive !== false,
+    upload_status: doc.uploadStatus || "success",
     created_at: doc.createdAt || new Date().toISOString(),
     updated_at: doc.updatedAt || new Date().toISOString(),
   };
@@ -264,9 +277,6 @@ export async function getServiceByIdApi(
   return normalizeBackendService(doc, categories);
 }
 
-/**
- * Helper to resolve category ID from input category name/id
- */
 /**
  * Helper to resolve category ID from input category name/id.
  * Guarantees that the returned ID is ALWAYS a valid 24-character hex MongoDB ObjectId.

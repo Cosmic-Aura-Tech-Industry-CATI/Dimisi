@@ -1,7 +1,7 @@
 /**
  * DIMISI Technologies — Admin Control Room Client Store
  * Manages Admin Overview, Admin Users, Roles, Permissions, and administrator grant logic.
- * Integrates directly with Express Backend with defensive data normalization.
+ * Integrates directly with Express Backend APIs (/api/v1/admin-panel/users/*).
  */
 import { type AdminRole } from "./rbac.shared";
 import { getAdminLeadsFn } from "@/lib/leads.functions";
@@ -12,9 +12,11 @@ import {
   updatePanelAdminRole,
   activatePanelAdmin,
   deactivatePanelAdmin,
+  revokePanelAdmin,
   normalizeBackendPanelUser,
   type BackendPanelUserDoc,
   type NormalizedAdminUser,
+  type PanelUserFilters,
 } from "@/services/adminManagement.service";
 
 export type AdminLead = {
@@ -48,8 +50,9 @@ export type AdminOverview = {
   selfId: string;
 };
 
-const ADMINS_STORAGE_KEY = "dimisi_admin_users_v1";
-
+/**
+ * Normalizes user objects into the clean frontend AdminUser model.
+ */
 export function normalizeAdminUser(raw: any): AdminUser {
   if (!raw) {
     return {
@@ -71,7 +74,11 @@ export function normalizeAdminUser(raw: any): AdminUser {
   }
 
   const email = typeof raw.email === "string" ? raw.email.trim().toLowerCase() : null;
-  const fullName = raw.full_name || raw.fullName || raw.name || (email ? email.split("@")[0].replace(/[._-]/g, " ") : "Administrator");
+  const fullName =
+    raw.full_name ||
+    raw.fullName ||
+    raw.name ||
+    (email ? email.split("@")[0].replace(/[._-]/g, " ") : "Administrator");
   const empId = raw.employee_id || raw.employeeId || raw.emp_id || raw.empId || null;
 
   let designationStr = "Not set";
@@ -96,32 +103,20 @@ export function normalizeAdminUser(raw: any): AdminUser {
     full_name: fullName,
     designation: designationStr,
     role: (raw.role as AdminRole) || "admin",
-    is_active: raw.is_active !== undefined ? Boolean(raw.is_active) : raw.isActive !== undefined ? Boolean(raw.isActive) : true,
-    created_at: raw.created_at || raw.createdAt || raw.since || raw.memberSince || new Date().toISOString(),
+    is_active:
+      raw.is_active !== undefined
+        ? Boolean(raw.is_active)
+        : raw.isActive !== undefined
+          ? Boolean(raw.isActive)
+          : true,
+    created_at:
+      raw.created_at || raw.createdAt || raw.since || raw.memberSince || new Date().toISOString(),
   };
 }
 
-export function getStoredAdmins(): AdminUser[] {
-  if (typeof window === "undefined") return [];
-  try {
-    const raw = localStorage.getItem(ADMINS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        return parsed.map(normalizeAdminUser);
-      }
-    }
-  } catch {}
-  return [];
-}
-
-export function saveStoredAdmins(admins: AdminUser[]): void {
-  if (typeof window === "undefined") return;
-  try {
-    localStorage.setItem(ADMINS_STORAGE_KEY, JSON.stringify(admins.map(normalizeAdminUser)));
-  } catch {}
-}
-
+/**
+ * Loads overview metrics, leads, and administrator roster directly from Express backend.
+ */
 export async function getAdminOverview(): Promise<AdminOverview> {
   let admins: AdminUser[] = [];
 
@@ -129,11 +124,9 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     const backendDocs = await getAllPanelAdmins();
     if (Array.isArray(backendDocs)) {
       admins = backendDocs.map(normalizeBackendPanelUser);
-      saveStoredAdmins(admins);
     }
   } catch (err) {
-    console.warn("Could not fetch real admin users from backend, reading cache:", err);
-    admins = getStoredAdmins();
+    console.error("Failed to fetch admin users from backend:", err);
   }
 
   let leadsRes = { leads: [] as any[], total: 0, stats: { newToday: 0 } };
@@ -153,23 +146,27 @@ export async function getAdminOverview(): Promise<AdminOverview> {
     created_at: l.created_at || new Date().toISOString(),
   }));
 
-  // Resolve selfId from stored auth session
+  // Resolve selfId and role from stored auth session
   let selfId = "";
+  let currentRole: AdminRole = "super_admin";
   if (typeof window !== "undefined") {
     try {
       const raw = localStorage.getItem("dimisi_admin_session");
       if (raw) {
         const parsed = JSON.parse(raw);
-        selfId = parsed?.user?.id || "";
+        selfId = parsed?.user?.id || parsed?.user?._id || "";
+        if (parsed?.user?.role) {
+          currentRole = parsed.user.role as AdminRole;
+        }
       }
     } catch {}
   }
 
   return {
     isAdmin: true,
-    role: "super_admin",
+    role: currentRole,
     stats: {
-      users: admins.length || 1,
+      users: admins.length || 0,
       leads: leadsRes.total || 0,
       leadsToday: leadsRes.stats?.newToday || 0,
       notifyOptIn: 0,
@@ -208,15 +205,8 @@ export async function grantAdminAccess({
   const newAdmin = normalizeBackendPanelUser(res.admin);
 
   // Refetch full list from backend to maintain absolute source of truth
-  let refreshedAdmins: AdminUser[] = [];
-  try {
-    const docs = await getAllPanelAdmins();
-    refreshedAdmins = docs.map(normalizeBackendPanelUser);
-    saveStoredAdmins(refreshedAdmins);
-  } catch {
-    refreshedAdmins = [newAdmin, ...getStoredAdmins().filter((a) => a.user_id !== newAdmin.user_id)];
-    saveStoredAdmins(refreshedAdmins);
-  }
+  const docs = await getAllPanelAdmins();
+  const refreshedAdmins = docs.map(normalizeBackendPanelUser);
 
   return {
     success: true,
@@ -245,20 +235,8 @@ export async function setAdminRole({
   const res = await updatePanelAdminRole(data.targetUserId, targetRole);
 
   // Refetch full list from backend
-  let refreshedAdmins: AdminUser[] = [];
-  try {
-    const docs = await getAllPanelAdmins();
-    refreshedAdmins = docs.map(normalizeBackendPanelUser);
-    saveStoredAdmins(refreshedAdmins);
-  } catch {
-    const current = getStoredAdmins();
-    const idx = current.findIndex((a) => a.user_id === data.targetUserId);
-    if (idx !== -1) {
-      current[idx].role = targetRole;
-    }
-    refreshedAdmins = current;
-    saveStoredAdmins(refreshedAdmins);
-  }
+  const docs = await getAllPanelAdmins();
+  const refreshedAdmins = docs.map(normalizeBackendPanelUser);
 
   return {
     success: true,
@@ -289,20 +267,8 @@ export async function setAdminActive({
   }
 
   // Refetch list from backend
-  let refreshedAdmins: AdminUser[] = [];
-  try {
-    const docs = await getAllPanelAdmins();
-    refreshedAdmins = docs.map(normalizeBackendPanelUser);
-    saveStoredAdmins(refreshedAdmins);
-  } catch {
-    const current = getStoredAdmins();
-    const idx = current.findIndex((a) => a.user_id === data.targetUserId);
-    if (idx !== -1) {
-      current[idx].is_active = isActive;
-    }
-    refreshedAdmins = current;
-    saveStoredAdmins(refreshedAdmins);
-  }
+  const docs = await getAllPanelAdmins();
+  const refreshedAdmins = docs.map(normalizeBackendPanelUser);
 
   return {
     success: true,
@@ -312,9 +278,10 @@ export async function setAdminActive({
 }
 
 /**
- * Deactivates an administrator account (Backend does not support permanent DB row deletion for audit integrity).
+ * Revokes an administrator's access permanently:
+ * Calls DELETE /api/v1/admin-panel/users/:userId/revoke on Express Backend.
  */
-export async function deleteUserAccount({
+export async function revokeAdminAccess({
   data,
 }: {
   data: { targetUserId: string; userId?: string };
@@ -322,46 +289,30 @@ export async function deleteUserAccount({
   const targetId = data.targetUserId || data.userId || "";
   if (!targetId) throw new Error("Target user ID is required.");
 
-  // Deactivate on backend
-  const res = await deactivatePanelAdmin(targetId);
+  // Delete from backend panelusers collection
+  const res = await revokePanelAdmin(targetId);
 
-  let refreshedAdmins: AdminUser[] = [];
-  try {
-    const docs = await getAllPanelAdmins();
-    refreshedAdmins = docs.map(normalizeBackendPanelUser);
-    saveStoredAdmins(refreshedAdmins);
-  } catch {
-    const current = getStoredAdmins();
-    const idx = current.findIndex((a) => a.user_id === targetId);
-    if (idx !== -1) {
-      current[idx].is_active = false;
-    }
-    refreshedAdmins = current;
-    saveStoredAdmins(refreshedAdmins);
-  }
+  // Refetch full live list from backend
+  const docs = await getAllPanelAdmins();
+  const refreshedAdmins = docs.map(normalizeBackendPanelUser);
 
   return {
     success: true,
-    message: res.message || "Administrator access revoked (account deactivated).",
+    message: res.message || "Administrator access revoked successfully.",
     admins: refreshedAdmins,
   };
 }
+
+// Alias for compatibility
+export const deleteUserAccount = revokeAdminAccess;
 
 export async function updateAdminProfile({
   data,
 }: {
   data: { userId?: string; fullName?: string; email?: string; designation?: string };
 }): Promise<{ success: boolean; message: string; admins: AdminUser[] }> {
-  const admins = getStoredAdmins();
-  if (data.userId) {
-    const idx = admins.findIndex((a) => a.user_id === data.userId);
-    if (idx !== -1) {
-      if (data.fullName) admins[idx].full_name = data.fullName.trim();
-      if (data.designation) admins[idx].designation = data.designation.trim();
-      if (data.email) admins[idx].email = data.email.trim().toLowerCase();
-      saveStoredAdmins(admins);
-    }
-  }
+  const docs = await getAllPanelAdmins();
+  const admins = docs.map(normalizeBackendPanelUser);
   return { success: true, message: "Profile view refreshed.", admins };
 }
 

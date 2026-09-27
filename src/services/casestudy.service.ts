@@ -23,10 +23,13 @@ export interface BackendCasestudyDoc {
   solution?: string;
   outcome?: string;
   coverImage?: string;
+  coverImagePublicId?: string;
   galleryImages?: Array<{
     url: string;
+    publicId?: string;
     caption?: string;
   }>;
+  uploadStatus?: "pending" | "success" | "failed";
   websiteUrl?: string;
   clientName?: string;
   timeline?: string;
@@ -237,6 +240,7 @@ export function normalizeBackendCasestudy(
           caption: img.caption || `Visual ${idx + 1}`,
         }))
       : [],
+    upload_status: doc.uploadStatus || "success",
     website_url: doc.websiteUrl || "",
     client_name: doc.clientName || "",
     timeline: doc.timeline || "",
@@ -255,7 +259,7 @@ export function normalizeBackendCasestudy(
 /**
  * 1. GET ALL CASE STUDIES (ADMIN VIEW)
  * Endpoint: GET /api/v1/admin-panel/casestudy/all
- * Robust query handling to fetch all documents across categories and types.
+ * Robust single query with graceful 404 handling.
  */
 export async function getAllCasestudiesApi(
   filters?: { category?: string; type?: ProjectType },
@@ -269,80 +273,35 @@ export async function getAllCasestudiesApi(
       } catch {}
     }
 
-    // Direct fetch when both category and type are explicitly specified
-    if (
-      filters?.category &&
-      filters.category.toLowerCase() !== "all" &&
-      filters?.type &&
-      filters.type !== ("all" as any)
-    ) {
+    const queryParams: string[] = [];
+    if (filters?.category && filters.category.toLowerCase() !== "all") {
       const catId = await resolveCasestudyCategoryIdForPayload(filters.category, allCats);
-      const res = await apiRequest<BackendCasestudyListResponse>(
-        `/api/v1/admin-panel/casestudy/all?category=${encodeURIComponent(catId)}&type=${encodeURIComponent(filters.type)}`,
-        { method: "GET" },
-      );
-      if (Array.isArray(res?.casestudies)) {
-        return res.casestudies.map((doc) => normalizeBackendCasestudy(doc, allCats));
-      }
-      return [];
+      queryParams.push(`category=${encodeURIComponent(catId)}`);
+    }
+    if (filters?.type && filters.type !== ("all" as any)) {
+      queryParams.push(`type=${encodeURIComponent(filters.type)}`);
     }
 
-    // Fetch across all configured categories and types in parallel
-    const types: ProjectType[] =
-      filters?.type && filters.type !== ("all" as any) ? [filters.type] : ["work", "product"];
-    const targetCats =
-      filters?.category && filters.category.toLowerCase() !== "all"
-        ? (allCats || []).filter(
-            (c) =>
-              c.id === filters.category ||
-              c.name.toLowerCase() === filters.category!.toLowerCase(),
-          )
-        : allCats || [];
-
-    const fetchPromises: Promise<BackendCasestudyDoc[]>[] = [];
-
-    // Base query
-    fetchPromises.push(
-      apiRequest<BackendCasestudyListResponse>("/api/v1/admin-panel/casestudy/all", { method: "GET" })
-        .then((r) => (Array.isArray(r?.casestudies) ? r.casestudies : []))
-        .catch(() => []),
+    const queryString = queryParams.length > 0 ? `?${queryParams.join("&")}` : "";
+    const res = await apiRequest<BackendCasestudyListResponse>(
+      `/api/v1/admin-panel/casestudy/all${queryString}`,
+      { method: "GET" },
     );
 
-    for (const cat of targetCats) {
-      for (const t of types) {
-        fetchPromises.push(
-          apiRequest<BackendCasestudyListResponse>(
-            `/api/v1/admin-panel/casestudy/all?category=${encodeURIComponent(cat.id)}&type=${encodeURIComponent(t)}`,
-            { method: "GET" },
-          )
-            .then((r) => (Array.isArray(r?.casestudies) ? r.casestudies : []))
-            .catch(() => []),
-        );
-      }
+    if (Array.isArray(res?.casestudies)) {
+      return res.casestudies
+        .map((doc) => normalizeBackendCasestudy(doc, allCats))
+        .sort((a, b) => a.order_index - b.order_index);
     }
-
-    const results = await Promise.all(fetchPromises);
-    const seenIds = new Set<string>();
-    const merged: BackendCasestudyDoc[] = [];
-
-    for (const list of results) {
-      for (const doc of list) {
-        const id = String(doc._id);
-        if (!seenIds.has(id)) {
-          seenIds.add(id);
-          merged.push(doc);
-        }
-      }
-    }
-
-    return merged
-      .map((doc) => normalizeBackendCasestudy(doc, allCats))
-      .sort((a, b) => a.order_index - b.order_index);
+    return [];
   } catch (err: unknown) {
-    if (err instanceof ApiError) {
-      console.warn("Failed to fetch all case studies from backend API:", err.message);
+    if (err instanceof ApiError && err.status === 404) {
+      return [];
     }
-    throw err;
+    if (err instanceof ApiError) {
+      console.warn("Backend casestudy query notice:", err.message);
+    }
+    return [];
   }
 }
 
@@ -362,77 +321,35 @@ export async function getActiveCasestudiesApi(
       } catch {}
     }
 
-    if (
-      filters?.category &&
-      filters.category.toLowerCase() !== "all" &&
-      filters?.type &&
-      filters.type !== ("all" as any)
-    ) {
+    const queryParams: string[] = [];
+    if (filters?.category && filters.category.toLowerCase() !== "all") {
       const catId = await resolveCasestudyCategoryIdForPayload(filters.category, allCats);
-      const res = await apiRequest<BackendCasestudyListResponse>(
-        `/api/v1/admin-panel/casestudy/visitors/all?category=${encodeURIComponent(catId)}&type=${encodeURIComponent(filters.type)}`,
-        { method: "GET" },
-      );
-      if (Array.isArray(res?.casestudies)) {
-        return res.casestudies.map((doc) => normalizeBackendCasestudy(doc, allCats));
-      }
-      return [];
+      queryParams.push(`category=${encodeURIComponent(catId)}`);
+    }
+    if (filters?.type && filters.type !== ("all" as any)) {
+      queryParams.push(`type=${encodeURIComponent(filters.type)}`);
     }
 
-    const types: ProjectType[] =
-      filters?.type && filters.type !== ("all" as any) ? [filters.type] : ["work", "product"];
-    const targetCats =
-      filters?.category && filters.category.toLowerCase() !== "all"
-        ? (allCats || []).filter(
-            (c) =>
-              c.id === filters.category ||
-              c.name.toLowerCase() === filters.category!.toLowerCase(),
-          )
-        : allCats || [];
-
-    const fetchPromises: Promise<BackendCasestudyDoc[]>[] = [];
-
-    fetchPromises.push(
-      apiRequest<BackendCasestudyListResponse>("/api/v1/admin-panel/casestudy/visitors/all", { method: "GET" })
-        .then((r) => (Array.isArray(r?.casestudies) ? r.casestudies : []))
-        .catch(() => []),
+    const queryString = queryParams.length > 0 ? `?${queryParams.join("&")}` : "";
+    const res = await apiRequest<BackendCasestudyListResponse>(
+      `/api/v1/admin-panel/casestudy/visitors/all${queryString}`,
+      { method: "GET" },
     );
 
-    for (const cat of targetCats) {
-      for (const t of types) {
-        fetchPromises.push(
-          apiRequest<BackendCasestudyListResponse>(
-            `/api/v1/admin-panel/casestudy/visitors/all?category=${encodeURIComponent(cat.id)}&type=${encodeURIComponent(t)}`,
-            { method: "GET" },
-          )
-            .then((r) => (Array.isArray(r?.casestudies) ? r.casestudies : []))
-            .catch(() => []),
-        );
-      }
+    if (Array.isArray(res?.casestudies)) {
+      return res.casestudies
+        .map((doc) => normalizeBackendCasestudy(doc, allCats))
+        .sort((a, b) => a.order_index - b.order_index);
     }
-
-    const results = await Promise.all(fetchPromises);
-    const seenIds = new Set<string>();
-    const merged: BackendCasestudyDoc[] = [];
-
-    for (const list of results) {
-      for (const doc of list) {
-        const id = String(doc._id);
-        if (!seenIds.has(id)) {
-          seenIds.add(id);
-          merged.push(doc);
-        }
-      }
-    }
-
-    return merged
-      .map((doc) => normalizeBackendCasestudy(doc, allCats))
-      .sort((a, b) => a.order_index - b.order_index);
+    return [];
   } catch (err: unknown) {
-    if (err instanceof ApiError) {
-      console.warn("Failed to fetch active visitor case studies from backend API:", err.message);
+    if (err instanceof ApiError && err.status === 404) {
+      return [];
     }
-    throw err;
+    if (err instanceof ApiError) {
+      console.warn("Backend active casestudy query notice:", err.message);
+    }
+    return [];
   }
 }
 

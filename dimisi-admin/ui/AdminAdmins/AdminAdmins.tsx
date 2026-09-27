@@ -72,7 +72,13 @@ export function AdminAdmins({
       onAdmins(res.admins);
       setNotice(res.message);
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Action failed.");
+      let msg = err instanceof Error ? err.message : "Action failed.";
+      if (msg.includes("User not found in the primary system")) {
+        msg = "Account not found in primary user directory. The user must be registered in the system before being granted administrator access.";
+      } else if (msg.includes("already a panel administrator")) {
+        msg = "This account is already registered as a panel administrator.";
+      }
+      setError(msg);
     } finally {
       setBusy(false);
     }
@@ -495,7 +501,7 @@ export function AdminAdmins({
 
             <div className={styles.modalBody}>
               <p className={styles.deleteWarningText}>
-                To preserve system audit records, accounts are not permanently deleted from the database. Revoking access will <strong>deactivate</strong> this administrator, immediately blocking Control Room access.
+                Revoking access will remove administrator privileges for <strong>{deleteModalTarget.email}</strong> and delete their panel access record. Their base account in the primary user directory remains intact, but they will no longer be able to access the Control Room unless granted access again.
               </p>
               <div className={styles.deleteUserSummary}>
                 <div>
@@ -520,7 +526,7 @@ export function AdminAdmins({
                 className={styles.confirmDeleteBtn}
                 onClick={executeDeleteAdmin}
               >
-                Revoke Access (Deactivate)
+                Confirm Revoke Access
               </button>
             </div>
           </div>

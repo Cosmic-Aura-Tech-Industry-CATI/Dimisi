@@ -227,30 +227,11 @@ export async function apiRequest<T = any>(
           }
         }
 
-        // 1. Automatic Silent Token Refresh & Request Retry Interceptor
+        // On 401 Unauthorized for admin-panel routes, invalidate local session cleanly
         const isAuthRoute =
           normalizedEndpoint.includes("/auth/login") ||
-          normalizedEndpoint.includes("/auth/refresh") ||
-          normalizedEndpoint.includes("/verify-login");
+          normalizedEndpoint.includes("/auth/logout");
 
-        if (response.status === 401 && !isAuthRoute && !rest._isRetry && typeof window !== "undefined") {
-          if (import.meta.env?.DEV) {
-            console.info(`[AUTH INTERCEPT] 401 on ${normalizedEndpoint}. Attempting silent token refresh...`);
-          }
-          const { refreshAdminTokenApi } = await import("./adminAuth.service");
-          const refreshOk = await refreshAdminTokenApi();
-          if (refreshOk) {
-            if (import.meta.env?.DEV) {
-              console.info(`[AUTH REFRESH SUCCESS] Replaying request: ${normalizedEndpoint}`);
-            }
-            return apiRequest<T>(endpoint, {
-              ...options,
-              _isRetry: true,
-            });
-          }
-        }
-
-        // 2. On persistent 401 (30-day refresh expired or banned), invalidate local stale session
         const isPanelRoute = normalizedEndpoint.startsWith("/api/v1/admin-panel/");
         const isVisitorRoute =
           normalizedEndpoint.includes("/visitors/") ||
@@ -271,7 +252,7 @@ export async function apiRequest<T = any>(
               new CustomEvent("dimisi-auth-change", {
                 detail: {
                   expired: true,
-                  message: "Your admin session has expired. Please sign in again.",
+                  message: "Your 15-minute security session has expired. Please sign in again.",
                 },
               }),
             );
