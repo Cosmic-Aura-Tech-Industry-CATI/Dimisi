@@ -67,6 +67,7 @@ export interface NormalizedAdminUser {
   emp_id?: string | null;
   email: string | null;
   full_name: string | null;
+  department?: string | null;
   designation: string | null;
   role: AdminRole;
   is_active: boolean;
@@ -86,6 +87,7 @@ export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | unde
       emp_id: null,
       email: null,
       full_name: "Unknown",
+      department: null,
       designation: "Not set",
       role: "admin",
       is_active: true,
@@ -110,6 +112,18 @@ export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | unde
     populatedUser?.fullName ||
     (email ? email.split("@")[0].replace(/[._-]/g, " ") : "Administrator");
 
+  let departmentStr: string | null = null;
+  if (populatedUser?.department) {
+    if (typeof populatedUser.department === "string") {
+      const trimmed = populatedUser.department.trim();
+      if (!/^[0-9a-fA-F]{24}$/.test(trimmed)) {
+        departmentStr = trimmed || null;
+      }
+    } else if (typeof populatedUser.department === "object") {
+      departmentStr = populatedUser.department.name || populatedUser.department.title || null;
+    }
+  }
+
   let designationStr = "Not set";
   if (populatedUser?.designation) {
     if (typeof populatedUser.designation === "string") {
@@ -132,6 +146,7 @@ export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | unde
     emp_id: empId ? String(empId) : null,
     email: email,
     full_name: fullName,
+    department: departmentStr,
     designation: designationStr,
     role: (doc.role as AdminRole) || "admin",
     is_active: doc.isActive !== undefined ? Boolean(doc.isActive) : true,

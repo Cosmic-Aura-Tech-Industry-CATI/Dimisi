@@ -691,11 +691,10 @@ export function AdminPanel() {
                 />
               )}
 
-              {/* SERVICES & SECTORS MANAGEMENT TAB */}
+              {/* SERVICES & CATEGORIES MANAGEMENT TAB */}
               {tab === "services" && (
                 <AdminServices
                   services={servicesData.services || []}
-                  industries={servicesData.industries || []}
                   categoryItems={servicesData.categoryItems || []}
                   categoryCounts={servicesData.categoryCounts || {}}
                   onRefresh={refreshServices}

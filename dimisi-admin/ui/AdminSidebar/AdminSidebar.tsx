@@ -44,7 +44,7 @@ export const ADMIN_NAV: {
   badgeKey?: "pendingReviews" | "openReports";
 }[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
-  { id: "services", label: "Services & Sectors", icon: Layers },
+  { id: "services", label: "Services & Categories", icon: Layers },
   { id: "work", label: "Our Work & Products", icon: FolderGit2 },
   { id: "careers", label: "Careers & Jobs", icon: Briefcase },
   { id: "blog", label: "Blog & Journal", icon: BookOpen },

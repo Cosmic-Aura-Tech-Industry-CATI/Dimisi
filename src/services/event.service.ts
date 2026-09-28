@@ -186,9 +186,19 @@ export function normalizeBackendGalleryItem(
   };
 }
 
+export function extractEventsList(res: any): BackendEventDoc[] {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res.events)) return res.events;
+  if (res.events && Array.isArray(res.events.events)) return res.events.events;
+  if (res.data && Array.isArray(res.data.events)) return res.data.events;
+  if (res.data && res.data.events && Array.isArray(res.data.events.events)) return res.data.events.events;
+  if (Array.isArray(res.data)) return res.data;
+  return [];
+}
+
 /**
- * Helper to fetch events/gallery docs across valid category ObjectIds.
- * Avoids passing { category: undefined } to backend which Mongoose evaluates as category: null.
+ * Helper to fetch events/gallery docs across valid category ObjectIds and global list.
  */
 async function fetchAdminEventsForCategories(
   categoryIds: string[],
@@ -197,20 +207,30 @@ async function fetchAdminEventsForCategories(
   const docMap = new Map<string, BackendEventDoc>();
   const validIds = Array.from(new Set(categoryIds.filter(isMongoId)));
 
+  // 1. Direct query by type
+  try {
+    const res = await apiRequest<BackendEventListResponse>(
+      `/api/v1/admin-panel/events?type=${type}`,
+      { method: "GET", cacheTtlMs: 0, timeoutMs: 30000 },
+    );
+    const list = extractEventsList(res);
+    for (const doc of list) {
+      if (doc && doc._id && doc.type === type) {
+        docMap.set(String(doc._id), doc);
+      }
+    }
+  } catch (err) {
+    console.warn(`Direct fetchAdminEvents for type=${type} failed:`, err);
+  }
+
+  // 2. Query per specific category if provided
   if (validIds.length > 0) {
     const promises = validIds.map((catId) =>
       apiRequest<BackendEventListResponse>(
         `/api/v1/admin-panel/events?category=${encodeURIComponent(catId)}&type=${type}`,
         { method: "GET", cacheTtlMs: 0, timeoutMs: 30000 },
       )
-        .then((res) => {
-          const list = Array.isArray(res?.events)
-            ? res.events
-            : Array.isArray((res as any)?.data?.events)
-            ? (res as any).data.events
-            : [];
-          return list;
-        })
+        .then((res) => extractEventsList(res))
         .catch(() => [] as BackendEventDoc[]),
     );
     const results = await Promise.all(promises);
@@ -221,26 +241,6 @@ async function fetchAdminEventsForCategories(
         }
       }
     }
-  }
-
-  // Also query direct fallback if map is empty
-  if (docMap.size === 0) {
-    try {
-      const res = await apiRequest<BackendEventListResponse>(
-        `/api/v1/admin-panel/events?type=${type}`,
-        { method: "GET", cacheTtlMs: 0, timeoutMs: 30000 },
-      );
-      const list = Array.isArray(res?.events)
-        ? res.events
-        : Array.isArray((res as any)?.data?.events)
-        ? (res as any).data.events
-        : [];
-      for (const doc of list) {
-        if (doc && doc._id && doc.type === type) {
-          docMap.set(String(doc._id), doc);
-        }
-      }
-    } catch {}
   }
 
   return Array.from(docMap.values());
@@ -253,20 +253,30 @@ async function fetchPublicEventsForCategories(
   const docMap = new Map<string, BackendEventDoc>();
   const validIds = Array.from(new Set(categoryIds.filter(isMongoId)));
 
+  // 1. Direct query by type
+  try {
+    const res = await apiRequest<BackendEventListResponse>(
+      `/api/v1/admin-panel/events/active?type=${type}`,
+      { method: "GET", cacheTtlMs: 15000, timeoutMs: 30000 },
+    );
+    const list = extractEventsList(res);
+    for (const doc of list) {
+      if (doc && doc._id && doc.type === type) {
+        docMap.set(String(doc._id), doc);
+      }
+    }
+  } catch (err) {
+    console.warn(`Direct fetchPublicEvents for type=${type} failed:`, err);
+  }
+
+  // 2. Query per specific category if provided
   if (validIds.length > 0) {
     const promises = validIds.map((catId) =>
       apiRequest<BackendEventListResponse>(
         `/api/v1/admin-panel/events/active?category=${encodeURIComponent(catId)}&type=${type}`,
         { method: "GET", cacheTtlMs: 15000, timeoutMs: 30000 },
       )
-        .then((res) => {
-          const list = Array.isArray(res?.events)
-            ? res.events
-            : Array.isArray((res as any)?.data?.events)
-            ? (res as any).data.events
-            : [];
-          return list;
-        })
+        .then((res) => extractEventsList(res))
         .catch(() => [] as BackendEventDoc[]),
     );
     const results = await Promise.all(promises);
@@ -277,25 +287,6 @@ async function fetchPublicEventsForCategories(
         }
       }
     }
-  }
-
-  if (docMap.size === 0) {
-    try {
-      const res = await apiRequest<BackendEventListResponse>(
-        `/api/v1/admin-panel/events/active?type=${type}`,
-        { method: "GET", cacheTtlMs: 15000, timeoutMs: 30000 },
-      );
-      const list = Array.isArray(res?.events)
-        ? res.events
-        : Array.isArray((res as any)?.data?.events)
-        ? (res as any).data.events
-        : [];
-      for (const doc of list) {
-        if (doc && doc._id && doc.type === type) {
-          docMap.set(String(doc._id), doc);
-        }
-      }
-    } catch {}
   }
 
   return Array.from(docMap.values());

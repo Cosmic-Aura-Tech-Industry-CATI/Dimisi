@@ -160,6 +160,13 @@ export function normalizeBackendService(
     };
   }
 
+  const rawCatId =
+    typeof doc.category === "object" && doc.category !== null
+      ? String((doc.category as any)._id)
+      : isMongoId(doc.category)
+      ? String(doc.category).trim()
+      : undefined;
+
   const resolvedCategory = resolveCategoryName(doc.category, categories);
   const rawHero = doc.heroImage?.trim() || "";
   const heroImage = rawHero.length > 0 ? rawHero : DEFAULT_SERVICE_FALLBACK_IMAGE;
@@ -169,6 +176,7 @@ export function normalizeBackendService(
     title: doc.title || "Unnamed Service",
     slug: doc.slug || doc.title?.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "service",
     category: resolvedCategory,
+    category_id: rawCatId,
     summary: doc.summary || "",
     tagline: doc.tagline || (doc.summary ? doc.summary.slice(0, 80) : ""),
     hero_image: heroImage,
@@ -197,6 +205,17 @@ export function normalizeBackendService(
   };
 }
 
+export function extractServicesList(res: any): BackendServiceDoc[] {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res.services)) return res.services;
+  if (res.services && Array.isArray(res.services.services)) return res.services.services;
+  if (res.data && Array.isArray(res.data.services)) return res.data.services;
+  if (res.data && res.data.services && Array.isArray(res.data.services.services)) return res.data.services.services;
+  if (Array.isArray(res.data)) return res.data;
+  return [];
+}
+
 /**
  * 1. GET ALL SERVICES FOR VISITORS (PUBLIC ACTIVE SERVICES)
  * Endpoint: GET /api/v1/admin-panel/services/visitors/all
@@ -216,10 +235,8 @@ export async function getVisitorServicesApi(
       { method: "GET" },
     );
 
-    if (Array.isArray(res?.services)) {
-      return res.services.map((doc) => normalizeBackendService(doc, categories));
-    }
-    return [];
+    const list = extractServicesList(res);
+    return list.map((doc) => normalizeBackendService(doc, categories));
   } catch (err: unknown) {
     if (err instanceof ApiError) {
       console.warn("Failed to fetch visitor services from backend API:", err.message);
@@ -244,10 +261,8 @@ export async function getAllServicesApi(
       { method: "GET" },
     );
 
-    if (Array.isArray(res?.services)) {
-      return res.services.map((doc) => normalizeBackendService(doc, categories));
-    }
-    return [];
+    const list = extractServicesList(res);
+    return list.map((doc) => normalizeBackendService(doc, categories));
   } catch (err: unknown) {
     if (err instanceof ApiError) {
       console.warn("Failed to fetch services from backend API:", err.message);
@@ -355,6 +370,69 @@ export async function resolveCategoryIdForPayload(
   return trimmed;
 }
 
+function parseJsonArrayField<T>(val: unknown, fallback: T[]): T[] {
+  if (!val) return fallback;
+  if (Array.isArray(val)) return val;
+  if (typeof val === "string") {
+    try {
+      const parsed = JSON.parse(val);
+      return Array.isArray(parsed) ? parsed : fallback;
+    } catch {
+      return fallback;
+    }
+  }
+  return fallback;
+}
+
+function normalizeProcessSteps(raw: any[]): Array<{ step: string; title: string; description: string }> {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item, idx) => ({
+      step: String(item?.step || item?.stepNumber || item?.step_number || idx + 1).padStart(2, "0"),
+      title: String(item?.title || `Phase ${idx + 1}`).trim(),
+      description: String(item?.description || "").trim(),
+    }))
+    .filter((s) => s.title.length > 0);
+}
+
+function normalizeBenefits(raw: any[]): Array<{ title: string; description: string; metric?: string }> {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => ({
+      title: String(item?.title || "").trim(),
+      description: String(item?.description || "").trim(),
+      metric: item?.metric ? String(item.metric).trim() : undefined,
+    }))
+    .filter((b) => b.title.length > 0);
+}
+
+function normalizeFaqs(raw: any[]): Array<{ question: string; answer: string }> {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .map((item) => ({
+      question: String(item?.question || "").trim(),
+      answer: String(item?.answer || "").trim(),
+    }))
+    .filter((f) => f.question.length > 0);
+}
+
+function normalizeStringList(raw: any): string[] {
+  if (!raw) return [];
+  if (Array.isArray(raw)) {
+    return raw.map((s) => String(s).trim()).filter(Boolean);
+  }
+  if (typeof raw === "string") {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        return parsed.map((s) => String(s).trim()).filter(Boolean);
+      }
+    } catch {}
+    return raw.split(",").map((s) => s.trim()).filter(Boolean);
+  }
+  return [];
+}
+
 /**
  * 3. CREATE SERVICE
  * Endpoint: POST /api/v1/admin-panel/services/create
@@ -363,45 +441,110 @@ export async function createServiceApi(
   payload: ServiceInput | FormData,
   categories?: ServiceCategoryItem[],
 ): Promise<CompanyService> {
-  let body: any;
+  let title = "";
+  let rawCat: string | undefined;
+  let tagline: string | undefined;
+  let slug: string | undefined;
+  let summary: string | undefined;
+  let heroImage: string | undefined;
+  let relatedImages: Array<{ url: string; caption?: string; alt?: string }> = [];
+  let whatIsIt: string | undefined;
+  let whoIsFor: string | undefined;
+  let problemSolved: string | undefined;
+  let whyItMatters: string | undefined;
+  let features: string[] = [];
+  let processSteps: Array<{ step: string; title: string; description: string }> = [];
+  let benefits: Array<{ title: string; description: string; metric?: string }> = [];
+  let faqs: Array<{ question: string; answer: string }> = [];
+  let techStack: string[] = [];
+  let orderIndex = 1;
+  let isFeatured = false;
+  let isActive = true;
 
   if (payload instanceof FormData) {
-    const rawCat = payload.get("category");
-    if (typeof rawCat === "string") {
-      const resolvedId = await resolveCategoryIdForPayload(rawCat, categories);
-      payload.set("category", resolvedId);
-    }
-    body = payload;
+    title = (payload.get("title") as string) || "";
+    rawCat = (payload.get("category") as string) || undefined;
+    tagline = (payload.get("tagline") as string) || undefined;
+    slug = (payload.get("slug") as string) || undefined;
+    summary = (payload.get("summary") as string) || undefined;
+    heroImage = (payload.get("hero_image") as string) || (payload.get("heroImage") as string) || undefined;
+    whatIsIt = (payload.get("whatIsIt") as string) || (payload.get("what_is_it") as string) || undefined;
+    whoIsFor = (payload.get("whoIsFor") as string) || (payload.get("who_is_for") as string) || undefined;
+    problemSolved = (payload.get("problemSolved") as string) || (payload.get("problem_solved") as string) || undefined;
+    whyItMatters = (payload.get("whyItMatters") as string) || (payload.get("why_it_matters") as string) || undefined;
+    features = normalizeStringList(payload.get("features"));
+    techStack = normalizeStringList(payload.get("techStack") || payload.get("tech_stack"));
+    processSteps = normalizeProcessSteps(parseJsonArrayField(payload.get("processSteps") || payload.get("process_steps"), []));
+    benefits = normalizeBenefits(parseJsonArrayField(payload.get("benefits"), []));
+    faqs = normalizeFaqs(parseJsonArrayField(payload.get("faqs"), []));
+    orderIndex = Number(payload.get("orderIndex") || payload.get("order_index")) || 1;
+    isFeatured = payload.get("isFeatured") === "true" || payload.get("is_featured") === "true";
+    isActive = payload.get("isActive") !== "false" && payload.get("is_active") !== "false";
   } else {
-    const categoryId = await resolveCategoryIdForPayload(payload.category, categories);
-    body = JSON.stringify({
-      title: payload.title.trim(),
-      category: categoryId,
-      tagline: payload.tagline?.trim() || undefined,
-      slug: payload.slug?.trim() || undefined,
-      summary: payload.summary?.trim() || undefined,
-      heroImage: payload.hero_image?.trim() || undefined,
-      relatedImages: payload.related_images || [],
-      whatIsIt: payload.what_is_it?.trim() || undefined,
-      whoIsFor: payload.who_is_for?.trim() || undefined,
-      problemSolved: payload.problem_solved?.trim() || undefined,
-      whyItMatters: payload.why_it_matters?.trim() || undefined,
-      features: payload.features || [],
-      processSteps: payload.process_steps || [],
-      benefits: payload.benefits || [],
-      faqs: payload.faqs || [],
-      techStack: payload.tech_stack || [],
-      orderIndex: Number(payload.order_index) || 1,
-      isFeatured: Boolean(payload.is_featured),
-      isActive: payload.is_active !== false,
-    });
+    title = payload.title || "";
+    rawCat = payload.category;
+    tagline = payload.tagline?.trim() || undefined;
+    slug = payload.slug?.trim() || undefined;
+    summary = payload.summary?.trim() || undefined;
+    heroImage = payload.hero_image?.trim() || undefined;
+    relatedImages = payload.related_images || [];
+    whatIsIt = payload.what_is_it?.trim() || payload.summary?.trim() || undefined;
+    whoIsFor = payload.who_is_for?.trim() || undefined;
+    problemSolved = payload.problem_solved?.trim() || undefined;
+    whyItMatters = payload.why_it_matters?.trim() || undefined;
+    features = normalizeStringList(payload.features);
+    techStack = normalizeStringList(payload.tech_stack);
+    processSteps = normalizeProcessSteps(payload.process_steps || []);
+    benefits = normalizeBenefits(payload.benefits || []);
+    faqs = normalizeFaqs(payload.faqs || []);
+    orderIndex = Number(payload.order_index) || 1;
+    isFeatured = Boolean(payload.is_featured);
+    isActive = payload.is_active !== false;
   }
+
+  const categoryId = await resolveCategoryIdForPayload(rawCat, categories);
+
+  const cleanSlug =
+    slug ||
+    title
+      .toLowerCase()
+      .trim()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "") ||
+    "service";
+
+  const cleanPayload = {
+    title: title.trim(),
+    category: categoryId,
+    tagline: tagline ? tagline.trim().slice(0, 100) : undefined,
+    slug: cleanSlug,
+    summary: summary ? summary.trim().slice(0, 200) : undefined,
+    heroImage: heroImage && !heroImage.startsWith("blob:") ? heroImage.trim() : DEFAULT_SERVICE_FALLBACK_IMAGE,
+    relatedImages,
+    whatIsIt: whatIsIt ? whatIsIt.trim().slice(0, 500) : undefined,
+    whoIsFor: whoIsFor ? whoIsFor.trim().slice(0, 500) : undefined,
+    problemSolved: problemSolved ? problemSolved.trim().slice(0, 500) : undefined,
+    whyItMatters: whyItMatters ? whyItMatters.trim().slice(0, 500) : undefined,
+    features,
+    processSteps,
+    benefits,
+    faqs,
+    techStack,
+    orderIndex: Math.max(1, orderIndex),
+    isFeatured,
+    isActive,
+  };
+
+  const body = JSON.stringify(cleanPayload);
 
   try {
     const res = await apiRequest<BackendServiceSingleResponse>(
       "/api/v1/admin-panel/services/create",
       {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body,
       },
     );
@@ -415,13 +558,8 @@ export async function createServiceApi(
   } catch (err: unknown) {
     if (err instanceof ApiError && err.status === 400) {
       console.error("[Service Create 400 Error Context]", {
-        selectedCategoryValue: payload instanceof FormData ? payload.get("category") : payload.category,
-        resolvedCategoryId:
-          typeof body === "string"
-            ? JSON.parse(body).category
-            : payload instanceof FormData
-            ? payload.get("category")
-            : undefined,
+        selectedCategoryValue: rawCat,
+        resolvedCategoryId: categoryId,
         errorMessage: err.message,
       });
     }
@@ -440,47 +578,111 @@ export async function updateServiceApi(
 ): Promise<CompanyService> {
   if (!id) throw new Error("Service ID is required for update.");
 
-  let body: any;
+  const updateObj: Record<string, any> = {};
 
   if (payload instanceof FormData) {
+    const title = payload.get("title");
+    if (title && typeof title === "string") updateObj.title = title.trim();
+
     const rawCat = payload.get("category");
-    if (typeof rawCat === "string") {
-      const resolvedId = await resolveCategoryIdForPayload(rawCat, categories);
-      payload.set("category", resolvedId);
+    if (rawCat && typeof rawCat === "string") {
+      updateObj.category = await resolveCategoryIdForPayload(rawCat, categories);
     }
-    body = payload;
+
+    const tagline = payload.get("tagline");
+    if (tagline && typeof tagline === "string") updateObj.tagline = tagline.trim().slice(0, 100);
+
+    const slug = payload.get("slug");
+    if (slug && typeof slug === "string") updateObj.slug = slug.trim();
+
+    const summary = payload.get("summary");
+    if (summary && typeof summary === "string") updateObj.summary = summary.trim().slice(0, 200);
+
+    const heroImage = payload.get("hero_image") || payload.get("heroImage");
+    if (heroImage && typeof heroImage === "string" && !heroImage.startsWith("blob:")) {
+      updateObj.heroImage = heroImage.trim();
+    }
+
+    const whatIsIt = payload.get("whatIsIt") || payload.get("what_is_it");
+    if (whatIsIt && typeof whatIsIt === "string") updateObj.whatIsIt = whatIsIt.trim().slice(0, 500);
+
+    const whoIsFor = payload.get("whoIsFor") || payload.get("who_is_for");
+    if (whoIsFor && typeof whoIsFor === "string") updateObj.whoIsFor = whoIsFor.trim().slice(0, 500);
+
+    const problemSolved = payload.get("problemSolved") || payload.get("problem_solved");
+    if (problemSolved && typeof problemSolved === "string") updateObj.problemSolved = problemSolved.trim().slice(0, 500);
+
+    const whyItMatters = payload.get("whyItMatters") || payload.get("why_it_matters");
+    if (whyItMatters && typeof whyItMatters === "string") updateObj.whyItMatters = whyItMatters.trim().slice(0, 500);
+
+    if (payload.has("features")) {
+      updateObj.features = normalizeStringList(payload.get("features"));
+    }
+    if (payload.has("techStack") || payload.has("tech_stack")) {
+      updateObj.techStack = normalizeStringList(payload.get("techStack") || payload.get("tech_stack"));
+    }
+    if (payload.has("processSteps") || payload.has("process_steps")) {
+      updateObj.processSteps = normalizeProcessSteps(
+        parseJsonArrayField(payload.get("processSteps") || payload.get("process_steps"), []),
+      );
+    }
+    if (payload.has("benefits")) {
+      updateObj.benefits = normalizeBenefits(parseJsonArrayField(payload.get("benefits"), []));
+    }
+    if (payload.has("faqs")) {
+      updateObj.faqs = normalizeFaqs(parseJsonArrayField(payload.get("faqs"), []));
+    }
+    if (payload.has("orderIndex") || payload.has("order_index")) {
+      updateObj.orderIndex = Math.max(1, Number(payload.get("orderIndex") || payload.get("order_index")) || 1);
+    }
+    if (payload.has("isFeatured") || payload.has("is_featured")) {
+      updateObj.isFeatured = payload.get("isFeatured") === "true" || payload.get("is_featured") === "true";
+    }
+    if (payload.has("isActive") || payload.has("is_active")) {
+      updateObj.isActive = payload.get("isActive") !== "false" && payload.get("is_active") !== "false";
+    }
   } else {
-    const updateObj: Record<string, any> = {};
     if (payload.title !== undefined) updateObj.title = payload.title.trim();
     if (payload.category !== undefined) {
       updateObj.category = await resolveCategoryIdForPayload(payload.category, categories);
     }
-    if (payload.tagline !== undefined && payload.tagline !== null) updateObj.tagline = payload.tagline.trim();
+    if (payload.tagline !== undefined && payload.tagline !== null) {
+      updateObj.tagline = payload.tagline.trim().slice(0, 100);
+    }
     if (payload.slug !== undefined && payload.slug !== null) updateObj.slug = payload.slug.trim();
-    if (payload.summary !== undefined && payload.summary !== null) updateObj.summary = payload.summary.trim();
-    if (payload.hero_image !== undefined) updateObj.heroImage = payload.hero_image.trim();
+    if (payload.summary !== undefined && payload.summary !== null) {
+      updateObj.summary = payload.summary.trim().slice(0, 200);
+    }
+    if (payload.hero_image !== undefined && !payload.hero_image.startsWith("blob:")) {
+      updateObj.heroImage = payload.hero_image.trim();
+    }
     if (payload.related_images !== undefined) updateObj.relatedImages = payload.related_images;
-    if (payload.what_is_it !== undefined) updateObj.whatIsIt = payload.what_is_it.trim();
-    if (payload.who_is_for !== undefined) updateObj.whoIsFor = payload.who_is_for.trim();
-    if (payload.problem_solved !== undefined) updateObj.problemSolved = payload.problem_solved.trim();
-    if (payload.why_it_matters !== undefined) updateObj.whyItMatters = payload.why_it_matters.trim();
-    if (payload.features !== undefined) updateObj.features = payload.features;
-    if (payload.process_steps !== undefined) updateObj.processSteps = payload.process_steps;
-    if (payload.benefits !== undefined) updateObj.benefits = payload.benefits;
-    if (payload.faqs !== undefined) updateObj.faqs = payload.faqs;
-    if (payload.tech_stack !== undefined) updateObj.techStack = payload.tech_stack;
-    if (payload.order_index !== undefined) updateObj.orderIndex = Number(payload.order_index);
+    if (payload.what_is_it !== undefined) updateObj.whatIsIt = payload.what_is_it.trim().slice(0, 500);
+    if (payload.who_is_for !== undefined) updateObj.whoIsFor = payload.who_is_for.trim().slice(0, 500);
+    if (payload.problem_solved !== undefined) updateObj.problemSolved = payload.problem_solved.trim().slice(0, 500);
+    if (payload.why_it_matters !== undefined) updateObj.whyItMatters = payload.why_it_matters.trim().slice(0, 500);
+    if (payload.features !== undefined) updateObj.features = normalizeStringList(payload.features);
+    if (payload.process_steps !== undefined) {
+      updateObj.processSteps = normalizeProcessSteps(payload.process_steps);
+    }
+    if (payload.benefits !== undefined) updateObj.benefits = normalizeBenefits(payload.benefits);
+    if (payload.faqs !== undefined) updateObj.faqs = normalizeFaqs(payload.faqs);
+    if (payload.tech_stack !== undefined) updateObj.techStack = normalizeStringList(payload.tech_stack);
+    if (payload.order_index !== undefined) updateObj.orderIndex = Math.max(1, Number(payload.order_index) || 1);
     if (payload.is_featured !== undefined) updateObj.isFeatured = Boolean(payload.is_featured);
     if (payload.is_active !== undefined) updateObj.isActive = Boolean(payload.is_active);
-
-    body = JSON.stringify(updateObj);
   }
+
+  const body = JSON.stringify(updateObj);
 
   try {
     const res = await apiRequest<BackendServiceSingleResponse>(
       `/api/v1/admin-panel/services/${encodeURIComponent(id)}/update`,
       {
         method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body,
       },
     );
@@ -496,12 +698,6 @@ export async function updateServiceApi(
       console.error("[Service Update 400 Error Context]", {
         serviceId: id,
         selectedCategoryValue: payload instanceof FormData ? payload.get("category") : payload.category,
-        resolvedCategoryId:
-          typeof body === "string"
-            ? JSON.parse(body).category
-            : payload instanceof FormData
-            ? payload.get("category")
-            : undefined,
         errorMessage: err.message,
       });
     }

@@ -1,4 +1,7 @@
-/** Shared, client-safe types and helpers for DIMISI Dynamic Services & Industries. */
+/** 
+ * Centralized, client-safe types and helpers for DIMISI Dynamic Services & Service Categories.
+ * Fully aligned with Express Backend API (/api/v1/admin-panel/services/* and /service-category/*).
+ */
 
 export interface ServiceProcessStep {
   step: string;
@@ -28,6 +31,7 @@ export interface CompanyService {
   title: string;
   slug: string;
   category: string;
+  category_id?: string;
   summary: string;
   tagline: string;
   hero_image: string;
@@ -81,32 +85,6 @@ export interface ServiceInput {
   upload_status?: "pending" | "success" | "failed" | undefined;
 }
 
-export interface IndustrySector {
-  id: string;
-  name: string;
-  slug: string;
-  tagline: string;
-  description: string;
-  badge: string;
-  image_url: string;
-  solutions: string[];
-  accent_glow?: string | null | undefined;
-  order_index: number;
-}
-
-export interface IndustryInput {
-  id?: string | null | undefined;
-  name: string;
-  slug?: string | null | undefined;
-  tagline: string;
-  description: string;
-  badge: string;
-  image_url: string;
-  solutions: string[];
-  accent_glow?: string | null | undefined;
-  order_index?: number | null | undefined;
-}
-
 export interface ServiceCategoryItem {
   id: string;
   name: string;
@@ -131,15 +109,43 @@ export interface ServiceCategoryInput {
 
 export interface PublicServicesPayload {
   services: CompanyService[];
-  industries: IndustrySector[];
   categories?: string[] | undefined;
   categoryItems?: ServiceCategoryItem[] | undefined;
+  industries?: any[];
   stats: {
     totalServices: number;
-    totalIndustries: number;
+    totalCategories: number;
+    totalIndustries?: number;
     uptimeSla: string;
     satisfactionScore: string;
   };
+}
+
+// Backward-compatibility alias for legacy overview types
+export interface IndustrySector {
+  id: string;
+  name: string;
+  slug: string;
+  tagline: string;
+  description: string;
+  badge: string;
+  image_url: string;
+  solutions: string[];
+  accent_glow?: string | null | undefined;
+  order_index: number;
+}
+
+export interface IndustryInput {
+  id?: string | null | undefined;
+  name: string;
+  slug?: string | null | undefined;
+  tagline: string;
+  description: string;
+  badge: string;
+  image_url: string;
+  solutions: string[];
+  accent_glow?: string | null | undefined;
+  order_index?: number | null | undefined;
 }
 
 export function slugifyService(title: string): string {
@@ -186,35 +192,6 @@ export function validateServiceCategoryInput(input: Partial<ServiceCategoryInput
     if (!Number.isInteger(num) || num < 1 || num > 10000) {
       return { valid: false, error: "Display order must be a whole number between 1 and 10000.", field: "order_index" };
     }
-  }
-  return { valid: true };
-}
-
-export function validateIndustryInput(input: Partial<IndustryInput>): {
-  valid: boolean;
-  error?: string;
-  field?: string;
-} {
-  const name = input.name?.trim() || "";
-  const tagline = input.tagline?.trim() || "";
-  const description = input.description?.trim() || "";
-  const badge = input.badge?.trim() || "";
-  const imageUrl = input.image_url?.trim() || "";
-
-  if (name.length < 2) {
-    return { valid: false, error: "Industry name must be at least 2 characters long.", field: "name" };
-  }
-  if (tagline.length < 5) {
-    return { valid: false, error: "Tagline must be at least 5 characters long.", field: "tagline" };
-  }
-  if (description.length < 10) {
-    return { valid: false, error: "Description must be at least 10 characters long.", field: "description" };
-  }
-  if (badge.length < 2) {
-    return { valid: false, error: "Industry badge label is required.", field: "badge" };
-  }
-  if (!imageUrl) {
-    return { valid: false, error: "Industry image URL is required.", field: "image_url" };
   }
   return { valid: true };
 }

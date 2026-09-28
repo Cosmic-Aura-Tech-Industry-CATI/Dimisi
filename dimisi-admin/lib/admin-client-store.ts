@@ -35,6 +35,7 @@ export type AdminUser = {
   emp_id?: string | null;
   email: string | null;
   full_name: string | null;
+  department?: string | null;
   designation: string | null;
   role: AdminRole;
   is_active: boolean;
@@ -61,6 +62,7 @@ export function normalizeAdminUser(raw: any): AdminUser {
       emp_id: null,
       email: null,
       full_name: "Unknown",
+      department: null,
       designation: "Not set",
       role: "admin",
       is_active: true,
@@ -80,6 +82,18 @@ export function normalizeAdminUser(raw: any): AdminUser {
     raw.name ||
     (email ? email.split("@")[0].replace(/[._-]/g, " ") : "Administrator");
   const empId = raw.employee_id || raw.employeeId || raw.emp_id || raw.empId || null;
+
+  let departmentStr: string | null = null;
+  if (raw.department) {
+    if (typeof raw.department === "string") {
+      const trimmed = raw.department.trim();
+      if (!/^[0-9a-fA-F]{24}$/.test(trimmed)) {
+        departmentStr = trimmed || null;
+      }
+    } else if (typeof raw.department === "object") {
+      departmentStr = raw.department.name || raw.department.title || null;
+    }
+  }
 
   let designationStr = "Not set";
   if (raw.designation) {
@@ -101,6 +115,7 @@ export function normalizeAdminUser(raw: any): AdminUser {
     emp_id: empId ? String(empId) : null,
     email: email,
     full_name: fullName,
+    department: departmentStr,
     designation: designationStr,
     role: (raw.role as AdminRole) || "admin",
     is_active:

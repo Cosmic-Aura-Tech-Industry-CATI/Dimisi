@@ -135,12 +135,12 @@ export async function getAdminWorkData(): Promise<{
       getAllCasestudiesApi(),
     ]);
 
-    if (catsResult.status === "fulfilled" && Array.isArray(catsResult.value) && catsResult.value.length > 0) {
+    if (catsResult.status === "fulfilled" && Array.isArray(catsResult.value)) {
       catItems = catsResult.value;
       workStore.setCategories(catItems);
     }
 
-    if (projectsResult.status === "fulfilled" && Array.isArray(projectsResult.value) && projectsResult.value.length > 0) {
+    if (projectsResult.status === "fulfilled" && Array.isArray(projectsResult.value)) {
       projectsList = projectsResult.value;
       workStore.setProjects(projectsList);
     }
@@ -376,17 +376,19 @@ export async function saveProjectFn({
       apiError = err instanceof Error ? err.message : "Backend update failed.";
     }
 
+    if (apiError || !remoteSaved) {
+      return {
+        success: false,
+        error: apiError || "Failed to save case study on server.",
+      };
+    }
+
     // Update in-memory store
-    const localSaved = workStore.saveProject({
-      ...data,
-      id: remoteSaved?.id || data.id,
-      slug: remoteSaved?.slug || data.slug,
-    });
+    workStore.saveProject(remoteSaved);
 
     return {
-      success: !apiError,
-      project: remoteSaved || localSaved,
-      ...(apiError ? { error: apiError } : {}),
+      success: true,
+      project: remoteSaved,
     };
   } catch (err) {
     return {

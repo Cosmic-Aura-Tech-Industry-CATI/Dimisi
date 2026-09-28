@@ -38,6 +38,7 @@ export interface BackendServiceCategorySingleResponse {
 
 export interface CreateServiceCategoryPayload {
   name: string;
+  slug?: string | undefined;
   description?: string | undefined;
   displayOrder: number;
   status?: "active" | "inactive" | undefined;
@@ -45,6 +46,7 @@ export interface CreateServiceCategoryPayload {
 
 export interface UpdateServiceCategoryPayload {
   name?: string | undefined;
+  slug?: string | undefined;
   description?: string | undefined;
   displayOrder?: number | undefined;
   status?: "active" | "inactive" | undefined;
@@ -133,7 +135,7 @@ export async function getAllServiceCategoriesApi(): Promise<ServiceCategoryItem[
 /**
  * 2. CREATE SERVICE CATEGORY
  * Endpoint: POST /api/v1/admin-panel/service-category/create
- * Body: { name, description?, displayOrder, status? }
+ * Body: { name, slug, description?, displayOrder, status? }
  */
 export async function createServiceCategoryApi(
   payload: CreateServiceCategoryPayload,
@@ -156,8 +158,16 @@ export async function createServiceCategoryApi(
     throw new Error("Display order must be an integer between 1 and 10000.");
   }
 
+  const cleanSlug =
+    payload.slug?.trim() ||
+    cleanName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+
   const requestBody: Record<string, any> = {
     name: cleanName,
+    slug: cleanSlug,
     displayOrder: orderNum,
     status: payload.status === "inactive" ? "inactive" : "active",
   };

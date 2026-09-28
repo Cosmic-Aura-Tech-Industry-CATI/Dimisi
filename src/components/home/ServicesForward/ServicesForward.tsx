@@ -1,4 +1,6 @@
+import { useMemo } from "react";
 import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import {
   Globe,
   Smartphone,
@@ -13,10 +15,14 @@ import {
   Rocket,
   ArrowUpRight,
   Sparkles,
+  Layers,
+  Database,
+  ShieldCheck,
 } from "lucide-react";
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import { TiltCard } from "@/components/common/TiltCard/TiltCard";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
+import { getPublicServicesData } from "@/lib/services.functions";
 import styles from "./ServicesForward.module.css";
 
 export interface ForwardServiceItem {
@@ -26,6 +32,25 @@ export interface ForwardServiceItem {
   icon: React.ComponentType<{ className?: string }>;
   route: string;
   badge?: string;
+  isFeatured?: boolean;
+}
+
+function resolveServiceIcon(slug = "", category = ""): React.ComponentType<{ className?: string }> {
+  const str = `${slug} ${category}`.toLowerCase();
+  if (str.includes("web") || str.includes("site") || str.includes("front")) return Globe;
+  if (str.includes("mobile") || str.includes("app") || str.includes("android") || str.includes("ios")) return Smartphone;
+  if (str.includes("ai") || str.includes("ml") || str.includes("intel") || str.includes("bot") || str.includes("auto")) return Cpu;
+  if (str.includes("design") || str.includes("ui") || str.includes("ux")) return Palette;
+  if (str.includes("cloud") || str.includes("devops") || str.includes("infra")) return Cloud;
+  if (str.includes("consult") || str.includes("advis")) return Compass;
+  if (str.includes("support") || str.includes("maint")) return Wrench;
+  if (str.includes("market") || str.includes("growth") || str.includes("seo")) return TrendingUp;
+  if (str.includes("data") || str.includes("analytics")) return Database;
+  if (str.includes("sec") || str.includes("cyber")) return ShieldCheck;
+  if (str.includes("startup") || str.includes("launch")) return Rocket;
+  if (str.includes("server") || str.includes("backend")) return Server;
+  if (str.includes("soft") || str.includes("dev") || str.includes("custom")) return Code2;
+  return Sparkles;
 }
 
 export const FORWARD_SERVICES: ForwardServiceItem[] = [
@@ -120,6 +145,43 @@ export const FORWARD_SERVICES: ForwardServiceItem[] = [
 ];
 
 export function ServicesForward() {
+  // Live dynamic services query synced with MongoDB and Admin Panel
+  const { data: payload } = useQuery({
+    queryKey: ["publicServices"],
+    queryFn: () => getPublicServicesData(),
+    staleTime: 1000 * 60 * 5, // 5 min cache
+  });
+
+  // Curate services for Home: prioritize Admin 'is_featured' services, with smart fallback to FORWARD_SERVICES
+  const displayServices: ForwardServiceItem[] = useMemo(() => {
+    const liveServices = payload?.services?.filter((s) => s.is_active) || [];
+    if (liveServices.length === 0) {
+      return FORWARD_SERVICES;
+    }
+
+    const featured = liveServices.filter((s) => s.is_featured);
+    const nonFeatured = liveServices.filter((s) => !s.is_featured);
+
+    // If at least one service is marked as featured, showcase featured first
+    const curatedList = featured.length > 0 ? [...featured, ...nonFeatured] : liveServices;
+
+    // Show up to 6 or 9 services on Home (or all featured if more exist)
+    const targetCount = Math.max(featured.length, 6);
+    const finalServices = curatedList.slice(0, Math.min(targetCount, 12));
+
+    return finalServices.map((srv, idx) => ({
+      number: String(idx + 1).padStart(2, "0"),
+      title: srv.title,
+      tagline:
+        srv.tagline ||
+        (srv.summary ? srv.summary.slice(0, 95) + "..." : "Engineered for sustained business throughput."),
+      icon: resolveServiceIcon(srv.slug, srv.category),
+      route: `/services/${srv.slug}`,
+      badge: srv.is_featured ? "Featured" : (srv.category || "Capability"),
+      isFeatured: Boolean(srv.is_featured),
+    }));
+  }, [payload?.services]);
+
   return (
     <section className={styles.section} id="services-forward" aria-label="Services That Move You Forward">
       <div className={styles.container}>
@@ -145,22 +207,39 @@ export function ServicesForward() {
           </Reveal>
         </div>
 
-        {/* 11 Services Grid */}
+        {/* Dynamic Services Grid */}
         <div className={styles.grid}>
-          {FORWARD_SERVICES.map((svc, i) => {
+          {displayServices.map((svc, i) => {
             const Icon = svc.icon;
             return (
-              <Reveal key={svc.number} delay={i * 45} className={styles.gridItem}>
-                <Link to={svc.route} className={styles.cardLink}>
-                  <TiltCard className={styles.card}>
+              <Reveal key={`${svc.number}-${svc.title}`} delay={i * 45} className={styles.gridItem}>
+                <Link to={svc.route as any} className={styles.cardLink}>
+                  <TiltCard
+                    className={[
+                      styles.card,
+                      svc.isFeatured ? styles.cardFeatured : "",
+                    ].join(" ")}
+                  >
                     <div className={styles.cardGlow} aria-hidden="true" />
-                    
+
                     <div className={styles.cardTop}>
                       <div className={styles.iconBox}>
                         <Icon className={styles.icon} />
                       </div>
                       <div className={styles.metaRow}>
-                        {svc.badge && <span className={styles.tagBadge}>{svc.badge}</span>}
+                        {svc.badge && (
+                          <span
+                            className={[
+                              styles.tagBadge,
+                              svc.isFeatured ? styles.tagBadgeFeatured : "",
+                            ].join(" ")}
+                          >
+                            {svc.isFeatured && (
+                              <Sparkles size={10} className={styles.badgeStarIcon} />
+                            )}
+                            {svc.badge}
+                          </span>
+                        )}
                         <span className={styles.serviceNum}>{svc.number}</span>
                       </div>
                     </div>

@@ -256,6 +256,17 @@ export function normalizeBackendCasestudy(
   };
 }
 
+export function extractCasestudiesList(res: any): BackendCasestudyDoc[] {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res.casestudies)) return res.casestudies;
+  if (res.casestudies && Array.isArray(res.casestudies.casestudies)) return res.casestudies.casestudies;
+  if (res.data && Array.isArray(res.data.casestudies)) return res.data.casestudies;
+  if (res.data && res.data.casestudies && Array.isArray(res.data.casestudies.casestudies)) return res.data.casestudies.casestudies;
+  if (Array.isArray(res.data)) return res.data;
+  return [];
+}
+
 /**
  * 1. GET ALL CASE STUDIES (ADMIN VIEW)
  * Endpoint: GET /api/v1/admin-panel/casestudy/all
@@ -288,12 +299,10 @@ export async function getAllCasestudiesApi(
       { method: "GET" },
     );
 
-    if (Array.isArray(res?.casestudies)) {
-      return res.casestudies
-        .map((doc) => normalizeBackendCasestudy(doc, allCats))
-        .sort((a, b) => a.order_index - b.order_index);
-    }
-    return [];
+    const list = extractCasestudiesList(res);
+    return list
+      .map((doc) => normalizeBackendCasestudy(doc, allCats))
+      .sort((a, b) => a.order_index - b.order_index);
   } catch (err: unknown) {
     if (err instanceof ApiError && err.status === 404) {
       return [];
@@ -336,12 +345,10 @@ export async function getActiveCasestudiesApi(
       { method: "GET" },
     );
 
-    if (Array.isArray(res?.casestudies)) {
-      return res.casestudies
-        .map((doc) => normalizeBackendCasestudy(doc, allCats))
-        .sort((a, b) => a.order_index - b.order_index);
-    }
-    return [];
+    const list = extractCasestudiesList(res);
+    return list
+      .map((doc) => normalizeBackendCasestudy(doc, allCats))
+      .sort((a, b) => a.order_index - b.order_index);
   } catch (err: unknown) {
     if (err instanceof ApiError && err.status === 404) {
       return [];
@@ -431,6 +438,7 @@ export async function createCasestudyApi(
 
     const formattedGallery = (payload.gallery_images || []).map((img, idx) => ({
       url: img.url || DEFAULT_CASESTUDY_FALLBACK_IMAGE,
+      publicId: (img as any).publicId?.trim() || `img_gal_${Date.now().toString(36)}_${idx}`,
       caption: img.caption?.trim() || `Showcase visual ${idx + 1}`,
     }));
 
@@ -445,6 +453,7 @@ export async function createCasestudyApi(
       solution: payload.solution.trim(),
       outcome: payload.outcome.trim(),
       coverImage: payload.cover_image?.trim() || "",
+      coverImagePublicId: payload.cover_image?.trim() ? `cov_${Date.now().toString(36)}` : "",
       galleryImages: formattedGallery,
       galleryImageDetails: formattedGallery,
       websiteUrl: validWebsiteUrl,
@@ -521,10 +530,12 @@ export async function updateCasestudyApi(
     if (payload.cover_image !== undefined) {
       updateObj.coverImage = payload.cover_image.trim();
       updateObj.existingCoverImage = payload.cover_image.trim();
+      updateObj.coverImagePublicId = payload.cover_image.trim() ? `cov_${Date.now().toString(36)}` : "";
     }
     if (payload.gallery_images !== undefined) {
       const formattedGallery = payload.gallery_images.map((img, idx) => ({
         url: img.url || DEFAULT_CASESTUDY_FALLBACK_IMAGE,
+        publicId: (img as any).publicId?.trim() || `img_gal_${Date.now().toString(36)}_${idx}`,
         caption: img.caption?.trim() || `Showcase visual ${idx + 1}`,
       }));
       updateObj.galleryImages = formattedGallery;

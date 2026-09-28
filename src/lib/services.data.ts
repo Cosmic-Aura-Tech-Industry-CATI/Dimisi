@@ -1587,7 +1587,7 @@ const SERVICE_CATEGORIES_STORAGE_KEY = "dimisi_admin_service_categories_v2";
 class MemoryServicesStore {
   private _services: CompanyService[] = [];
   private _industries: IndustrySector[] = [...SEED_INDUSTRIES];
-  private _categories: ServiceCategoryItem[] = [...INITIAL_SERVICE_CATEGORIES];
+  private _categories: ServiceCategoryItem[] = [];
 
   constructor() {
     this.loadFromLocalStorage();
@@ -1599,7 +1599,7 @@ class MemoryServicesStore {
         const raw = localStorage.getItem(SERVICE_CATEGORIES_STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed) && parsed.length > 0) {
+          if (Array.isArray(parsed)) {
             this._categories = parsed;
           }
         }
@@ -1649,7 +1649,7 @@ class MemoryServicesStore {
   }
 
   setCategories(categories: ServiceCategoryItem[]): void {
-    if (Array.isArray(categories) && categories.length > 0) {
+    if (Array.isArray(categories)) {
       this._categories = [...categories];
       this.saveToLocalStorage();
     }
@@ -1736,12 +1736,14 @@ class MemoryServicesStore {
 
   deleteCategory(id: string): boolean {
     const initLen = this._categories.length;
-    this._categories = this._categories.filter((c) => c.id !== id && c.name.toLowerCase() !== id.toLowerCase());
-    const deleted = this._categories.length < initLen;
-    if (deleted) {
-      this.saveToLocalStorage();
-    }
-    return deleted;
+    this._categories = this._categories.filter(
+      (c) =>
+        c.id !== id &&
+        c.name.toLowerCase() !== id.toLowerCase() &&
+        c.slug.toLowerCase() !== id.toLowerCase(),
+    );
+    this.saveToLocalStorage();
+    return this._categories.length < initLen;
   }
 
   getPublicPayload(): PublicServicesPayload {

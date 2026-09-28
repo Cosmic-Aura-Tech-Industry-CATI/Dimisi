@@ -584,7 +584,11 @@ export function AdminWork({
     ]);
     setNewMetricLabel("");
     setNewMetricValue("");
-    setOrderIndex(projectList.length + 1);
+    const nextOrder =
+      projectList.length > 0
+        ? Math.max(...projectList.map((p) => Number(p.order_index) || 0), 0) + 1
+        : 1;
+    setOrderIndex(nextOrder);
     setIsFeatured(false);
     setIsActive(true);
     setModalTab("overview");

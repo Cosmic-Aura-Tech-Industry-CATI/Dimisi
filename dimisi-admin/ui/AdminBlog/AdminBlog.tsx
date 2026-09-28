@@ -599,7 +599,11 @@ export function AdminBlog({
     setMetaTitle("");
     setMetaDescription("");
     setOgImage("");
-    setOrderIndex(posts.length + 1);
+    const nextOrder =
+      (posts || []).length > 0
+        ? Math.max(...(posts || []).map((p) => Number(p.order_index) || 0), 0) + 1
+        : 1;
+    setOrderIndex(nextOrder);
     setModalTab("basic");
     setFormError(null);
     setFieldErrors({});
