@@ -12,7 +12,11 @@ import type {
   ReviewStatus,
   ReviewType,
 } from "@/lib/reviews.shared";
-import { computeStats } from "@/lib/reviews.shared";
+import {
+  computeStats,
+  extractMongoId,
+  isMongoId,
+} from "@/lib/reviews.shared";
 
 export interface BackendReviewDoc {
   _id: string;
@@ -143,9 +147,21 @@ export function normalizeBackendReview(doc: BackendReviewDoc): AdminReview {
     consent_to_publish: Boolean(doc.consentToPublish),
     status: (doc.status as ReviewStatus) || "pending",
     is_featured: false,
+    is_active: doc.isActive !== false,
+    is_reported: Boolean(doc.isReported),
+    report: doc.report
+      ? {
+          reason: doc.report.reason,
+          note: doc.report.note || null,
+          reporterName: doc.report.reporterName || null,
+          reporterEmail: doc.report.reporterEmail || null,
+          reportedAt: doc.report.reportedAt || null,
+        }
+      : null,
     moderation_reason: doc.isReported ? `Reported: ${doc.report?.reason || "Flagged"}` : null,
     moderated_by: "system",
-    submitter_ip: "127.0.0.1",
+    submitter_ip: (doc as any).ipAddress || "127.0.0.1",
+    user_agent: (doc as any).userAgent || null,
     submitted_at: doc.createdAt || new Date().toISOString(),
     approved_at: isApproved ? doc.updatedAt || doc.createdAt || null : null,
     rejected_at: isRejected ? doc.updatedAt || null : null,
@@ -191,9 +207,9 @@ export function normalizeBackendReport(doc: BackendReviewDoc): ReviewReport | nu
     reporter_email: doc.report?.reporterEmail || null,
     reason: doc.report?.reason || "Inappropriate Content",
     message: doc.report?.note || null,
-    status: doc.isActive ? "resolved" : "open",
+    status: doc.isReported && doc.isActive !== false ? "open" : "resolved",
     created_at: doc.report?.reportedAt || doc.updatedAt || doc.createdAt || new Date().toISOString(),
-    resolved_at: doc.isActive ? doc.updatedAt || null : null,
+    resolved_at: !doc.isActive || !doc.isReported ? doc.updatedAt || null : null,
     resolved_by: null,
     review: {
       customer_name: doc.fullName,
@@ -209,11 +225,11 @@ export function normalizeBackendReport(doc: BackendReviewDoc): ReviewReport | nu
  * Endpoint: GET /api/v1/admin-panel/reviews/public/all
  */
 export async function getPublicReviewsApi(options: {
-  page?: number;
-  limit?: number;
-  serviceName?: string;
-  rating?: number;
-  type?: "client" | "employee";
+  page?: number | undefined;
+  limit?: number | undefined;
+  serviceName?: string | undefined;
+  rating?: number | undefined;
+  type?: "client" | "employee" | undefined;
 } = {}): Promise<{
   reviews: PublicReview[];
   total: number;
@@ -273,21 +289,52 @@ export async function getPublicReviewsApi(options: {
 /**
  * 2. SUBMIT PUBLIC REVIEW
  * Endpoint: POST /api/v1/admin-panel/reviews/:campainId/create
+ * Supports multipart/form-data via FormData for profileImage photo uploads, as well as JSON payloads.
  */
-export async function submitPublicReviewApi(payload: SubmitReviewPayload): Promise<AdminReview> {
-  const campaignId = payload.campaignId?.trim();
-  const endpoint = campaignId
-    ? `/api/v1/admin-panel/reviews/${encodeURIComponent(campaignId)}/create`
-    : "/api/v1/admin-panel/reviews/create";
+export async function submitPublicReviewApi(
+  payloadOrCampaignId: string | SubmitReviewPayload | FormData,
+  maybePayload?: SubmitReviewPayload | FormData,
+): Promise<AdminReview> {
+  let targetCampaignId = "";
+  let bodyPayload: SubmitReviewPayload | FormData;
 
-  const res = await apiRequest<BackendReviewSingleResponse>(
-    endpoint,
-    {
+  if (typeof payloadOrCampaignId === "string") {
+    targetCampaignId = payloadOrCampaignId;
+    bodyPayload = maybePayload!;
+  } else {
+    bodyPayload = payloadOrCampaignId;
+    if (typeof FormData !== "undefined" && bodyPayload instanceof FormData) {
+      targetCampaignId = (bodyPayload.get("campaignId") as string) || "";
+    } else if ("campaignId" in bodyPayload && bodyPayload.campaignId) {
+      targetCampaignId = bodyPayload.campaignId;
+    }
+  }
+
+  const cleanCampaignId = extractMongoId(targetCampaignId);
+  if (!cleanCampaignId || !isMongoId(cleanCampaignId)) {
+    throw new Error("A valid campaign ID is required to submit a review.");
+  }
+
+  const endpoint = `/api/v1/admin-panel/reviews/${encodeURIComponent(cleanCampaignId)}/create`;
+
+  let requestOptions: Parameters<typeof apiRequest>[1];
+  if (typeof FormData !== "undefined" && bodyPayload instanceof FormData) {
+    // When sending FormData, apiClient automatically deletes default Content-Type so browser sets boundary
+    requestOptions = {
+      method: "POST",
+      body: bodyPayload,
+      timeoutMs: 30000,
+    };
+  } else {
+    requestOptions = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    },
-  );
+      body: JSON.stringify(bodyPayload),
+      timeoutMs: 30000,
+    };
+  }
+
+  const res = await apiRequest<BackendReviewSingleResponse>(endpoint, requestOptions);
 
   clearApiCache("/api/v1/admin-panel/reviews");
 
@@ -302,10 +349,11 @@ export async function submitPublicReviewApi(payload: SubmitReviewPayload): Promi
  * Endpoint: PATCH /api/v1/admin-panel/reviews/:id/report
  */
 export async function reportReviewApi(id: string, payload: ReportReviewPayload): Promise<boolean> {
-  if (!id) throw new Error("Review ID is required.");
+  const cleanId = extractMongoId(id);
+  if (!cleanId) throw new Error("A valid review ID is required.");
 
   const res = await apiRequest<{ status: string; message?: string }>(
-    `/api/v1/admin-panel/reviews/${encodeURIComponent(id)}/report`,
+    `/api/v1/admin-panel/reviews/${encodeURIComponent(cleanId)}/report`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -462,10 +510,11 @@ export async function updateReviewStatusApi(
   id: string,
   status: "approved" | "rejected",
 ): Promise<AdminReview> {
-  if (!id) throw new Error("Review ID is required.");
+  const cleanId = extractMongoId(id);
+  if (!cleanId) throw new Error("A valid review ID is required.");
 
   const res = await apiRequest<BackendReviewSingleResponse>(
-    `/api/v1/admin-panel/reviews/${encodeURIComponent(id)}/update`,
+    `/api/v1/admin-panel/reviews/${encodeURIComponent(cleanId)}/update`,
     {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -486,10 +535,11 @@ export async function updateReviewStatusApi(
  * Endpoint: PATCH /api/v1/admin-panel/reviews/:id/delete
  */
 export async function deleteReviewApi(id: string): Promise<boolean> {
-  if (!id) throw new Error("Review ID is required.");
+  const cleanId = extractMongoId(id);
+  if (!cleanId) throw new Error("A valid review ID is required.");
 
   const res = await apiRequest<{ status: string; message?: string }>(
-    `/api/v1/admin-panel/reviews/${encodeURIComponent(id)}/delete`,
+    `/api/v1/admin-panel/reviews/${encodeURIComponent(cleanId)}/delete`,
     {
       method: "PATCH",
     },
@@ -504,10 +554,11 @@ export async function deleteReviewApi(id: string): Promise<boolean> {
  * Endpoint: PATCH /api/v1/admin-panel/reviews/:id/keep
  */
 export async function keepReviewApi(id: string): Promise<AdminReview> {
-  if (!id) throw new Error("Review ID is required.");
+  const cleanId = extractMongoId(id);
+  if (!cleanId) throw new Error("A valid review ID is required.");
 
   const res = await apiRequest<BackendReviewSingleResponse>(
-    `/api/v1/admin-panel/reviews/${encodeURIComponent(id)}/keep`,
+    `/api/v1/admin-panel/reviews/${encodeURIComponent(cleanId)}/keep`,
     {
       method: "PATCH",
     },
@@ -526,10 +577,11 @@ export async function keepReviewApi(id: string): Promise<AdminReview> {
  * Endpoint: PATCH /api/v1/admin-panel/reviews/:id/toggle-active
  */
 export async function toggleReviewActiveApi(id: string): Promise<AdminReview> {
-  if (!id) throw new Error("Review ID is required.");
+  const cleanId = extractMongoId(id);
+  if (!cleanId) throw new Error("A valid review ID is required.");
 
   const res = await apiRequest<BackendReviewSingleResponse>(
-    `/api/v1/admin-panel/reviews/${encodeURIComponent(id)}/toggle-active`,
+    `/api/v1/admin-panel/reviews/${encodeURIComponent(cleanId)}/toggle-active`,
     {
       method: "PATCH",
     },
@@ -548,10 +600,11 @@ export async function toggleReviewActiveApi(id: string): Promise<AdminReview> {
  * Endpoint: PATCH /api/v1/admin-panel/reviews/:id/toggle-verify
  */
 export async function toggleReviewVerifyApi(id: string): Promise<AdminReview> {
-  if (!id) throw new Error("Review ID is required.");
+  const cleanId = extractMongoId(id);
+  if (!cleanId) throw new Error("A valid review ID is required.");
 
   const res = await apiRequest<BackendReviewSingleResponse>(
-    `/api/v1/admin-panel/reviews/${encodeURIComponent(id)}/toggle-verify`,
+    `/api/v1/admin-panel/reviews/${encodeURIComponent(cleanId)}/toggle-verify`,
     {
       method: "PATCH",
     },

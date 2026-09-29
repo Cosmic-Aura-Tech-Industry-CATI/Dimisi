@@ -28,6 +28,10 @@ import {
   Calendar,
   Layers,
   RotateCw,
+  ArrowRight,
+  ChevronRight,
+  ChevronUp,
+  ChevronDown,
 } from "lucide-react";
 import {
   type JobOpening,
@@ -44,6 +48,7 @@ import {
   APPLICATION_STATUS_META,
   slugifyJob,
   isMongoId,
+  getLocalResumeFromVault,
 } from "@/lib/careers.shared";
 import {
   saveJobFn,
@@ -128,10 +133,36 @@ export function AdminCareers({
   const [appNotesSuccess, setAppNotesSuccess] = useState<string | null>(null);
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
 
+  // Status Change Confirmation Modal State (Backend automated email awareness)
+  const [statusConfirmModal, setStatusConfirmModal] = useState<{
+    id: string;
+    candidateName: string;
+    nextStatus: ApplicationStatus;
+  } | null>(null);
+
+  // Applications Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  // Helper for resilient notes persistence (backend filterBody("status") strips notes)
+  const getPersistedNotes = (appId: string, fallback?: string): string => {
+    try {
+      const local = localStorage.getItem(`dimisi_app_notes_${appId}`);
+      if (local !== null && local !== "") return local;
+    } catch {}
+    return fallback || "";
+  };
+
+  const persistNotes = (appId: string, notes: string) => {
+    try {
+      localStorage.setItem(`dimisi_app_notes_${appId}`, notes);
+    } catch {}
+  };
+
   // Synchronize notes when selectedApplication changes
   useEffect(() => {
     if (selectedApplication) {
-      setAppNotesText(selectedApplication.notes || "");
+      setAppNotesText(getPersistedNotes(selectedApplication.id, selectedApplication.notes));
       setAppNotesSuccess(null);
     }
   }, [selectedApplication]);
@@ -140,7 +171,9 @@ export function AdminCareers({
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (applicationToDelete) {
+        if (statusConfirmModal) {
+          setStatusConfirmModal(null);
+        } else if (applicationToDelete) {
           setApplicationToDelete(null);
         } else if (selectedResume) {
           setSelectedResume(null);
@@ -151,7 +184,7 @@ export function AdminCareers({
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [applicationToDelete, selectedResume, selectedApplication]);
+  }, [statusConfirmModal, applicationToDelete, selectedResume, selectedApplication]);
 
   // Unique job titles for filtering
   const uniqueJobPositions = useMemo(() => {
@@ -160,6 +193,11 @@ export function AdminCareers({
     jobs.forEach((j) => set.add(j.title));
     return Array.from(set);
   }, [applications, jobs]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [appSearch, appStatusFilter, appPositionFilter]);
 
   // Filtered applications
   const filteredApplications = useMemo(() => {
@@ -184,7 +222,14 @@ export function AdminCareers({
     });
   }, [applications, appSearch, appStatusFilter, appPositionFilter]);
 
-  // Status Metrics
+  // Applications Pagination Calculations
+  const totalPages = Math.max(1, Math.ceil(filteredApplications.length / pageSize));
+  const paginatedApplications = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredApplications.slice(start, start + pageSize);
+  }, [filteredApplications, currentPage, pageSize]);
+
+  // Status Metrics (covers all 9 backend statuses)
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {
       total: applications.length,
@@ -194,6 +239,8 @@ export function AdminCareers({
       interview: 0,
       rejected: 0,
       hired: 0,
+      pending: 0,
+      failed: 0,
     };
     applications.forEach((a) => {
       if (counts[a.status] !== undefined) {
@@ -229,22 +276,38 @@ export function AdminCareers({
     });
   };
 
+  const requestStatusChange = (
+    id: string,
+    candidateName: string,
+    nextStatus: ApplicationStatus
+  ) => {
+    // If moving to a status that triggers automated email dispatch in the backend:
+    if (["interview", "rejected", "hired", "accepted"].includes(nextStatus)) {
+      setStatusConfirmModal({ id, candidateName, nextStatus });
+    } else {
+      handleStatusChange(id, nextStatus);
+    }
+  };
+
   const handleSaveNotes = (id: string) => {
     if (!selectedApplication) return;
+    persistNotes(id, appNotesText);
     startTransition(async () => {
-      const res = await updateApplicationStatusFn({
-        data: {
-          id,
-          status: selectedApplication.status,
-          notes: appNotesText,
-        },
-      });
-      if (res.success && res.application) {
-        setSelectedApplication(res.application);
-        setAppNotesSuccess("Notes saved successfully!");
-        setTimeout(() => setAppNotesSuccess(null), 3000);
-        onRefresh();
-      }
+      try {
+        await updateApplicationStatusFn({
+          data: {
+            id,
+            status: selectedApplication.status,
+            notes: appNotesText,
+          },
+        });
+      } catch {}
+      setSelectedApplication((prev) =>
+        prev ? { ...prev, notes: appNotesText } : null
+      );
+      setAppNotesSuccess("Notes saved successfully!");
+      setTimeout(() => setAppNotesSuccess(null), 3000);
+      onRefresh();
     });
   };
 
@@ -270,21 +333,8 @@ export function AdminCareers({
   };
 
   const handleDownloadResume = async (app: JobApplicationItem) => {
-    try {
-      if (app.id && app.id.length === 24) {
-        await downloadResumeApi(app.id, app.full_name);
-        return;
-      }
-    } catch {
-      // Fallback to direct URL if live stream endpoint is not available
-    }
-
-    if (app.resume_data_url && app.resume_data_url.startsWith("http")) {
-      window.open(app.resume_data_url, "_blank");
-      return;
-    }
-
-    if (app.resume_data_url) {
+    // 1. Direct Base64 data URL
+    if (app.resume_data_url && app.resume_data_url.startsWith("data:")) {
       const link = document.createElement("a");
       link.href = app.resume_data_url;
       link.download = app.resume_name || `${app.full_name.replace(/\s+/g, "_")}_Resume.pdf`;
@@ -294,7 +344,41 @@ export function AdminCareers({
       return;
     }
 
-    alert("Resume data is not available for this record.");
+    // 2. Direct Cloudinary HTTP URL
+    if (app.resume_url && app.resume_url.startsWith("http")) {
+      window.open(app.resume_url, "_blank");
+      return;
+    }
+    if (app.resume_data_url && app.resume_data_url.startsWith("http")) {
+      window.open(app.resume_data_url, "_blank");
+      return;
+    }
+
+    // 3. Live stream download API
+    try {
+      if (app.id && app.id.length === 24) {
+        await downloadResumeApi(app.id, app.full_name);
+        return;
+      }
+    } catch {
+      // Fallback to local vault below
+    }
+
+    // 4. Local client vault by email or ID
+    const cached =
+      (app.email ? getLocalResumeFromVault(app.email) : null) ||
+      (app.id ? getLocalResumeFromVault(app.id) : null);
+    if (cached?.dataUrl && cached.dataUrl.startsWith("data:")) {
+      const link = document.createElement("a");
+      link.href = cached.dataUrl;
+      link.download = cached.name || `${app.full_name.replace(/\s+/g, "_")}_Resume.pdf`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
+
+    alert("Resume data is still processing or not available yet.");
   };
 
   // --- JOB MODAL STATE ---
@@ -372,6 +456,58 @@ export function AdminCareers({
   const [closingSubline, setClosingSubline] = useState(closingCta.subline);
   const [settingsSuccess, setSettingsSuccess] = useState(false);
 
+  // Detect order collision in job form (backend job.model.ts enforces unique orderIndex)
+  const conflictingJob = useMemo(() => {
+    return jobs.find(
+      (j) => j.order_index === Number(orderIndex) && j.id !== editingJob?.id
+    );
+  }, [jobs, orderIndex, editingJob]);
+
+  // Sorted jobs for reliable display & swap operations
+  const sortedJobs = useMemo(() => {
+    return [...jobs].sort((a, b) => (a.order_index || 0) - (b.order_index || 0));
+  }, [jobs]);
+
+  // Quick applicant count per role
+  const getJobApplicantCount = (jobTitle: string) => {
+    return applications.filter(
+      (a) => a.job_title.toLowerCase() === jobTitle.toLowerCase()
+    ).length;
+  };
+
+  // Safe Up/Down reordering respecting MongoDB unique orderIndex constraint
+  const handleMoveJobOrder = async (targetJob: JobOpening, direction: "up" | "down") => {
+    const currentIndex = sortedJobs.findIndex((j) => j.id === targetJob.id);
+    if (currentIndex === -1) return;
+    const swapIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (swapIndex < 0 || swapIndex >= sortedJobs.length) return;
+    const neighbor = sortedJobs[swapIndex];
+
+    const currentOrder = targetJob.order_index;
+    const neighborOrder = neighbor.order_index;
+
+    startTransition(async () => {
+      try {
+        const tempOrder = 999999 + Math.floor(Math.random() * 1000);
+        await saveJob({
+          data: { ...targetJob, order_index: tempOrder },
+          departments,
+        });
+        await saveJob({
+          data: { ...neighbor, order_index: currentOrder },
+          departments,
+        });
+        await saveJob({
+          data: { ...targetJob, order_index: neighborOrder },
+          departments,
+        });
+        onRefresh();
+      } catch (err) {
+        console.error("Failed to reorder jobs:", err);
+      }
+    });
+  };
+
   const handleOpenCreateJob = () => {
     setEditingJob(null);
     setTitle("");
@@ -393,7 +529,8 @@ export function AdminCareers({
       "Flexible remote working hours.",
     ]);
     setApplyUrl("");
-    setOrderIndex(jobs.length + 1);
+    const maxOrder = jobs.length > 0 ? Math.max(...jobs.map((j) => j.order_index || 0)) : 0;
+    setOrderIndex(maxOrder + 1);
     setIsFeatured(false);
     setStatus("open");
     setModalTab("basic");
@@ -673,10 +810,20 @@ export function AdminCareers({
             </div>
 
             <div className={styles.appFiltersRow}>
-              {/* Status Filter Pills */}
+              {/* Status Filter Pills (All 9 backend statuses supported) */}
               <div className={styles.appStatusPills}>
                 {(
-                  ["all", "new", "reviewing", "shortlisted", "interview", "rejected", "hired"] as const
+                  [
+                    "all",
+                    "new",
+                    "reviewing",
+                    "shortlisted",
+                    "interview",
+                    "hired",
+                    "rejected",
+                    "pending",
+                    "failed",
+                  ] as const
                 ).map((st) => (
                   <button
                     key={st}
@@ -687,7 +834,10 @@ export function AdminCareers({
                     ].join(" ")}
                     onClick={() => setAppStatusFilter(st)}
                   >
-                    {st === "all" ? "All Statuses" : st.charAt(0).toUpperCase() + st.slice(1)}
+                    {st === "all"
+                      ? "All Statuses"
+                      : APPLICATION_STATUS_META[st]?.label ||
+                        st.charAt(0).toUpperCase() + st.slice(1)}
                   </button>
                 ))}
               </div>
@@ -712,6 +862,25 @@ export function AdminCareers({
               )}
             </div>
           </div>
+
+          {/* Active Role Filter Banner */}
+          {appPositionFilter !== "all" && (
+            <div className={styles.activeFilterBanner}>
+              <div className={styles.activeFilterLeft}>
+                <span>Filtered by Role:</span>
+                <strong className={styles.filterBadge}>{appPositionFilter}</strong>
+                <span>({filteredApplications.length} candidate{filteredApplications.length === 1 ? "" : "s"})</span>
+              </div>
+              <button
+                type="button"
+                className={styles.clearFilterBtn}
+                onClick={() => setAppPositionFilter("all")}
+              >
+                <X size={12} />
+                <span>Clear Role Filter</span>
+              </button>
+            </div>
+          )}
 
           {/* Action Success Toast */}
           {actionSuccessMsg && (
@@ -747,125 +916,233 @@ export function AdminCareers({
                 )}
               </div>
             ) : (
-              <table className={styles.table}>
-                <thead>
-                  <tr>
-                    <th>Applicant</th>
-                    <th>Job Position</th>
-                    <th>Location</th>
-                    <th>Resume</th>
-                    <th>Applied On</th>
-                    <th>Status</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredApplications.map((app) => {
-                    const statusMeta =
-                      APPLICATION_STATUS_META[app.status] || APPLICATION_STATUS_META.new;
-                    return (
-                      <tr key={app.id}>
-                        <td>
-                          <div className={styles.applicantCol}>
-                            <div className={styles.applicantAvatar}>
-                              {app.full_name.charAt(0).toUpperCase()}
+              <>
+                <table className={styles.table}>
+                  <colgroup>
+                    <col style={{ width: "17%" }} />
+                    <col style={{ width: "17%" }} />
+                    <col style={{ width: "11%" }} />
+                    <col style={{ width: "13%" }} />
+                    <col style={{ width: "11%" }} />
+                    <col style={{ width: "16%" }} />
+                    <col style={{ width: "15%" }} />
+                  </colgroup>
+                  <thead>
+                    <tr>
+                      <th className={styles.thLeft}>Applicant</th>
+                      <th className={styles.thLeft}>Job Position</th>
+                      <th className={styles.thLeft}>Location</th>
+                      <th className={styles.thCenter}>Resume</th>
+                      <th className={styles.thCenter}>Applied On</th>
+                      <th className={styles.thCenter}>Status</th>
+                      <th className={styles.thCenter}>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {paginatedApplications.map((app) => {
+                      const statusMeta =
+                        APPLICATION_STATUS_META[app.status] || APPLICATION_STATUS_META.new;
+                      const vaultData =
+                        (!app.resume_data_url || app.resume_data_url === "PENDING")
+                          ? (app.email ? getLocalResumeFromVault(app.email) : null) ||
+                            (app.id ? getLocalResumeFromVault(app.id) : null)
+                          : null;
+                      const effectiveResumeDataUrl = vaultData?.dataUrl || app.resume_data_url;
+                      const hasResume = Boolean(
+                        (effectiveResumeDataUrl &&
+                          effectiveResumeDataUrl !== "PENDING" &&
+                          effectiveResumeDataUrl.length > 10) ||
+                          (app.resume_url && app.resume_url !== "PENDING" && app.resume_url.startsWith("http"))
+                      );
+                      const isUploading =
+                        app.status === "pending" ||
+                        app.resume_url === "PENDING" ||
+                        app.resume_data_url === "PENDING";
+                      return (
+                        <tr key={app.id}>
+                          <td className={styles.tdLeft}>
+                            <div className={styles.applicantCol}>
+                              <span className={styles.applicantName} title={app.full_name}>
+                                {app.full_name}
+                              </span>
                             </div>
-                            <div className={styles.applicantInfo}>
-                              <span className={styles.applicantName}>{app.full_name}</span>
+                          </td>
+                          <td className={styles.tdLeft}>
+                            <div
+                              className={styles.posCell}
+                              title={`${app.job_title}${app.job_department ? ` (${app.job_department})` : ""}`}
+                            >
+                              <span className={styles.posTitle}>{app.job_title}</span>
+                              <span className={styles.posDept}>{app.job_department || "General"}</span>
                             </div>
-                          </div>
-                        </td>
-                        <td>
-                          <div
-                            className={styles.posCell}
-                            title={`${app.job_title}${app.job_department ? ` (${app.job_department})` : ""}`}
-                          >
-                            <span className={styles.posTitle}>{app.job_title}</span>
-                            <span className={styles.posDept}>{app.job_department || "General"}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <div className={styles.locCell} title={app.location}>
-                            <MapPin size={13} className={styles.locPin} />
-                            <span className={styles.locTextTruncate}>{app.location}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <button
-                            type="button"
-                            className={styles.resumeActionBtn}
-                            onClick={() => setSelectedResume(app)}
-                            title={`View Resume: ${app.resume_name || "Resume"}`}
-                            aria-label={`View resume for ${app.full_name}`}
-                          >
-                            <FileText size={13} />
-                            <span>View Resume</span>
-                          </button>
-                        </td>
-                        <td>
-                          <div className={styles.dateCell}>
-                            <Calendar size={12} className={styles.calIcon} />
-                            <span>{formatDate(app.applied_at)}</span>
-                          </div>
-                        </td>
-                        <td>
-                          <select
-                            value={app.status}
-                            onChange={(e) =>
-                              handleStatusChange(app.id, e.target.value as ApplicationStatus)
-                            }
-                            className={styles.statusDropdown}
-                            style={{
-                              color: statusMeta.color,
-                              background: statusMeta.bg,
-                              borderColor: statusMeta.border,
-                            }}
-                            aria-label={`Update status for ${app.full_name}`}
-                          >
-                            <option value="new">New</option>
-                            <option value="reviewing">Reviewing</option>
-                            <option value="shortlisted">Shortlisted</option>
-                            <option value="interview">Interview</option>
-                            <option value="rejected">Rejected</option>
-                            <option value="hired">Hired</option>
-                          </select>
-                        </td>
-                        <td>
-                          <div className={styles.rowActions}>
-                            <button
-                              type="button"
-                              className={styles.viewDetailsIconBtn}
-                              onClick={() => handleOpenApplicationDetails(app)}
-                              title="View Full Application Details"
-                              aria-label={`View details for ${app.full_name}`}
+                          </td>
+                          <td className={styles.tdLeft}>
+                            <div className={styles.locCell} title={app.location || "Remote"}>
+                              <MapPin size={13} className={styles.locPin} />
+                              <span className={styles.locTextTruncate}>{app.location || "Remote"}</span>
+                            </div>
+                          </td>
+                          <td className={styles.tdCenter}>
+                            {hasResume ? (
+                              <button
+                                type="button"
+                                className={styles.resumeActionBtn}
+                                onClick={() =>
+                                  setSelectedResume({
+                                    ...app,
+                                    resume_data_url: effectiveResumeDataUrl,
+                                    resume_name: vaultData?.name || app.resume_name || "Resume.pdf",
+                                  })
+                                }
+                                title={`View Resume: ${vaultData?.name || app.resume_name || "Resume"}`}
+                                aria-label={`View resume for ${app.full_name}`}
+                              >
+                                <FileText size={13} />
+                                <span>View Resume</span>
+                              </button>
+                            ) : isUploading ? (
+                              <span className={styles.resumePendingBadge} title="Resume upload is processing">
+                                <RotateCw size={12} className={styles.spinIcon} />
+                                <span>Uploading</span>
+                              </span>
+                            ) : app.status === "failed" ? (
+                              <span
+                                className={styles.resumeFailedBadge}
+                                title={app.failure_reason || "Resume upload failed"}
+                              >
+                                <AlertCircle size={12} />
+                                <span>Upload Failed</span>
+                              </span>
+                            ) : (
+                              <span
+                                className={styles.noResumeBadge}
+                                title="No resume file was attached with this application"
+                              >
+                                <span>No File</span>
+                              </span>
+                            )}
+                          </td>
+                          <td className={styles.tdCenter}>
+                            <div className={styles.dateCell}>
+                              <Calendar size={12} className={styles.calIcon} />
+                              <span>{formatDate(app.applied_at)}</span>
+                            </div>
+                          </td>
+                          <td className={styles.tdCenter}>
+                            <select
+                              value={app.status}
+                              onChange={(e) =>
+                                requestStatusChange(
+                                  app.id,
+                                  app.full_name,
+                                  e.target.value as ApplicationStatus
+                                )
+                              }
+                              className={styles.statusDropdown}
+                              style={{
+                                color: statusMeta.color,
+                                background: statusMeta.bg,
+                                borderColor: statusMeta.border,
+                              }}
+                              aria-label={`Update status for ${app.full_name}`}
                             >
-                              <Eye size={15} />
-                            </button>
-                            <button
-                              type="button"
-                              className={styles.downloadIconBtn}
-                              onClick={() => handleDownloadResume(app)}
-                              title="Download Resume File"
-                              aria-label={`Download resume for ${app.full_name}`}
-                            >
-                              <Download size={15} />
-                            </button>
-                            <button
-                              type="button"
-                              className={styles.delBtn}
-                              onClick={() => setApplicationToDelete(app)}
-                              title="Delete Application"
-                              aria-label={`Delete application from ${app.full_name}`}
-                            >
-                              <Trash2 size={15} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
+                              <option value="new">New</option>
+                              <option value="reviewing">Reviewing</option>
+                              <option value="shortlisted">Shortlisted</option>
+                              <option value="interview">Interview</option>
+                              <option value="hired">Hired</option>
+                              <option value="rejected">Rejected</option>
+                              <option value="pending">Pending</option>
+                              <option value="resume_uploaded">Resume Uploaded</option>
+                              <option value="failed">Failed</option>
+                            </select>
+                          </td>
+                          <td className={styles.tdActions}>
+                            <div className={styles.rowActions}>
+                              <button
+                                type="button"
+                                className={styles.viewDetailsIconBtn}
+                                onClick={() => handleOpenApplicationDetails(app)}
+                                title="View Full Application Details"
+                                aria-label={`View details for ${app.full_name}`}
+                              >
+                                <Eye size={15} />
+                              </button>
+                              <button
+                                type="button"
+                                className={[
+                                  styles.downloadIconBtn,
+                                  !hasResume ? styles.btnDisabled : "",
+                                ].join(" ")}
+                                onClick={() => hasResume && handleDownloadResume(app)}
+                                disabled={!hasResume}
+                                title={hasResume ? "Download Resume File" : "No resume file available"}
+                                aria-label={`Download resume for ${app.full_name}`}
+                              >
+                                <Download size={15} />
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.delBtn}
+                                onClick={() => setApplicationToDelete(app)}
+                                title="Delete Application"
+                                aria-label={`Delete application from ${app.full_name}`}
+                              >
+                                <Trash2 size={15} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+
+                {/* Applications Pagination Controls */}
+                {filteredApplications.length > 0 && (
+                  <div className={styles.paginationBar}>
+                    <div className={styles.paginationInfo}>
+                      Showing {(currentPage - 1) * pageSize + 1}–
+                      {Math.min(currentPage * pageSize, filteredApplications.length)} of{" "}
+                      {filteredApplications.length} applications
+                    </div>
+                    <div className={styles.paginationControls}>
+                      <button
+                        type="button"
+                        className={styles.pageBtn}
+                        disabled={currentPage <= 1}
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      >
+                        Previous
+                      </button>
+                      <span className={styles.pageIndicator}>
+                        Page {currentPage} of {totalPages}
+                      </span>
+                      <button
+                        type="button"
+                        className={styles.pageBtn}
+                        disabled={currentPage >= totalPages}
+                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      >
+                        Next
+                      </button>
+                      <select
+                        value={pageSize}
+                        onChange={(e) => {
+                          setPageSize(Number(e.target.value));
+                          setCurrentPage(1);
+                        }}
+                        className={styles.pageSizeSelect}
+                        aria-label="Items per page"
+                      >
+                        <option value={10}>10 / page</option>
+                        <option value={25}>25 / page</option>
+                        <option value={50}>50 / page</option>
+                      </select>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
 
@@ -906,8 +1183,9 @@ export function AdminCareers({
                       <select
                         value={selectedApplication.status}
                         onChange={(e) =>
-                          handleStatusChange(
+                          requestStatusChange(
                             selectedApplication.id,
+                            selectedApplication.full_name,
                             e.target.value as ApplicationStatus
                           )
                         }
@@ -918,8 +1196,11 @@ export function AdminCareers({
                         <option value="reviewing">Reviewing</option>
                         <option value="shortlisted">Shortlisted</option>
                         <option value="interview">Interview</option>
-                        <option value="rejected">Rejected</option>
                         <option value="hired">Hired</option>
+                        <option value="rejected">Rejected</option>
+                        <option value="pending">Pending</option>
+                        <option value="resume_uploaded">Resume Uploaded</option>
+                        <option value="failed">Failed</option>
                       </select>
                     </div>
 
@@ -937,6 +1218,45 @@ export function AdminCareers({
 
                 {/* Modal Body */}
                 <div className={styles.appModalBody}>
+                  {/* HIRING WORKFLOW STEPPER */}
+                  <div className={styles.stepperContainer}>
+                    {[
+                      { key: "new", label: "New" },
+                      { key: "reviewing", label: "Reviewing" },
+                      { key: "shortlisted", label: "Shortlisted" },
+                      { key: "interview", label: "Interview" },
+                      { key: "hired", label: "Hired" },
+                      { key: "rejected", label: "Rejected" },
+                    ].map((step, idx, arr) => {
+                      const isActive = selectedApplication.status === step.key;
+                      return (
+                        <div key={step.key} style={{ display: "contents" }}>
+                          <button
+                            type="button"
+                            className={[
+                              styles.stepItem,
+                              isActive ? styles.stepItemActive : "",
+                            ].join(" ")}
+                            onClick={() =>
+                              requestStatusChange(
+                                selectedApplication.id,
+                                selectedApplication.full_name,
+                                step.key as ApplicationStatus
+                              )
+                            }
+                            title={`Click to set status to ${step.label}`}
+                          >
+                            <span>{idx + 1}.</span>
+                            <span>{step.label}</span>
+                          </button>
+                          {idx < arr.length - 1 && (
+                            <ChevronRight size={12} className={styles.stepArrow} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+
                   {/* Section 1: APPLICANT PROFILE */}
                   <div className={styles.appDetailSection}>
                     <h4 className={styles.appDetailSectionTitle}>APPLICANT PROFILE</h4>
@@ -1024,44 +1344,82 @@ export function AdminCareers({
                   {/* Section 3: RESUME */}
                   <div className={styles.appDetailSection}>
                     <h4 className={styles.appDetailSectionTitle}>RESUME</h4>
-                    <div className={styles.resumeDisplayCard}>
-                      <div className={styles.resumeDisplayLeft}>
-                        <div className={styles.resumeFileIconCircle}>
-                          <FileText size={22} />
-                        </div>
-                        <div className={styles.resumeFileInfo}>
-                          <div className={styles.resumeFileName}>
-                            {selectedApplication.resume_name}
+                    {selectedApplication.status === "pending" || selectedApplication.resume_url === "PENDING" ? (
+                      <div className={styles.resumeDisplayCard}>
+                        <div className={styles.resumeDisplayLeft}>
+                          <div className={styles.resumeFileIconCircle}>
+                            <RotateCw size={22} className={styles.spinIcon} />
                           </div>
-                          <div className={styles.resumeFileMeta}>
-                            <span className={styles.formatPill}>
-                              {selectedApplication.resume_name.split(".").pop()?.toUpperCase() || "PDF"}
-                            </span>
-                            <span>•</span>
-                            <span>{formatFileSize(selectedApplication.resume_size)}</span>
+                          <div className={styles.resumeFileInfo}>
+                            <div className={styles.resumeFileName}>Resume Upload Pending</div>
+                            <div className={styles.resumeFileMeta}>
+                              <span>Candidate application received; file storage is synchronizing.</span>
+                            </div>
                           </div>
                         </div>
                       </div>
+                    ) : selectedApplication.status === "failed" ? (
+                      <div
+                        className={styles.resumeDisplayCard}
+                        style={{ borderColor: "rgba(239, 68, 68, 0.4)", background: "rgba(239, 68, 68, 0.05)" }}
+                      >
+                        <div className={styles.resumeDisplayLeft}>
+                          <div
+                            className={styles.resumeFileIconCircle}
+                            style={{ background: "rgba(239, 68, 68, 0.15)", color: "#ef4444" }}
+                          >
+                            <AlertCircle size={22} />
+                          </div>
+                          <div className={styles.resumeFileInfo}>
+                            <div className={styles.resumeFileName} style={{ color: "#ef4444" }}>
+                              Resume Processing Failed
+                            </div>
+                            <div className={styles.resumeFileMeta}>
+                              <span>{selectedApplication.failure_reason || "File could not be stored in cloud storage."}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className={styles.resumeDisplayCard}>
+                        <div className={styles.resumeDisplayLeft}>
+                          <div className={styles.resumeFileIconCircle}>
+                            <FileText size={22} />
+                          </div>
+                          <div className={styles.resumeFileInfo}>
+                            <div className={styles.resumeFileName}>
+                              {selectedApplication.resume_name}
+                            </div>
+                            <div className={styles.resumeFileMeta}>
+                              <span className={styles.formatPill}>
+                                {selectedApplication.resume_name.split(".").pop()?.toUpperCase() || "PDF"}
+                              </span>
+                              <span>•</span>
+                              <span>{formatFileSize(selectedApplication.resume_size)}</span>
+                            </div>
+                          </div>
+                        </div>
 
-                      <div className={styles.resumeDisplayActions}>
-                        <button
-                          type="button"
-                          className={styles.previewResumeBtn}
-                          onClick={() => setSelectedResume(selectedApplication)}
-                        >
-                          <Eye size={14} />
-                          <span>View Resume</span>
-                        </button>
-                        <button
-                          type="button"
-                          className={styles.downloadResumeBtn}
-                          onClick={() => handleDownloadResume(selectedApplication)}
-                        >
-                          <Download size={14} />
-                          <span>Download Resume</span>
-                        </button>
+                        <div className={styles.resumeDisplayActions}>
+                          <button
+                            type="button"
+                            className={styles.previewResumeBtn}
+                            onClick={() => setSelectedResume(selectedApplication)}
+                          >
+                            <Eye size={14} />
+                            <span>View Resume</span>
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.downloadResumeBtn}
+                            onClick={() => handleDownloadResume(selectedApplication)}
+                          >
+                            <Download size={14} />
+                            <span>Download Resume</span>
+                          </button>
+                        </div>
                       </div>
-                    </div>
+                    )}
                   </div>
 
                   {/* Section 4: ADDITIONAL INFORMATION */}
@@ -1307,38 +1665,107 @@ export function AdminCareers({
                 </div>
 
                 <div className={styles.resumePreviewBody}>
-                  {selectedResume.resume_data_url ? (
-                    selectedResume.resume_name.toLowerCase().endsWith(".pdf") ||
-                    selectedResume.resume_type.includes("pdf") ? (
-                      <iframe
-                        src={selectedResume.resume_data_url}
-                        title={`Resume Preview - ${selectedResume.full_name}`}
-                        className={styles.pdfIframe}
-                      />
-                    ) : (
+                  {(() => {
+                    const previewVaultData =
+                      (!selectedResume.resume_data_url || selectedResume.resume_data_url === "PENDING")
+                        ? (selectedResume.email ? getLocalResumeFromVault(selectedResume.email) : null) ||
+                          (selectedResume.id ? getLocalResumeFromVault(selectedResume.id) : null)
+                        : null;
+                    const previewUrl =
+                      previewVaultData?.dataUrl ||
+                      (selectedResume.resume_data_url && selectedResume.resume_data_url !== "PENDING"
+                        ? selectedResume.resume_data_url
+                        : selectedResume.resume_url && selectedResume.resume_url !== "PENDING"
+                        ? selectedResume.resume_url
+                        : "");
+                    const isPdf =
+                      selectedResume.resume_name?.toLowerCase().endsWith(".pdf") ||
+                      selectedResume.resume_type?.includes("pdf") ||
+                      previewUrl.startsWith("data:application/pdf");
+
+                    if (previewUrl) {
+                      return isPdf ? (
+                        <iframe
+                          src={previewUrl}
+                          title={`Resume Preview - ${selectedResume.full_name}`}
+                          className={styles.pdfIframe}
+                        />
+                      ) : (
+                        <div className={styles.docPreviewNotice}>
+                          <FileText size={48} className={styles.docNoticeIcon} />
+                          <h4>Document File ({selectedResume.resume_name})</h4>
+                          <p>
+                            Direct browser preview is not natively supported for this format. Click the download button below to inspect the document locally.
+                          </p>
+                          <button
+                            type="button"
+                            className={styles.docDownloadBtn}
+                            onClick={() => handleDownloadResume(selectedResume)}
+                          >
+                            <Download size={16} />
+                            <span>Download {selectedResume.resume_name}</span>
+                          </button>
+                        </div>
+                      );
+                    }
+
+                    return (
                       <div className={styles.docPreviewNotice}>
-                        <FileText size={48} className={styles.docNoticeIcon} />
-                        <h4>Word Document (.DOC / .DOCX)</h4>
-                        <p>
-                          Direct browser preview for Word documents is not natively rendered by standard iframe engines. Click the download button below to inspect the document locally.
-                        </p>
-                        <button
-                          type="button"
-                          className={styles.docDownloadBtn}
-                          onClick={() => handleDownloadResume(selectedResume)}
-                        >
-                          <Download size={16} />
-                          <span>Download {selectedResume.resume_name}</span>
-                        </button>
+                        <AlertCircle size={36} className={styles.docNoticeIcon} />
+                        <h4>No File Data</h4>
+                        <p>Resume file data is not available for this record.</p>
                       </div>
-                    )
-                  ) : (
-                    <div className={styles.docPreviewNotice}>
-                      <AlertCircle size={36} className={styles.docNoticeIcon} />
-                      <h4>No File Data</h4>
-                      <p>Resume file data is not available for this record.</p>
-                    </div>
-                  )}
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* STATUS CHANGE CONFIRMATION MODAL (Automated Email Alert Awareness) */}
+          {statusConfirmModal && (
+            <div
+              className={styles.confirmModalBackdrop}
+              role="dialog"
+              aria-modal="true"
+              onClick={() => setStatusConfirmModal(null)}
+            >
+              <div
+                className={styles.confirmModalCard}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <h4 className={styles.confirmModalTitle}>
+                  Send Status Notification Email?
+                </h4>
+                <p className={styles.confirmModalText}>
+                  Moving applicant <strong>{statusConfirmModal.candidateName}</strong> to status{" "}
+                  <strong style={{ color: APPLICATION_STATUS_META[statusConfirmModal.nextStatus]?.color || "#ffffff" }}>
+                    {APPLICATION_STATUS_META[statusConfirmModal.nextStatus]?.label ||
+                      statusConfirmModal.nextStatus}
+                  </strong>{" "}
+                  will automatically trigger an official email dispatch from the backend server to the candidate.
+                </p>
+                <div className={styles.confirmModalActions}>
+                  <button
+                    type="button"
+                    className={styles.confirmCancelBtn}
+                    onClick={() => setStatusConfirmModal(null)}
+                    disabled={isPending}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.confirmSubmitBtn}
+                    onClick={() => {
+                      const { id, nextStatus } = statusConfirmModal;
+                      setStatusConfirmModal(null);
+                      handleStatusChange(id, nextStatus);
+                    }}
+                    disabled={isPending}
+                  >
+                    {isPending ? "Sending..." : "Confirm & Send Email"}
+                  </button>
                 </div>
               </div>
             </div>
@@ -1385,12 +1812,38 @@ export function AdminCareers({
                   </td>
                 </tr>
               ) : (
-                jobs.map((j) => (
+                sortedJobs.map((j, jIdx) => (
                   <tr
                     key={j.id}
                     className={j.status !== "open" ? styles.inactiveRow : ""}
                   >
-                    <td className={styles.orderCell}>{j.order_index ?? "—"}</td>
+                    <td className={styles.orderCell}>
+                      <div className={styles.orderCellContent}>
+                        <span>{j.order_index ?? "—"}</span>
+                        <div className={styles.orderArrows}>
+                          <button
+                            type="button"
+                            className={styles.orderArrowBtn}
+                            disabled={isPending || jIdx === 0}
+                            onClick={() => handleMoveJobOrder(j, "up")}
+                            title="Move Up in Display Order"
+                            aria-label={`Move ${j.title} up`}
+                          >
+                            <ChevronUp size={10} />
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.orderArrowBtn}
+                            disabled={isPending || jIdx === sortedJobs.length - 1}
+                            onClick={() => handleMoveJobOrder(j, "down")}
+                            title="Move Down in Display Order"
+                            aria-label={`Move ${j.title} down`}
+                          >
+                            <ChevronDown size={10} />
+                          </button>
+                        </div>
+                      </div>
+                    </td>
                     <td className={styles.titleTd}>
                       <div className={styles.titleCol}>
                         <span className={styles.jobName} title={j.title}>
@@ -1404,6 +1857,22 @@ export function AdminCareers({
                             {j.summary}
                           </span>
                         ) : null}
+                        <button
+                          type="button"
+                          className={styles.jobApplicantChip}
+                          onClick={() => {
+                            setAppPositionFilter(j.title);
+                            setActiveSection("applications");
+                          }}
+                          title={`View ${getJobApplicantCount(j.title)} applicant(s) for this position`}
+                        >
+                          <Users size={12} />
+                          <span>
+                            {getJobApplicantCount(j.title)} Applicant
+                            {getJobApplicantCount(j.title) === 1 ? "" : "s"}
+                          </span>
+                          <ArrowRight size={10} />
+                        </button>
                       </div>
                     </td>
                     <td className={styles.tdCenter}>
@@ -1882,6 +2351,14 @@ export function AdminCareers({
                         value={orderIndex}
                         onChange={(e) => setOrderIndex(Number(e.target.value))}
                       />
+                      {conflictingJob && (
+                        <div className={styles.orderWarning}>
+                          <AlertCircle size={13} />
+                          <span>
+                            Order #{orderIndex} is currently used by &quot;{conflictingJob.title}&quot;.
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
 

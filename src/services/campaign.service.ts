@@ -3,8 +3,9 @@
  * Handles Marketing & Review Campaign listing, creation, activation toggle, and deletion
  * against the Express backend API (/api/v1/admin-panel/campaigns/*).
  */
-import { apiRequest, ApiError, clearApiCache } from "./apiClient";
+import { apiRequest, ApiError, clearApiCache, API_BASE_URL } from "./apiClient";
 import type { ReviewCampaign } from "@/lib/reviews.shared";
+import { extractMongoId, isMongoId } from "@/lib/reviews.shared";
 import { getVisitorServicesApi } from "./service.service";
 
 export interface BackendCampaignDoc {
@@ -66,13 +67,7 @@ export function generateCampaignSlug(name: string): string {
   return base || `campaign-${Date.now().toString(36)}`;
 }
 
-/**
- * Checks if a given string is a valid 24-character hex MongoDB ObjectId.
- */
-export function isMongoId(id?: string | null): boolean {
-  if (!id || typeof id !== "string") return false;
-  return /^[0-9a-fA-F]{24}$/.test(id.trim());
-}
+export { isMongoId };
 
 /**
  * Normalizes backend ICampaign document into frontend ReviewCampaign model.
@@ -220,15 +215,65 @@ export async function createAdminCampaignApi(
 }
 
 /**
+ * Generates official backend URL to download high-resolution vector (SVG) or bitmap (PNG) QR code.
+ * Endpoint: GET /api/v1/admin-panel/campaigns/:id/qr.:ext
+ */
+export function getCampaignQrDownloadUrl(
+  campaignId: string,
+  format: "png" | "svg" = "png",
+  size: number = 2048,
+): string {
+  const cleanId = extractMongoId(campaignId);
+  const safeExt = format.toLowerCase() === "svg" ? "svg" : "png";
+  const safeSize = Math.min(Math.max(size, 128), 4096);
+  return `${API_BASE_URL}/api/v1/admin-panel/campaigns/${encodeURIComponent(cleanId)}/qr.${safeExt}?size=${safeSize}`;
+}
+
+/**
+ * Resolves a default active campaign ObjectId from database or cached state.
+ * Prevents 400 error when submitting reviews from generic /review URL without a campaign param.
+ */
+export async function resolveDefaultCampaignId(): Promise<string | null> {
+  // 1. Try to fetch from backend campaigns if accessible
+  try {
+    const campaigns = await getAllAdminCampaignsApi();
+    if (Array.isArray(campaigns)) {
+      const active = campaigns.find((c) => c.is_active && isMongoId(c.id));
+      if (active) return active.id;
+      const anyMongo = campaigns.find((c) => isMongoId(c.id));
+      if (anyMongo) return anyMongo.id;
+    }
+  } catch {}
+
+  // 2. Check localStorage cached campaigns
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("dimisi_campaigns_v1");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) {
+          const active = parsed.find((c: any) => c.is_active !== false && isMongoId(c.id));
+          if (active) return active.id;
+          const anyMongo = parsed.find((c: any) => isMongoId(c.id));
+          if (anyMongo) return anyMongo.id;
+        }
+      }
+    } catch {}
+  }
+  return null;
+}
+
+/**
  * 3. TOGGLE ACTIVATE CAMPAIGN
  * Endpoint: PATCH /api/v1/admin-panel/campaigns/:id/toggle-activate
  */
 export async function toggleAdminCampaignApi(id: string): Promise<ReviewCampaign> {
-  if (!id) throw new Error("Campaign ID is required.");
+  const cleanId = extractMongoId(id);
+  if (!cleanId) throw new Error("Campaign ID is required.");
 
   try {
     const res = await apiRequest<BackendCampaignSingleResponse>(
-      `/api/v1/admin-panel/campaigns/${encodeURIComponent(id)}/toggle-activate`,
+      `/api/v1/admin-panel/campaigns/${encodeURIComponent(cleanId)}/toggle-activate`,
       {
         method: "PATCH",
         timeoutMs: 30000,
@@ -242,7 +287,7 @@ export async function toggleAdminCampaignApi(id: string): Promise<ReviewCampaign
     }
     throw new Error(res?.message || "Failed to toggle campaign activation.");
   } catch (err) {
-    console.error(`Failed to toggle campaign ${id}:`, err);
+    console.error(`Failed to toggle campaign ${cleanId}:`, err);
     throw err;
   }
 }
@@ -252,11 +297,12 @@ export async function toggleAdminCampaignApi(id: string): Promise<ReviewCampaign
  * Endpoint: DELETE /api/v1/admin-panel/campaigns/:id/delete
  */
 export async function deleteAdminCampaignApi(id: string): Promise<boolean> {
-  if (!id) throw new Error("Campaign ID is required.");
+  const cleanId = extractMongoId(id);
+  if (!cleanId) throw new Error("Campaign ID is required.");
 
   try {
     const res = await apiRequest<{ status: string; message?: string }>(
-      `/api/v1/admin-panel/campaigns/${encodeURIComponent(id)}/delete`,
+      `/api/v1/admin-panel/campaigns/${encodeURIComponent(cleanId)}/delete`,
       {
         method: "DELETE",
         timeoutMs: 30000,
@@ -267,7 +313,7 @@ export async function deleteAdminCampaignApi(id: string): Promise<boolean> {
 
     return res?.status === "success";
   } catch (err) {
-    console.error(`Failed to delete campaign ${id}:`, err);
+    console.error(`Failed to delete campaign ${cleanId}:`, err);
     throw err;
   }
 }
@@ -280,6 +326,22 @@ export async function deleteAdminCampaignApi(id: string): Promise<boolean> {
 export async function getPublicCampaignBySlugApi(slug: string): Promise<ReviewCampaign | null> {
   if (!slug || !slug.trim()) return null;
   const cleanSlug = slug.trim();
+
+  // If the slug itself is an active MongoDB ObjectId, or we have cached campaigns, check for matching campaign
+  if (typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("dimisi_campaigns_v1");
+      if (raw) {
+        const cached = JSON.parse(raw);
+        if (Array.isArray(cached)) {
+          const match = cached.find((c: any) => c.slug === cleanSlug || c.id === cleanSlug);
+          if (match && isMongoId(match.id)) {
+            return match;
+          }
+        }
+      }
+    } catch {}
+  }
 
   let matchedServiceName: string | null = null;
   try {

@@ -30,6 +30,7 @@ import {
   submitReview,
 } from "@/lib/reviews.functions";
 import { optimizeImageFile, validateImageFile } from "@/lib/image-optimizer";
+import { resolveDefaultCampaignId } from "@/services/campaign.service";
 import { ApiError } from "@/services/apiClient";
 import styles from "./ReviewSubmitPage.module.css";
 
@@ -76,7 +77,12 @@ export function ReviewSubmitPage({
   });
 
   const [hoverRating, setHoverRating] = useState<number>(0);
-  const [photoData, setPhotoData] = useState<{ name: string; type: string; dataUrl: string } | null>(null);
+  const [photoData, setPhotoData] = useState<{
+    name: string;
+    type: string;
+    dataUrl: string;
+    file?: File;
+  } | null>(null);
   const [captcha, setCaptcha] = useState<{ question: string; token: string } | null>(null);
   const [captchaAnswer, setCaptchaAnswer] = useState("");
   const [honeypot, setHoneypot] = useState("");
@@ -109,6 +115,18 @@ export function ReviewSubmitPage({
         .catch(() => {
           // ignore campaign load error
         });
+    } else {
+      // Generic /review visitor: proactively resolve default campaign ID to prevent submission failures
+      resolveDefaultCampaignId().then((campId) => {
+        if (active && campId) {
+          setCampaign((prev) => prev || {
+            id: campId,
+            campaign_name: "Client Experience Review",
+            service_name: null,
+            location: "DIMISI HQ, New Delhi",
+          });
+        }
+      });
     }
 
     loadCaptcha()
@@ -147,6 +165,7 @@ export function ReviewSubmitPage({
         name: optimized.file.name,
         type: optimized.file.type,
         dataUrl: optimized.dataUrl,
+        file: optimized.file,
       });
       setErrors((prev) => {
         const { photo, ...rest } = prev;
@@ -189,7 +208,7 @@ export function ReviewSubmitPage({
         await sendReview({
           data: {
             ...(campaignSlug ? { slug: campaignSlug } : {}),
-            ...(campaign?.id && !campaign.id.startsWith("camp-") ? { campaignId: campaign.id } : {}),
+            ...(campaign?.id ? { campaignId: campaign.id } : {}),
             customerName: formData.customerName,
             ...(formData.customerEmail ? { customerEmail: formData.customerEmail } : {}),
             ...(formData.customerPhone ? { customerPhone: formData.customerPhone } : {}),
@@ -204,6 +223,7 @@ export function ReviewSubmitPage({
             consent: formData.consent,
             captchaToken: captcha?.token ?? "",
             captchaAnswer: captchaAnswer.trim(),
+            photoFile: photoData?.file || null,
             ...(photoData?.dataUrl ? { customerPhoto: photoData.dataUrl } : {}),
           },
         });

@@ -269,6 +269,7 @@ export function ServicesPage() {
                         alt={service.title}
                         className={styles.spotlightImg}
                         loading="lazy"
+                        decoding="async"
                         onError={(e) => {
                           const target = e.currentTarget as HTMLImageElement;
                           if (target.src !== DEFAULT_SERVICE_FALLBACK_IMAGE) {
@@ -513,6 +514,7 @@ export function ServicesPage() {
                         alt={service.title}
                         className={styles.cardImg}
                         loading="lazy"
+                        decoding="async"
                         onError={(e) => {
                           const target = e.currentTarget as HTMLImageElement;
                           if (target.src !== DEFAULT_SERVICE_FALLBACK_IMAGE) {

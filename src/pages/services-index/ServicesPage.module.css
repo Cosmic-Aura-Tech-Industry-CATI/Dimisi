@@ -121,10 +121,8 @@
   gap: 1.85rem;
   padding: 0.75rem 2rem;
   border-radius: 999px;
-  background: rgba(18, 20, 30, 0.65);
+  background: rgba(18, 20, 30, 0.94);
   border: 1px solid rgba(255, 255, 255, 0.09);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
 }
 
@@ -169,13 +167,12 @@
   gap: 0.45rem;
   padding: 0.75rem 1.35rem;
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(22, 24, 36, 0.92);
   border: 1px solid rgba(255, 255, 255, 0.12);
   color: rgba(255, 255, 255, 0.85);
   font-weight: 600;
   font-size: 0.9rem;
   text-decoration: none;
-  backdrop-filter: blur(12px);
   transition: all 0.25s ease;
 }
 
@@ -248,11 +245,9 @@
   flex-direction: column;
   width: 100%;
   border-radius: 22px;
-  background: radial-gradient(circle at 100% 0%, rgba(255, 179, 0, 0.1) 0%, transparent 60%),
-              linear-gradient(150deg, rgba(24, 26, 38, 0.92), rgba(12, 13, 20, 0.98));
+  background: radial-gradient(circle at 100% 0%, rgba(255, 179, 0, 0.08) 0%, transparent 60%),
+              linear-gradient(150deg, #181a28, #0c0d15);
   border: 1px solid rgba(255, 179, 0, 0.45);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   overflow: hidden;
   box-shadow:
     0 16px 45px -10px rgba(0, 0, 0, 0.85),
@@ -321,9 +316,8 @@
   color: #fbbf24;
   padding: 0.2rem 0.55rem;
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.75);
+  background: rgba(10, 11, 18, 0.92);
   border: 1px solid rgba(255, 179, 0, 0.4);
-  backdrop-filter: blur(6px);
 }
 
 .spotlightBody {
@@ -494,6 +488,8 @@
 .gridItem {
   display: flex;
   width: 100%;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 480px;
 }
 
 .serviceCard {
@@ -502,10 +498,8 @@
   flex-direction: column;
   width: 100%;
   border-radius: 20px;
-  background: linear-gradient(150deg, rgba(20, 22, 33, 0.75), rgba(10, 11, 18, 0.85));
+  background: linear-gradient(150deg, #151724, #0b0c14);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
   overflow: hidden;
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
@@ -522,7 +516,7 @@
 .featuredCard {
   border-color: rgba(255, 179, 0, 0.38) !important;
   background: radial-gradient(circle at 100% 0%, rgba(255, 179, 0, 0.08) 0%, transparent 60%),
-              linear-gradient(150deg, rgba(24, 25, 36, 0.85), rgba(12, 13, 20, 0.92)) !important;
+              linear-gradient(150deg, #1a1c2a, #0c0e16) !important;
   box-shadow: 0 10px 32px -10px rgba(255, 179, 0, 0.12) !important;
 }
 
@@ -576,12 +570,11 @@
   font-weight: 700;
   padding: 0.2rem 0.55rem;
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.75);
+  background: rgba(10, 11, 18, 0.92);
   border: 1px solid rgba(255, 122, 0, 0.35);
   color: var(--dm-amber, #ffb300);
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  backdrop-filter: blur(6px);
 }
 
 .cardFeaturedBadge {
@@ -593,12 +586,11 @@
   font-weight: 700;
   padding: 0.2rem 0.55rem;
   border-radius: 6px;
-  background: rgba(255, 179, 0, 0.2);
+  background: rgba(28, 22, 10, 0.92);
   border: 1px solid rgba(255, 179, 0, 0.55);
   color: #fbbf24;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  backdrop-filter: blur(8px);
   box-shadow: 0 0 12px rgba(255, 179, 0, 0.25);
 }
 
@@ -617,8 +609,7 @@
   color: rgba(255, 255, 255, 0.6);
   padding: 0.2rem 0.5rem;
   border-radius: 6px;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(6px);
+  background: rgba(10, 11, 18, 0.88);
 }
 
 .cardContent {
@@ -735,6 +726,8 @@
   position: relative;
   width: 100%;
   padding: clamp(2.5rem, 5vw, 4rem) 0;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 400px;
 }
 
 .whyGrid {
@@ -753,14 +746,13 @@
   width: 100%;
   padding: 1.5rem;
   border-radius: 16px;
-  background: rgba(18, 20, 30, 0.55);
+  background: linear-gradient(150deg, #151724, #0c0d15);
   border: 1px solid rgba(255, 255, 255, 0.07);
-  backdrop-filter: blur(14px);
   transition: all 0.3s ease;
 }
 
 .whyCard:hover {
-  background: rgba(22, 25, 38, 0.75);
+  background: linear-gradient(150deg, #181b2a, #0e1018);
   border-color: rgba(255, 179, 0, 0.3);
   transform: translateY(-3px);
 }
@@ -823,14 +815,13 @@
   gap: 0.45rem;
   padding: 0.45rem 0.95rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(22, 24, 36, 0.85);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: rgba(255, 255, 255, 0.75);
   font-size: 0.84rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.25s ease;
-  backdrop-filter: blur(10px);
 }
 
 .categoryPill:hover {
@@ -921,6 +912,8 @@
   position: relative;
   width: 100%;
   padding: clamp(3.5rem, 7vw, 6rem) 0;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 650px;
 }
 
 .categoriesGrid {
@@ -941,10 +934,8 @@
   width: 100%;
   padding: 1.75rem;
   border-radius: 20px;
-  background: linear-gradient(150deg, rgba(20, 22, 33, 0.75), rgba(10, 11, 18, 0.85));
+  background: linear-gradient(150deg, #151724, #0b0c14);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
   overflow: hidden;
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.6);
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
@@ -1055,6 +1046,8 @@
   position: relative;
   width: 100%;
   padding: clamp(4rem, 8vw, 7rem) 0;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 450px;
 }
 
 .ctaCard {
@@ -1062,10 +1055,8 @@
   text-align: center;
   padding: clamp(2.5rem, 6vw, 4.5rem) clamp(1.5rem, 4vw, 3rem);
   border-radius: 28px;
-  background: linear-gradient(150deg, rgba(25, 28, 42, 0.8), rgba(12, 14, 22, 0.9));
+  background: linear-gradient(150deg, #181a28, #0c0d15);
   border: 1px solid rgba(255, 255, 255, 0.12);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
   overflow: hidden;
   box-shadow: 0 24px 70px -15px rgba(0, 0, 0, 0.85);
   display: flex;
@@ -1251,10 +1242,8 @@
   text-align: center;
   padding: 3.5rem 2rem;
   border-radius: 24px;
-  background: linear-gradient(150deg, rgba(20, 22, 33, 0.75), rgba(12, 14, 22, 0.85));
+  background: linear-gradient(150deg, #151724, #0b0c14);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   max-width: 640px;
   margin: 1rem auto 2rem;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);

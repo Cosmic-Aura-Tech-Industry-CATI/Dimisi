@@ -24,6 +24,8 @@ import {
   normalizeBackendApplication,
   serializeJobInputToBackend,
   isMongoId,
+  saveLocalResumeToVault,
+  getLocalResumeFromVault,
 } from "./careers.shared";
 import {
   apiRequest,
@@ -437,6 +439,22 @@ export async function submitJobApplicationFn({
 
     const doc = res?.data?.application;
     const normalized = normalizeBackendApplication(doc);
+    if (data.resume_data_url && typeof window !== "undefined") {
+      saveLocalResumeToVault(data.email, {
+        dataUrl: data.resume_data_url,
+        name: "Resume.pdf",
+        email: data.email,
+        fullName: data.full_name,
+      });
+      if (doc?._id) {
+        saveLocalResumeToVault(doc._id, {
+          dataUrl: data.resume_data_url,
+          name: "Resume.pdf",
+          email: data.email,
+          fullName: data.full_name,
+        });
+      }
+    }
     // Synchronize local store ONLY after confirmed backend success
     careersStore.submitApplication(data);
     clearApiCache("/api/v1/admin-panel/application");
@@ -495,12 +513,36 @@ export async function getApplicationByIdApi(id: string): Promise<JobApplicationI
 
 /**
  * 11. GET ADMIN APPLICATIONS
- * Endpoint: GET /api/v1/admin-panel/application/all
+ * Supports querying all applications or per-job applications (/job/:jobId).
  */
-export async function getAdminApplicationsFn(): Promise<JobApplicationItem[]> {
+export async function getAdminApplicationsFn(query?: {
+  jobId?: string;
+  search?: string;
+  status?: string;
+  page?: number;
+  limit?: number;
+}): Promise<JobApplicationItem[]> {
   try {
+    let endpoint = "/api/v1/admin-panel/application/all";
+    if (query?.jobId && isMongoId(query.jobId)) {
+      endpoint = `/api/v1/admin-panel/application/job/${encodeURIComponent(query.jobId)}`;
+    }
+
+    const queryParts: string[] = [];
+    if (query?.page) queryParts.push(`page=${query.page}`);
+    if (query?.limit) queryParts.push(`limit=${query.limit}`);
+    if (query?.status && query.status !== "all") {
+      const bStatus = query.status === "hired" ? "accepted" : query.status;
+      queryParts.push(`status=${encodeURIComponent(bStatus)}`);
+    }
+    if (query?.search) queryParts.push(`search=${encodeURIComponent(query.search)}`);
+
+    if (queryParts.length > 0) {
+      endpoint += (endpoint.includes("?") ? "&" : "?") + queryParts.join("&");
+    }
+
     const res = await apiRequest<BackendApplicationListResponse>(
-      "/api/v1/admin-panel/application/all",
+      endpoint,
       { method: "GET" },
     );
 
@@ -650,10 +692,39 @@ export async function downloadResumeApi(
     if (res.status === 401 || res.status === 403) {
       throw new Error("Unauthorized to download resume. Please ensure you are logged in as admin.");
     }
+
+    // Check client vault fallback if backend worker/Cloudinary is pending (HTTP 404)
+    if (typeof window !== "undefined") {
+      const cached = getLocalResumeFromVault(id);
+      if (cached?.dataUrl && cached.dataUrl.startsWith("data:")) {
+        const link = document.createElement("a");
+        link.href = cached.dataUrl;
+        link.download = cached.name || filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        return;
+      }
+    }
+
     if (res.status === 404) {
       throw new Error("Resume not found or still processing.");
     }
     throw new Error(`Failed to download resume (HTTP ${res.status}).`);
+  }
+
+  // Check client vault for non-mongo records
+  if (typeof window !== "undefined") {
+    const cached = getLocalResumeFromVault(id);
+    if (cached?.dataUrl && cached.dataUrl.startsWith("data:")) {
+      const link = document.createElement("a");
+      link.href = cached.dataUrl;
+      link.download = cached.name || filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      return;
+    }
   }
 
   throw new Error("Resume download is not available for this record.");

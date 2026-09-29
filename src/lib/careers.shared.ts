@@ -9,12 +9,16 @@ export type WorkplaceType = "Remote" | "Hybrid" | "On-site";
 export type JobStatus = "open" | "closed" | "draft";
 
 export type ApplicationStatus =
+  | "pending"
+  | "resume_uploaded"
   | "new"
   | "reviewing"
   | "shortlisted"
   | "interview"
   | "rejected"
-  | "hired";
+  | "hired"
+  | "accepted"
+  | "failed";
 
 export interface JobOpening {
   id: string;
@@ -72,6 +76,9 @@ export interface JobApplicationItem {
   resume_size: number;
   resume_type: string;
   resume_data_url: string;
+  resume_url?: string | undefined;
+  resume_public_id?: string | undefined;
+  failure_reason?: string | undefined;
   status: ApplicationStatus;
   applied_at: string;
   notes?: string | undefined;
@@ -95,6 +102,18 @@ export const APPLICATION_STATUS_META: Record<
   ApplicationStatus,
   { label: string; color: string; bg: string; border: string }
 > = {
+  pending: {
+    label: "Processing",
+    color: "#fb923c",
+    bg: "rgba(251, 146, 60, 0.12)",
+    border: "rgba(251, 146, 60, 0.3)",
+  },
+  resume_uploaded: {
+    label: "Resume Ready",
+    color: "#a78bfa",
+    bg: "rgba(167, 139, 250, 0.12)",
+    border: "rgba(167, 139, 250, 0.3)",
+  },
   new: {
     label: "New",
     color: "#60a5fa",
@@ -130,6 +149,18 @@ export const APPLICATION_STATUS_META: Record<
     color: "#34d399",
     bg: "rgba(52, 211, 153, 0.12)",
     border: "rgba(52, 211, 153, 0.3)",
+  },
+  accepted: {
+    label: "Hired",
+    color: "#34d399",
+    bg: "rgba(52, 211, 153, 0.12)",
+    border: "rgba(52, 211, 153, 0.3)",
+  },
+  failed: {
+    label: "Failed",
+    color: "#ef4444",
+    bg: "rgba(239, 68, 68, 0.15)",
+    border: "rgba(239, 68, 68, 0.4)",
   },
 };
 
@@ -404,15 +435,40 @@ export function normalizeBackendApplication(
   // Map status
   let status: ApplicationStatus = "new";
   const rawStatus = String(rawDoc.status || "").toLowerCase();
-  if (rawStatus === "reviewing") status = "reviewing";
+  if (rawStatus === "pending") status = "pending";
+  else if (rawStatus === "resume_uploaded") status = "resume_uploaded";
+  else if (rawStatus === "reviewing") status = "reviewing";
   else if (rawStatus === "shortlisted") status = "shortlisted";
   else if (rawStatus === "interview") status = "interview";
   else if (rawStatus === "rejected") status = "rejected";
   else if (rawStatus === "accepted" || rawStatus === "hired") status = "hired";
+  else if (rawStatus === "failed") status = "failed";
   else status = "new";
 
-  const resumeUrl = rawDoc.resumeUrl || rawDoc.resume_data_url || "";
-  const resumeName = resumeUrl.split("/").pop() || rawDoc.resume_name || "Resume.pdf";
+  let resumeUrl = rawDoc.resumeUrl || rawDoc.resume_data_url || "";
+  let resumeName = rawDoc.resume_name || "";
+  let resumeSize = typeof rawDoc.resume_size === "number" ? rawDoc.resume_size : 0;
+  let resumeType = rawDoc.resume_type || "application/pdf";
+
+  // Check client-side vault if resume is missing or "PENDING"
+  if (typeof window !== "undefined" && (!resumeUrl || resumeUrl === "PENDING")) {
+    const emailKey = (rawDoc.email || "").trim().toLowerCase();
+    const cached =
+      (emailKey ? getLocalResumeFromVault(emailKey) : null) ||
+      (appId ? getLocalResumeFromVault(appId) : null);
+    if (cached) {
+      resumeUrl = cached.dataUrl;
+      resumeName = cached.name;
+      resumeSize = cached.size;
+      resumeType = cached.type;
+    }
+  }
+
+  if (!resumeName) {
+    resumeName = resumeUrl.startsWith("http")
+      ? (resumeUrl.split("/").pop() || "Resume.pdf")
+      : "Resume.pdf";
+  }
 
   return {
     id: appId,
@@ -429,13 +485,62 @@ export function normalizeBackendApplication(
     cover_letter: rawDoc.coverLetter || rawDoc.cover_letter || undefined,
     additional_info: rawDoc.additionalInfo || rawDoc.additional_info || undefined,
     resume_name: resumeName,
-    resume_size: typeof rawDoc.resume_size === "number" ? rawDoc.resume_size : 0,
-    resume_type: resumeUrl.toLowerCase().endsWith(".pdf") ? "application/pdf" : rawDoc.resume_type || "application/octet-stream",
+    resume_size: resumeSize,
+    resume_type: resumeUrl.toLowerCase().endsWith(".pdf") ? "application/pdf" : resumeType,
     resume_data_url: resumeUrl,
+    resume_url: rawDoc.resumeUrl || undefined,
+    resume_public_id: rawDoc.resumePublicId || rawDoc.resume_public_id || undefined,
+    failure_reason: rawDoc.failureReason || rawDoc.failure_reason || undefined,
     status,
     applied_at: rawDoc.createdAt || rawDoc.applied_at || new Date().toISOString(),
     notes: rawDoc.notes || undefined,
   };
+}
+
+/**
+ * Local client-side resume vault for caching uploaded files across application lifecycles.
+ */
+export function saveLocalResumeToVault(
+  key: string,
+  payload: {
+    dataUrl: string;
+    name?: string;
+    size?: number;
+    type?: string;
+    email?: string;
+    fullName?: string;
+  }
+): void {
+  if (typeof window === "undefined" || !key) return;
+  try {
+    const cleanKey = key.trim().toLowerCase();
+    const data = {
+      ...payload,
+      savedAt: new Date().toISOString(),
+    };
+    localStorage.setItem(`dimisi_resume_${cleanKey}`, JSON.stringify(data));
+  } catch {}
+}
+
+export function getLocalResumeFromVault(
+  key: string
+): { dataUrl: string; name: string; size: number; type: string } | null {
+  if (typeof window === "undefined" || !key) return null;
+  try {
+    const cleanKey = key.trim().toLowerCase();
+    const raw = localStorage.getItem(`dimisi_resume_${cleanKey}`);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (parsed?.dataUrl && typeof parsed.dataUrl === "string") {
+      return {
+        dataUrl: parsed.dataUrl,
+        name: parsed.name || "Resume.pdf",
+        size: typeof parsed.size === "number" ? parsed.size : 0,
+        type: parsed.type || "application/pdf",
+      };
+    }
+  } catch {}
+  return null;
 }
 
 /**

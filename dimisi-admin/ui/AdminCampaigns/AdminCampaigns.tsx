@@ -24,12 +24,14 @@ import {
 import {
   DIMISI_SERVICES,
   type ReviewCampaign,
+  isMongoId,
 } from "@/lib/reviews.shared";
 import {
   createCampaign,
   updateCampaign,
   deleteCampaign,
 } from "@/lib/reviews.functions";
+import { getCampaignQrDownloadUrl } from "@/services/campaign.service";
 import { getAllServicesApi } from "@/services";
 import type { CompanyService } from "@/lib/services.shared";
 import styles from "./AdminCampaigns.module.css";
@@ -144,24 +146,58 @@ export function AdminCampaigns({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownloadPng = () => {
-    if (!canvasRef.current || !activeCampaign) return;
-    const dataUrl = canvasRef.current.toDataURL("image/png");
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = `dimisi-qr-${activeCampaign.slug}.png`;
-    a.click();
+  const handleDownloadPng = async () => {
+    if (!activeCampaign) return;
+    if (isMongoId(activeCampaign.id)) {
+      try {
+        const downloadUrl = getCampaignQrDownloadUrl(activeCampaign.id, "png", 2048);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.target = "_blank";
+        a.download = `dimisi-qr-${activeCampaign.slug}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      } catch (err) {
+        console.warn("Backend QR download failed, falling back to local canvas:", err);
+      }
+    }
+    if (canvasRef.current) {
+      const dataUrl = canvasRef.current.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `dimisi-qr-${activeCampaign.slug}.png`;
+      a.click();
+    }
   };
 
-  const handleDownloadSvg = () => {
-    if (!qrSvg || !activeCampaign) return;
-    const blob = new Blob([qrSvg], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `dimisi-qr-${activeCampaign.slug}.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleDownloadSvg = async () => {
+    if (!activeCampaign) return;
+    if (isMongoId(activeCampaign.id)) {
+      try {
+        const downloadUrl = getCampaignQrDownloadUrl(activeCampaign.id, "svg", 2048);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.target = "_blank";
+        a.download = `dimisi-qr-${activeCampaign.slug}.svg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      } catch (err) {
+        console.warn("Backend QR download failed, falling back to local SVG:", err);
+      }
+    }
+    if (qrSvg) {
+      const blob = new Blob([qrSvg], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `dimisi-qr-${activeCampaign.slug}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   const handleCreateSubmit = (e: React.FormEvent) => {

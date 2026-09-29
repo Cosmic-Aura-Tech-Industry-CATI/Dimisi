@@ -8,6 +8,8 @@ import {
   normalizeReviewerType,
   sanitizeText,
   slugify,
+  extractMongoId,
+  isMongoId,
   type PublicReview,
   type AdminReview,
   type ReviewCampaign,
@@ -23,6 +25,7 @@ import {
   createAdminCampaignApi,
   toggleAdminCampaignApi,
   deleteAdminCampaignApi,
+  resolveDefaultCampaignId,
 } from "@/services/campaign.service";
 import {
   getPublicReviewsApi,
@@ -281,6 +284,7 @@ export async function getReviewCampaign({
 /**
  * 2. SUBMIT PUBLIC REVIEW
  * Submits review to live backend API.
+ * Uses FormData multipart encoding so images are properly handled by multer.
  */
 export async function submitReview({
   data,
@@ -298,6 +302,7 @@ export async function submitReview({
     reviewText: string;
     customerPhoto?: string;
     photo?: { dataUrl?: string } | null;
+    photoFile?: File | null;
     customerLocation?: string;
     consent: boolean;
     campaignId?: string;
@@ -306,31 +311,66 @@ export async function submitReview({
     captchaAnswer?: string;
   };
 }): Promise<{ success: boolean; reviewId: string }> {
-  let resolvedCampaignId = data.campaignId;
-  if (!resolvedCampaignId && data.slug) {
+  let resolvedCampaignId = data.campaignId ? extractMongoId(data.campaignId) : "";
+
+  // 1. If not a valid Mongo ObjectId, try resolving via public campaign slug
+  if ((!resolvedCampaignId || !isMongoId(resolvedCampaignId)) && data.slug) {
     try {
       const publicCamp = await getPublicCampaignBySlugApi(data.slug);
-      if (publicCamp && publicCamp.id && !publicCamp.id.startsWith("camp-")) {
-        resolvedCampaignId = publicCamp.id;
+      if (publicCamp?.id) {
+        const extracted = extractMongoId(publicCamp.id);
+        if (isMongoId(extracted)) {
+          resolvedCampaignId = extracted;
+        }
       }
     } catch {}
   }
 
-  const effectivePhoto = data.customerPhoto || data.photo?.dataUrl || undefined;
+  // 2. Fallback: resolve from active database campaigns
+  if (!resolvedCampaignId || !isMongoId(resolvedCampaignId)) {
+    try {
+      const defaultCampId = await resolveDefaultCampaignId();
+      if (defaultCampId) {
+        resolvedCampaignId = defaultCampId;
+      }
+    } catch {}
+  }
 
-  const created = await submitPublicReviewApi({
-    serviceName: sanitizeText(data.serviceName, 100) || "General Services",
-    reviewerType: data.reviewerType === "employee" ? "employee" : "client",
-    fullName: sanitizeText(data.customerName, 80),
-    email: sanitizeText(data.customerEmail, 160) || "anonymous@dimisi.tech",
-    company: sanitizeText(data.employeeDepartment || data.customerLocation, 120) || undefined,
-    designation: sanitizeText(data.roleOrTitle, 100) || undefined,
-    rating: Math.min(5, Math.max(1, Number(data.rating) || 5)),
-    reviewText: sanitizeText(data.reviewText, 2000),
-    profileImageUrl: effectivePhoto,
-    consentToPublish: true,
-    campaignId: resolvedCampaignId || undefined,
-  });
+  if (!resolvedCampaignId || !isMongoId(resolvedCampaignId)) {
+    throw new Error(
+      "No active review campaign found in system. Please select a valid campaign or create one in the Admin Panel.",
+    );
+  }
+
+  const cleanName = sanitizeText(data.customerName, 80);
+  const cleanEmail = sanitizeText(data.customerEmail, 160) || "anonymous@dimisi.tech";
+  const cleanServiceName = sanitizeText(data.serviceName, 100) || "General Services";
+  const cleanDesignation = sanitizeText(data.roleOrTitle, 100);
+  const cleanCompany = sanitizeText(data.employeeDepartment || data.customerLocation, 120);
+  const cleanLocation = sanitizeText(data.customerLocation, 120);
+  const cleanReviewText = sanitizeText(data.reviewText, 2000);
+  const ratingNum = Math.min(5, Math.max(1, Number(data.rating) || 5));
+  const reviewerType = data.reviewerType === "employee" ? "employee" : "client";
+
+  // Build FormData for uploadMiddleware.single("profileImage")
+  const formData = new FormData();
+  formData.append("campaignId", resolvedCampaignId);
+  formData.append("fullName", cleanName);
+  formData.append("email", cleanEmail);
+  formData.append("reviewerType", reviewerType);
+  formData.append("rating", String(ratingNum));
+  formData.append("reviewText", cleanReviewText);
+  formData.append("consentToPublish", "true");
+  if (cleanServiceName) formData.append("serviceName", cleanServiceName);
+  if (cleanDesignation) formData.append("designation", cleanDesignation);
+  if (cleanCompany) formData.append("company", cleanCompany);
+  if (cleanLocation) formData.append("location", cleanLocation);
+
+  if (data.photoFile) {
+    formData.append("profileImage", data.photoFile);
+  }
+
+  const created = await submitPublicReviewApi(resolvedCampaignId, formData);
 
   return { success: true, reviewId: created.id };
 }
@@ -349,7 +389,8 @@ export async function reportReview({
     message?: string | undefined;
   };
 }): Promise<{ success: boolean; message?: string }> {
-  await reportReviewApi(data.reviewId, {
+  const cleanId = extractMongoId(data.reviewId);
+  await reportReviewApi(cleanId || data.reviewId, {
     reason: data.reason,
     note: data.message,
     reporterName: data.reporterName,
@@ -371,11 +412,12 @@ export async function resolveReport({
     actionNote?: string | undefined;
   };
 }): Promise<{ success: boolean }> {
-  if (!data.reportId) return { success: false };
+  const cleanId = extractMongoId(data.reportId);
+  if (!cleanId) return { success: false };
   if (data.status === "dismissed") {
-    await keepReviewApi(data.reportId);
+    await keepReviewApi(cleanId);
   } else {
-    await deleteReviewApi(data.reportId);
+    await deleteReviewApi(cleanId);
   }
   return { success: true };
 }
@@ -484,9 +526,10 @@ export async function updateReviewStatus({
     notifyCustomer?: boolean | undefined;
   };
 }): Promise<{ success: boolean }> {
-  if (!data.reviewId) return { success: false };
+  const cleanId = extractMongoId(data.reviewId);
+  if (!cleanId) return { success: false };
   await updateReviewStatusApi(
-    data.reviewId,
+    cleanId,
     data.status === "approved" ? "approved" : "rejected",
   );
   return { success: true };
@@ -520,8 +563,9 @@ export async function toggleReviewVerified({
 }: {
   data: { reviewId: string; isVerified: boolean };
 }): Promise<{ success: boolean }> {
-  if (!data.reviewId) return { success: false };
-  await toggleReviewVerifyApi(data.reviewId);
+  const cleanId = extractMongoId(data.reviewId);
+  if (!cleanId) return { success: false };
+  await toggleReviewVerifyApi(cleanId);
   return { success: true };
 }
 
@@ -530,8 +574,9 @@ export async function toggleReviewFeatured({
 }: {
   data: { reviewId: string; isFeatured: boolean };
 }): Promise<{ success: boolean }> {
-  if (!data.reviewId) return { success: false };
-  await toggleReviewActiveApi(data.reviewId);
+  const cleanId = extractMongoId(data.reviewId);
+  if (!cleanId) return { success: false };
+  await toggleReviewActiveApi(cleanId);
   return { success: true };
 }
 
@@ -540,8 +585,9 @@ export async function deleteReviewAdmin({
 }: {
   data: { reviewId: string };
 }): Promise<{ success: boolean }> {
-  if (!data.reviewId) return { success: false };
-  await deleteReviewApi(data.reviewId);
+  const cleanId = extractMongoId(data.reviewId);
+  if (!cleanId) return { success: false };
+  await deleteReviewApi(cleanId);
   return { success: true };
 }
 
@@ -550,8 +596,9 @@ export async function keepReviewAdmin({
 }: {
   data: { reviewId: string };
 }): Promise<{ success: boolean }> {
-  if (!data.reviewId) return { success: false };
-  await keepReviewApi(data.reviewId);
+  const cleanId = extractMongoId(data.reviewId);
+  if (!cleanId) return { success: false };
+  await keepReviewApi(cleanId);
   return { success: true };
 }
 

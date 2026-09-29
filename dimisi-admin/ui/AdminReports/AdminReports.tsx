@@ -136,7 +136,7 @@ export function AdminReports({
                         <button
                           type="button"
                           className={[styles.btnAction, styles.btnKeep].join(" ")}
-                          onClick={() => handleAction(rep.id, "keep")}
+                          onClick={() => handleAction(rep.review_id || rep.id, "keep")}
                           disabled={isPending}
                           title="Review is safe — Dismiss report"
                         >
@@ -146,7 +146,7 @@ export function AdminReports({
                         <button
                           type="button"
                           className={[styles.btnAction, styles.btnArchive].join(" ")}
-                          onClick={() => handleAction(rep.id, "archive")}
+                          onClick={() => handleAction(rep.review_id || rep.id, "archive")}
                           disabled={isPending}
                           title="Hide from public site"
                         >
@@ -156,7 +156,7 @@ export function AdminReports({
                         <button
                           type="button"
                           className={[styles.btnAction, styles.btnDelete].join(" ")}
-                          onClick={() => handleAction(rep.id, "delete")}
+                          onClick={() => handleAction(rep.review_id || rep.id, "delete")}
                           disabled={isPending}
                           title="Permanently remove"
                         >
