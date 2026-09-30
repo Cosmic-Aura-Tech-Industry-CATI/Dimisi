@@ -40,9 +40,6 @@ const AdminCampaigns = lazy(() =>
 const AdminReports = lazy(() =>
   import("../AdminReports/AdminReports").then((m) => ({ default: m.AdminReports }))
 );
-const AdminAnalytics = lazy(() =>
-  import("../AdminAnalytics/AdminAnalytics").then((m) => ({ default: m.AdminAnalytics }))
-);
 const AdminLogs = lazy(() =>
   import("../AdminLogs/AdminLogs").then((m) => ({ default: m.AdminLogs }))
 );
@@ -76,6 +73,7 @@ import {
 import {
   getAdminBlogData,
 } from "@/lib/blog.functions";
+import { syncLiveCounts } from "@/services";
 import type { CompanyEvent, EventGalleryItem, EventCategoryItem } from "@/lib/events.shared";
 import type { CompanyService, IndustrySector, ServiceCategoryItem } from "@/lib/services.shared";
 import type { ProjectItem, WorkCategoryItem } from "@/lib/work.shared";
@@ -122,7 +120,7 @@ const DEFAULT_STATS: ReviewStats = {
   openReportsCount: 0,
 };
 
-/** DIMISI admin panel — reviews, campaigns, moderation, analytics, leads, admins with RBAC enforcement. */
+/** DIMISI admin panel — reviews, campaigns, moderation, leads, admins with RBAC enforcement. */
 const DEFAULT_OVERVIEW: AdminOverview = {
   isAdmin: true,
   role: "super_admin",
@@ -150,7 +148,6 @@ const VALID_ADMIN_TABS: AdminTab[] = [
   "reviews",
   "campaigns",
   "reports",
-  "analytics",
   "logs",
   "settings",
   "leads",
@@ -408,8 +405,7 @@ export function AdminPanel() {
       } else if (
         newTab === "reviews" ||
         newTab === "campaigns" ||
-        newTab === "reports" ||
-        newTab === "analytics"
+        newTab === "reports"
       ) {
         refreshReviews();
       } else if (newTab === "overview" || newTab === "admins" || newTab === "leads") {
@@ -444,7 +440,7 @@ export function AdminPanel() {
         } else if (tab === "events") {
           const res = await loadEventsData();
           if (active) setEventsData(res);
-        } else if (tab === "reviews" || tab === "campaigns" || tab === "reports" || tab === "analytics") {
+        } else if (tab === "reviews" || tab === "campaigns" || tab === "reports") {
           const res = await loadReviewsData();
           if (active) setReviewsData(res);
         } else {
@@ -502,6 +498,21 @@ export function AdminPanel() {
       active = false;
     };
   }, [user, tab]);
+
+  // Synchronize live operational counts into active topbar notification alerts
+  useEffect(() => {
+    if (reviewsData?.stats || data?.stats) {
+      syncLiveCounts({
+        pendingReviews: reviewsData?.stats?.pendingCount || 0,
+        openReports: reviewsData?.stats?.openReportsCount || 0,
+        leadsToday: data?.stats?.leadsToday || 0,
+      });
+    }
+  }, [
+    reviewsData?.stats?.pendingCount,
+    reviewsData?.stats?.openReportsCount,
+    data?.stats?.leadsToday,
+  ]);
 
   async function signOut() {
     try {
@@ -761,14 +772,9 @@ export function AdminPanel() {
                 <AdminReports reports={reviewsData.reports || []} onRefresh={refreshReviews} />
               )}
 
-              {/* ANALYTICS TAB */}
-              {tab === "analytics" && (
-                <AdminAnalytics data={reviewsData} />
-              )}
-
               {/* ADMIN LOGS TAB */}
               {tab === "logs" && (
-                <AdminLogs currentUserRole={userRole} />
+                <AdminLogs currentUserRole={userRole} currentAdmins={currentData.admins} />
               )}
 
               {/* SETTINGS TAB */}

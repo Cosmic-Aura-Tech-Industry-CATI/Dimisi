@@ -79,10 +79,9 @@ export default defineConfig(({ mode, command }) => {
             if (
               id.includes("AdminReviews") ||
               id.includes("AdminCampaigns") ||
-              id.includes("AdminReports") ||
-              id.includes("AdminAnalytics")
+              id.includes("AdminReports")
             ) {
-              return "admin-reviews-analytics";
+              return "admin-reviews";
             }
             if (
               id.includes("AdminLogs") ||

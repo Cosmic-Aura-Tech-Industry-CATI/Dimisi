@@ -32,6 +32,7 @@ import {
 import { optimizeImageFile, validateImageFile } from "@/lib/image-optimizer";
 import { resolveDefaultCampaignId } from "@/services/campaign.service";
 import { ApiError } from "@/services/apiClient";
+import { addAdminNotification, getNotificationSettings } from "@/services";
 import styles from "./ReviewSubmitPage.module.css";
 
 const RATING_DESCRIPTIONS: Record<number, string> = {
@@ -227,6 +228,22 @@ export function ReviewSubmitPage({
             ...(photoData?.dataUrl ? { customerPhoto: photoData.dataUrl } : {}),
           },
         });
+
+        // Dispatch real-time in-app notification to admin topbar bell if enabled
+        try {
+          const settings = getNotificationSettings();
+          if (settings.notify_on_submit) {
+            addAdminNotification({
+              category: "review",
+              title: `New Review: ${formData.customerName.trim()} (${formData.rating}★)`,
+              message: `${formData.rating}-star review submitted by ${formData.customerName.trim()} for ${formData.serviceName || "DIMISI Technologies"}.`,
+              targetTab: "reviews",
+            });
+          }
+        } catch (e) {
+          console.warn("[review] Notification dispatch error:", e);
+        }
+
         setSubmitted(true);
       } catch (err: unknown) {
         let msg = "Something went wrong while submitting your review. Please try again.";

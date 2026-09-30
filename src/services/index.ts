@@ -268,3 +268,25 @@ export {
   type BackendAppConfigResponse,
 } from "./config.service";
 
+// 18. Admin Notifications & Alert Center API
+export {
+  getNotificationSettings,
+  saveNotificationSettings,
+  getAdminNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  clearAllNotifications,
+  deleteNotification,
+  addAdminNotification,
+  triggerTestNotification,
+  syncLiveCounts,
+  NOTIFICATIONS_EVENT,
+} from "./notification.service";
+export {
+  type AdminNotificationItem,
+  type NotificationCategory,
+  type NotificationSettings,
+  DEFAULT_NOTIFICATION_SETTINGS,
+} from "../lib/notifications.types";
+
+

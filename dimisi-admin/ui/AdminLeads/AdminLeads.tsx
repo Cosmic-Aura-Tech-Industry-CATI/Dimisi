@@ -2,7 +2,7 @@
  * DIMISI Technologies — Admin Leads & Visitor Intelligence Module
  * Dedicated component for full lead lifecycle management and first-party visitor telemetry.
  */
-import { useState, useEffect, useCallback, useTransition } from "react";
+import { useState, useEffect, useCallback, useMemo, useTransition } from "react";
 import {
   Users,
   Radio,
@@ -29,6 +29,11 @@ import {
   Phone,
   Building,
   Target,
+  Download,
+  Copy,
+  Check,
+  MessageSquare,
+  AlertTriangle,
 } from "lucide-react";
 import {
   getAdminLeadsFn,
@@ -76,7 +81,9 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
   const [leadSearch, setLeadSearch] = useState("");
   const [leadStatusFilter, setLeadStatusFilter] = useState<"all" | LeadStatus>("all");
   const [leadSourceFilter, setLeadSourceFilter] = useState<string>("all");
-  const [leadSortBy, setLeadSortBy] = useState<"created_at" | "full_name" | "status">("created_at");
+  // Aligned with Mongoose schema field names: createdAt, fullName, status, company
+  const [leadSortBy, setLeadSortBy] = useState<"createdAt" | "fullName" | "status" | "company">("createdAt");
+  const [leadSortOrder, setLeadSortOrder] = useState<"desc" | "asc">("desc");
 
   // Visitors State
   const [visitors, setVisitors] = useState<VisitorSessionItem[]>([]);
@@ -97,14 +104,18 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
   const [visitorDeviceFilter, setVisitorDeviceFilter] = useState<string>("all");
   const [autoRefresh, setAutoRefresh] = useState(true);
 
-  // Detail Modal State
+  // Detail Modal & Notes State
   const [selectedLead, setSelectedLead] = useState<LeadDetailsWithJourney | null>(null);
   const [selectedVisitorJourney, setSelectedVisitorJourney] = useState<{
     session: VisitorSessionItem | null;
     journey: PageViewItem[];
   } | null>(null);
   const [leadNotes, setLeadNotes] = useState("");
+  const [leadNotesSaving, setLeadNotesSaving] = useState(false);
+  const [leadNotesSaved, setLeadNotesSaved] = useState(false);
   const [leadStatusUpdating, setLeadStatusUpdating] = useState(false);
+  const [copyFeedback, setCopyFeedback] = useState<{ text: string; id: string } | null>(null);
+  const [deleteTargetLead, setDeleteTargetLead] = useState<LeadItem | null>(null);
 
   // Common UI State
   const [loading, setLoading] = useState(false);
@@ -124,7 +135,7 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
           status: leadStatusFilter,
           source: leadSourceFilter,
           sortBy: leadSortBy,
-          sortOrder: "desc",
+          sortOrder: leadSortOrder,
         },
       });
       startTransition(() => {
@@ -138,7 +149,7 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
     } finally {
       setLoading(false);
     }
-  }, [leadPage, leadSearch, leadStatusFilter, leadSourceFilter, leadSortBy]);
+  }, [leadPage, leadSearch, leadStatusFilter, leadSourceFilter, leadSortBy, leadSortOrder]);
 
   /** Load Visitors */
   const loadVisitors = useCallback(async () => {
@@ -192,6 +203,26 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
     return () => clearInterval(interval);
   }, [autoRefresh, activeTab, loadLeads, loadVisitors]);
 
+  // Instant client-side search filtering across multiple fields
+  const displayedLeads = useMemo(() => {
+    if (!leadSearch.trim()) return leads;
+    const q = leadSearch.toLowerCase().trim();
+    return leads.filter((l) => {
+      return (
+        (l.full_name && l.full_name.toLowerCase().includes(q)) ||
+        (l.email && l.email.toLowerCase().includes(q)) ||
+        (l.phone && l.phone.toLowerCase().includes(q)) ||
+        (l.company && l.company.toLowerCase().includes(q)) ||
+        (l.inquiry_type && l.inquiry_type.toLowerCase().includes(q)) ||
+        (l.message && l.message.toLowerCase().includes(q)) ||
+        (l.notes && l.notes.toLowerCase().includes(q)) ||
+        (l.source && l.source.toLowerCase().includes(q)) ||
+        (l.page && l.page.toLowerCase().includes(q)) ||
+        (l.visitor_id && l.visitor_id.toLowerCase().includes(q))
+      );
+    });
+  }, [leads, leadSearch]);
+
   /** Open Lead Details Drawer */
   const handleOpenLead = async (leadId: string) => {
     try {
@@ -237,6 +268,9 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
             : null,
         );
       }
+      setLeads((prev) =>
+        prev.map((l) => (l.id === leadId ? { ...l, status, notes: leadNotes } : l)),
+      );
       void loadLeads();
       if (onRefreshOverview) onRefreshOverview();
     } catch (err: any) {
@@ -246,9 +280,105 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
     }
   };
 
+  /** Save Internal Admin Notes */
+  const handleSaveNotes = async () => {
+    if (!selectedLead) return;
+    setLeadNotesSaving(true);
+    try {
+      await updateAdminLeadStatusFn({
+        data: {
+          leadId: selectedLead.lead.id,
+          status: selectedLead.lead.status,
+          notes: leadNotes.trim(),
+        },
+      });
+      setSelectedLead((prev) =>
+        prev
+          ? {
+              ...prev,
+              lead: { ...prev.lead, notes: leadNotes.trim() },
+            }
+          : null,
+      );
+      setLeads((prev) =>
+        prev.map((l) =>
+          l.id === selectedLead.lead.id ? { ...l, notes: leadNotes.trim() } : l,
+        ),
+      );
+      setLeadNotesSaved(true);
+      setTimeout(() => setLeadNotesSaved(false), 2500);
+      if (onRefreshOverview) onRefreshOverview();
+    } catch (err: any) {
+      alert("Failed to save notes: " + err.message);
+    } finally {
+      setLeadNotesSaving(false);
+    }
+  };
+
+  /** Append Quick Note Tag */
+  const appendQuickTag = (tag: string) => {
+    setLeadNotes((prev) => (prev ? `${prev}\n• ${tag}` : `• ${tag}`));
+  };
+
+  /** Copy text to clipboard */
+  const copyToClipboard = (text: string, id: string) => {
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text);
+      setCopyFeedback({ text, id });
+      setTimeout(() => setCopyFeedback(null), 2000);
+    }
+  };
+
+  /** Export Leads to CSV */
+  const handleExportCSV = () => {
+    if (!leads.length) {
+      alert("No leads available to export.");
+      return;
+    }
+    const headers = [
+      "Lead ID",
+      "Full Name",
+      "Email",
+      "Phone",
+      "Company",
+      "Inquiry Type",
+      "Status",
+      "Source",
+      "Page",
+      "Message",
+      "Internal Notes",
+      "Visitor ID",
+      "Session ID",
+      "Created Date",
+    ];
+    const rows = leads.map((l) => [
+      `"${l.id}"`,
+      `"${(l.full_name || "").replace(/"/g, '""')}"`,
+      `"${(l.email || "").replace(/"/g, '""')}"`,
+      `"${(l.phone || "").replace(/"/g, '""')}"`,
+      `"${(l.company || "").replace(/"/g, '""')}"`,
+      `"${(l.inquiry_type || "").replace(/"/g, '""')}"`,
+      `"${l.status}"`,
+      `"${l.source || ""}"`,
+      `"${l.page || ""}"`,
+      `"${(l.message || "").replace(/"/g, '""').replace(/\n/g, " ")}"`,
+      `"${(l.notes || "").replace(/"/g, '""').replace(/\n/g, " ")}"`,
+      `"${l.visitor_id || ""}"`,
+      `"${l.session_id || ""}"`,
+      `"${l.created_at}"`,
+    ]);
+    const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `dimisi_leads_export_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   /** Delete Lead */
   const handleDeleteLead = async (leadId: string) => {
-    if (!confirm("Are you sure you want to delete this lead?")) return;
     try {
       await deleteAdminLeadFn({ data: { leadId } });
       if (selectedLead?.lead.id === leadId) setSelectedLead(null);
@@ -323,6 +453,16 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
         </div>
 
         <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={styles.exportBtn}
+            onClick={handleExportCSV}
+            title="Export leads to CSV"
+          >
+            <Download size={14} />
+            <span>Export CSV</span>
+          </button>
+
           <label className={styles.autoRefreshBadge}>
             <input
               type="checkbox"
@@ -402,11 +542,11 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
 
           {/* Filter & Search Bar */}
           <div className={styles.filterBar}>
-            <div className={styles.searchInputWrap}>
+            <div className={styles.searchInputWrap} style={{ position: "relative" }}>
               <Search size={15} className={styles.searchIcon} />
               <input
                 type="text"
-                placeholder="Search leads by name, email, phone, company, message…"
+                placeholder="Search leads by name, email, phone, company, message, notes…"
                 value={leadSearch}
                 onChange={(e) => {
                   setLeadSearch(e.target.value);
@@ -414,6 +554,16 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
                 }}
                 className={styles.searchInput}
               />
+              {leadSearch && (
+                <button
+                  type="button"
+                  className={styles.searchClearBtn}
+                  onClick={() => setLeadSearch("")}
+                  title="Clear search"
+                >
+                  <X size={13} />
+                </button>
+              )}
             </div>
 
             <select
@@ -444,16 +594,25 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
               <option value="contact_page">Contact Page</option>
               <option value="website">Website</option>
               <option value="campaign">Campaign / QR</option>
+              <option value="signup-form">Sign-up Form</option>
             </select>
 
             <select
               className={styles.selectInput}
-              value={leadSortBy}
-              onChange={(e) => setLeadSortBy(e.target.value as any)}
+              value={`${leadSortBy}:${leadSortOrder}`}
+              onChange={(e) => {
+                const [field, order] = e.target.value.split(":");
+                setLeadSortBy(field as any);
+                setLeadSortOrder(order as any);
+                setLeadPage(1);
+              }}
             >
-              <option value="created_at">Newest First</option>
-              <option value="full_name">Name (A-Z)</option>
-              <option value="status">Status</option>
+              <option value="createdAt:desc">Newest First</option>
+              <option value="createdAt:asc">Oldest First</option>
+              <option value="fullName:asc">Name (A-Z)</option>
+              <option value="fullName:desc">Name (Z-A)</option>
+              <option value="status:asc">Status</option>
+              <option value="company:asc">Company (A-Z)</option>
             </select>
           </div>
 
@@ -463,28 +622,45 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
               <table className={styles.table}>
                 <thead>
                   <tr>
-                    <th>Lead Name & Email</th>
+                    <th>Lead Contact</th>
                     <th>Phone / Company</th>
                     <th>Source & Page</th>
-                    <th>Visitor Context</th>
-                    <th>Created</th>
+                    <th>Telemetry</th>
+                    <th>Internal Notes</th>
+                    <th>Received</th>
                     <th>Status</th>
                     <th style={{ textAlign: "right", minWidth: "150px" }}>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {leads.length === 0 ? (
+                  {displayedLeads.length === 0 ? (
                     <tr>
-                      <td colSpan={7}>
+                      <td colSpan={8}>
                         <div className={styles.stateBox}>
                           <Users size={32} color="#64748b" />
-                          <div className={styles.stateTitle}>No leads found</div>
-                          <p>Inquiries submitted via the Contact Form will appear here automatically.</p>
+                          <div className={styles.stateTitle}>
+                            {leadSearch ? `No leads matching "${leadSearch}"` : "No leads found"}
+                          </div>
+                          <p>
+                            {leadSearch
+                              ? "Try searching for a different name, email, company, or clear the search filter."
+                              : "Inquiries submitted via the Contact Form will appear here automatically."}
+                          </p>
+                          {leadSearch && (
+                            <button
+                              type="button"
+                              className={styles.actionBtn}
+                              style={{ marginTop: "0.75rem" }}
+                              onClick={() => setLeadSearch("")}
+                            >
+                              Clear Search Filter
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
                   ) : (
-                    leads.map((lead) => {
+                    displayedLeads.map((lead) => {
                       const statusMeta = LEAD_STATUS_META[lead.status || "new"] || LEAD_STATUS_META.new;
                       return (
                         <tr
@@ -493,24 +669,58 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
                           onClick={() => handleOpenLead(lead.id)}
                         >
                           <td>
-                            <div style={{ fontWeight: 600, color: "#f8fafc" }}>
-                              {lead.full_name || "Anonymous Lead"}
+                            <div className={styles.leadIdentityCell}>
+                              <div className={styles.avatarCircle}>
+                                {(lead.full_name || lead.email || "L").charAt(0).toUpperCase()}
+                              </div>
+                              <div>
+                                <div style={{ fontWeight: 600, color: "#f8fafc" }}>
+                                  {lead.full_name || "Anonymous Lead"}
+                                </div>
+                                <div className={styles.leadMetaRow}>
+                                  <span>{lead.email}</span>
+                                  <button
+                                    type="button"
+                                    className={styles.copyInlineBtn}
+                                    title="Copy email"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      copyToClipboard(lead.email, `table-${lead.id}`);
+                                    }}
+                                  >
+                                    {copyFeedback?.id === `table-${lead.id}` ? (
+                                      <Check size={11} color="#4ade80" />
+                                    ) : (
+                                      <Copy size={11} />
+                                    )}
+                                  </button>
+                                </div>
+                              </div>
                             </div>
-                            <div style={{ fontSize: "0.78rem", color: "#94a3b8" }}>{lead.email}</div>
                           </td>
 
                           <td>
-                            <div>{lead.phone || "—"}</div>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                              {lead.phone ? (
+                                <>
+                                  <Phone size={12} color="#94a3b8" />
+                                  <span>{lead.phone}</span>
+                                </>
+                              ) : (
+                                <span style={{ color: "#64748b" }}>—</span>
+                              )}
+                            </div>
                             {lead.company && (
-                              <div style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
-                                {lead.company}
+                              <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", fontSize: "0.76rem", color: "var(--dm-gold, #ffd79a)", marginTop: "0.2rem" }}>
+                                <Building size={11} />
+                                <span>{lead.company}</span>
                               </div>
                             )}
                           </td>
 
                           <td>
                             <span className={styles.tagPill}>{lead.source || "contact_page"}</span>
-                            <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: "0.2rem" }}>
+                            <div style={{ fontSize: "0.72rem", color: "#64748b", marginTop: "0.2rem", fontFamily: "monospace" }}>
                               {lead.page || "/contact"}
                             </div>
                           </td>
@@ -522,19 +732,29 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
                                   Linked Session
                                 </span>
                                 <span style={{ fontSize: "0.72rem", color: "#64748b", fontFamily: "monospace" }}>
-                                  {lead.visitor_id.slice(0, 10)}…
+                                  {lead.visitor_id.slice(0, 12)}…
                                 </span>
                               </div>
                             ) : (
-                              <span style={{ color: "#64748b", fontSize: "0.8rem" }}>Direct / Unlinked</span>
+                              <span style={{ color: "#64748b", fontSize: "0.8rem" }}>Direct Form</span>
                             )}
                           </td>
 
-                          <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem", color: "#94a3b8" }}>
-                            {new Date(lead.created_at).toLocaleString([], {
-                              dateStyle: "medium",
-                              timeStyle: "short",
-                            })}
+                          <td>
+                            {lead.notes ? (
+                              <span className={styles.notesBadge} title={lead.notes}>
+                                📝 {lead.notes}
+                              </span>
+                            ) : (
+                              <span className={styles.noNotesMuted}>—</span>
+                            )}
+                          </td>
+
+                          <td style={{ whiteSpace: "nowrap", fontSize: "0.8rem", color: "#94a3b8" }} title={new Date(lead.created_at).toLocaleString()}>
+                            <div>{getRelativeTime(lead.created_at)}</div>
+                            <div style={{ fontSize: "0.72rem", color: "#64748b" }}>
+                              {new Date(lead.created_at).toLocaleDateString([], { month: "short", day: "numeric" })}
+                            </div>
                           </td>
 
                           <td>
@@ -564,7 +784,7 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
                               <button
                                 type="button"
                                 className={styles.tableDeleteBtn}
-                                onClick={() => handleDeleteLead(lead.id)}
+                                onClick={() => setDeleteTargetLead(lead)}
                                 title="Delete lead"
                                 aria-label="Delete lead"
                               >
@@ -972,6 +1192,59 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
                     </span>
                   </div>
                 </div>
+
+                {/* Quick Contact & Direct Action Buttons */}
+                <div className={styles.contactActionsGrid}>
+                  <a
+                    href={`mailto:${selectedLead.lead.email}?subject=Inquiry from DIMISI Technologies`}
+                    className={`${styles.contactActionBtn} ${styles.contactActionBtnEmail}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <Mail size={13} />
+                    <span>Email Lead</span>
+                  </a>
+
+                  {selectedLead.lead.phone ? (
+                    <>
+                      <a
+                        href={`tel:${selectedLead.lead.phone}`}
+                        className={`${styles.contactActionBtn} ${styles.contactActionBtnCall}`}
+                      >
+                        <Phone size={13} />
+                        <span>Call</span>
+                      </a>
+                      <a
+                        href={`https://wa.me/${selectedLead.lead.phone.replace(/[^0-9]/g, "")}`}
+                        className={`${styles.contactActionBtn} ${styles.contactActionBtnWa}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <MessageSquare size={13} />
+                        <span>WhatsApp</span>
+                      </a>
+                    </>
+                  ) : null}
+
+                  <button
+                    type="button"
+                    className={styles.contactActionBtn}
+                    style={{ background: "rgba(255, 255, 255, 0.06)", border: "1px solid rgba(255, 255, 255, 0.15)", color: "#cbd5e1" }}
+                    onClick={() => copyToClipboard(selectedLead.lead.email, "drawer-email")}
+                  >
+                    {copyFeedback?.id === "drawer-email" ? (
+                      <>
+                        <Check size={13} color="#4ade80" />
+                        <span style={{ color: "#4ade80" }}>Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy size={13} />
+                        <span>Copy Email</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
 
               {/* Inquiry Message */}
@@ -981,10 +1254,96 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
                     <span className={styles.sectionHeading}>
                       <FileText size={16} /> Inquiry Message
                     </span>
+                    <button
+                      type="button"
+                      className={styles.copyInlineBtn}
+                      style={{ fontSize: "0.75rem", display: "inline-flex", gap: "0.3rem", color: "#94a3b8" }}
+                      onClick={() => copyToClipboard(selectedLead.lead.message || "", "msg-copy")}
+                    >
+                      {copyFeedback?.id === "msg-copy" ? (
+                        <>
+                          <Check size={12} color="#4ade80" />
+                          <span style={{ color: "#4ade80" }}>Copied</span>
+                        </>
+                      ) : (
+                        <>
+                          <Copy size={12} />
+                          <span>Copy Text</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                   <div className={styles.messageBox}>{selectedLead.lead.message}</div>
                 </div>
               )}
+
+              {/* Internal Admin Notes & Follow-up Log */}
+              <div className={styles.notesSection}>
+                <div className={styles.notesHeaderRow}>
+                  <span className={styles.sectionHeading}>
+                    <MessageSquare size={16} color="var(--dm-amber, #ffab2e)" /> Internal Admin Notes & Follow-up Log
+                  </span>
+                  <span className={styles.charCount}>
+                    {leadNotes.length} / 2000 chars
+                  </span>
+                </div>
+
+                {/* Quick Note Tags */}
+                <div className={styles.quickTagsWrap}>
+                  <span style={{ fontSize: "0.74rem", color: "#94a3b8", marginRight: "0.2rem" }}>Quick Tags:</span>
+                  {[
+                    "📞 Follow-up Call",
+                    "📧 Proposal Sent",
+                    "🤝 Discovery Call",
+                    "💼 Quote Requested",
+                    "⭐ High Priority",
+                    "⏳ Pending Client",
+                  ].map((tag) => (
+                    <button
+                      key={tag}
+                      type="button"
+                      className={styles.quickTagBtn}
+                      onClick={() => appendQuickTag(tag)}
+                    >
+                      + {tag}
+                    </button>
+                  ))}
+                </div>
+
+                <textarea
+                  className={styles.notesTextarea}
+                  placeholder="Record call summaries, client requirements, budget discussions, or internal follow-up tasks..."
+                  value={leadNotes}
+                  maxLength={2000}
+                  onChange={(e) => setLeadNotes(e.target.value)}
+                />
+
+                <div className={styles.notesFooterRow}>
+                  <div>
+                    {leadNotesSaved && (
+                      <span className={styles.saveSuccessMsg}>
+                        <Check size={14} /> Notes saved to database!
+                      </span>
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    className={styles.saveNotesBtn}
+                    onClick={handleSaveNotes}
+                    disabled={leadNotesSaving}
+                  >
+                    {leadNotesSaving ? (
+                      <>
+                        <RefreshCw size={13} className="animate-spin" /> Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Check size={14} /> Save Notes
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
 
               {/* Associated Visitor Context */}
               {selectedLead.visitorSession && (
@@ -1190,6 +1549,43 @@ export function AdminLeads({ initialLeads = [], currentUserRole = "admin", onRef
                   </div>
                 )}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Custom Delete Confirmation Modal */}
+      {deleteTargetLead && (
+        <div className={styles.confirmOverlay} onClick={() => setDeleteTargetLead(null)}>
+          <div className={styles.confirmCard} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.confirmTitle}>
+              <AlertTriangle size={20} />
+              <span>Confirm Delete Lead</span>
+            </div>
+            <p className={styles.confirmText}>
+              Are you sure you want to permanently delete the inquiry from{" "}
+              <strong>{deleteTargetLead.full_name || deleteTargetLead.email}</strong>?
+              This will remove the lead record and cannot be undone.
+            </p>
+            <div className={styles.confirmActions}>
+              <button
+                type="button"
+                className={styles.confirmCancelBtn}
+                onClick={() => setDeleteTargetLead(null)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.confirmDeleteBtn}
+                onClick={async () => {
+                  const targetId = deleteTargetLead.id;
+                  setDeleteTargetLead(null);
+                  await handleDeleteLead(targetId);
+                }}
+              >
+                Delete Lead
+              </button>
             </div>
           </div>
         </div>

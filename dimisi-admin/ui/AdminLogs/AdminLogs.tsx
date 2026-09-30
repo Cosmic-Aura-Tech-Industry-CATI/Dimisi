@@ -17,7 +17,6 @@ import {
   Calendar,
   Star,
   QrCode,
-  TrendingUp,
   Settings,
   User,
   Copy,
@@ -30,6 +29,9 @@ import {
   RefreshCw,
   Lock,
   Download,
+  Terminal,
+  Server,
+  FileCode,
 } from "lucide-react";
 import { type AdminRole, ADMIN_ROLES, getRoleMeta } from "../../lib/rbac.shared";
 import type {
@@ -52,15 +54,28 @@ const MODULE_LIST: ActivityModule[] = [
   "Events",
   "Reviews",
   "Campaigns",
-  "Analytics",
   "Settings",
   "Profile",
+  "Workspace",
 ];
 
 function initials(name?: string, email?: string) {
   const src = (name || email || "A").trim();
   const parts = src.split(/[\s.@_-]+/).filter(Boolean);
   return ((parts[0]?.[0] ?? "A") + (parts[1]?.[0] ?? "")).toUpperCase();
+}
+
+function formatRelativeTime(timestamp: number): string {
+  const diffSec = Math.floor((Date.now() - timestamp) / 1000);
+  if (diffSec < 60) return "Just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHours = Math.floor(diffMin / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays === 1) return "Yesterday";
+  if (diffDays < 30) return `${diffDays}d ago`;
+  return `${Math.floor(diffDays / 30)}mo ago`;
 }
 
 function getModuleIcon(mod: string) {
@@ -83,23 +98,146 @@ function getModuleIcon(mod: string) {
       return Star;
     case "Campaigns":
       return QrCode;
-    case "Analytics":
-      return TrendingUp;
     case "Settings":
       return Settings;
     case "Profile":
       return User;
+    case "Workspace":
+      return Terminal;
     default:
       return ScrollText;
   }
 }
 
-interface AdminLogsProps {
-  currentUserRole?: AdminRole | string;
+function formatActionName(action?: string): string {
+  if (!action) return "Administrative Action";
+  if (action.includes(" ") && /[A-Z]/.test(action)) return action;
+  return action
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(" ");
 }
 
-export function AdminLogs({ currentUserRole }: AdminLogsProps) {
+function getActionBadgeStyle(action?: string, status?: LogStatus) {
+  if (status === "FAILED") {
+    return {
+      color: "#f87171",
+      bg: "rgba(239, 68, 68, 0.12)",
+      border: "rgba(239, 68, 68, 0.35)",
+    };
+  }
+  const act = (action || "").toLowerCase();
+  if (
+    act.includes("create") ||
+    act.includes("add") ||
+    act.includes("activate") ||
+    act.includes("login") ||
+    act.includes("publish")
+  ) {
+    return {
+      color: "#34d399",
+      bg: "rgba(16, 185, 129, 0.12)",
+      border: "rgba(16, 185, 129, 0.35)",
+    };
+  }
+  if (
+    act.includes("delete") ||
+    act.includes("remove") ||
+    act.includes("drop") ||
+    act.includes("suspend") ||
+    act.includes("revoke")
+  ) {
+    return {
+      color: "#f87171",
+      bg: "rgba(239, 68, 68, 0.12)",
+      border: "rgba(239, 68, 68, 0.35)",
+    };
+  }
+  if (
+    act.includes("status") ||
+    act.includes("toggle") ||
+    act.includes("switch") ||
+    act.includes("role")
+  ) {
+    return {
+      color: "#fbbf24",
+      bg: "rgba(245, 158, 11, 0.12)",
+      border: "rgba(245, 158, 11, 0.35)",
+    };
+  }
+  return {
+    color: "#38bdf8",
+    bg: "rgba(56, 189, 248, 0.12)",
+    border: "rgba(56, 189, 248, 0.35)",
+  };
+}
+
+function getDateRangeBounds(range: "all" | "today" | "yesterday" | "7days" | "30days"): {
+  startDate?: string;
+  endDate?: string;
+} {
+  if (range === "all") return {};
+  const now = new Date();
+  if (range === "today") {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+    return { startDate: start.toISOString() };
+  }
+  if (range === "yesterday") {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59, 999);
+    return { startDate: start.toISOString(), endDate: end.toISOString() };
+  }
+  if (range === "7days") {
+    const start = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    return { startDate: start.toISOString() };
+  }
+  if (range === "30days") {
+    const start = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    return { startDate: start.toISOString() };
+  }
+  return {};
+}
+
+function getBackendEntityType(mod: "all" | ActivityModule): string | undefined {
+  switch (mod) {
+    case "Authentication":
+      return "authentication";
+    case "Administrators":
+      return "administrator";
+    case "Services":
+      return "service";
+    case "Our Work":
+      return "casestudy";
+    case "Careers":
+      return "career";
+    case "Blogs":
+      return "blog";
+    case "Events":
+      return "event";
+    case "Reviews":
+      return "review";
+    case "Campaigns":
+      return "campaign";
+    case "Settings":
+      return "settings";
+    case "Profile":
+      return "administrator";
+    case "Workspace":
+      return "workspace";
+    default:
+      return undefined;
+  }
+}
+
+interface AdminLogsProps {
+  currentUserRole?: AdminRole | string;
+  currentAdmins?: any[];
+}
+
+export function AdminLogs({ currentUserRole, currentAdmins }: AdminLogsProps) {
   const [logs, setLogs] = useState<AdminLog[]>([]);
+  const [totalServerRecords, setTotalServerRecords] = useState<number>(0);
+  const [serverTotalPages, setServerTotalPages] = useState<number>(1);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
@@ -114,45 +252,90 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
   const [sortField, setSortField] = useState<SortField>("timestamp");
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
 
-  // Pagination State
-  const [page, setPage] = useState(1);
-  const pageSize = 10;
+  // Server Pagination State
+  const [page, setPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(20);
 
-  // Modal & Interactive State
+  // Auto-Refresh (Off = 0, 30s, 60s)
+  const [autoRefreshRate, setAutoRefreshRate] = useState<0 | 30 | 60>(0);
+
+  // Modal / Drawer & Interactive State
   const [selectedLog, setSelectedLog] = useState<AdminLog | null>(null);
   const [copiedId, setCopiedId] = useState(false);
+  const [copiedTargetId, setCopiedTargetId] = useState(false);
+  const [copiedIp, setCopiedIp] = useState(false);
+  const [copiedJson, setCopiedJson] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
-  const loadLiveLogs = useCallback(async () => {
-    setIsLoading(true);
-    setErrorMessage(null);
-    try {
-      const res = await getPanelActivityLogsApi({ page: 1, limit: 100 });
-      if (Array.isArray(res.adminLogs)) {
-        setLogs(res.adminLogs);
+  // Load logs directly from the backend activity service with dynamic admin lookups
+  const loadLiveLogs = useCallback(
+    async (isBackground = false) => {
+      if (!isBackground) {
+        setIsLoading(true);
       }
-    } catch (err: any) {
-      console.warn("Failed to load activity logs:", err);
-      if (err?.status === 401 || err?.message?.includes("token") || err?.message?.includes("valid for this panel")) {
-        setErrorMessage("Authentication mismatch: Panel authentication token required. (Backend activity route requires protectPanel)");
-      } else {
-        setErrorMessage(err instanceof Error ? err.message : "Failed to fetch activity logs from server.");
-      }
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
+      setErrorMessage(null);
+      try {
+        const bounds = getDateRangeBounds(dateFilter);
+        const entityType = getBackendEntityType(moduleFilter);
 
+        const res = await getPanelActivityLogsApi({
+          page,
+          limit: pageSize,
+          ...(bounds.startDate ? { startDate: bounds.startDate } : {}),
+          ...(bounds.endDate ? { endDate: bounds.endDate } : {}),
+          ...(entityType ? { entityType } : {}),
+          admins: currentAdmins,
+        });
+
+        if (Array.isArray(res.adminLogs)) {
+          setLogs(res.adminLogs);
+          setTotalServerRecords(res.total);
+          setServerTotalPages(res.totalPages);
+        }
+      } catch (err: any) {
+        console.warn("Failed to load activity logs:", err);
+        if (
+          err?.status === 401 ||
+          err?.message?.includes("token") ||
+          err?.message?.includes("valid for this panel")
+        ) {
+          setErrorMessage(
+            "Authentication mismatch: Panel authentication token required. (Backend activity route requires protectPanel)"
+          );
+        } else {
+          setErrorMessage(
+            err instanceof Error ? err.message : "Failed to fetch activity logs from server."
+          );
+        }
+      } finally {
+        if (!isBackground) {
+          setIsLoading(false);
+        }
+      }
+    },
+    [page, pageSize, dateFilter, moduleFilter, currentAdmins]
+  );
+
+  // Initial and reactive load on page, pageSize, dateFilter, or moduleFilter change
   useEffect(() => {
     void loadLiveLogs();
   }, [loadLiveLogs]);
 
-  // Reset pagination on filter change
+  // Reset page to 1 when filters or page size change
   useEffect(() => {
     setPage(1);
-  }, [search, roleFilter, moduleFilter, statusFilter, dateFilter]);
+  }, [search, roleFilter, moduleFilter, statusFilter, dateFilter, pageSize]);
 
-  // Modal Escape key handler
+  // Auto-Refresh interval handler
+  useEffect(() => {
+    if (autoRefreshRate <= 0) return;
+    const interval = setInterval(() => {
+      void loadLiveLogs(true);
+    }, autoRefreshRate * 1000);
+    return () => clearInterval(interval);
+  }, [autoRefreshRate, loadLiveLogs]);
+
+  // Drawer Escape key handler
   useEffect(() => {
     if (!selectedLog) return;
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -164,7 +347,7 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
 
   // Top summary metrics calculation
   const stats = useMemo(() => {
-    const total = logs?.length ?? 0;
+    const total = totalServerRecords;
     const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
     let today = 0;
     let success = 0;
@@ -182,14 +365,12 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
       successfulCount: success,
       failedCount: failed,
     };
-  }, [logs]);
+  }, [totalServerRecords, logs]);
 
-  // Filter and sort logs
+  // In-memory filter and sort for current batch
   const filteredLogs = useMemo(() => {
     const list = logs ?? [];
     const query = search.trim().toLowerCase();
-    const now = Date.now();
-    const oneDayMs = 24 * 60 * 60 * 1000;
 
     const filtered = list.filter((log) => {
       // Search matching
@@ -200,8 +381,19 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
         const activityMatch = log.activity?.toLowerCase().includes(query);
         const moduleMatch = log.module?.toLowerCase().includes(query);
         const detailsMatch = log.details?.toLowerCase().includes(query);
+        const targetMatch = log.targetResource?.toLowerCase().includes(query);
+        const ipMatch = log.ipAddress?.toLowerCase().includes(query);
 
-        if (!nameMatch && !emailMatch && !empMatch && !activityMatch && !moduleMatch && !detailsMatch) {
+        if (
+          !nameMatch &&
+          !emailMatch &&
+          !empMatch &&
+          !activityMatch &&
+          !moduleMatch &&
+          !detailsMatch &&
+          !targetMatch &&
+          !ipMatch
+        ) {
           return false;
         }
       }
@@ -211,25 +403,9 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
         return false;
       }
 
-      // Module filter
-      if (moduleFilter !== "all" && log.module !== moduleFilter) {
-        return false;
-      }
-
       // Status filter
       if (statusFilter !== "all" && log.status !== statusFilter) {
         return false;
-      }
-
-      // Date range filter
-      if (dateFilter === "today") {
-        if (log.timestamp < now - oneDayMs) return false;
-      } else if (dateFilter === "yesterday") {
-        if (log.timestamp >= now - oneDayMs || log.timestamp < now - 2 * oneDayMs) return false;
-      } else if (dateFilter === "7days") {
-        if (log.timestamp < now - 7 * oneDayMs) return false;
-      } else if (dateFilter === "30days") {
-        if (log.timestamp < now - 30 * oneDayMs) return false;
       }
 
       return true;
@@ -252,18 +428,14 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
     });
 
     return filtered;
-  }, [logs, search, roleFilter, moduleFilter, statusFilter, dateFilter, sortField, sortOrder]);
+  }, [logs, search, roleFilter, statusFilter, sortField, sortOrder]);
 
-  // Pagination slicing
-  const totalPages = Math.max(1, Math.ceil(filteredLogs.length / pageSize));
-  const paginatedLogs = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return filteredLogs.slice(start, start + pageSize);
-  }, [filteredLogs, page, pageSize]);
-
-  // Has active filters
   const hasActiveFilters = Boolean(
-    search || roleFilter !== "all" || moduleFilter !== "all" || statusFilter !== "all" || dateFilter !== "all"
+    search ||
+      roleFilter !== "all" ||
+      moduleFilter !== "all" ||
+      statusFilter !== "all" ||
+      dateFilter !== "all"
   );
 
   const handleResetFilters = () => {
@@ -301,8 +473,81 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
     }
   };
 
+  const handleCopyTargetId = (targetId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      void navigator.clipboard.writeText(targetId);
+      setCopiedTargetId(true);
+      setTimeout(() => setCopiedTargetId(false), 2000);
+    }
+  };
+
+  const handleCopyIp = (ip: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      void navigator.clipboard.writeText(ip);
+      setCopiedIp(true);
+      setTimeout(() => setCopiedIp(false), 2000);
+    }
+  };
+
+  const handleCopyRecordJson = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!selectedLog) return;
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      const dump = JSON.stringify(
+        {
+          id: selectedLog.id,
+          action: selectedLog.activity,
+          actionRaw: selectedLog.actionRaw,
+          module: selectedLog.module,
+          entityTypeRaw: selectedLog.entityTypeRaw,
+          status: selectedLog.status,
+          scope: selectedLog.scope,
+          admin: {
+            name: selectedLog.adminName,
+            email: selectedLog.email,
+            employeeId: selectedLog.employeeId,
+            accountId: selectedLog.accountId,
+            role: selectedLog.role,
+          },
+          targetResource: selectedLog.targetResource,
+          details: selectedLog.details,
+          telemetry: {
+            ipAddress: selectedLog.ipAddress,
+            userAgent: selectedLog.userAgent,
+            timestamp: selectedLog.timestamp,
+            date: selectedLog.date,
+            time: selectedLog.time,
+          },
+          metadata: selectedLog.metadata,
+        },
+        null,
+        2
+      );
+      void navigator.clipboard.writeText(dump);
+      setCopiedJson(true);
+      setTimeout(() => setCopiedJson(false), 2000);
+    }
+  };
+
   const handleExportCsv = () => {
-    const headers = ["ID", "Date", "Time", "Admin", "Email", "Employee ID", "Role", "Activity", "Module", "Status", "Details"];
+    const headers = [
+      "ID",
+      "Date",
+      "Time",
+      "Admin",
+      "Email",
+      "Employee ID",
+      "Role",
+      "Scope",
+      "Activity",
+      "Module",
+      "Status",
+      "Target Resource",
+      "Details",
+      "IP Address",
+    ];
     const rows = filteredLogs.map((l) => [
       l.id,
       l.date,
@@ -311,10 +556,13 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
       l.email,
       l.employeeId || l.accountId || "—",
       l.role,
+      l.scope || "PANEL",
       `"${(l.activity || "").replace(/"/g, '""')}"`,
       l.module,
       l.status,
+      l.targetResource || "—",
       `"${(l.details || "").replace(/"/g, '""')}"`,
+      l.ipAddress || "—",
     ]);
 
     const csvContent = [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
@@ -322,7 +570,10 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.setAttribute("download", `dimisi-admin-logs-${new Date().toISOString().split("T")[0]}.csv`);
+    link.setAttribute(
+      "download",
+      `dimisi-admin-logs-${new Date().toISOString().split("T")[0]}.csv`
+    );
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -350,11 +601,31 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
           </div>
           <h1 className={styles.title}>Admin Logs</h1>
           <p className={styles.subtitle}>
-            Track and review administrative activity across the DIMISI Control Room.
+            Track and inspect enterprise administrative audit telemetry across the DIMISI Control
+            Room.
           </p>
+          <div className={styles.scopeIndicator} title="Backend scope isolation: Dedicated Panel Operations">
+            <Server size={11} />
+            <span>Dedicated Panel Operations Scope ({totalServerRecords.toLocaleString()} live events recorded)</span>
+          </div>
         </div>
 
         <div className={styles.headerActions}>
+          {/* AUTO REFRESH TOGGLE */}
+          <div className={styles.autoRefreshGroup} title="Automatic periodic data refresh">
+            <RefreshCw size={13} className={autoRefreshRate > 0 ? "animate-spin" : ""} />
+            <span>Auto-Refresh:</span>
+            <select
+              className={styles.autoRefreshSelect}
+              value={autoRefreshRate}
+              onChange={(e) => setAutoRefreshRate(Number(e.target.value) as 0 | 30 | 60)}
+            >
+              <option value={0}>Off</option>
+              <option value={30}>Every 30s</option>
+              <option value={60}>Every 60s</option>
+            </select>
+          </div>
+
           <button
             type="button"
             className={styles.actionBtn}
@@ -381,13 +652,13 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
       <div className={styles.statsGrid}>
         <div className={styles.statCard}>
           <div className={styles.statHeader}>
-            <span className={styles.statLabel}>Total Activities</span>
+            <span className={styles.statLabel}>Panel Activities</span>
             <div className={styles.statIcon}>
               <Activity size={16} />
             </div>
           </div>
-          <div className={styles.statValue}>{stats.totalActivities}</div>
-          <span className={styles.statSubtext}>Recorded across all modules</span>
+          <div className={styles.statValue}>{stats.totalActivities.toLocaleString()}</div>
+          <span className={styles.statSubtext}>Total records stored in database</span>
         </div>
 
         <div className={styles.statCard}>
@@ -398,33 +669,42 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
             </div>
           </div>
           <div className={styles.statValue}>{stats.todayCount}</div>
-          <span className={styles.statSubtext}>Actions logged in last 24h</span>
+          <span className={styles.statSubtext}>Actions logged in recent batch</span>
         </div>
 
         <div className={styles.statCard}>
           <div className={styles.statHeader}>
             <span className={styles.statLabel}>Successful Actions</span>
-            <div className={styles.statIcon} style={{ color: "#4ade80", background: "rgba(34, 197, 94, 0.1)" }}>
+            <div
+              className={styles.statIcon}
+              style={{ color: "#4ade80", background: "rgba(34, 197, 94, 0.1)" }}
+            >
               <CheckCircle2 size={16} />
             </div>
           </div>
           <div className={styles.statValue} style={{ color: "#4ade80" }}>
             {stats.successfulCount}
           </div>
-          <span className={styles.statSubtext}>Completed without errors</span>
+          <span className={styles.statSubtext}>Verified completed actions</span>
         </div>
 
         <div className={styles.statCard}>
           <div className={styles.statHeader}>
             <span className={styles.statLabel}>Failed Actions</span>
-            <div className={styles.statIcon} style={{ color: "#f87171", background: "rgba(239, 68, 68, 0.1)" }}>
+            <div
+              className={styles.statIcon}
+              style={{ color: "#f87171", background: "rgba(239, 68, 68, 0.1)" }}
+            >
               <AlertCircle size={16} />
             </div>
           </div>
-          <div className={styles.statValue} style={{ color: stats.failedCount > 0 ? "#f87171" : "inherit" }}>
+          <div
+            className={styles.statValue}
+            style={{ color: stats.failedCount > 0 ? "#f87171" : "inherit" }}
+          >
             {stats.failedCount}
           </div>
-          <span className={styles.statSubtext}>Blocked or failed attempts</span>
+          <span className={styles.statSubtext}>Blocked or rejected operations</span>
         </div>
       </div>
 
@@ -436,7 +716,7 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
             <input
               type="text"
               className={styles.searchInput}
-              placeholder="Search by admin, email, employee ID, activity, or module…"
+              placeholder="Search by admin, email, employee ID (e.g. DMSEMP260002), action, or target ID…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -482,7 +762,7 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
             </select>
           </div>
 
-          {/* Module Filter */}
+          {/* Module Filter (Database Query Pushdown) */}
           <div className={styles.filterGroup}>
             <span className={styles.filterLabel}>Module:</span>
             <select
@@ -509,12 +789,11 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
             >
               <option value="all">All Status</option>
               <option value="SUCCESS">Success</option>
-              <option value="WARNING">Warning</option>
               <option value="FAILED">Failed</option>
             </select>
           </div>
 
-          {/* Date Filter */}
+          {/* Date Filter (Database Query Pushdown) */}
           <div className={styles.filterGroup}>
             <span className={styles.filterLabel}>Date:</span>
             <select
@@ -523,7 +802,7 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
               onChange={(e) => setDateFilter(e.target.value as any)}
             >
               <option value="all">All Time</option>
-              <option value="today">Today (Last 24h)</option>
+              <option value="today">Today (Since Midnight)</option>
               <option value="yesterday">Yesterday</option>
               <option value="7days">Last 7 Days</option>
               <option value="30days">Last 30 Days</option>
@@ -532,18 +811,45 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
         </div>
       </div>
 
-      {/* TABLE CARD */}
+      {/* TABLE CARD - CONSOLIDATED 6-COLUMN MASTER LAYOUT */}
       <div className={styles.tableCard}>
         {/* CARD HEADER (OUTSIDE SCROLL AREA) */}
         <div className={styles.tableCardHeader}>
-          <h3 className={styles.tableTitle}>
-            <ScrollText size={16} />
-            <span>Administrative Audit Log</span>
-          </h3>
-          <span className={styles.resultCount}>
-            Showing {filteredLogs.length === 0 ? 0 : (page - 1) * pageSize + 1}–
-            {Math.min(page * pageSize, filteredLogs.length)} of {filteredLogs.length} entries
-          </span>
+          <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+            <h3 className={styles.tableTitle}>
+              <ScrollText size={16} />
+              <span>Administrative Audit Log</span>
+            </h3>
+            {isLoading && (
+              <RefreshCw
+                size={13}
+                className="animate-spin"
+                style={{ color: "var(--dm-amber)" }}
+              />
+            )}
+          </div>
+
+          <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+            {/* Page Size Selector */}
+            <div className={styles.pageSizeWrap}>
+              <span>Show:</span>
+              <select
+                className={styles.pageSizeSelect}
+                value={pageSize}
+                onChange={(e) => setPageSize(Number(e.target.value))}
+              >
+                <option value={10}>10 rows</option>
+                <option value={20}>20 rows</option>
+                <option value={50}>50 rows</option>
+                <option value={100}>100 rows</option>
+              </select>
+            </div>
+
+            <span className={styles.resultCount}>
+              Page {page} of {Math.max(1, serverTotalPages)} ({totalServerRecords.toLocaleString()}{" "}
+              total logs)
+            </span>
+          </div>
         </div>
 
         {/* DEDICATED DUAL-AXIS SCROLL CONTAINER */}
@@ -551,73 +857,70 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
           <table className={styles.table}>
             <thead>
               <tr>
-                {/* 1. DATE */}
-                <th className={[styles.thSortable, styles.colDate].join(" ")} onClick={() => handleSort("timestamp")}>
+                {/* 1. TIMESTAMP (Date + Time + Relative Ago) */}
+                <th
+                  className={[styles.thSortable, styles.colTimestamp].join(" ")}
+                  onClick={() => handleSort("timestamp")}
+                >
                   <div className={styles.thContent}>
-                    <span>Date</span>
+                    <span>Timestamp</span>
                     {renderSortIndicator("timestamp")}
                   </div>
                 </th>
 
-                {/* 2. TIME */}
-                <th className={[styles.thSortable, styles.colTime].join(" ")} onClick={() => handleSort("timestamp")}>
+                {/* 2. ACTOR (Avatar + Name + Email + Real Employee ID) */}
+                <th
+                  className={[styles.thSortable, styles.colActor].join(" ")}
+                  onClick={() => handleSort("adminName")}
+                >
                   <div className={styles.thContent}>
-                    <span>Time</span>
-                    {renderSortIndicator("timestamp")}
-                  </div>
-                </th>
-
-                {/* 3. ADMIN */}
-                <th className={[styles.thSortable, styles.colAdmin].join(" ")} onClick={() => handleSort("adminName")}>
-                  <div className={styles.thContent}>
-                    <span>Admin</span>
+                    <span>Actor / Performed By</span>
                     {renderSortIndicator("adminName")}
                   </div>
                 </th>
 
-                {/* 4. EMAIL */}
-                <th className={styles.colEmail}>
-                  <span>Email</span>
+                {/* 3. ROLE & SCOPE */}
+                <th className={styles.colRoleScope}>
+                  <span>Role & Scope</span>
                 </th>
 
-                {/* 5. EMPLOYEE ID */}
-                <th className={styles.colAccountId}>
-                  <span>Employee ID</span>
-                </th>
-
-                {/* 6. ROLE */}
-                <th className={styles.colRole}>
-                  <span>Role</span>
-                </th>
-
-                {/* 7. ACTIVITY */}
+                {/* 4. ACTIVITY & TARGET */}
                 <th className={styles.colActivity}>
-                  <span>Activity</span>
+                  <span>Activity & Target</span>
                 </th>
 
-                {/* 8. MODULE */}
-                <th className={[styles.thSortable, styles.colModule].join(" ")} onClick={() => handleSort("module")}>
+                {/* 5. MODULE */}
+                <th
+                  className={[styles.thSortable, styles.colModule].join(" ")}
+                  onClick={() => handleSort("module")}
+                >
                   <div className={styles.thContent}>
                     <span>Module</span>
                     {renderSortIndicator("module")}
                   </div>
                 </th>
 
-                {/* 9. STATUS */}
-                <th className={[styles.thSortable, styles.colStatus].join(" ")} onClick={() => handleSort("status")}>
-                  <div className={styles.thContent} style={{ justifyContent: "center" }}>
-                    <span>Status</span>
+                {/* 6. STATUS & DOSSIER */}
+                <th
+                  className={[styles.thSortable, styles.colStatus].join(" ")}
+                  onClick={() => handleSort("status")}
+                >
+                  <div className={styles.thContent} style={{ justifyContent: "flex-end" }}>
+                    <span>Status & Record</span>
                     {renderSortIndicator("status")}
                   </div>
                 </th>
               </tr>
             </thead>
             <tbody>
-              {isLoading && paginatedLogs.length === 0 ? (
+              {isLoading && filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={9}>
+                  <td colSpan={6}>
                     <div className={styles.emptyState}>
-                      <div className={styles.emptyIconBox} style={{ animation: "spin 1s linear infinite" }}>
+                      <div
+                        className={styles.emptyIconBox}
+                        style={{ animation: "spin 1s linear infinite" }}
+                      >
                         <RefreshCw size={28} />
                       </div>
                       <h4 className={styles.emptyTitle}>Loading Activity Logs...</h4>
@@ -627,11 +930,14 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
                     </div>
                   </td>
                 </tr>
-              ) : errorMessage && paginatedLogs.length === 0 ? (
+              ) : errorMessage && filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={9}>
+                  <td colSpan={6}>
                     <div className={styles.emptyState}>
-                      <div className={styles.emptyIconBox} style={{ borderColor: "#ef4444", color: "#ef4444" }}>
+                      <div
+                        className={styles.emptyIconBox}
+                        style={{ borderColor: "#ef4444", color: "#ef4444" }}
+                      >
                         <AlertTriangle size={28} />
                       </div>
                       <h4 className={styles.emptyTitle}>Unable to Load Activity Logs</h4>
@@ -639,7 +945,7 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
                       <button
                         type="button"
                         className={styles.resetBtn}
-                        onClick={loadLiveLogs}
+                        onClick={() => void loadLiveLogs()}
                         style={{ marginTop: "0.5rem" }}
                       >
                         <RefreshCw size={12} />
@@ -648,9 +954,9 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
                     </div>
                   </td>
                 </tr>
-              ) : paginatedLogs.length === 0 ? (
+              ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={9}>
+                  <td colSpan={6}>
                     <div className={styles.emptyState}>
                       <div className={styles.emptyIconBox}>
                         <Search size={28} />
@@ -674,103 +980,144 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
                   </td>
                 </tr>
               ) : (
-                paginatedLogs.map((log) => {
+                filteredLogs.map((log) => {
                   const roleMeta = getRoleMeta(log.role);
                   const ModuleIcon = getModuleIcon(log.module);
+                  const badgeStyle = getActionBadgeStyle(log.actionRaw || log.activity, log.status);
 
                   return (
                     <tr
                       key={log.id}
                       className={styles.tableRow}
                       onClick={() => setSelectedLog(log)}
-                      title="Click to view detailed activity telemetry"
+                      title="Click to inspect security audit dossier"
                     >
-                      {/* 1. DATE */}
-                      <td className={styles.colDate}>
-                        <span className={styles.dateMain}>{log.date}</span>
-                      </td>
-
-                      {/* 2. TIME */}
-                      <td className={styles.colTime}>
-                        <span className={styles.timeSub}>{log.time}</span>
-                      </td>
-
-                      {/* 3. ADMIN */}
-                      <td className={styles.colAdmin}>
-                        <div className={styles.adminCell}>
-                          <span className={styles.avatar}>
-                            {initials(log.adminName, log.email)}
-                          </span>
-                          <span className={styles.adminName}>{log.adminName || "DIMISI Admin"}</span>
-                        </div>
-                      </td>
-
-                      {/* 4. EMAIL */}
-                      <td className={styles.colEmail}>
-                        <span className={styles.emailText} title={log.email || ""}>
-                          {log.email || "—"}
-                        </span>
-                      </td>
-
-                      {/* 5. EMPLOYEE ID */}
-                      <td className={styles.colAccountId}>
-                        <span
-                          className={styles.accountBadge}
-                          title={`Employee ID: ${log.employeeId || log.accountId || "—"}\n(Click row to view full details)`}
-                        >
-                          {log.employeeId || (log.accountId ? `${log.accountId.slice(0, 10)}…` : "—")}
-                        </span>
-                      </td>
-
-                      {/* 6. ROLE */}
-                      <td className={styles.colRole}>
-                        <span
-                          className={styles.roleBadge}
-                          style={{
-                            color: roleMeta.color,
-                            background: roleMeta.bg,
-                            borderColor: roleMeta.border,
-                          }}
-                        >
-                          {roleMeta.shortLabel}
-                        </span>
-                      </td>
-
-                      {/* 7. ACTIVITY */}
-                      <td className={styles.colActivity}>
-                        <div className={styles.activityCell} title={log.activity}>
-                          <div className={styles.activityIconBox}>
-                            <ModuleIcon size={13} />
+                      {/* 1. TIMESTAMP (Date, Time, Relative) */}
+                      <td className={styles.colTimestamp}>
+                        <div className={styles.timestampGroup}>
+                          <span className={styles.timestampDate}>{log.date}</span>
+                          <div className={styles.timestampMeta}>
+                            <span>{log.time}</span>
+                            <span>•</span>
+                            <span className={styles.relativeTime}>
+                              {formatRelativeTime(log.timestamp)}
+                            </span>
                           </div>
-                          <span className={styles.activityText}>{log.activity}</span>
                         </div>
                       </td>
 
-                      {/* 8. MODULE */}
+                      {/* 2. ACTOR (Avatar + Full Name + Email + Real Employee ID) */}
+                      <td className={styles.colActor}>
+                        <div className={styles.actorGroup}>
+                          {log.avatar ? (
+                            <img
+                              src={log.avatar}
+                              alt={log.adminName}
+                              className={styles.avatarImg}
+                              onError={(e) => {
+                                (e.target as HTMLElement).style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <span className={styles.avatar}>
+                              {initials(log.adminName, log.email)}
+                            </span>
+                          )}
+                          <div className={styles.actorInfo}>
+                            <span className={styles.actorName}>
+                              {log.adminName || "DIMISI Admin"}
+                            </span>
+                            <div className={styles.actorMetaRow}>
+                              <span className={styles.actorEmail} title={log.email || ""}>
+                                {log.email || "—"}
+                              </span>
+                              <span
+                                className={styles.actorEmpBadge}
+                                title={`Employee ID: ${log.employeeId || "—"}`}
+                              >
+                                {log.employeeId || "—"}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* 3. ROLE & SCOPE */}
+                      <td className={styles.colRoleScope}>
+                        <div className={styles.roleScopeGroup}>
+                          <span
+                            className={styles.roleBadge}
+                            style={{
+                              color: roleMeta.color,
+                              background: roleMeta.bg,
+                              borderColor: roleMeta.border,
+                            }}
+                          >
+                            {roleMeta.shortLabel}
+                          </span>
+                          <span className={styles.scopeTag}>
+                            <Server size={10} />
+                            <span>{log.scope || "PANEL"}</span>
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 4. ACTIVITY & TARGET */}
+                      <td className={styles.colActivity}>
+                        <div className={styles.activityGroup} title={log.activity}>
+                          <span
+                            className={styles.actionBadge}
+                            style={{
+                              color: badgeStyle.color,
+                              background: badgeStyle.bg,
+                              borderColor: badgeStyle.border,
+                            }}
+                          >
+                            <ModuleIcon size={12} />
+                            <span>{formatActionName(log.activity)}</span>
+                          </span>
+                          <span
+                            className={styles.activitySubtext}
+                            title={log.details || log.targetResource || ""}
+                          >
+                            {log.details ||
+                              (log.targetResource ? `Target: ${log.targetResource}` : "—")}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* 5. MODULE */}
                       <td className={styles.colModule}>
                         <span className={styles.moduleBadge}>{log.module}</span>
                       </td>
 
-                      {/* 9. STATUS */}
+                      {/* 6. STATUS & DOSSIER ACTION */}
                       <td className={styles.colStatus}>
-                        {log.status === "SUCCESS" && (
-                          <span className={[styles.statusPill, styles.statusSuccess].join(" ")}>
-                            <CheckCircle2 size={11} />
-                            <span>SUCCESS</span>
-                          </span>
-                        )}
-                        {log.status === "WARNING" && (
-                          <span className={[styles.statusPill, styles.statusWarning].join(" ")}>
-                            <AlertTriangle size={11} />
-                            <span>WARNING</span>
-                          </span>
-                        )}
-                        {log.status === "FAILED" && (
-                          <span className={[styles.statusPill, styles.statusFailed].join(" ")}>
-                            <AlertCircle size={11} />
-                            <span>FAILED</span>
-                          </span>
-                        )}
+                        <div className={styles.statusActionGroup}>
+                          {log.status === "SUCCESS" && (
+                            <span className={[styles.statusPill, styles.statusSuccess].join(" ")}>
+                              <CheckCircle2 size={11} />
+                              <span>SUCCESS</span>
+                            </span>
+                          )}
+                          {log.status === "FAILED" && (
+                            <span className={[styles.statusPill, styles.statusFailed].join(" ")}>
+                              <AlertCircle size={11} />
+                              <span>FAILED</span>
+                            </span>
+                          )}
+                          <button
+                            type="button"
+                            className={styles.inspectBtn}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setSelectedLog(log);
+                            }}
+                            title="Inspect complete audit dossier"
+                          >
+                            <ChevronRight size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -780,36 +1127,36 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
           </table>
         </div>
 
-        {/* PAGINATION CONTROLS (OUTSIDE SCROLL AREA) */}
-        {filteredLogs.length > 0 && (
+        {/* SERVER-SIDE PAGINATION CONTROLS */}
+        {totalServerRecords > 0 && (
           <div className={styles.paginationRow}>
-            <span className={styles.pageInfo}>
-              Page {page} of {totalPages}
-            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+              <span className={styles.pageInfo}>
+                Showing Page {page} of {Math.max(1, serverTotalPages)} (
+                {totalServerRecords.toLocaleString()} entries)
+              </span>
+            </div>
 
             <div className={styles.pageControls}>
               <button
                 type="button"
                 className={styles.pageBtn}
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
+                disabled={page === 1 || isLoading}
                 aria-label="Previous page"
               >
                 <ChevronLeft size={16} />
               </button>
 
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => {
-                // Show first, last, current, and adjacent pages
-                if (totalPages > 7) {
-                  if (p !== 1 && p !== totalPages && Math.abs(p - page) > 1) {
-                    if (p === 2 || p === totalPages - 1) {
-                      return (
-                        <span key={p} style={{ padding: "0 0.2rem", color: "var(--dm-dim)" }}>
-                          …
-                        </span>
-                      );
-                    }
-                    return null;
+              {Array.from({ length: Math.min(serverTotalPages, 7) }, (_, idx) => {
+                let p = idx + 1;
+                if (serverTotalPages > 7) {
+                  if (page <= 4) {
+                    p = idx + 1;
+                  } else if (page >= serverTotalPages - 3) {
+                    p = serverTotalPages - 6 + idx;
+                  } else {
+                    p = page - 3 + idx;
                   }
                 }
 
@@ -817,8 +1164,11 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
                   <button
                     key={p}
                     type="button"
-                    className={[styles.pageBtn, page === p ? styles.pageBtnActive : ""].join(" ")}
+                    className={[styles.pageBtn, page === p ? styles.pageBtnActive : ""].join(
+                      " "
+                    )}
                     onClick={() => setPage(p)}
+                    disabled={isLoading}
                   >
                     {p}
                   </button>
@@ -828,8 +1178,8 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
               <button
                 type="button"
                 className={styles.pageBtn}
-                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-                disabled={page === totalPages}
+                onClick={() => setPage((p) => Math.min(serverTotalPages, p + 1))}
+                disabled={page >= serverTotalPages || isLoading}
                 aria-label="Next page"
               >
                 <ChevronRight size={16} />
@@ -839,182 +1189,331 @@ export function AdminLogs({ currentUserRole }: AdminLogsProps) {
         )}
       </div>
 
-      {/* DETAIL MODAL */}
+      {/* SLIDE-OVER SECURITY AUDIT DOSSIER */}
       {selectedLog && (
         <div
-          className={styles.modalBackdrop}
+          className={styles.drawerBackdrop}
           onClick={() => setSelectedLog(null)}
           role="dialog"
           aria-modal="true"
-          aria-label="Activity details"
+          aria-label="Activity Audit Dossier"
         >
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <div className={styles.modalTitleBox}>
-                <span className={styles.modalKicker}>Activity Audit Record</span>
-                <h3 className={styles.modalTitle}>{selectedLog.activity}</h3>
+          <div className={styles.drawerPane} onClick={(e) => e.stopPropagation()}>
+            {/* DRAWER HEADER */}
+            <div className={styles.drawerHeader}>
+              <div className={styles.drawerHeaderInfo}>
+                <span className={styles.modalKicker}>Enterprise Security Audit Dossier</span>
+                <h3 className={styles.modalTitle}>{formatActionName(selectedLog.activity)}</h3>
+                <div className={styles.drawerBadges}>
+                  {selectedLog.scope && (
+                    <span className={styles.scopeBadge}>
+                      <Server size={11} />
+                      <span>{selectedLog.scope}</span>
+                    </span>
+                  )}
+                  {selectedLog.status === "SUCCESS" && (
+                    <span className={[styles.statusPill, styles.statusSuccess].join(" ")}>
+                      <CheckCircle2 size={11} />
+                      <span>SUCCESS</span>
+                    </span>
+                  )}
+                  {selectedLog.status === "FAILED" && (
+                    <span className={[styles.statusPill, styles.statusFailed].join(" ")}>
+                      <AlertCircle size={11} />
+                      <span>FAILED</span>
+                    </span>
+                  )}
+                  <span className={styles.moduleBadge}>{selectedLog.module}</span>
+                </div>
               </div>
               <button
                 type="button"
                 className={styles.modalCloseBtn}
                 onClick={() => setSelectedLog(null)}
-                aria-label="Close modal"
+                aria-label="Close dossier"
               >
                 <X size={16} />
               </button>
             </div>
 
-            <div className={styles.modalBody}>
-              <div className={styles.modalGrid}>
-                {/* Admin */}
-                <div className={styles.modalField}>
-                  <span className={styles.modalFieldLabel}>Performed By</span>
-                  <div className={styles.modalFieldValue}>
-                    <span className={styles.avatar} style={{ width: "1.7rem", height: "1.7rem", fontSize: "0.66rem" }}>
-                      {initials(selectedLog.adminName, selectedLog.email)}
-                    </span>
-                    <strong>{selectedLog.adminName || "DIMISI Admin"}</strong>
+            {/* DRAWER BODY */}
+            <div className={styles.drawerBody}>
+              {/* SECTION 1: PERFORMED BY */}
+              <div className={styles.drawerSection}>
+                <span className={styles.drawerSectionTitle}>
+                  <User size={13} />
+                  <span>Administrative Actor</span>
+                </span>
+                <div className={styles.drawerCard}>
+                  <div className={styles.drawerUserRow}>
+                    {selectedLog.avatar ? (
+                      <img
+                        src={selectedLog.avatar}
+                        alt={selectedLog.adminName}
+                        className={styles.avatarImgLarge}
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = "none";
+                        }}
+                      />
+                    ) : (
+                      <span
+                        className={styles.avatar}
+                        style={{ width: "2.75rem", height: "2.75rem", fontSize: "1rem" }}
+                      >
+                        {initials(selectedLog.adminName, selectedLog.email)}
+                      </span>
+                    )}
+                    <div className={styles.drawerUserInfo}>
+                      <span className={styles.drawerUserName}>
+                        {selectedLog.adminName || "DIMISI Administrator"}
+                      </span>
+                      <span className={styles.drawerUserEmail}>{selectedLog.email}</span>
+                    </div>
                   </div>
-                </div>
 
-                {/* Email */}
-                <div className={styles.modalField}>
-                  <span className={styles.modalFieldLabel}>Admin Email</span>
-                  <div className={styles.modalFieldValue}>{selectedLog.email}</div>
-                </div>
-
-                {/* Employee ID */}
-                <div className={styles.modalField}>
-                  <span className={styles.modalFieldLabel}>Employee ID</span>
-                  <div className={styles.modalFieldValue}>
-                    <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.8rem", color: "var(--dm-amber, #ff9f1c)", fontWeight: 600 }}>
-                      {selectedLog.employeeId || selectedLog.accountId}
-                    </span>
-                    <button
-                      type="button"
-                      className={styles.copyIdBtn}
-                      onClick={(e) => handleCopyEmployeeId(selectedLog.employeeId || selectedLog.accountId || "", e)}
-                      title="Copy Employee ID"
-                    >
-                      {copiedId ? <Check size={14} color="#4ade80" /> : <Copy size={14} />}
-                    </button>
-                  </div>
-                </div>
-
-                {/* System Role */}
-                <div className={styles.modalField}>
-                  <span className={styles.modalFieldLabel}>Assigned Role</span>
-                  <div className={styles.modalFieldValue}>
-                    {(() => {
-                      const meta = getRoleMeta(selectedLog.role);
-                      return (
+                  <div className={styles.modalGrid}>
+                    <div className={styles.modalField}>
+                      <span className={styles.modalFieldLabel}>Employee ID</span>
+                      <div className={styles.modalFieldValue}>
                         <span
-                          className={styles.roleBadge}
-                          style={{ color: meta.color, background: meta.bg, borderColor: meta.border }}
+                          style={{
+                            fontFamily: "var(--font-mono, monospace)",
+                            fontSize: "0.82rem",
+                            color: "var(--dm-amber, #ff9f1c)",
+                            fontWeight: 600,
+                          }}
                         >
-                          {meta.label} ({meta.shortLabel})
+                          {selectedLog.employeeId || selectedLog.accountId}
                         </span>
-                      );
-                    })()}
+                        <button
+                          type="button"
+                          className={styles.copyIdBtn}
+                          onClick={(e) =>
+                            handleCopyEmployeeId(
+                              selectedLog.employeeId || selectedLog.accountId || "",
+                              e
+                            )
+                          }
+                          title="Copy Employee ID"
+                        >
+                          {copiedId ? (
+                            <Check size={14} color="#4ade80" />
+                          ) : (
+                            <Copy size={14} />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className={styles.modalField}>
+                      <span className={styles.modalFieldLabel}>Assigned Role</span>
+                      <div className={styles.modalFieldValue}>
+                        {(() => {
+                          const meta = getRoleMeta(selectedLog.role);
+                          return (
+                            <span
+                              className={styles.roleBadge}
+                              style={{
+                                color: meta.color,
+                                background: meta.bg,
+                                borderColor: meta.border,
+                              }}
+                            >
+                              {meta.label} ({meta.shortLabel})
+                            </span>
+                          );
+                        })()}
+                      </div>
+                    </div>
                   </div>
                 </div>
+              </div>
 
-                {/* Module */}
-                <div className={styles.modalField}>
-                  <span className={styles.modalFieldLabel}>Affected Module</span>
-                  <div className={styles.modalFieldValue}>
-                    <span className={styles.moduleBadge}>{selectedLog.module}</span>
-                  </div>
-                </div>
-
-                {/* Status */}
-                <div className={styles.modalField}>
-                  <span className={styles.modalFieldLabel}>Action Status</span>
-                  <div className={styles.modalFieldValue}>
-                    {selectedLog.status === "SUCCESS" && (
-                      <span className={[styles.statusPill, styles.statusSuccess].join(" ")}>
-                        <CheckCircle2 size={12} />
-                        <span>SUCCESS</span>
-                      </span>
-                    )}
-                    {selectedLog.status === "WARNING" && (
-                      <span className={[styles.statusPill, styles.statusWarning].join(" ")}>
-                        <AlertTriangle size={12} />
-                        <span>WARNING</span>
-                      </span>
-                    )}
-                    {selectedLog.status === "FAILED" && (
-                      <span className={[styles.statusPill, styles.statusFailed].join(" ")}>
-                        <AlertCircle size={12} />
-                        <span>FAILED</span>
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Date & Time */}
-                <div className={styles.modalField}>
-                  <span className={styles.modalFieldLabel}>Timestamp</span>
-                  <div className={styles.modalFieldValue}>
-                    <span style={{ fontFamily: "var(--font-mono, monospace)" }}>
-                      {selectedLog.date} at {selectedLog.time}
-                    </span>
-                  </div>
-                </div>
-
-                {/* Target Resource */}
-                {selectedLog.targetResource && (
+              {/* SECTION 2: OPERATION & TARGET */}
+              <div className={styles.drawerSection}>
+                <span className={styles.drawerSectionTitle}>
+                  <Layers size={13} />
+                  <span>Operation & Target</span>
+                </span>
+                <div className={styles.modalGrid}>
                   <div className={styles.modalField}>
-                    <span className={styles.modalFieldLabel}>Target Resource</span>
+                    <span className={styles.modalFieldLabel}>Action Identifier</span>
                     <div className={styles.modalFieldValue}>
-                      <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.8rem", color: "var(--dm-gold)" }}>
-                        {selectedLog.targetResource}
+                      <span
+                        style={{
+                          fontFamily: "var(--font-mono, monospace)",
+                          fontSize: "0.8rem",
+                          color: "var(--dm-amber)",
+                        }}
+                      >
+                        {selectedLog.actionRaw || selectedLog.activity}
                       </span>
                     </div>
+                  </div>
+
+                  <div className={styles.modalField}>
+                    <span className={styles.modalFieldLabel}>Entity Type</span>
+                    <div className={styles.modalFieldValue}>
+                      <span
+                        style={{
+                          fontFamily: "var(--font-mono, monospace)",
+                          fontSize: "0.8rem",
+                          color: "#38bdf8",
+                        }}
+                      >
+                        {selectedLog.entityTypeRaw || selectedLog.module}
+                      </span>
+                    </div>
+                  </div>
+
+                  {selectedLog.targetResource && (
+                    <div className={styles.modalField} style={{ gridColumn: "span 2" }}>
+                      <span className={styles.modalFieldLabel}>Target Resource ID</span>
+                      <div className={styles.modalFieldValue}>
+                        <span
+                          style={{
+                            fontFamily: "var(--font-mono, monospace)",
+                            fontSize: "0.82rem",
+                            color: "var(--dm-gold)",
+                          }}
+                        >
+                          {selectedLog.targetResource}
+                        </span>
+                        <button
+                          type="button"
+                          className={styles.copyIdBtn}
+                          onClick={(e) =>
+                            handleCopyTargetId(selectedLog.targetResource || "", e)
+                          }
+                          title="Copy Resource ID"
+                        >
+                          {copiedTargetId ? (
+                            <Check size={14} color="#4ade80" />
+                          ) : (
+                            <Copy size={14} />
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Subtext Description */}
+                {selectedLog.details && (
+                  <div className={styles.modalDescBox}>
+                    <span className={styles.modalFieldLabel}>Audit Details & Subtext</span>
+                    <p className={styles.modalDescText}>{selectedLog.details}</p>
                   </div>
                 )}
               </div>
 
-              {/* Description / Details */}
-              {selectedLog.details && (
-                <div className={styles.modalDescBox}>
-                  <span className={styles.modalFieldLabel}>Action Details & Telemetry</span>
-                  <p className={styles.modalDescText}>{selectedLog.details}</p>
-                </div>
-              )}
-
-              {/* IP / User Agent */}
-              {(selectedLog.ipAddress || selectedLog.userAgent) && (
+              {/* SECTION 3: ORIGIN & TELEMETRY */}
+              <div className={styles.drawerSection}>
+                <span className={styles.drawerSectionTitle}>
+                  <Clock size={13} />
+                  <span>Origin & Network Telemetry</span>
+                </span>
                 <div className={styles.modalGrid}>
-                  {selectedLog.ipAddress && (
-                    <div className={styles.modalField}>
-                      <span className={styles.modalFieldLabel}>Origin IP Address</span>
-                      <div className={styles.modalFieldValue}>
-                        <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.8rem" }}>
-                          {selectedLog.ipAddress}
-                        </span>
-                      </div>
+                  <div className={styles.modalField}>
+                    <span className={styles.modalFieldLabel}>Timestamp</span>
+                    <div className={styles.modalFieldValue}>
+                      <span style={{ fontFamily: "var(--font-mono, monospace)", fontSize: "0.8rem" }}>
+                        {selectedLog.date} at {selectedLog.time}
+                      </span>
                     </div>
-                  )}
+                  </div>
+
+                  <div className={styles.modalField}>
+                    <span className={styles.modalFieldLabel}>Origin IP Address</span>
+                    <div className={styles.modalFieldValue}>
+                      <span
+                        style={{
+                          fontFamily: "var(--font-mono, monospace)",
+                          fontSize: "0.8rem",
+                        }}
+                      >
+                        {selectedLog.ipAddress || "127.0.0.1"}
+                      </span>
+                      {selectedLog.ipAddress && (
+                        <button
+                          type="button"
+                          className={styles.copyIdBtn}
+                          onClick={(e) => handleCopyIp(selectedLog.ipAddress || "", e)}
+                          title="Copy IP Address"
+                        >
+                          {copiedIp ? (
+                            <Check size={14} color="#4ade80" />
+                          ) : (
+                            <Copy size={14} />
+                          )}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
                   {selectedLog.userAgent && (
                     <div className={styles.modalField} style={{ gridColumn: "span 2" }}>
                       <span className={styles.modalFieldLabel}>Client User Agent</span>
-                      <div className={styles.modalFieldValue} style={{ fontSize: "0.76rem", color: "var(--dm-dim)" }}>
+                      <div
+                        className={styles.modalFieldValue}
+                        style={{ fontSize: "0.76rem", color: "var(--dm-dim)", lineHeight: 1.4 }}
+                      >
                         {selectedLog.userAgent}
                       </div>
                     </div>
                   )}
                 </div>
-              )}
+              </div>
+
+              {/* SECTION 4: METADATA EXPLORER */}
+              <div className={styles.drawerSection}>
+                <span className={styles.drawerSectionTitle}>
+                  <FileCode size={13} />
+                  <span>Metadata & Payload Explorer</span>
+                </span>
+                <div className={styles.jsonViewerBox}>
+                  <button
+                    type="button"
+                    className={styles.copyCodeBtn}
+                    onClick={handleCopyRecordJson}
+                    title="Copy Raw Metadata JSON"
+                  >
+                    {copiedJson ? <Check size={12} color="#4ade80" /> : <Copy size={12} />}
+                    <span>{copiedJson ? "Copied" : "Copy JSON"}</span>
+                  </button>
+                  <pre className={styles.jsonPre}>
+                    {JSON.stringify(
+                      selectedLog.metadata || {
+                        action: selectedLog.actionRaw || selectedLog.activity,
+                        scope: selectedLog.scope || "PANEL",
+                        ip: selectedLog.ipAddress,
+                        userAgent: selectedLog.userAgent,
+                        targetResource: selectedLog.targetResource,
+                      },
+                      null,
+                      2
+                    )}
+                  </pre>
+                </div>
+              </div>
             </div>
 
-            <div className={styles.modalFooter}>
+            {/* DRAWER FOOTER */}
+            <div className={styles.drawerFooter}>
+              <button
+                type="button"
+                className={styles.actionBtn}
+                onClick={handleCopyRecordJson}
+              >
+                {copiedJson ? <Check size={14} color="#4ade80" /> : <Copy size={14} />}
+                <span>{copiedJson ? "Copied Audit Record!" : "Copy Record JSON"}</span>
+              </button>
               <button
                 type="button"
                 className={styles.actionBtn}
                 onClick={() => setSelectedLog(null)}
               >
-                Close Record
+                Close Dossier
               </button>
             </div>
           </div>

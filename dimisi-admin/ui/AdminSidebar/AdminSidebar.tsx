@@ -8,7 +8,6 @@ import {
   Star,
   QrCode,
   Flag,
-  TrendingUp,
   Settings,
   Calendar,
   Layers,
@@ -31,7 +30,6 @@ export type AdminTab =
   | "reviews"
   | "campaigns"
   | "reports"
-  | "analytics"
   | "logs"
   | "settings"
   | "leads"
@@ -52,7 +50,6 @@ export const ADMIN_NAV: {
   { id: "reviews", label: "Reviews", icon: Star, badgeKey: "pendingReviews" },
   { id: "campaigns", label: "Campaigns & QR", icon: QrCode },
   { id: "reports", label: "Moderation Queue", icon: Flag, badgeKey: "openReports" },
-  { id: "analytics", label: "Analytics", icon: TrendingUp },
   { id: "logs", label: "Admin Logs", icon: ScrollText },
   { id: "settings", label: "Notifications", icon: Settings },
   { id: "leads", label: "Leads", icon: Users },

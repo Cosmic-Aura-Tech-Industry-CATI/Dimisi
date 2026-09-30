@@ -413,68 +413,49 @@
   gap: 0.4rem;
 }
 
-/* Column Specific Minimum Widths & Alignments */
-.colDate {
-  min-width: 120px;
-  width: 120px;
+/* Column Specific Widths & Alignments (Consolidated 6-Column Layout) */
+.colTimestamp {
+  min-width: 150px;
+  width: 155px;
   text-align: left;
 }
 
-.colTime {
-  min-width: 100px;
-  width: 100px;
+.colActor {
+  min-width: 280px;
+  width: 295px;
   text-align: left;
 }
 
-.colAdmin {
-  min-width: 190px;
-  width: 190px;
-  text-align: left;
-}
-
-.colEmail {
-  min-width: 250px;
-  width: 250px;
-  text-align: left;
-}
-
-.colAccountId {
-  min-width: 170px;
-  width: 170px;
-  text-align: left;
-}
-
-.colRole {
-  min-width: 130px;
-  width: 130px;
+.colRoleScope {
+  min-width: 140px;
+  width: 145px;
   text-align: left;
 }
 
 .colActivity {
-  min-width: 300px;
-  width: 320px;
+  min-width: 280px;
+  width: 300px;
   text-align: left;
 }
 
 .colModule {
-  min-width: 160px;
-  width: 160px;
+  min-width: 140px;
+  width: 145px;
   text-align: left;
 }
 
 .colStatus {
-  min-width: 120px;
-  width: 120px;
-  text-align: center;
+  min-width: 140px;
+  width: 145px;
+  text-align: right;
 }
 
 .table td {
-  padding: 0.9rem 1.1rem;
+  padding: 0.85rem 1rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   color: var(--dm-warm, #fbf3e9);
   vertical-align: middle;
-  white-space: nowrap;
-  height: 66px;
+  height: 68px;
 }
 
 .tableRow {
@@ -490,77 +471,184 @@
   border-bottom: none;
 }
 
-/* Cell Elements */
-.dateMain {
+/* Consolidated Cell Components */
+
+/* 1. Timestamp Cell */
+.timestampGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.timestampDate {
   font-family: var(--font-mono, monospace);
   font-size: 0.82rem;
   color: var(--dm-warm, #fbf3e9);
   font-weight: 600;
 }
 
-.timeSub {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.76rem;
-  color: var(--dm-dim, #a09587);
-}
-
-.adminCell {
+.timestampMeta {
   display: flex;
   align-items: center;
-  gap: 0.65rem;
-}
-
-.avatar {
-  display: grid;
-  place-items: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 999px;
-  background: var(--dm-grad-flare, linear-gradient(120deg, #ff9f1c, #e8c39e));
-  color: #100c06;
-  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  gap: 0.4rem;
+  font-family: var(--font-mono, monospace);
   font-size: 0.72rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  flex-shrink: 0;
+  color: var(--dm-dim, #a09587);
 }
 
-.adminName {
+.relativeTime {
+  color: var(--dm-amber, #ffab2e);
+  font-weight: 500;
+}
+
+/* 2. Actor Identity Cell */
+.actorGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.actorInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.actorName {
   font-weight: 600;
+  font-size: 0.88rem;
   color: var(--dm-warm, #fbf3e9);
   white-space: nowrap;
-}
-
-.emailText {
-  color: var(--dm-dim, #a09587);
-  font-size: 0.8rem;
-  max-width: 230px;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap;
-  display: block;
 }
 
-.accountBadge {
-  font-family: var(--font-mono, monospace);
+.actorMetaRow {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.actorEmail {
   font-size: 0.74rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  padding: 0.22rem 0.5rem;
-  border-radius: 5px;
-  color: #e2e8f0;
+  color: var(--dm-dim, #a09587);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 140px;
+}
+
+.actorEmpBadge {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  padding: 0.12rem 0.4rem;
+  border-radius: 4px;
+  background: rgba(255, 171, 46, 0.1);
+  color: var(--dm-amber, #ffab2e);
+  border: 1px solid rgba(255, 171, 46, 0.25);
+  white-space: nowrap;
+  letter-spacing: 0.04em;
+}
+
+/* 3. Role & Scope Cell */
+.roleScopeGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.35rem;
 }
 
 .roleBadge {
-  font-family: var(--font-mono, monospace);
-  font-size: 0.66rem;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.68rem;
   font-weight: 700;
   padding: 0.2rem 0.55rem;
-  border-radius: 4px;
+  border-radius: 5px;
   border: 1px solid;
   white-space: nowrap;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.scopeTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #c084fc;
+  background: rgba(168, 85, 247, 0.1);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  padding: 0.1rem 0.4rem;
+  border-radius: 4px;
+}
+
+/* 4. Activity & Target Cell */
+.activityGroup {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.28rem;
+  max-width: 280px;
+}
+
+.activitySubtext {
+  font-size: 0.74rem;
+  color: var(--dm-dim, #a09587);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 270px;
+}
+
+/* 5. Status & Action Cell */
+.statusActionGroup {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.inspectBtn {
+  display: grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--dm-dim, #a09587);
+  cursor: pointer;
+  transition: all 0.2s var(--dm-ease, ease);
+  flex-shrink: 0;
+}
+
+.inspectBtn:hover {
+  background: rgba(255, 171, 46, 0.16);
+  border-color: rgba(255, 171, 46, 0.4);
+  color: var(--dm-gold, #ffd79a);
+  transform: translateX(2px);
+}
+
+.scopeIndicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.7rem;
+  font-weight: 600;
   letter-spacing: 0.04em;
+  background: rgba(168, 85, 247, 0.12);
+  color: #d8b4fe;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+  margin-top: 0.2rem;
 }
 
 .activityCell {
@@ -932,4 +1020,293 @@
   .tableWrap {
     max-height: 460px;
   }
+}
+
+/* Page Size Selector */
+.pageSizeWrap {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: var(--dm-dim, #a09587);
+}
+
+.pageSizeSelect {
+  background: rgba(20, 16, 24, 0.85);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.15));
+  border-radius: 8px;
+  color: var(--dm-warm, #fbf3e9);
+  padding: 0.25rem 0.6rem;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.78rem;
+  cursor: pointer;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.pageSizeSelect:focus {
+  border-color: var(--dm-amber, #ffab2e);
+}
+
+.pageSizeSelect option {
+  background: #141018;
+  color: #fbf3e9;
+}
+
+/* Auto Refresh Control */
+.autoRefreshGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  background: rgba(20, 16, 24, 0.75);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.15));
+  border-radius: 10px;
+  padding: 0.45rem 0.75rem;
+  color: var(--dm-dim, #a09587);
+  font-size: 0.8rem;
+}
+
+.autoRefreshSelect {
+  background: transparent;
+  border: none;
+  color: var(--dm-warm, #fbf3e9);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  outline: none;
+}
+
+.autoRefreshSelect option {
+  background: #141018;
+  color: #fbf3e9;
+}
+
+/* Badges & Action Tags */
+.actionBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.scopeBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  background: rgba(168, 85, 247, 0.12);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.avatarImg {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--dm-amber, #ffab2e);
+  flex-shrink: 0;
+}
+
+.avatarImgLarge {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--dm-amber, #ffab2e);
+  flex-shrink: 0;
+}
+
+/* Slide-Over Dossier Drawer */
+.drawerBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+  backdrop-filter: blur(12px);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.2s ease-out;
+}
+
+.drawerPane {
+  width: min(650px, 94vw);
+  height: 100%;
+  background: rgba(13, 11, 19, 0.98);
+  border-left: 1px solid var(--dm-line, rgba(255, 214, 170, 0.2));
+  box-shadow: -20px 0 60px rgba(0, 0, 0, 0.85);
+  display: flex;
+  flex-direction: column;
+  animation: slideInRight 0.28s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow-y: auto;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+.drawerHeader {
+  padding: 1.5rem;
+  border-bottom: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  background: rgba(20, 16, 28, 0.7);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(14px);
+}
+
+.drawerHeaderInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.drawerBadges {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.drawerBody {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.35rem;
+  flex: 1;
+}
+
+.drawerSection {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.drawerSectionTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dm-amber, #ffab2e);
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.drawerCard {
+  background: rgba(8, 7, 12, 0.65);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.08));
+  border-radius: 12px;
+  padding: 1rem 1.15rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.drawerUserRow {
+  display: flex;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.drawerUserInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.drawerUserName {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+}
+
+.drawerUserEmail {
+  font-size: 0.8rem;
+  color: var(--dm-dim, #a09587);
+}
+
+.jsonViewerBox {
+  position: relative;
+  background: #050409;
+  border: 1px solid rgba(255, 214, 170, 0.12);
+  border-radius: 10px;
+  padding: 1.1rem 1rem 1rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.76rem;
+  color: #e2e8f0;
+  line-height: 1.55;
+  overflow-x: auto;
+  max-height: 280px;
+}
+
+.jsonPre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.copyCodeBtn {
+  position: absolute;
+  top: 0.55rem;
+  right: 0.55rem;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--dm-dim, #a09587);
+  padding: 0.3rem 0.6rem;
+  border-radius: 6px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  transition: all 0.2s;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.copyCodeBtn:hover {
+  background: rgba(255, 171, 46, 0.18);
+  color: var(--dm-gold, #ffd79a);
+  border-color: rgba(255, 171, 46, 0.35);
+}
+
+.drawerFooter {
+  padding: 1.2rem 1.5rem;
+  border-top: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  background: rgba(20, 16, 28, 0.7);
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  backdrop-filter: blur(14px);
 }

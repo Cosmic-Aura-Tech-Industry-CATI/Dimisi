@@ -12,9 +12,9 @@ export type ActivityModule =
   | "Events"
   | "Reviews"
   | "Campaigns"
-  | "Analytics"
   | "Settings"
-  | "Profile";
+  | "Profile"
+  | "Workspace";
 
 export interface AdminLog {
   id: string;
@@ -25,14 +25,19 @@ export interface AdminLog {
   email: string;
   employeeId: string;
   accountId?: string | undefined;
+  avatar?: string | undefined;
   role: AdminRole;
   activity: string;
+  actionRaw?: string | undefined;
   module: ActivityModule;
+  entityTypeRaw?: string | undefined;
   status: LogStatus;
+  scope?: "PANEL" | "ADMIN" | "PERSONAL" | "ORG" | string | undefined;
   details?: string | undefined;
   targetResource?: string | undefined;
   ipAddress?: string | undefined;
   userAgent?: string | undefined;
+  metadata?: Record<string, any> | undefined;
 }
 
 export interface AdminLogFilters {

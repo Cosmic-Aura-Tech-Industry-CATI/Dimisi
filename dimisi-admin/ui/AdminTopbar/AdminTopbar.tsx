@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { Menu, Clock, AlertTriangle } from "lucide-react";
 import { useAuth } from "@/hooks/useAuth";
+import type { AdminTab } from "../AdminSidebar/AdminSidebar";
+import { AdminNotificationBell } from "./AdminNotificationBell";
 import styles from "./AdminTopbar.module.css";
 
 function formatTime(seconds: number): string {
@@ -9,15 +11,17 @@ function formatTime(seconds: number): string {
   return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-/** Admin topbar: mobile nav toggle, section title, live session countdown, right-aligned profile icon. */
+/** Admin topbar: mobile nav toggle, section title, live session countdown, notification hub, right-aligned profile icon. */
 export function AdminTopbar({
   title,
   onToggleNav,
   profile,
+  onTab,
 }: {
   title: string;
   onToggleNav: () => void;
   profile?: ReactNode;
+  onTab?: (tab: AdminTab) => void;
 }) {
   const { remainingSeconds, isExpiringSoon } = useAuth();
 
@@ -46,6 +50,7 @@ export function AdminTopbar({
             <span>{formatTime(remainingSeconds)}</span>
           </div>
         )}
+        <AdminNotificationBell onNavigate={onTab} />
         {profile}
       </div>
     </header>

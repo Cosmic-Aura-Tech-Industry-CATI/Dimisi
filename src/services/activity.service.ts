@@ -15,11 +15,13 @@ export interface BackendActivityLogDoc {
     email?: string;
     avatar?: string;
     role?: string;
+    empId?: string;
+    employeeId?: string;
   } | string;
   action: string;
   entityType?: string;
   entityId?: string;
-  status?: "SUCCESS" | "FAILED";
+  status?: "SUCCESS" | "FAILED" | "success" | "failed";
   scope: "PANEL" | "ADMIN" | "PERSONAL" | "ORG";
   metadata?: Record<string, any>;
   createdAt?: string;
@@ -57,10 +59,10 @@ function mapEntityTypeToModule(entityType?: string, action?: string): ActivityMo
   if (norm.includes("EVENT") || norm.includes("GALLERY")) return "Events";
   if (norm.includes("REVIEW")) return "Reviews";
   if (norm.includes("CAMPAIGN") || norm.includes("QR")) return "Campaigns";
-  if (norm.includes("LEAD") || norm.includes("ANALYTICS")) return "Analytics";
   if (norm.includes("SETTING") || norm.includes("CONFIG")) return "Settings";
   if (norm.includes("PROFILE") || norm.includes("PASSWORD")) return "Profile";
-  return "Authentication";
+  if (norm.includes("TASK") || norm.includes("WORKSPACE")) return "Workspace";
+  return "Settings";
 }
 
 export function normalizeBackendActivityLog(doc: BackendActivityLogDoc): AdminActivityLogItem {
@@ -91,18 +93,104 @@ export function normalizeBackendActivityLog(doc: BackendActivityLogDoc): AdminAc
   };
 }
 
-export function toAdminLogModel(doc: BackendActivityLogDoc): AdminLog {
+// Known registry of organization administrators & directors to resolve identities cleanly in Frontend
+const KNOWN_ADMIN_DIRECTORY: Record<
+  string,
+  { empId: string; role: AdminRole; name: string }
+> = {
+  "swatantrasingh308@gmail.com": {
+    empId: "DMSEMP260002",
+    role: "super_admin",
+    name: "Swatantra Singh",
+  },
+  "6a943c347bc0f3820907ca8f": {
+    empId: "DMSEMP260002",
+    role: "super_admin",
+    name: "Swatantra Singh",
+  },
+  "dixitshikhar004@gmail.com": {
+    empId: "DMSEMP260001",
+    role: "admin",
+    name: "Shikhar",
+  },
+  "6a6de96c647a47da841f6304": {
+    empId: "DMSEMP260001",
+    role: "admin",
+    name: "Shikhar",
+  },
+  "mridulmishra2117@gmail.com": {
+    empId: "DMSEMP260005",
+    role: "super_admin",
+    name: "Mridul Mishra",
+  },
+  "2022bds017@axiscolleges.in": {
+    empId: "DMSEMP260005",
+    role: "super_admin",
+    name: "Mridul Mishra",
+  },
+  "6a76e847be868d2b3387c31b": {
+    empId: "DMSEMP260005",
+    role: "super_admin",
+    name: "Mridul Mishra",
+  },
+  "h2307190100015@gmail.com": {
+    empId: "DMSEMP260010",
+    role: "editor",
+    name: "Amit Kumar",
+  },
+  "6a8efd99dd739a9233d866bc": {
+    empId: "DMSEMP260010",
+    role: "editor",
+    name: "Amit Kumar",
+  },
+  "prashantumrao4242@gmail.com": {
+    empId: "DMSEMP260012",
+    role: "editor",
+    name: "Prashant Umrao",
+  },
+  "6a9a5e976076e98d1416a7c9": {
+    empId: "DMSEMP260012",
+    role: "editor",
+    name: "Prashant Umrao",
+  },
+  "mnishkarsh71@gmail.com": {
+    empId: "DMSEMP260003",
+    role: "admin",
+    name: "Nishkarsh Mishra",
+  },
+  "6a9a8f0bf707cf8b7d7d3464": {
+    empId: "DMSEMP260003",
+    role: "admin",
+    name: "Nishkarsh Mishra",
+  },
+  "harshmishra200529@gmail.com": {
+    empId: "DMSEMP260013",
+    role: "editor",
+    name: "Harsh Mishra",
+  },
+  "6abc8fd68cf85e7358bc8d12": {
+    empId: "DMSEMP260013",
+    role: "editor",
+    name: "Harsh Mishra",
+  },
+};
+
+export function toAdminLogModel(doc: BackendActivityLogDoc, adminDirectory?: any[]): AdminLog {
   const d = doc.createdAt ? new Date(doc.createdAt) : new Date();
   let actorName = "Admin User";
   let actorEmail = "admin@dimisi.tech";
   let employeeId = "EMP-001";
   let accountId = "usr-admin";
   let role: AdminRole = "admin";
+  let avatar: string | undefined = undefined;
 
   if (doc.actorId && typeof doc.actorId === "object") {
     actorName = doc.actorId.name || doc.actorId.email || "Admin User";
     actorEmail = doc.actorId.email || "admin@dimisi.tech";
     accountId = String(doc.actorId._id || "usr-admin");
+    if (doc.actorId.avatar) {
+      avatar = doc.actorId.avatar;
+    }
 
     const emp =
       doc.actorId.empId ||
@@ -113,13 +201,9 @@ export function toAdminLogModel(doc: BackendActivityLogDoc): AdminLog {
 
     if (emp) {
       employeeId = String(emp);
-    } else if (doc.actorId._id && !/^[0-9a-fA-F]{24}$/.test(doc.actorId._id)) {
-      employeeId = String(doc.actorId._id);
-    } else {
-      employeeId = "EMP-001";
     }
 
-    if (doc.actorId.role && ["super_admin", "admin", "editor", "analyst", "viewer"].includes(doc.actorId.role)) {
+    if (doc.actorId.role && ["super_admin", "admin", "editor", "moderator", "analyst"].includes(doc.actorId.role)) {
       role = doc.actorId.role as AdminRole;
     }
   } else if (doc.actorId) {
@@ -127,14 +211,55 @@ export function toAdminLogModel(doc: BackendActivityLogDoc): AdminLog {
     const emp = (doc.metadata?.employeeId) || (doc.metadata?.empId);
     if (emp) {
       employeeId = String(emp);
-    } else if (!/^[0-9a-fA-F]{24}$/.test(String(doc.actorId))) {
-      employeeId = String(doc.actorId);
-    } else {
-      employeeId = "EMP-001";
     }
   }
 
-  const status: LogStatus = doc.status === "FAILED" ? "FAILED" : "SUCCESS";
+  // 1. Dynamic lookup against passed adminDirectory (from AdminPanel.tsx)
+  if (Array.isArray(adminDirectory) && adminDirectory.length > 0) {
+    const cleanMail = actorEmail.toLowerCase();
+    const match = adminDirectory.find(
+      (a: any) =>
+        (a?.email && a.email.toLowerCase() === cleanMail) ||
+        (a?.user_id && a.user_id === accountId)
+    );
+    if (match) {
+      if (match.emp_id || match.employee_id) {
+        employeeId = String(match.emp_id || match.employee_id);
+      }
+      if (match.role && ["super_admin", "admin", "editor", "moderator", "analyst"].includes(match.role)) {
+        role = match.role as AdminRole;
+      }
+      if (match.full_name && (!actorName || actorName === "Admin User")) {
+        actorName = match.full_name;
+      }
+    }
+  }
+
+  // 2. Static directory lookup for known organizational accounts (Swatantra Singh, Shikhar, Mridul, etc.)
+  const known =
+    KNOWN_ADMIN_DIRECTORY[actorEmail.toLowerCase()] ||
+    KNOWN_ADMIN_DIRECTORY[accountId];
+  if (known) {
+    if (employeeId === "EMP-001") {
+      employeeId = known.empId;
+    }
+    role = known.role;
+    if (!actorName || actorName === "Admin User") {
+      actorName = known.name;
+    }
+  }
+
+  // 3. Fallback for unknown users: Avoid dummy "EMP-001", generate clean user ID
+  if (employeeId === "EMP-001") {
+    if (accountId.startsWith("usr-")) {
+      employeeId = accountId;
+    } else if (/^[0-9a-fA-F]{24}$/.test(accountId)) {
+      employeeId = `DMS-${accountId.slice(-6).toUpperCase()}`;
+    }
+  }
+
+  const rawStatus = (doc.status || "success").toUpperCase();
+  const status: LogStatus = rawStatus === "FAILED" ? "FAILED" : "SUCCESS";
   const mod = mapEntityTypeToModule(doc.entityType, doc.action);
 
   const formattedDate = d.toISOString().split("T")[0];
@@ -151,15 +276,26 @@ export function toAdminLogModel(doc: BackendActivityLogDoc): AdminLog {
     accountId,
     role,
     activity: doc.action,
+    actionRaw: doc.action,
     module: mod,
+    entityTypeRaw: doc.entityType,
     status,
+    scope: doc.scope,
     details: doc.metadata?.subtext || `${doc.action} performed on ${doc.entityType || "resource"}`,
     ipAddress: doc.metadata?.ip || "127.0.0.1",
     userAgent: doc.metadata?.useragent || "Web Client",
   };
 
+  if (avatar) {
+    log.avatar = avatar;
+  }
+
   if (doc.entityId) {
     log.targetResource = String(doc.entityId);
+  }
+
+  if (doc.metadata) {
+    log.metadata = doc.metadata;
   }
 
   return log;
@@ -176,6 +312,7 @@ export async function getPanelActivityLogsApi(filters: {
   endDate?: string;
   entityType?: string;
   actorId?: string;
+  admins?: any[];
 } = {}): Promise<{
   logs: AdminActivityLogItem[];
   adminLogs: AdminLog[];
@@ -196,7 +333,7 @@ export async function getPanelActivityLogsApi(filters: {
   try {
     const res = await apiRequest<any>(
       `/api/v1/activity/panel${query}`,
-      { method: "GET", cacheTtlMs: 5000 },
+      { method: "GET", cacheTtlMs: 0 },
     );
 
     let rawLogs: BackendActivityLogDoc[] = [];
@@ -224,7 +361,7 @@ export async function getPanelActivityLogsApi(filters: {
 
     return {
       logs: rawLogs.map(normalizeBackendActivityLog),
-      adminLogs: rawLogs.map(toAdminLogModel),
+      adminLogs: rawLogs.map((doc) => toAdminLogModel(doc, filters.admins)),
       total,
       page,
       totalPages,
