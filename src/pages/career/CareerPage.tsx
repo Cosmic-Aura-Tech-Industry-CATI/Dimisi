@@ -159,7 +159,7 @@ export function CareerPage() {
 
   // Open Apply Modal Handler
   const handleOpenApplyModal = (job?: JobOpening | null) => {
-    const targetJob = job || jobs[0] || null;
+    const targetJob = job || (jobs.length > 0 ? jobs[0] : null);
     setSelectedJobForApply(targetJob);
     setFormErrors({});
     setSubmitError(null);
@@ -249,8 +249,14 @@ export function CareerPage() {
     e.preventDefault();
     setSubmitError(null);
 
+    const targetJobId = selectedJobForApply?.id || (jobs.length > 0 ? jobs[0].id : "");
+    if (!targetJobId) {
+      setSubmitError("There are currently no active openings available. Please check back later.");
+      return;
+    }
+
     const inputData = {
-      job_id: selectedJobForApply?.id || "general-inquiry",
+      job_id: targetJobId,
       full_name: fullName,
       email,
       phone,

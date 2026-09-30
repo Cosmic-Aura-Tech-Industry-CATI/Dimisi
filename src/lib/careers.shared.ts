@@ -236,6 +236,15 @@ export interface BackendJobListResponse {
   data?: {
     jobs: BackendJobDoc[];
   };
+  jobs?: BackendJobDoc[];
+  pagination?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+    hasNext?: boolean;
+    hasPrev?: boolean;
+  };
 }
 
 export interface BackendJobSingleResponse {
@@ -271,6 +280,15 @@ export interface BackendApplicationListResponse {
   data?: {
     applications: BackendApplicationDoc[];
   };
+  applications?: BackendApplicationDoc[];
+  pagination?: {
+    total?: number;
+    page?: number;
+    limit?: number;
+    totalPages?: number;
+    hasNext?: boolean;
+    hasPrev?: boolean;
+  };
 }
 
 export interface BackendApplicationSingleResponse {
@@ -286,6 +304,16 @@ export interface BackendApplicationSingleResponse {
  */
 export function isMongoId(id?: string | null): boolean {
   return typeof id === "string" && /^[0-9a-fA-F]{24}$/.test(id.trim());
+}
+
+/**
+ * Extracts a pure 24-character hex MongoDB ObjectId from any input string
+ */
+export function extractMongoId(val: unknown): string {
+  if (!val) return "";
+  const str = String(val).trim();
+  const hexMatch = str.match(/[a-fA-F0-9]{24}/);
+  return hexMatch ? hexMatch[0] : "";
 }
 
 /**
@@ -550,11 +578,14 @@ export function resolveDepartmentId(
   deptInput: string | undefined | null,
   departments?: DepartmentItem[],
 ): string {
+  const fallbackDbId = "6abbbaeac7ae646931d366d3";
+
   if (!deptInput) {
-    if (departments && departments.length > 0 && isMongoId(departments[0].id)) {
-      return departments[0].id;
+    if (departments && departments.length > 0) {
+      const firstValid = departments.find((d) => isMongoId(d.id));
+      if (firstValid) return firstValid.id;
     }
-    return "65f1a2b3c4d5e6f7a8b9c001";
+    return fallbackDbId;
   }
 
   const trimmed = deptInput.trim();
@@ -570,9 +601,11 @@ export function resolveDepartmentId(
     if (match && isMongoId(match.id)) {
       return match.id;
     }
+    const firstValid = departments.find((d) => isMongoId(d.id));
+    if (firstValid) return firstValid.id;
   }
 
-  return trimmed;
+  return fallbackDbId;
 }
 
 /**
@@ -610,7 +643,6 @@ export function serializeJobInputToBackend(
     responsibilities: Array.isArray(input.responsibilities) ? input.responsibilities.filter(Boolean) : [],
     requirements: Array.isArray(input.requirements) ? input.requirements.filter(Boolean) : [],
     benefits: Array.isArray(input.benefits) ? input.benefits.filter(Boolean) : [],
-    orderIndex: Number(input.order_index ?? 1),
     isFeatured: Boolean(input.is_featured),
     isActive: input.status !== "closed" && input.status !== "draft",
   };
@@ -641,8 +673,8 @@ export function validateJobInput(input: Partial<JobInput>): {
   valid: boolean;
   error?: string;
 } {
-  if (!input.title || input.title.trim().length < 3) {
-    return { valid: false, error: "Job title must be at least 3 characters long." };
+  if (!input.title || input.title.trim().length < 5) {
+    return { valid: false, error: "Job title must be at least 5 characters long." };
   }
   if (!input.department || input.department.trim().length < 2) {
     return { valid: false, error: "Department is required." };
@@ -650,8 +682,17 @@ export function validateJobInput(input: Partial<JobInput>): {
   if (!input.location || input.location.trim().length < 2) {
     return { valid: false, error: "Location is required." };
   }
-  if (!input.summary || input.summary.trim().length < 10) {
-    return { valid: false, error: "Job summary must be at least 10 characters long." };
+  if (!input.summary || input.summary.trim().length < 20) {
+    return { valid: false, error: "Job summary must be at least 20 characters long." };
+  }
+  if (!input.responsibilities || input.responsibilities.filter((r) => r && r.trim().length >= 5).length === 0) {
+    return { valid: false, error: "Please provide at least one responsibility (min 5 characters)." };
+  }
+  if (!input.requirements || input.requirements.filter((r) => r && r.trim().length >= 5).length === 0) {
+    return { valid: false, error: "Please provide at least one requirement (min 5 characters)." };
+  }
+  if (!input.benefits || input.benefits.filter((b) => b && b.trim().length >= 5).length === 0) {
+    return { valid: false, error: "Please provide at least one benefit (min 5 characters)." };
   }
 
   return { valid: true };

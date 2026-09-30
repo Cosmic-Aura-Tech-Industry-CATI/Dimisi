@@ -49,6 +49,7 @@ import {
   slugifyJob,
   isMongoId,
   getLocalResumeFromVault,
+  validateJobInput,
 } from "@/lib/careers.shared";
 import {
   saveJobFn,
@@ -592,6 +593,26 @@ export function AdminCareers({
       is_featured: isFeatured,
       status,
     };
+
+    const validation = validateJobInput(input);
+    if (!validation.valid) {
+      setFormError(validation.error || "Please fill in all required fields.");
+      if (
+        validation.error?.includes("title") ||
+        validation.error?.includes("Department") ||
+        validation.error?.includes("Location")
+      ) {
+        setModalTab("basic");
+      } else if (
+        validation.error?.includes("summary") ||
+        validation.error?.includes("responsibility")
+      ) {
+        setModalTab("details");
+      } else {
+        setModalTab("requirements");
+      }
+      return;
+    }
 
     startTransition(async () => {
       try {
@@ -1806,8 +1827,17 @@ export function AdminCareers({
                     <div className={styles.emptyTableState}>
                       <Briefcase size={28} className={styles.emptyTableIcon} />
                       <span>
-                        No open job positions found. Click &quot;+ Add New Role&quot; to create one.
+                        No open job positions found. Click &quot;+ Add Open Position&quot; to create one.
                       </span>
+                      <button
+                        type="button"
+                        onClick={handleOpenCreateJob}
+                        className={styles.createBtn}
+                        style={{ marginTop: "0.75rem" }}
+                      >
+                        <Plus size={16} />
+                        <span>Add Open Position</span>
+                      </button>
                     </div>
                   </td>
                 </tr>

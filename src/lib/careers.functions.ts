@@ -24,6 +24,7 @@ import {
   normalizeBackendApplication,
   serializeJobInputToBackend,
   isMongoId,
+  extractMongoId,
   saveLocalResumeToVault,
   getLocalResumeFromVault,
 } from "./careers.shared";
@@ -39,26 +40,39 @@ import {
   type DepartmentItem,
 } from "../services/department.service";
 
-export { isMongoId };
+export { isMongoId, extractMongoId };
 
 /**
  * 1. GET PUBLIC CAREERS DATA
- * Endpoint: GET /api/v1/admin-panel/jobs/all
+ * Endpoint: GET /api/v1/admin-panel/jobs/visitors/all (Public endpoint)
  * Only active jobs (isActive: true) are returned for public visitors.
  */
 export async function getPublicCareersData(): Promise<PublicCareersPayload> {
-  const departments: DepartmentItem[] = DEFAULT_DEPARTMENTS;
+  let departments: DepartmentItem[] = DEFAULT_DEPARTMENTS;
+  try {
+    const liveDeps = await getAllActiveDepartmentsApi();
+    if (Array.isArray(liveDeps) && liveDeps.length > 0) {
+      departments = liveDeps;
+    }
+  } catch {}
 
   try {
-    const res = await apiRequest<BackendJobListResponse>(
-      "/api/v1/admin-panel/jobs/all",
-      { method: "GET" },
-    );
+    let res: BackendJobListResponse;
+    try {
+      res = await apiRequest<BackendJobListResponse>(
+        "/api/v1/admin-panel/jobs/visitors/all",
+        { method: "GET" },
+      );
+    } catch {
+      res = await apiRequest<BackendJobListResponse>(
+        "/api/v1/admin-panel/jobs/all",
+        { method: "GET" },
+      );
+    }
 
-    const rawJobs = res?.data?.jobs;
+    const rawJobs = res?.jobs || res?.data?.jobs;
     if (Array.isArray(rawJobs)) {
       const allNormalized = rawJobs.map((doc) => normalizeBackendJob(doc, departments));
-      // Filter for public view: only active jobs
       const activeJobs = allNormalized.filter((j) => j.status === "open");
       careersStore.setJobs(activeJobs);
     } else {
@@ -68,7 +82,6 @@ export async function getPublicCareersData(): Promise<PublicCareersPayload> {
     if (err instanceof ApiError) {
       console.warn("Failed to fetch public careers from live backend API:", err.message);
     }
-    throw err;
   }
 
   return careersStore.getPublicPayload();
@@ -98,12 +111,20 @@ export async function getJobBySlug({
       departments = [];
     }
 
-    const res = await apiRequest<BackendJobListResponse>(
-      "/api/v1/admin-panel/jobs/all",
-      { method: "GET" },
-    );
+    let res: BackendJobListResponse;
+    try {
+      res = await apiRequest<BackendJobListResponse>(
+        "/api/v1/admin-panel/jobs/visitors/all",
+        { method: "GET" },
+      );
+    } catch {
+      res = await apiRequest<BackendJobListResponse>(
+        "/api/v1/admin-panel/jobs/all",
+        { method: "GET" },
+      );
+    }
 
-    const rawJobs = res?.data?.jobs;
+    const rawJobs = res?.jobs || res?.data?.jobs;
     if (Array.isArray(rawJobs)) {
       const allNormalized = rawJobs.map((doc) => normalizeBackendJob(doc, departments));
       const activeJobs = allNormalized.filter((j) => j.status === "open");
@@ -120,18 +141,27 @@ export async function getJobBySlug({
 
 /**
  * 3. GET SINGLE JOB BY ID
- * Endpoint: GET /api/v1/admin-panel/jobs/:id
+ * Endpoint: GET /api/v1/admin-panel/jobs/:id/one (Public)
  */
 export async function getJobByIdApi(
   id: string,
   departments?: DepartmentItem[],
 ): Promise<JobOpening> {
-  if (!id) throw new Error("Job ID is required.");
+  const cleanId = extractMongoId(id) || id.trim();
+  if (!cleanId) throw new Error("Job ID is required.");
 
-  const res = await apiRequest<BackendJobSingleResponse>(
-    `/api/v1/admin-panel/jobs/${encodeURIComponent(id)}`,
-    { method: "GET" },
-  );
+  let res: BackendJobSingleResponse;
+  try {
+    res = await apiRequest<BackendJobSingleResponse>(
+      `/api/v1/admin-panel/jobs/${encodeURIComponent(cleanId)}/one`,
+      { method: "GET" },
+    );
+  } catch {
+    res = await apiRequest<BackendJobSingleResponse>(
+      `/api/v1/admin-panel/jobs/${encodeURIComponent(cleanId)}`,
+      { method: "GET" },
+    );
+  }
 
   const doc = res?.data?.job;
   if (!doc) throw new Error(res?.message || "Job not found.");
@@ -161,22 +191,28 @@ export async function getAdminCareersData(): Promise<{
 
   const [jobsRes, appsRes] = await Promise.allSettled([
     apiRequest<BackendJobListResponse>("/api/v1/admin-panel/jobs/all", { method: "GET" }),
-    apiRequest<BackendApplicationListResponse>("/api/v1/admin-panel/application/all", { method: "GET" }),
+    apiRequest<BackendApplicationListResponse>("/api/v1/admin-panel/application/all?limit=100", { method: "GET" }),
   ]);
 
   let allJobs: JobOpening[] = [];
-  if (jobsRes.status === "fulfilled" && Array.isArray(jobsRes.value?.data?.jobs)) {
-    allJobs = jobsRes.value.data.jobs.map((doc) => normalizeBackendJob(doc, departments));
-    careersStore.setJobs(allJobs);
+  if (jobsRes.status === "fulfilled") {
+    const rawJobs = jobsRes.value?.jobs || jobsRes.value?.data?.jobs;
+    if (Array.isArray(rawJobs)) {
+      allJobs = rawJobs.map((doc) => normalizeBackendJob(doc, departments));
+      careersStore.setJobs(allJobs);
+    }
   } else if (jobsRes.status === "rejected") {
     console.warn("Could not load live jobs for admin careers:", jobsRes.reason);
     allJobs = careersStore.getAllJobs();
   }
 
   let allApps: JobApplicationItem[] = [];
-  if (appsRes.status === "fulfilled" && Array.isArray(appsRes.value?.data?.applications)) {
-    allApps = appsRes.value.data.applications.map((doc) => normalizeBackendApplication(doc, allJobs));
-    careersStore.setApplications(allApps);
+  if (appsRes.status === "fulfilled") {
+    const rawApps = appsRes.value?.applications || appsRes.value?.data?.applications;
+    if (Array.isArray(rawApps)) {
+      allApps = rawApps.map((doc) => normalizeBackendApplication(doc, allJobs));
+      careersStore.setApplications(allApps);
+    }
   } else if (appsRes.status === "rejected") {
     console.warn("Could not load live applications for admin careers:", appsRes.reason);
     allApps = careersStore.getAllApplications();
@@ -222,13 +258,14 @@ export async function saveJobFn({
     }
 
     const payload = serializeJobInputToBackend(data, departments);
+    const cleanId = extractMongoId(data.id);
 
     let savedDoc: any = null;
 
-    if (data.id && isMongoId(data.id)) {
+    if (cleanId) {
       // UPDATE existing job
       const res = await apiRequest<BackendJobSingleResponse>(
-        `/api/v1/admin-panel/jobs/${encodeURIComponent(data.id)}/update`,
+        `/api/v1/admin-panel/jobs/${encodeURIComponent(cleanId)}/update`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -273,11 +310,12 @@ export async function deleteJobFn({
   data: { id: string };
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    if (!data?.id) return { success: false, error: "Job ID is required." };
+    const cleanId = extractMongoId(data?.id) || data?.id?.trim();
+    if (!cleanId) return { success: false, error: "Job ID is required." };
 
-    if (isMongoId(data.id)) {
+    if (isMongoId(cleanId)) {
       await apiRequest(
-        `/api/v1/admin-panel/jobs/${encodeURIComponent(data.id)}/delete`,
+        `/api/v1/admin-panel/jobs/${encodeURIComponent(cleanId)}/delete`,
         { method: "DELETE" },
       );
     }
@@ -306,10 +344,11 @@ export async function toggleJobActiveFn({
   departments?: DepartmentItem[];
 }): Promise<{ success: boolean; job?: JobOpening; error?: string }> {
   try {
-    if (!data?.id) return { success: false, error: "Job ID is required." };
+    const cleanId = extractMongoId(data?.id) || data?.id?.trim();
+    if (!cleanId) return { success: false, error: "Job ID is required." };
 
     const res = await apiRequest<BackendJobSingleResponse>(
-      `/api/v1/admin-panel/jobs/${encodeURIComponent(data.id)}/toggle-activate`,
+      `/api/v1/admin-panel/jobs/${encodeURIComponent(cleanId)}/toggle-activate`,
       { method: "PATCH" },
     );
 
@@ -345,10 +384,11 @@ export async function toggleJobFeaturedFn({
   departments?: DepartmentItem[];
 }): Promise<{ success: boolean; job?: JobOpening; error?: string }> {
   try {
-    if (!data?.id) return { success: false, error: "Job ID is required." };
+    const cleanId = extractMongoId(data?.id) || data?.id?.trim();
+    if (!cleanId) return { success: false, error: "Job ID is required." };
 
     const res = await apiRequest<BackendJobSingleResponse>(
-      `/api/v1/admin-panel/jobs/${encodeURIComponent(data.id)}/toggle-featured`,
+      `/api/v1/admin-panel/jobs/${encodeURIComponent(cleanId)}/toggle-featured`,
       { method: "PATCH" },
     );
 
@@ -374,10 +414,7 @@ export async function toggleJobFeaturedFn({
 
 /**
  * 9. SUBMIT JOB APPLICATION
- * Endpoint: POST /api/v1/admin-panel/application/submit
- *
- * Note: Public application submission requires a backend route/authorization configuration
- * that permits unauthenticated visitors. Frontend intentionally does not bypass authentication.
+ * Endpoint: POST /api/v1/admin-panel/application/submit (Public Multipart)
  */
 export async function submitJobApplicationFn({
   data,
@@ -397,17 +434,34 @@ export async function submitJobApplicationFn({
       return { success: false, error: "Please upload your resume file (PDF, DOC, or DOCX)." };
     }
 
+    // Resolve valid Mongoose ObjectId for jobId
+    let targetJobId = extractMongoId(data.job_id);
+    if (!targetJobId) {
+      const activeJobs = careersStore.getAllJobs().filter((j) => j.status === "open");
+      const matched = activeJobs.find((j) => isMongoId(j.id));
+      if (matched) {
+        targetJobId = matched.id;
+      }
+    }
+
+    if (!targetJobId || !isMongoId(targetJobId)) {
+      return {
+        success: false,
+        error: "Please select an active job position before submitting your application.",
+      };
+    }
+
     const formData = new FormData();
-    formData.append("jobId", data.job_id || "general-inquiry");
-    formData.append("fullName", data.full_name);
-    formData.append("email", data.email);
-    formData.append("phone", data.phone);
-    formData.append("location", data.location);
-    if (data.portfolio_url) formData.append("portfolioUrl", data.portfolio_url);
-    if (data.linkedin_url) formData.append("linkedinUrl", data.linkedin_url);
-    if (data.github_url) formData.append("githubUrl", data.github_url);
-    if (data.cover_letter) formData.append("coverLetter", data.cover_letter);
-    if (data.additional_info) formData.append("additionalInfo", data.additional_info);
+    formData.append("jobId", targetJobId);
+    formData.append("fullName", data.full_name.trim());
+    formData.append("email", data.email.trim().toLowerCase());
+    formData.append("phone", data.phone.trim());
+    formData.append("location", data.location.trim());
+    if (data.portfolio_url) formData.append("portfolioUrl", data.portfolio_url.trim());
+    if (data.linkedin_url) formData.append("linkedinUrl", data.linkedin_url.trim());
+    if (data.github_url) formData.append("githubUrl", data.github_url.trim());
+    if (data.cover_letter) formData.append("coverLetter", data.cover_letter.trim());
+    if (data.additional_info) formData.append("additionalInfo", data.additional_info.trim());
 
     if (resumeFile) {
       formData.append("resume", resumeFile);
@@ -455,7 +509,7 @@ export async function submitJobApplicationFn({
         });
       }
     }
-    // Synchronize local store ONLY after confirmed backend success
+    // Synchronize local store
     careersStore.submitApplication(data);
     clearApiCache("/api/v1/admin-panel/application");
     return { success: true, application: normalized };
@@ -463,11 +517,9 @@ export async function submitJobApplicationFn({
     let msg = "Unable to submit your application right now. Please try again shortly.";
 
     if (err instanceof ApiError) {
-      if (err.status === 401 || err.status === 403) {
-        msg = "Unable to submit your application right now. Please try again shortly.";
-        if (typeof console !== "undefined" && typeof console.warn === "function") {
-          console.warn("[JobApplication] Public submission blocked: backend requires authenticated user session (HTTP 401/403).");
-        }
+      const errorText = (err.message || "").toLowerCase();
+      if (err.status === 409 || errorText.includes("e11000") || errorText.includes("duplicate") || errorText.includes("already exists")) {
+        msg = "You have already submitted an application for this position with this email address.";
       } else if (err.status === 413) {
         msg = "Resume file is too large. Please upload a file under 5MB.";
       } else if (err.status === 400) {
@@ -493,11 +545,12 @@ export async function submitJobApplicationFn({
  * Endpoint: GET /api/v1/admin-panel/application/:id
  */
 export async function getApplicationByIdApi(id: string): Promise<JobApplicationItem> {
-  if (!id) throw new Error("Application ID is required.");
+  const cleanId = extractMongoId(id) || id.trim();
+  if (!cleanId) throw new Error("Application ID is required.");
 
-  if (isMongoId(id)) {
+  if (isMongoId(cleanId)) {
     const res = await apiRequest<BackendApplicationSingleResponse>(
-      `/api/v1/admin-panel/application/${encodeURIComponent(id)}`,
+      `/api/v1/admin-panel/application/${encodeURIComponent(cleanId)}`,
       { method: "GET" },
     );
     const doc = res?.data?.application;
@@ -513,7 +566,7 @@ export async function getApplicationByIdApi(id: string): Promise<JobApplicationI
 
 /**
  * 11. GET ADMIN APPLICATIONS
- * Supports querying all applications or per-job applications (/job/:jobId).
+ * Supports querying all applications (/all) or per-job applications (/job/:jobId).
  */
 export async function getAdminApplicationsFn(query?: {
   jobId?: string;
@@ -523,9 +576,10 @@ export async function getAdminApplicationsFn(query?: {
   limit?: number;
 }): Promise<JobApplicationItem[]> {
   try {
+    const cleanJobId = extractMongoId(query?.jobId);
     let endpoint = "/api/v1/admin-panel/application/all";
-    if (query?.jobId && isMongoId(query.jobId)) {
-      endpoint = `/api/v1/admin-panel/application/job/${encodeURIComponent(query.jobId)}`;
+    if (cleanJobId) {
+      endpoint = `/api/v1/admin-panel/application/job/${encodeURIComponent(cleanJobId)}`;
     }
 
     const queryParts: string[] = [];
@@ -535,7 +589,9 @@ export async function getAdminApplicationsFn(query?: {
       const bStatus = query.status === "hired" ? "accepted" : query.status;
       queryParts.push(`status=${encodeURIComponent(bStatus)}`);
     }
-    if (query?.search) queryParts.push(`search=${encodeURIComponent(query.search)}`);
+    if (query?.search && query.search.trim()) {
+      queryParts.push(`search=${encodeURIComponent(query.search.trim())}`);
+    }
 
     if (queryParts.length > 0) {
       endpoint += (endpoint.includes("?") ? "&" : "?") + queryParts.join("&");
@@ -546,9 +602,10 @@ export async function getAdminApplicationsFn(query?: {
       { method: "GET" },
     );
 
-    if (Array.isArray(res?.data?.applications)) {
+    const rawList = res?.applications || res?.data?.applications;
+    if (Array.isArray(rawList)) {
       const allJobs = careersStore.getAllJobs();
-      const normalized = res.data.applications.map((doc) =>
+      const normalized = rawList.map((doc) =>
         normalizeBackendApplication(doc, allJobs),
       );
       careersStore.setApplications(normalized);
@@ -564,6 +621,7 @@ export async function getAdminApplicationsFn(query?: {
 /**
  * 12. UPDATE APPLICATION STATUS
  * Endpoint: PATCH /api/v1/admin-panel/application/:id/update
+ * Enforces filterBody("status"): sends only { status }
  */
 export async function updateApplicationStatusFn({
   data,
@@ -571,13 +629,14 @@ export async function updateApplicationStatusFn({
   data: { id: string; status: ApplicationStatus; notes?: string };
 }): Promise<{ success: boolean; application?: JobApplicationItem; error?: string }> {
   try {
-    if (!data?.id) return { success: false, error: "Application ID is required." };
+    const cleanId = extractMongoId(data?.id) || data?.id?.trim();
+    if (!cleanId) return { success: false, error: "Application ID is required." };
 
     const backendStatus = data.status === "hired" ? "accepted" : data.status;
 
-    if (isMongoId(data.id)) {
+    if (isMongoId(cleanId)) {
       const res = await apiRequest<BackendApplicationSingleResponse>(
-        `/api/v1/admin-panel/application/${encodeURIComponent(data.id)}/update`,
+        `/api/v1/admin-panel/application/${encodeURIComponent(cleanId)}/update`,
         {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
@@ -612,11 +671,12 @@ export async function deleteApplicationFn({
   data: { id: string };
 }): Promise<{ success: boolean; error?: string }> {
   try {
-    if (!data?.id) return { success: false, error: "Application ID is required." };
+    const cleanId = extractMongoId(data?.id) || data?.id?.trim();
+    if (!cleanId) return { success: false, error: "Application ID is required." };
 
-    if (isMongoId(data.id)) {
+    if (isMongoId(cleanId)) {
       await apiRequest(
-        `/api/v1/admin-panel/application/${encodeURIComponent(data.id)}/delete`,
+        `/api/v1/admin-panel/application/${encodeURIComponent(cleanId)}/delete`,
         { method: "DELETE" },
       );
     }
@@ -632,6 +692,7 @@ export async function deleteApplicationFn({
   }
 }
 
+
 /**
  * 13. DOWNLOAD RESUME FROM LIVE API
  * Endpoint: GET /api/v1/admin-panel/application/:id/resume
@@ -640,12 +701,13 @@ export async function downloadResumeApi(
   id: string,
   candidateName?: string,
 ): Promise<void> {
-  if (!id) throw new Error("Application ID is required.");
+  const cleanId = extractMongoId(id) || id.trim();
+  if (!cleanId) throw new Error("Application ID is required.");
 
   const filename = `${(candidateName || "Candidate").replace(/\s+/g, "_")}_Resume.pdf`;
 
-  if (isMongoId(id)) {
-    const url = `${API_BASE_URL}/api/v1/admin-panel/application/${encodeURIComponent(id)}/resume`;
+  if (isMongoId(cleanId)) {
+    const url = `${API_BASE_URL}/api/v1/admin-panel/application/${encodeURIComponent(cleanId)}/resume`;
     let authToken: string | undefined;
     if (typeof window !== "undefined") {
       try {
