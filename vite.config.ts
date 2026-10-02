@@ -23,6 +23,22 @@ export default defineConfig(({ mode, command }) => {
           changeOrigin: true,
           secure: false,
           ws: true,
+          cookieDomainRewrite: "localhost",
+          cookiePathRewrite: "/",
+          configure: (proxy) => {
+            proxy.on("proxyRes", (proxyRes) => {
+              const setCookieHeaders = proxyRes.headers["set-cookie"];
+              if (setCookieHeaders) {
+                proxyRes.headers["set-cookie"] = (
+                  Array.isArray(setCookieHeaders) ? setCookieHeaders : [setCookieHeaders]
+                ).map((cookieStr) =>
+                  cookieStr
+                    .replace(/;\s*Secure/gi, "")
+                    .replace(/SameSite=None/gi, "SameSite=Lax")
+                );
+              }
+            });
+          },
         },
       },
     },
@@ -63,10 +79,9 @@ export default defineConfig(({ mode, command }) => {
             if (
               id.includes("AdminReviews") ||
               id.includes("AdminCampaigns") ||
-              id.includes("AdminReports") ||
-              id.includes("AdminAnalytics")
+              id.includes("AdminReports")
             ) {
-              return "admin-reviews-analytics";
+              return "admin-reviews";
             }
             if (
               id.includes("AdminLogs") ||

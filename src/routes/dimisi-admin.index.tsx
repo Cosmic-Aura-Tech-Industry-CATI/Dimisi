@@ -7,7 +7,9 @@ export const Route = createFileRoute("/dimisi-admin/")({
   beforeLoad: ({ search }) => {
     const rawTab = search?.tab?.toLowerCase();
     const target =
-      rawTab && rawTab !== "overview" ? `/dimisi-admin/${rawTab}` : "/dimisi-admin/overview";
+      rawTab && rawTab !== "overview" && rawTab !== "analytics"
+        ? `/dimisi-admin/${rawTab}`
+        : "/dimisi-admin/overview";
     throw redirect({
       to: target,
       replace: true,

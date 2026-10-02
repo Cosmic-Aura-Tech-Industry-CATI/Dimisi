@@ -19,16 +19,21 @@ import {
   Smartphone,
   ExternalLink,
   Percent,
+  AlertTriangle,
 } from "lucide-react";
 import {
   DIMISI_SERVICES,
   type ReviewCampaign,
+  isMongoId,
 } from "@/lib/reviews.shared";
 import {
   createCampaign,
   updateCampaign,
   deleteCampaign,
 } from "@/lib/reviews.functions";
+import { getCampaignQrDownloadUrl } from "@/services/campaign.service";
+import { getAllServicesApi } from "@/services";
+import type { CompanyService } from "@/lib/services.shared";
 import styles from "./AdminCampaigns.module.css";
 
 export function AdminCampaigns({
@@ -42,13 +47,20 @@ export function AdminCampaigns({
   const editCampaign = updateCampaign;
   const removeCampaign = deleteCampaign;
 
+  // Live Services from Express backend / MongoDB
+  const [servicesList, setServicesList] = useState<CompanyService[]>([]);
+  const [isLoadingServices, setIsLoadingServices] = useState(false);
+
   // Creation State
   const [isCreating, setIsCreating] = useState(false);
   const [name, setName] = useState("");
-  const [slug, setSlug] = useState("");
-  const [service, setService] = useState("");
+  const [selectedServiceId, setSelectedServiceId] = useState("");
+  const [selectedServiceName, setSelectedServiceName] = useState("");
   const [location, setLocation] = useState("");
   const [expiry, setExpiry] = useState("");
+
+  // Delete Confirmation Modal
+  const [deleteTarget, setDeleteTarget] = useState<ReviewCampaign | null>(null);
 
   // Active QR Studio Modal
   const [activeCampaign, setActiveCampaign] = useState<ReviewCampaign | null>(null);
@@ -60,6 +72,28 @@ export function AdminCampaigns({
   const [showFlyer, setShowFlyer] = useState(false);
 
   const [isPending, startTransition] = useTransition();
+
+  // Load live services from Express backend on mount
+  useEffect(() => {
+    let isMounted = true;
+    setIsLoadingServices(true);
+    getAllServicesApi()
+      .then((list) => {
+        if (isMounted && Array.isArray(list)) {
+          setServicesList(list);
+        }
+      })
+      .catch((err) => {
+        console.warn("Failed to fetch live services for campaigns:", err);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingServices(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
 
   const getCampaignUrl = (cSlug: string) => {
     if (typeof window !== "undefined") {
@@ -112,43 +146,78 @@ export function AdminCampaigns({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleDownloadPng = () => {
-    if (!canvasRef.current || !activeCampaign) return;
-    const dataUrl = canvasRef.current.toDataURL("image/png");
-    const a = document.createElement("a");
-    a.href = dataUrl;
-    a.download = `dimisi-qr-${activeCampaign.slug}.png`;
-    a.click();
+  const handleDownloadPng = async () => {
+    if (!activeCampaign) return;
+    if (isMongoId(activeCampaign.id)) {
+      try {
+        const downloadUrl = getCampaignQrDownloadUrl(activeCampaign.id, "png", 2048);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.target = "_blank";
+        a.download = `dimisi-qr-${activeCampaign.slug}.png`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      } catch (err) {
+        console.warn("Backend QR download failed, falling back to local canvas:", err);
+      }
+    }
+    if (canvasRef.current) {
+      const dataUrl = canvasRef.current.toDataURL("image/png");
+      const a = document.createElement("a");
+      a.href = dataUrl;
+      a.download = `dimisi-qr-${activeCampaign.slug}.png`;
+      a.click();
+    }
   };
 
-  const handleDownloadSvg = () => {
-    if (!qrSvg || !activeCampaign) return;
-    const blob = new Blob([qrSvg], { type: "image/svg+xml" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `dimisi-qr-${activeCampaign.slug}.svg`;
-    a.click();
-    URL.revokeObjectURL(url);
+  const handleDownloadSvg = async () => {
+    if (!activeCampaign) return;
+    if (isMongoId(activeCampaign.id)) {
+      try {
+        const downloadUrl = getCampaignQrDownloadUrl(activeCampaign.id, "svg", 2048);
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.target = "_blank";
+        a.download = `dimisi-qr-${activeCampaign.slug}.svg`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        return;
+      } catch (err) {
+        console.warn("Backend QR download failed, falling back to local SVG:", err);
+      }
+    }
+    if (qrSvg) {
+      const blob = new Blob([qrSvg], { type: "image/svg+xml" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `dimisi-qr-${activeCampaign.slug}.svg`;
+      a.click();
+      URL.revokeObjectURL(url);
+    }
   };
 
   const handleCreateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name.trim()) return;
     startTransition(async () => {
       try {
         await addCampaign({
           data: {
-            campaignName: name,
-            ...(slug ? { slug } : {}),
-            ...(service ? { serviceName: service } : {}),
-            ...(location ? { location } : {}),
+            campaignName: name.trim(),
+            ...(selectedServiceId ? { serviceId: selectedServiceId } : {}),
+            ...(selectedServiceName ? { serviceName: selectedServiceName } : {}),
+            ...(location.trim() ? { location: location.trim() } : {}),
             ...(expiry ? { expiresAt: expiry } : {}),
           },
         });
         setIsCreating(false);
         setName("");
-        setSlug("");
-        setService("");
+        setSelectedServiceId("");
+        setSelectedServiceName("");
         setLocation("");
         setExpiry("");
         onRefresh();
@@ -178,11 +247,12 @@ export function AdminCampaigns({
     });
   };
 
-  const handleDelete = (c: ReviewCampaign) => {
-    if (!confirm(`Are you sure you want to delete campaign "${c.campaign_name}"?`)) return;
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
     startTransition(async () => {
       try {
-        await removeCampaign({ data: { campaignId: c.id } });
+        await removeCampaign({ data: { campaignId: deleteTarget.id } });
+        setDeleteTarget(null);
         onRefresh();
       } catch (err) {
         alert(err instanceof Error ? err.message : "Error deleting campaign.");
@@ -311,7 +381,8 @@ export function AdminCampaigns({
                   type="button"
                   className={styles.btnAction}
                   style={{ color: "#f43f5e" }}
-                  onClick={() => handleDelete(c)}
+                  onClick={() => setDeleteTarget(c)}
+                  title="Delete Campaign"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -518,42 +589,37 @@ export function AdminCampaigns({
                   className={styles.input}
                   placeholder="e.g. Q3 Web Clients - WhatsApp"
                   value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    if (!slug) setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-"));
-                  }}
+                  onChange={(e) => setName(e.target.value)}
                   required
                 />
-              </div>
-
-              <div className={styles.field}>
-                <label className={styles.label}>Unique URL Slug *</label>
-                <input
-                  type="text"
-                  className={styles.input}
-                  placeholder="e.g. q3-web-clients"
-                  value={slug}
-                  onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-"))}
-                  required
-                />
-                <span style={{ fontSize: "0.74rem", color: "#64748b" }}>
-                  Public URL: /review/{slug || "slug"}
-                </span>
               </div>
 
               <div className={styles.field}>
                 <label className={styles.label}>Associated Service (Optional)</label>
                 <select
                   className={styles.select}
-                  value={service}
-                  onChange={(e) => setService(e.target.value)}
+                  value={selectedServiceId}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSelectedServiceId(val);
+                    const found = servicesList.find((s) => s.id === val);
+                    setSelectedServiceName(found ? found.title : "");
+                  }}
                 >
-                  <option value="">Select service to pre-fill on form...</option>
-                  {DIMISI_SERVICES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
+                  <option value="">
+                    {isLoadingServices ? "Loading live services..." : "Select live service to pre-fill on form..."}
+                  </option>
+                  {servicesList.length > 0
+                    ? servicesList.map((s) => (
+                        <option key={s.id} value={s.id}>
+                          {s.title}
+                        </option>
+                      ))
+                    : DIMISI_SERVICES.map((s) => (
+                        <option key={s} value={s}>
+                          {s}
+                        </option>
+                      ))}
                 </select>
               </div>
 
@@ -595,6 +661,40 @@ export function AdminCampaigns({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      ) : null}
+
+      {/* Delete Campaign Confirmation Modal */}
+      {deleteTarget ? (
+        <div className={styles.modalBackdrop} onClick={() => setDeleteTarget(null)}>
+          <div className={styles.deleteModalContent} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.deleteWarningHeader}>
+              <AlertTriangle size={24} className={styles.deleteWarningIcon} />
+              <h4 className={styles.deleteWarningTitle}>Delete Review Campaign?</h4>
+            </div>
+            <p className={styles.deleteWarningText}>
+              Are you sure you want to permanently delete campaign <strong>"{deleteTarget.campaign_name}"</strong>?
+              This will remove the campaign and deactivate its direct review link (<code>/review/{deleteTarget.slug}</code>).
+            </p>
+            <div className={styles.deleteModalActions}>
+              <button
+                type="button"
+                className={styles.cancelDeleteBtn}
+                onClick={() => setDeleteTarget(null)}
+                disabled={isPending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.confirmDeleteBtn}
+                onClick={handleConfirmDelete}
+                disabled={isPending}
+              >
+                {isPending ? <Loader2 size={15} className="animate-spin" /> : "Yes, Delete Campaign"}
+              </button>
+            </div>
           </div>
         </div>
       ) : null}

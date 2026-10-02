@@ -288,44 +288,40 @@ export async function saveBlogCategoryFn({
       return { success: false, error: validation.error || "Category validation failed." };
     }
 
-    let saved: BlogCategoryItem | null = null;
+    let saved: BlogCategoryItem;
 
-    try {
-      if (data.id && isMongoId(data.id)) {
-        saved = await updateBlogCategoryApi(data.id, {
-          name: data.name,
-          description: data.description,
-          displayOrder: data.order_index,
-          status: data.status,
-        });
-      } else {
-        saved = await createBlogCategoryApi({
-          name: data.name,
-          description: data.description,
-          displayOrder: data.order_index || 1,
-          status: data.status || "active",
-        });
-      }
-    } catch (apiErr) {
-      console.warn("Category backend sync failed, saving to local store:", apiErr);
+    if (data.id && isMongoId(data.id)) {
+      saved = await updateBlogCategoryApi(data.id, {
+        name: data.name,
+        description: data.description,
+        displayOrder: data.order_index,
+        status: data.status,
+      });
+    } else {
+      saved = await createBlogCategoryApi({
+        name: data.name,
+        description: data.description,
+        displayOrder: data.order_index || 1,
+        status: data.status || "active",
+      });
     }
 
-    // Persist in local store (backed by localStorage)
-    const localSaved = blogStore.saveCategory({
-      id: saved?.id || data.id,
-      name: saved?.name || data.name,
-      slug: saved?.slug || data.slug,
-      description: saved?.description || data.description,
-      status: saved?.status || data.status,
-      order_index: saved?.order_index || data.order_index,
+    // Update local cache
+    blogStore.saveCategory({
+      id: saved.id,
+      name: saved.name,
+      slug: saved.slug,
+      description: saved.description,
+      status: saved.status,
+      order_index: saved.order_index,
     });
 
-    return { success: true, category: saved || localSaved };
+    return { success: true, category: saved };
   } catch (err) {
     console.error("saveBlogCategoryFn failed:", err);
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to save category.",
+      error: err instanceof Error ? err.message : "Failed to save category to database.",
     };
   }
 }
@@ -342,11 +338,7 @@ export async function deleteBlogCategoryFn({
     if (!data?.id) return { success: false, postCount: 0, error: "Category ID is required." };
 
     if (isMongoId(data.id)) {
-      try {
-        await deleteBlogCategoryApi(data.id);
-      } catch (apiErr) {
-        console.warn("Delete category API failed, deleting locally:", apiErr);
-      }
+      await deleteBlogCategoryApi(data.id);
     }
 
     const res = blogStore.deleteCategory(data.id);
@@ -356,7 +348,7 @@ export async function deleteBlogCategoryFn({
     return {
       success: false,
       postCount: 0,
-      error: err instanceof Error ? err.message : "Failed to delete category.",
+      error: err instanceof Error ? err.message : "Failed to delete category from database.",
     };
   }
 }
@@ -377,35 +369,31 @@ export async function saveBlogPostFn({
       return { success: false, error: validation.error || "Validation failed." };
     }
 
-    let saved: BlogPostItem | null = null;
+    let saved: BlogPostItem;
 
-    try {
-      if (data.id && isMongoId(data.id)) {
-        saved = await updateBlogApi(data.id, data, coverImageFile);
-      } else {
-        saved = await createBlogApi(data, coverImageFile);
-      }
-    } catch (apiErr) {
-      console.warn("Blog post backend sync failed, saving to local store:", apiErr);
+    if (data.id && isMongoId(data.id)) {
+      saved = await updateBlogApi(data.id, data, coverImageFile);
+    } else {
+      saved = await createBlogApi(data, coverImageFile);
     }
 
-    // Persist in local store (backed by localStorage)
-    const localSaved = blogStore.savePost({
+    // Sync local cache
+    blogStore.savePost({
       ...data,
-      id: saved?.id || data.id,
-      slug: saved?.slug || data.slug,
-      cover_image: saved?.cover_image || data.cover_image,
-      author_name: saved?.author_name || data.author_name,
-      author_role: saved?.author_role || data.author_role,
-      published_at: saved?.published_at || data.published_at,
+      id: saved.id,
+      slug: saved.slug,
+      cover_image: saved.cover_image,
+      author_name: saved.author_name,
+      author_role: saved.author_role,
+      published_at: saved.published_at,
     });
 
-    return { success: true, post: saved || localSaved };
+    return { success: true, post: saved };
   } catch (err) {
     console.error("saveBlogPostFn failed:", err);
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to save blog post.",
+      error: err instanceof Error ? err.message : "Failed to save blog post to database.",
     };
   }
 }
@@ -422,11 +410,7 @@ export async function deleteBlogPostFn({
     if (!data?.id) return { success: false, error: "Post ID is required." };
 
     if (isMongoId(data.id)) {
-      try {
-        await deleteBlogApi(data.id);
-      } catch (apiErr) {
-        console.warn("Delete blog API failed, deleting locally:", apiErr);
-      }
+      await deleteBlogApi(data.id);
     }
 
     blogStore.deletePost(data.id);
@@ -435,7 +419,7 @@ export async function deleteBlogPostFn({
     console.error("deleteBlogPostFn failed:", err);
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to delete post.",
+      error: err instanceof Error ? err.message : "Failed to delete post from database.",
     };
   }
 }
@@ -452,28 +436,19 @@ export async function toggleBlogActiveFn({
     if (!data?.id) return { success: false, error: "Post ID is required." };
 
     if (isMongoId(data.id)) {
-      try {
-        const updated = await toggleBlogActiveApi(data.id);
-        blogStore.savePost({
-          ...updated,
-        });
-        return { success: true, post: updated };
-      } catch (apiErr) {
-        console.warn("Toggle status API failed, toggling locally:", apiErr);
-      }
+      const updated = await toggleBlogActiveApi(data.id);
+      blogStore.savePost({
+        ...updated,
+      });
+      return { success: true, post: updated };
     }
 
-    // Local fallback
-    const post = blogStore.getPostById(data.id);
-    if (!post) return { success: false, error: "Post not found." };
-    const newStatus = post.status === "published" ? "draft" : "published";
-    const updated = blogStore.savePost({ ...post, status: newStatus });
-    return { success: true, post: updated };
+    return { success: false, error: "Invalid blog ID." };
   } catch (err) {
     console.error("toggleBlogActiveFn failed:", err);
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to toggle status.",
+      error: err instanceof Error ? err.message : "Failed to toggle blog status.",
     };
   }
 }

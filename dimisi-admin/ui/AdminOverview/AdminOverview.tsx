@@ -26,7 +26,7 @@ import { type AdminTab } from "../AdminSidebar/AdminSidebar";
 import { type AdminRole, getRoleMeta } from "../../lib/rbac.shared";
 import type { AdminOverview as AdminOverviewType } from "../../server/admin.functions";
 import type { AdminDashboardData } from "@/lib/reviews.functions";
-import type { CompanyService, IndustrySector } from "@/lib/services.shared";
+import type { CompanyService, ServiceCategoryItem, IndustrySector } from "@/lib/services.shared";
 import type { ProjectItem } from "@/lib/work.shared";
 import type { JobOpening, HiringProcessStep, CultureBenefit } from "@/lib/careers.shared";
 import type { BlogPostItem, BlogConfig } from "@/lib/blog.shared";
@@ -36,7 +36,12 @@ import styles from "./AdminOverview.module.css";
 interface AdminOverviewProps {
   overviewData: AdminOverviewType;
   reviewsData: AdminDashboardData;
-  servicesData: { services: CompanyService[]; industries: IndustrySector[] };
+  servicesData: {
+    services: CompanyService[];
+    industries?: IndustrySector[];
+    categoryItems?: ServiceCategoryItem[];
+    categories?: string[];
+  };
   workData: { projects: ProjectItem[] };
   careersData: { jobs: JobOpening[]; hiring_steps: HiringProcessStep[]; benefits: CultureBenefit[] };
   blogData: { posts: BlogPostItem[]; config: BlogConfig; categories: string[] };
@@ -235,7 +240,7 @@ export function AdminOverview({
                 <Layers size={20} />
               </div>
               <span style={{ fontSize: "0.72rem", color: "var(--dm-amber, #ffb300)", fontFamily: "var(--dm-font-mono, monospace)", fontWeight: 700 }}>
-                {(servicesData?.industries || []).length} SECTORS
+                {(servicesData?.categoryItems || []).length || (servicesData?.categories || []).length} CATEGORIES
               </span>
             </div>
             <div className={styles.kpiValue}>{(servicesData?.services || []).length}</div>
@@ -244,7 +249,7 @@ export function AdminOverview({
           <div className={styles.kpiSub}>
             <span>Interactive detail pages live</span>
             <button type="button" className={styles.kpiLink} onClick={() => onTab("services")}>
-              <span>Services</span>
+              <span>Services & Categories</span>
               <ArrowRight size={13} />
             </button>
           </div>

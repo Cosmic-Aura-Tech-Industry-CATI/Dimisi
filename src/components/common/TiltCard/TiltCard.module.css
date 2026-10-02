@@ -7,7 +7,6 @@
   border-radius: 22px;
   border: 1px solid var(--dm-line);
   background: var(--dm-grad-panel);
-  backdrop-filter: blur(18px);
   box-shadow: var(--dm-shadow-deep);
   overflow: hidden;
   transform: perspective(1100px) rotateX(var(--rx)) rotateY(var(--ry)) translateZ(0);
@@ -15,10 +14,10 @@
     transform 0.45s var(--dm-ease),
     border-color 0.45s var(--dm-ease),
     box-shadow 0.45s var(--dm-ease);
-  will-change: transform;
 }
 
 .card:hover {
+  will-change: transform;
   border-color: rgba(255, 159, 28, 0.42);
   box-shadow:
     var(--dm-shadow-deep),

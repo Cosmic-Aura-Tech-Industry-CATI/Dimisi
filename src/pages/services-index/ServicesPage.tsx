@@ -1,3 +1,4 @@
+import { useState, useMemo } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -16,13 +17,16 @@ import {
   Code2,
   AlertTriangle,
   RefreshCw,
+  Search,
+  FolderKanban,
+  Tag,
 } from "lucide-react";
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import { TiltCard } from "@/components/common/TiltCard/TiltCard";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
 import { getPublicServicesData } from "@/lib/services.functions";
 import { DEFAULT_SERVICE_FALLBACK_IMAGE } from "@/services/service.service";
-import type { CompanyService, IndustrySector } from "@/lib/services.shared";
+import type { CompanyService, ServiceCategoryItem } from "@/lib/services.shared";
 import pageStyles from "@/styles/page.module.css";
 import styles from "./ServicesPage.module.css";
 
@@ -61,13 +65,91 @@ export function ServicesPage() {
     queryFn: () => getPublicServicesData(),
   });
 
-  const services = payload?.services || [];
-  const industries = payload?.industries || [];
+  const services: CompanyService[] = useMemo(() => payload?.services || [], [payload?.services]);
+  const categoryItems: ServiceCategoryItem[] = useMemo(() => payload?.categoryItems || [], [payload?.categoryItems]);
+
+  const [selectedCat, setSelectedCat] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState<string>("");
+
+  // Dedicated Featured Services array for the top Featured Spotlight section
+  const featuredServices = useMemo(() => {
+    return services
+      .filter((s) => s.is_active && s.is_featured)
+      .sort((a, b) => (a.order_index ?? 999) - (b.order_index ?? 999));
+  }, [services]);
+
+  const featuredCount = featuredServices.length;
+
+  // Calculate service counts per category
+  const categoryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    services.forEach((s) => {
+      const cat = s.category || "General";
+      counts[cat] = (counts[cat] || 0) + 1;
+      counts[cat.toLowerCase()] = (counts[cat.toLowerCase()] || 0) + 1;
+      if (s.category_id) {
+        counts[s.category_id] = (counts[s.category_id] || 0) + 1;
+        counts[s.category_id.toLowerCase()] = (counts[s.category_id.toLowerCase()] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [services]);
+
+  // Filter services by selected category and search input, with priority sorting for featured
+  const filteredServices = useMemo(() => {
+    const list = services.filter((service) => {
+      // 1. Category Filter (supports 'featured', 'all', or specific category)
+      if (selectedCat === "featured") {
+        if (!service.is_featured) return false;
+      } else if (selectedCat !== "all") {
+        const catNameLower = service.category?.toLowerCase() || "";
+        const targetLower = selectedCat.toLowerCase();
+        const catId = service.category_id;
+        const matchesCategory =
+          catNameLower === targetLower ||
+          service.category === selectedCat ||
+          catId === selectedCat ||
+          (catId && catId.toLowerCase() === targetLower);
+        if (!matchesCategory) {
+          return false;
+        }
+      }
+
+      // 2. Search Query Filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const titleMatch = service.title?.toLowerCase().includes(query);
+        const taglineMatch = service.tagline?.toLowerCase().includes(query);
+        const summaryMatch = service.summary?.toLowerCase().includes(query);
+        const featureMatch = service.features?.some((f) => f.toLowerCase().includes(query));
+        const techMatch = service.tech_stack?.some((t) => t.toLowerCase().includes(query));
+        return titleMatch || taglineMatch || summaryMatch || featureMatch || techMatch;
+      }
+
+      return true;
+    });
+
+    // 3. Priority Sort: Featured services first, then by order_index
+    return [...list].sort((a, b) => {
+      if (a.is_featured && !b.is_featured) return -1;
+      if (!a.is_featured && b.is_featured) return 1;
+      return (a.order_index ?? 999) - (b.order_index ?? 999);
+    });
+  }, [services, selectedCat, searchQuery]);
+
   const stats = payload?.stats || {
     totalServices: services.length,
-    totalIndustries: industries.length,
+    totalCategories: categoryItems.length,
     uptimeSla: "99.99%",
     satisfactionScore: "4.9/5",
+  };
+
+  const handleSelectCategory = (catNameOrId: string) => {
+    setSelectedCat(catNameOrId);
+    const targetElement = document.getElementById("services-roster");
+    if (targetElement) {
+      targetElement.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   return (
@@ -92,7 +174,7 @@ export function ServicesPage() {
           <Reveal variant="up" delay={120}>
             <p className={styles.heroSubtitle}>
               We deliver tailored digital solutions, intelligent workflows, and scalable architectures
-              engineered for diverse industries and real-world business needs.
+              engineered for high performance and real-world business needs.
             </p>
           </Reveal>
 
@@ -100,13 +182,13 @@ export function ServicesPage() {
           <Reveal variant="up" delay={160}>
             <div className={styles.metricsBar}>
               <div className={styles.metricItem}>
-                <span className={styles.metricNum}>{stats.totalServices}+</span>
+                <span className={styles.metricNum}>{stats.totalServices || services.length}+</span>
                 <span className={styles.metricLabel}>Core Disciplines</span>
               </div>
               <div className={styles.metricDivider} aria-hidden="true" />
               <div className={styles.metricItem}>
-                <span className={styles.metricNum}>{stats.totalIndustries}+</span>
-                <span className={styles.metricLabel}>Strategic Sectors</span>
+                <span className={styles.metricNum}>{stats.totalCategories || categoryItems.length}+</span>
+                <span className={styles.metricLabel}>Service Categories</span>
               </div>
               <div className={styles.metricDivider} aria-hidden="true" />
               <div className={styles.metricItem}>
@@ -129,13 +211,20 @@ export function ServicesPage() {
                 <ArrowUpRight size={18} />
               </MagneticButton>
 
+              {featuredServices.length > 0 && (
+                <a href="#featured-spotlight" className={styles.secondaryAnchor}>
+                  <span>⭐ Featured Capabilities ({featuredServices.length})</span>
+                  <ChevronRight size={16} />
+                </a>
+              )}
+
               <a href="#services-roster" className={styles.secondaryAnchor}>
                 <span>Explore All Services</span>
                 <ChevronRight size={16} />
               </a>
 
-              <a href="#industries" className={styles.secondaryAnchor}>
-                <span>View Industries We Serve</span>
+              <a href="#categories-showcase" className={styles.secondaryAnchor}>
+                <span>View Service Categories</span>
                 <ChevronRight size={16} />
               </a>
             </div>
@@ -143,7 +232,113 @@ export function ServicesPage() {
         </div>
       </section>
 
-      {/* 2. DYNAMIC SERVICES GRID SECTION */}
+      {/* 2. DEDICATED FEATURED CAPABILITIES SPOTLIGHT SECTION (ABOVE CORE CAPABILITIES) */}
+      {featuredServices.length > 0 && searchQuery === "" && selectedCat === "all" && (
+        <section className={styles.featuredSection} id="featured-spotlight" aria-label="Featured Capabilities Spotlight">
+          <div className={styles.container}>
+            <div className={styles.sectionHeaderCenter}>
+              <Reveal variant="fade">
+                <div className={styles.featuredEyebrow}>
+                  <Sparkles size={14} className={styles.featuredAmberIcon} />
+                  <span>Flagship Spotlight · Curated Disciplines</span>
+                </div>
+              </Reveal>
+              <Reveal variant="up" delay={60}>
+                <h2 className={styles.featuredSectionTitle}>
+                  Featured <span className={styles.gradientText}>Engineering Capabilities</span>
+                </h2>
+              </Reveal>
+              <Reveal variant="up" delay={100}>
+                <p className={styles.sectionSub}>
+                  Flagship services spotlighted by our architecture team for high velocity, proven scalability, and transformative business impact.
+                </p>
+              </Reveal>
+            </div>
+
+            {/* Featured Cards Spotlight Grid */}
+            <div className={styles.featuredGrid}>
+              {featuredServices.map((service, index) => (
+                <Reveal key={`featured-${service.id}`} delay={index * 50} className={styles.featuredCol}>
+                  <TiltCard className={styles.featuredSpotlightCard}>
+                    <div className={styles.spotlightCardGlow} aria-hidden="true" />
+
+                    {/* Media Header */}
+                    <div className={styles.spotlightMediaHolder}>
+                      <img
+                        src={service.hero_image || DEFAULT_SERVICE_FALLBACK_IMAGE}
+                        alt={service.title}
+                        className={styles.spotlightImg}
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          if (target.src !== DEFAULT_SERVICE_FALLBACK_IMAGE) {
+                            target.src = DEFAULT_SERVICE_FALLBACK_IMAGE;
+                          }
+                        }}
+                      />
+                      <div className={styles.spotlightImgOverlay} />
+                      <div className={styles.cardBadgeCluster}>
+                        <span className={styles.cardCatBadge}>{service.category}</span>
+                        <span className={styles.cardFeaturedBadge}>
+                          <Sparkles size={11} className={styles.featuredStarIcon} />
+                          <span>Featured Spotlight</span>
+                        </span>
+                      </div>
+                      <span className={styles.spotlightIndexTag}>
+                        #{String(index + 1).padStart(2, "0")}
+                      </span>
+                    </div>
+
+                    {/* Spotlight Body */}
+                    <div className={styles.spotlightBody}>
+                      <h3 className={styles.spotlightTitle}>{service.title}</h3>
+                      {service.tagline && (
+                        <p className={styles.spotlightTagline}>{service.tagline}</p>
+                      )}
+                      <p className={styles.spotlightSummary}>{service.summary}</p>
+
+                      {/* Key Features */}
+                      {service.features && service.features.length > 0 && (
+                        <ul className={styles.spotlightFeatures}>
+                          {service.features.slice(0, 3).map((feat) => (
+                            <li key={feat} className={styles.spotlightFeatureItem}>
+                              <CheckCircle2 className={styles.spotlightCheckIcon} size={14} />
+                              <span>{feat}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+
+                      {/* Footer Actions */}
+                      <div className={styles.spotlightFooter}>
+                        <Link
+                          to="/services/$slug"
+                          params={{ slug: service.slug }}
+                          className={styles.spotlightPrimaryLink}
+                        >
+                          <span>Explore Architecture</span>
+                          <ArrowUpRight size={16} />
+                        </Link>
+
+                        <Link
+                          to="/contact"
+                          search={{ service: service.slug }}
+                          className={styles.spotlightInquireLink}
+                        >
+                          <span>Inquire Now →</span>
+                        </Link>
+                      </div>
+                    </div>
+                  </TiltCard>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 3. DYNAMIC SERVICES GRID SECTION (CORE ENGINEERING CAPABILITIES) */}
       <section className={styles.servicesSection} id="services-roster" aria-label="Core Services">
         <div className={styles.container}>
           <div className={styles.sectionHeaderCenter}>
@@ -165,6 +360,55 @@ export function ServicesPage() {
               </p>
             </Reveal>
           </div>
+
+          {/* Interactive Filter Toolbar (All Services + Featured Only) & Quick Search */}
+          {services.length > 0 && (
+            <div className={styles.filterToolbar}>
+              <div className={styles.categoryPillList} role="tablist" aria-label="Filter Services">
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={selectedCat === "all"}
+                  className={[styles.categoryPill, selectedCat === "all" ? styles.categoryPillActive : ""].join(" ")}
+                  onClick={() => setSelectedCat("all")}
+                >
+                  <span>All Services</span>
+                  <span className={styles.categoryPillCount}>{services.length}</span>
+                </button>
+
+                {featuredCount > 0 && (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={selectedCat === "featured"}
+                    className={[
+                      styles.categoryPill,
+                      styles.featuredCategoryPill,
+                      selectedCat === "featured" ? styles.categoryPillActive : "",
+                    ].join(" ")}
+                    onClick={() => setSelectedCat(selectedCat === "featured" ? "all" : "featured")}
+                  >
+                    <Sparkles size={12} className={styles.featuredTabStar} />
+                    <span>Featured</span>
+                    <span className={styles.categoryPillCount}>{featuredCount}</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Quick Search */}
+              <div className={styles.searchBox}>
+                <Search size={15} className={styles.searchIcon} />
+                <input
+                  type="text"
+                  placeholder="Search capabilities..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className={styles.searchInput}
+                  aria-label="Search services"
+                />
+              </div>
+            </div>
+          )}
 
           {/* LOADING STATE SKELETONS */}
           {isLoading && (!payload || services.length === 0) && (
@@ -216,28 +460,53 @@ export function ServicesPage() {
           )}
 
           {/* EMPTY STATE */}
-          {!isLoading && !isError && services.length === 0 && (
+          {!isLoading && !isError && filteredServices.length === 0 && (
             <div className={styles.stateBox}>
               <div className={styles.stateIconBox}>
                 <Layers size={28} />
               </div>
-              <h3 className={styles.stateTitle}>No services available at the moment</h3>
+              <h3 className={styles.stateTitle}>
+                {searchQuery || selectedCat !== "all"
+                  ? "No matching services found"
+                  : "No services available at the moment"}
+              </h3>
               <p className={styles.stateText}>
-                Our engineering disciplines are being updated. Check back shortly or discuss tailored business requirements directly with our architecture team.
+                {searchQuery || selectedCat !== "all"
+                  ? "Try adjusting your category filter or search keywords to view other capabilities."
+                  : "Our engineering disciplines are being updated. Check back shortly or discuss tailored business requirements directly with our architecture team."}
               </p>
-              <MagneticButton to="/contact">
-                <span>Discuss Custom Requirements</span>
-                <ArrowUpRight size={18} />
-              </MagneticButton>
+              {searchQuery || selectedCat !== "all" ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCat("all");
+                    setSearchQuery("");
+                  }}
+                  className={styles.retryBtn}
+                >
+                  <RefreshCw size={15} />
+                  <span>Reset All Filters</span>
+                </button>
+              ) : (
+                <MagneticButton to="/contact">
+                  <span>Discuss Custom Requirements</span>
+                  <ArrowUpRight size={18} />
+                </MagneticButton>
+              )}
             </div>
           )}
 
           {/* Live Services Grid with Visual Imagery */}
-          {services.length > 0 && (
+          {filteredServices.length > 0 && (
             <div className={styles.servicesGrid}>
-              {services.map((service, index) => (
+              {filteredServices.map((service, index) => (
                 <Reveal key={service.id} delay={index * 40} className={styles.gridItem}>
-                  <TiltCard className={styles.serviceCard}>
+                  <TiltCard
+                    className={[
+                      styles.serviceCard,
+                      service.is_featured ? styles.featuredCard : "",
+                    ].join(" ")}
+                  >
                     {/* Card Visual Header with Image */}
                     <div className={styles.cardImageHolder}>
                       <img
@@ -245,6 +514,7 @@ export function ServicesPage() {
                         alt={service.title}
                         className={styles.cardImg}
                         loading="lazy"
+                        decoding="async"
                         onError={(e) => {
                           const target = e.currentTarget as HTMLImageElement;
                           if (target.src !== DEFAULT_SERVICE_FALLBACK_IMAGE) {
@@ -253,7 +523,15 @@ export function ServicesPage() {
                         }}
                       />
                       <div className={styles.cardImgOverlay} />
-                      <span className={styles.cardCatBadge}>{service.category}</span>
+                      <div className={styles.cardBadgeCluster}>
+                        <span className={styles.cardCatBadge}>{service.category}</span>
+                        {service.is_featured && (
+                          <span className={styles.cardFeaturedBadge}>
+                            <Sparkles size={11} className={styles.featuredStarIcon} />
+                            <span>Featured</span>
+                          </span>
+                        )}
+                      </div>
                       <span className={styles.cardIndexTag}>
                         {String(index + 1).padStart(2, "0")}
                       </span>
@@ -329,83 +607,67 @@ export function ServicesPage() {
         </div>
       </section>
 
-      {/* 4. INDUSTRIES WE SERVE SECTION */}
-      <section className={styles.industriesSection} id="industries" aria-label="Industries We Serve">
-        <div className={styles.container}>
-          <div className={styles.sectionHeaderCenter}>
-            <Reveal variant="fade">
-              <div className={styles.sectionEyebrow}>
-                <Sparkles className={styles.amberSparkle} />
-                <span>Sector Specialization</span>
-              </div>
-            </Reveal>
-            <Reveal variant="up" delay={60}>
-              <h2 className={styles.sectionTitle}>
-                Industries We <span className={styles.gradientText}>Serve</span>
-              </h2>
-            </Reveal>
-            <Reveal variant="up" delay={100}>
-              <p className={styles.sectionSub}>
-                How we solve domain-specific business challenges with custom architectures, compliance-ready
-                workflows, and user-centric software.
-              </p>
-            </Reveal>
-          </div>
-
-          {/* 8 Industries Interactive Cards Grid */}
-          <div className={styles.industriesGrid}>
-            {industries.map((ind, index) => (
-              <Reveal key={ind.id} delay={index * 50} className={styles.industryItem}>
-                <div className={styles.industryCard}>
-                  {/* Industry Image Banner */}
-                  <div className={styles.indImageHolder}>
-                    <img
-                      src={ind.image_url}
-                      alt={ind.name}
-                      className={styles.indImg}
-                      loading="lazy"
-                      decoding="async"
-                    />
-                    <div className={styles.indImgOverlay} />
-                    <span className={styles.indBadge}>{ind.badge}</span>
-                  </div>
-
-                  <div className={styles.indBody}>
-                    <h3 className={styles.indTitle}>{ind.name}</h3>
-                    <p className={styles.indTagline}>{ind.tagline}</p>
-                    <p className={styles.indDesc}>{ind.description}</p>
-
-                    {/* Domain Solutions Pills */}
-                    {ind.solutions && ind.solutions.length > 0 && (
-                      <div className={styles.solutionsBox}>
-                        <span className={styles.solutionsHeader}>Engineered Solutions:</span>
-                        <div className={styles.solutionsList}>
-                          {ind.solutions.map((sol) => (
-                            <span key={sol} className={styles.solPill}>
-                              {sol}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className={styles.indFooter}>
-                    <Link
-                      to="/contact"
-                      search={{ industry: ind.slug }}
-                      className={styles.indLink}
-                    >
-                      <span>Consult on {ind.name} Requirements</span>
-                      <ArrowRight size={14} />
-                    </Link>
-                  </div>
+      {/* 4. SERVICE CATEGORIES SHOWCASE SECTION */}
+      {categoryItems.length > 0 && (
+        <section className={styles.categoriesSection} id="categories-showcase" aria-label="Service Categories">
+          <div className={styles.container}>
+            <div className={styles.sectionHeaderCenter}>
+              <Reveal variant="fade">
+                <div className={styles.sectionEyebrow}>
+                  <Sparkles className={styles.amberSparkle} />
+                  <span>Disciplines & Categories</span>
                 </div>
               </Reveal>
-            ))}
+              <Reveal variant="up" delay={60}>
+                <h2 className={styles.sectionTitle}>
+                  Explore Our <span className={styles.gradientText}>Service Categories</span>
+                </h2>
+              </Reveal>
+              <Reveal variant="up" delay={100}>
+                <p className={styles.sectionSub}>
+                  Structured capabilities designed to take your digital products from conceptual architecture
+                  to global production scale.
+                </p>
+              </Reveal>
+            </div>
+
+            <div className={styles.categoriesGrid}>
+              {categoryItems.map((cat, index) => {
+                const count = categoryCounts[cat.name] || categoryCounts[cat.name.toLowerCase()] || 0;
+                return (
+                  <Reveal key={cat.id} delay={index * 50} className={styles.categoryShowcaseCol}>
+                    <div className={styles.categoryShowcaseCard}>
+                      <div className={styles.catCardTop}>
+                        <div className={styles.catIconBox}>
+                          <FolderKanban size={22} />
+                        </div>
+                        <span className={styles.catOrderBadge}>ORDER #{cat.order_index}</span>
+                      </div>
+
+                      <h3 className={styles.catCardTitle}>{cat.name}</h3>
+                      <p className={styles.catCardDesc}>{cat.description}</p>
+
+                      <div className={styles.catCardFooter}>
+                        <span className={styles.catCountTag}>
+                          {count} {count === 1 ? "Capability" : "Capabilities"}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleSelectCategory(cat.name)}
+                          className={styles.catExploreBtn}
+                        >
+                          <span>Explore Services</span>
+                          <ArrowRight size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  </Reveal>
+                );
+              })}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       {/* 5. CLOSING CALL TO ACTION SECTION */}
       <section className={styles.ctaSection} aria-label="Closing Call To Action">
@@ -417,10 +679,11 @@ export function ServicesPage() {
                 <MessageSquare className={styles.ctaIcon} />
               </div>
 
-              <h2 className={styles.ctaTitle}>Don't See Your Industry?</h2>
+              <h2 className={styles.ctaTitle}>Need a Tailored Technical Solution?</h2>
 
               <p className={styles.ctaSub}>
-                We work across domains. Tell us about your business and let's explore what's possible.
+                We partner with engineering teams and visionary founders to build resilient systems.
+                Tell us about your business goals and let's engineer what's next.
               </p>
 
               <div className={styles.ctaButtonRow}>

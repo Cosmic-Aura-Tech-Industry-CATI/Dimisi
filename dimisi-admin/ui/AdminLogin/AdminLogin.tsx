@@ -1,16 +1,40 @@
-import { useState } from "react";
-import { Eye, EyeOff, ShieldCheck } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Eye, EyeOff, ShieldCheck, Clock } from "lucide-react";
 import { loginAdmin } from "@/services/adminAuth.service";
 import { ApiError } from "@/services/apiClient";
 import styles from "../styles/admin.module.css";
 
+const LAST_ADMIN_EMAIL_KEY = "dimisi_last_admin_email";
+
 /** Secure sign-in gate for the DIMISI admin panel with Express backend authentication. */
 export function AdminLogin() {
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem(LAST_ADMIN_EMAIL_KEY) || "";
+    }
+    return "";
+  });
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [sessionNotice, setSessionNotice] = useState<string | null>(() => {
+    if (typeof window !== "undefined") {
+      const expiredReason = sessionStorage.getItem("dimisi_admin_session_expired");
+      if (expiredReason) {
+        sessionStorage.removeItem("dimisi_admin_session_expired");
+        return expiredReason;
+      }
+    }
+    return null;
+  });
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (sessionNotice) {
+      const timer = setTimeout(() => setSessionNotice(null), 8000);
+      return () => clearTimeout(timer);
+    }
+  }, [sessionNotice]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -31,10 +55,13 @@ export function AdminLogin() {
         email: cleanEmail,
         password: cleanPassword,
       });
+      if (typeof window !== "undefined") {
+        localStorage.setItem(LAST_ADMIN_EMAIL_KEY, cleanEmail);
+      }
     } catch (err: unknown) {
       if (err instanceof ApiError) {
         if (err.status === 401) {
-          setError("Invalid administrator credentials.");
+          setError(err.message && !err.message.includes("status 401") ? err.message : "Invalid administrator credentials.");
         } else if (err.status === 403) {
           setError(err.message || "You do not have permission to access the control room.");
         } else if (err.status === 408) {
@@ -67,6 +94,27 @@ export function AdminLogin() {
         <p className={styles.sub} style={{ marginBottom: "1.5rem" }}>
           Sign in with your authorized administrator credentials.
         </p>
+
+        {sessionNotice && (
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "0.5rem",
+              padding: "0.65rem 0.85rem",
+              borderRadius: "0.5rem",
+              background: "rgba(245, 158, 11, 0.12)",
+              border: "1px solid rgba(245, 158, 11, 0.3)",
+              color: "#fbbf24",
+              fontSize: "0.85rem",
+              marginBottom: "1rem",
+              lineHeight: "1.4",
+            }}
+          >
+            <Clock size={16} style={{ flexShrink: 0 }} />
+            <span>{sessionNotice}</span>
+          </div>
+        )}
 
         <form className={styles.form} onSubmit={submit}>
           <div className={styles.field}>

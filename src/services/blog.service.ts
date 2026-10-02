@@ -157,6 +157,17 @@ export function normalizeBackendBlog(
   };
 }
 
+export function extractBlogsList(res: any): BackendBlogDoc[] {
+  if (!res) return [];
+  if (Array.isArray(res)) return res;
+  if (Array.isArray(res.blogs)) return res.blogs;
+  if (res.blogs && Array.isArray(res.blogs.blogs)) return res.blogs.blogs;
+  if (res.data && Array.isArray(res.data.blogs)) return res.data.blogs;
+  if (res.data && res.data.blogs && Array.isArray(res.data.blogs.blogs)) return res.data.blogs.blogs;
+  if (Array.isArray(res.data)) return res.data;
+  return [];
+}
+
 /**
  * 1. GET PUBLIC ACTIVE BLOGS
  * Endpoint: GET /api/v1/admin-panel/blog/visitors/all
@@ -185,10 +196,8 @@ export async function getPublicActiveBlogsApi(
       cacheTtlMs: 20000,
     });
 
-    if (Array.isArray(res?.blogs)) {
-      return res.blogs.map((doc) => normalizeBackendBlog(doc, allCats));
-    }
-    return [];
+    const list = extractBlogsList(res);
+    return list.map((doc) => normalizeBackendBlog(doc, allCats));
   } catch {
     return [];
   }
@@ -222,10 +231,8 @@ export async function getAllAdminBlogsApi(
       cacheTtlMs: 5000,
     });
 
-    if (Array.isArray(res?.blogs)) {
-      return res.blogs.map((doc) => normalizeBackendBlog(doc, allCats));
-    }
-    return [];
+    const list = extractBlogsList(res);
+    return list.map((doc) => normalizeBackendBlog(doc, allCats));
   } catch {
     return [];
   }

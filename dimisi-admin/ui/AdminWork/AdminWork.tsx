@@ -584,7 +584,11 @@ export function AdminWork({
     ]);
     setNewMetricLabel("");
     setNewMetricValue("");
-    setOrderIndex(projectList.length + 1);
+    const nextOrder =
+      projectList.length > 0
+        ? Math.max(...projectList.map((p) => Number(p.order_index) || 0), 0) + 1
+        : 1;
+    setOrderIndex(nextOrder);
     setIsFeatured(false);
     setIsActive(true);
     setModalTab("overview");
@@ -932,7 +936,39 @@ export function AdminWork({
 
     startTransition(async () => {
       try {
-        const res = await saveProject({ data: input });
+        let payloadToSubmit: ProjectInput | FormData = input;
+        if (coverFile) {
+          const fd = new FormData();
+          if (editingProject?.id) fd.append("id", editingProject.id);
+          fd.append("title", input.title);
+          fd.append("slug", input.slug || finalSlug);
+          fd.append("type", input.type);
+          fd.append("category", input.category);
+          fd.append("tagline", input.tagline || "");
+          fd.append("overview", input.overview);
+          fd.append("challenge", input.challenge);
+          fd.append("solution", input.solution);
+          fd.append("outcome", input.outcome);
+          fd.append("coverImage", coverFile);
+          if (editingProject?.cover_image) {
+            fd.append("existingCoverImage", editingProject.cover_image);
+          }
+          const existingGallery = (galleryImages || []).filter((g) => g.url.startsWith("http"));
+          if (existingGallery.length > 0) {
+            fd.append("existingGalleryImages", JSON.stringify(existingGallery));
+          }
+          if (input.website_url) fd.append("websiteUrl", input.website_url);
+          if (input.client_name) fd.append("clientName", input.client_name);
+          if (input.timeline) fd.append("timeline", input.timeline);
+          fd.append("techStack", JSON.stringify(input.tech_stack || []));
+          fd.append("metrics", JSON.stringify(input.metrics || []));
+          fd.append("orderIndex", String(input.order_index || 1));
+          fd.append("isFeatured", String(Boolean(input.is_featured)));
+          fd.append("isActive", String(input.is_active !== false));
+          payloadToSubmit = fd;
+        }
+
+        const res = await saveProject({ data: payloadToSubmit, id: editingProject?.id });
         if (res.success) {
           setShowModal(false);
           await refreshProjects();
@@ -1329,9 +1365,51 @@ export function AdminWork({
                   </td>
                   <td>
                     <div className={styles.titleCol}>
-                      <span className={styles.projTitle} title={p.title}>
-                        {p.title}
-                      </span>
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px", flexWrap: "wrap" }}>
+                        <span className={styles.projTitle} title={p.title}>
+                          {p.title}
+                        </span>
+                        {p.upload_status === "pending" && (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              fontSize: "11px",
+                              fontWeight: 500,
+                              color: "#facc15",
+                              background: "rgba(250, 204, 21, 0.12)",
+                              padding: "2px 7px",
+                              borderRadius: "12px",
+                              border: "1px solid rgba(250, 204, 21, 0.25)",
+                            }}
+                            title="BullMQ Worker is processing high-res images"
+                          >
+                            <RefreshCw size={10} style={{ animation: "spin 1.2s linear infinite" }} />
+                            Processing
+                          </span>
+                        )}
+                        {p.upload_status === "failed" && (
+                          <span
+                            style={{
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "4px",
+                              fontSize: "11px",
+                              fontWeight: 500,
+                              color: "#f87171",
+                              background: "rgba(248, 113, 113, 0.12)",
+                              padding: "2px 7px",
+                              borderRadius: "12px",
+                              border: "1px solid rgba(248, 113, 113, 0.25)",
+                            }}
+                            title="Media upload worker encountered an error"
+                          >
+                            <AlertCircle size={10} />
+                            Upload Issue
+                          </span>
+                        )}
+                      </div>
                       {p.tagline ? (
                         <span className={styles.projTagline} title={p.tagline}>
                           {p.tagline}
@@ -1833,10 +1911,16 @@ export function AdminWork({
                 {modalTab === "overview" && (
                   <div className={styles.tabPane}>
                     <div className={styles.formGroup}>
-                      <label>Project Title *</label>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <label>Project Title * (5 - 100 characters)</label>
+                        <span style={{ fontSize: "11px", color: title.length < 5 || title.length > 100 ? "#f87171" : "rgba(255,255,255,0.4)" }}>
+                          {title.length}/100
+                        </span>
+                      </div>
                       <input
                         type="text"
                         required
+                        maxLength={100}
                         value={title}
                         className={fieldErrors.title ? styles.inputError : ""}
                         onChange={(e) => {
@@ -1920,10 +2004,16 @@ export function AdminWork({
                     </div>
 
                     <div className={styles.formGroup}>
-                      <label>Tagline / Punchline *</label>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <label>Tagline / Punchline * (Max 200 characters)</label>
+                        <span style={{ fontSize: "11px", color: tagline.length > 200 ? "#f87171" : "rgba(255,255,255,0.4)" }}>
+                          {tagline.length}/200
+                        </span>
+                      </div>
                       <input
                         type="text"
                         required
+                        maxLength={200}
                         value={tagline}
                         onChange={(e) => setTagline(e.target.value)}
                         placeholder="e.g. Custom Travel Booking & Itinerary Platform for Northern India Expeditions"
@@ -1935,6 +2025,7 @@ export function AdminWork({
                         <label>Client / Brand Name</label>
                         <input
                           type="text"
+                          maxLength={100}
                           value={clientName}
                           onChange={(e) => setClientName(e.target.value)}
                           placeholder="e.g. Rudra Tours Ltd or DIMISI Labs"
@@ -1945,6 +2036,7 @@ export function AdminWork({
                         <label>Project Timeline</label>
                         <input
                           type="text"
+                          maxLength={100}
                           value={timeline}
                           onChange={(e) => setTimeline(e.target.value)}
                           placeholder="e.g. 4 Weeks Sprint"
@@ -1955,6 +2047,8 @@ export function AdminWork({
                         <label>Display Order</label>
                         <input
                           type="number"
+                          min={1}
+                          max={10000}
                           value={orderIndex}
                           onChange={(e) => setOrderIndex(Number(e.target.value))}
                         />
@@ -1979,15 +2073,21 @@ export function AdminWork({
                     <div className={styles.narrativeIntroBox}>
                       <Sparkles size={16} className={styles.sparkleIcon} />
                       <p>
-                        Structured 4-pillar narrative displayed across the interactive case study detail page.
+                        Structured 4-pillar narrative displayed across the interactive case study detail page (Max 2,000 characters per pillar).
                       </p>
                     </div>
 
                     <div className={styles.formGroup}>
-                      <label>1. Overview (Full Project Scope &amp; Purpose) *</label>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <label>1. Overview (Full Project Scope &amp; Purpose) *</label>
+                        <span style={{ fontSize: "11px", color: overview.length > 2000 ? "#f87171" : overview.length > 1800 ? "#fbbf24" : "rgba(255,255,255,0.4)" }}>
+                          {overview.length}/2000
+                        </span>
+                      </div>
                       <textarea
                         rows={3}
                         required
+                        maxLength={2000}
                         value={overview}
                         className={fieldErrors.overview ? styles.inputError : ""}
                         onChange={(e) => {
@@ -2008,10 +2108,16 @@ export function AdminWork({
                     </div>
 
                     <div className={styles.formGroup}>
-                      <label>2. The Challenge (Problem, Bottleneck, or Business Hurdle) *</label>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <label>2. The Challenge (Problem, Bottleneck, or Business Hurdle) *</label>
+                        <span style={{ fontSize: "11px", color: challenge.length > 2000 ? "#f87171" : challenge.length > 1800 ? "#fbbf24" : "rgba(255,255,255,0.4)" }}>
+                          {challenge.length}/2000
+                        </span>
+                      </div>
                       <textarea
                         rows={3}
                         required
+                        maxLength={2000}
                         value={challenge}
                         className={fieldErrors.challenge ? styles.inputError : ""}
                         onChange={(e) => {
@@ -2032,10 +2138,16 @@ export function AdminWork({
                     </div>
 
                     <div className={styles.formGroup}>
-                      <label>3. Our Solution (Engineering Architecture &amp; Execution) *</label>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <label>3. Our Solution (Engineering Architecture &amp; Execution) *</label>
+                        <span style={{ fontSize: "11px", color: solution.length > 2000 ? "#f87171" : solution.length > 1800 ? "#fbbf24" : "rgba(255,255,255,0.4)" }}>
+                          {solution.length}/2000
+                        </span>
+                      </div>
                       <textarea
                         rows={3}
                         required
+                        maxLength={2000}
                         value={solution}
                         className={fieldErrors.solution ? styles.inputError : ""}
                         onChange={(e) => {
@@ -2056,10 +2168,16 @@ export function AdminWork({
                     </div>
 
                     <div className={styles.formGroup}>
-                      <label>4. The Outcome (Measurable Business Impact &amp; ROI) *</label>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <label>4. The Outcome (Measurable Business Impact &amp; ROI) *</label>
+                        <span style={{ fontSize: "11px", color: outcome.length > 2000 ? "#f87171" : outcome.length > 1800 ? "#fbbf24" : "rgba(255,255,255,0.4)" }}>
+                          {outcome.length}/2000
+                        </span>
+                      </div>
                       <textarea
                         rows={3}
                         required
+                        maxLength={2000}
                         value={outcome}
                         className={fieldErrors.outcome ? styles.inputError : ""}
                         onChange={(e) => {

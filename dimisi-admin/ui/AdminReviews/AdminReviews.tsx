@@ -34,7 +34,6 @@ import {
 } from "@/lib/reviews.shared";
 import {
   updateReviewStatus,
-  updateReviewContent,
   toggleReviewFeatured,
   toggleReviewVerified,
   deleteReview,
@@ -49,7 +48,6 @@ export function AdminReviews({
   onRefresh: () => void;
 }) {
   const changeStatus = updateReviewStatus;
-  const editContent = updateReviewContent;
   const setFeatured = toggleReviewFeatured;
   const setVerified = toggleReviewVerified;
   const removeReview = deleteReview;
@@ -66,18 +64,6 @@ export function AdminReviews({
   const [rejectingReview, setRejectingReview] = useState<AdminReview | null>(null);
   const [rejectReason, setRejectReason] = useState("Does not meet Dimisi review standards or authenticity criteria.");
   const [notifyCustomerOnReject, setNotifyCustomerOnReject] = useState(true);
-
-  const [editingReview, setEditingReview] = useState<AdminReview | null>(null);
-  const [editText, setEditText] = useState("");
-  const [editName, setEditName] = useState("");
-  const [editType, setEditType] = useState<ReviewType>("client");
-  const [editRole, setEditRole] = useState("");
-  const [editDepartment, setEditDepartment] = useState("");
-  const [editEmploymentStatus, setEditEmploymentStatus] = useState<"current" | "former">("current");
-  const [editVerified, setEditVerified] = useState(false);
-  const [editService, setEditService] = useState("");
-  const [editLocation, setEditLocation] = useState("");
-  const [editRating, setEditRating] = useState(5);
 
   const [deletingReview, setDeletingReview] = useState<AdminReview | null>(null);
 
@@ -195,47 +181,6 @@ export function AdminReviews({
     });
   };
 
-  const handleEditOpen = (rev: AdminReview) => {
-    setEditingReview(rev);
-    setEditText(rev.review_text);
-    setEditName(rev.customer_name);
-    setEditType((rev.reviewer_type as ReviewType) || "client");
-    setEditRole(rev.role_or_title || "");
-    setEditDepartment(rev.employee_department || "");
-    setEditEmploymentStatus(rev.employment_status || "current");
-    setEditVerified(Boolean(rev.is_verified));
-    setEditService(rev.service_name || "");
-    setEditLocation(rev.customer_location || "");
-    setEditRating(rev.rating);
-  };
-
-  const handleEditSave = () => {
-    if (!editingReview) return;
-    startTransition(async () => {
-      try {
-        await editContent({
-          data: {
-            reviewId: editingReview.id,
-            customerName: editName,
-            reviewerType: editType,
-            roleOrTitle: editRole,
-            employeeDepartment: editDepartment,
-            employmentStatus: editEmploymentStatus,
-            isVerified: editVerified,
-            reviewText: editText,
-            ...(editService ? { serviceName: editService } : {}),
-            ...(editLocation ? { customerLocation: editLocation } : {}),
-            rating: editRating,
-          },
-        });
-        setEditingReview(null);
-        onRefresh();
-        if (viewingReview?.id === editingReview.id) setViewingReview(null);
-      } catch (err) {
-        alert(err instanceof Error ? err.message : "Error updating review.");
-      }
-    });
-  };
 
   const handleDeleteConfirm = () => {
     if (!deletingReview) return;
@@ -300,7 +245,16 @@ export function AdminReviews({
             onClick={() => setStatusTab("pending")}
           >
             <span>Pending</span>
-            <span className={[styles.tabBadge, pendingCount > 0 ? styles.tabBadgeActive : ""].join(" ")}>
+            <span
+              className={[
+                styles.tabBadge,
+                statusTab === "pending"
+                  ? styles.tabBadgeActive
+                  : pendingCount > 0
+                  ? styles.tabBadgePendingAlert
+                  : "",
+              ].join(" ")}
+            >
               {pendingCount}
             </span>
           </button>
@@ -613,15 +567,15 @@ export function AdminReviews({
                             </button>
                           )}
 
-                          {/* Edit Content */}
+                          {/* Audit & Details */}
                           <button
                             type="button"
                             className={styles.actionBtn}
-                            onClick={() => handleEditOpen(rev)}
-                            title="Edit Review Content"
-                            aria-label="Edit Review Content"
+                            onClick={() => setViewingReview(rev)}
+                            title="Audit Review Details"
+                            aria-label="Audit Review Details"
                           >
-                            <Edit3 size={15} color="#e2e8f0" />
+                            <ShieldCheck size={15} color="#818cf8" />
                           </button>
 
                           {/* Delete */}
@@ -736,15 +690,35 @@ export function AdminReviews({
                     {new Date(viewingReview.submitted_at).toLocaleString()}
                   </div>
                 </div>
+                <div>
+                  <div className={styles.detailLabel}>Campaign Source</div>
+                  <div className={styles.detailVal}>
+                    {viewingReview.campaign_name || viewingReview.campaign_id || "Direct Web / Public"}
+                  </div>
+                </div>
+                <div>
+                  <div className={styles.detailLabel}>Submission Telemetry</div>
+                  <div className={styles.detailVal} style={{ fontSize: "0.78rem", color: "#94a3b8" }}>
+                    IP: {viewingReview.submitter_ip || "127.0.0.1"}
+                    {viewingReview.user_agent ? ` • ${viewingReview.user_agent.slice(0, 45)}...` : ""}
+                  </div>
+                </div>
               </div>
             </div>
 
             <div className={styles.detailLabel}>Written Review Text</div>
             <div className={styles.reviewTextFull}>"{viewingReview.review_text}"</div>
 
-            {viewingReview.moderation_reason ? (
-              <div style={{ padding: "0.75rem", background: "rgba(239, 68, 68, 0.1)", borderRadius: "8px", color: "#fca5a5", fontSize: "0.85rem", marginBottom: "1rem" }}>
-                <strong>Moderation Reason:</strong> {viewingReview.moderation_reason}
+            {viewingReview.report || viewingReview.is_reported || viewingReview.moderation_reason ? (
+              <div style={{ padding: "0.85rem", background: "rgba(239, 68, 68, 0.12)", border: "1px solid rgba(239, 68, 68, 0.25)", borderRadius: "8px", color: "#fca5a5", fontSize: "0.85rem", marginBottom: "1rem" }}>
+                <div style={{ fontWeight: 700, display: "flex", alignItems: "center", gap: "6px", marginBottom: "0.3rem" }}>
+                  <ShieldAlert size={14} color="#ef4444" /> Flagged for Moderation
+                </div>
+                <div><strong>Reason:</strong> {viewingReview.report?.reason || viewingReview.moderation_reason || "Flagged"}</div>
+                {viewingReview.report?.note ? <div><strong>Reporter Note:</strong> "{viewingReview.report.note}"</div> : null}
+                {viewingReview.report?.reporterName ? (
+                  <div><strong>Reported By:</strong> {viewingReview.report.reporterName} {viewingReview.report.reporterEmail ? `(${viewingReview.report.reporterEmail})` : ""}</div>
+                ) : null}
               </div>
             ) : null}
 
@@ -793,10 +767,10 @@ export function AdminReviews({
               <button
                 type="button"
                 className={styles.actionBtn}
-                onClick={() => handleEditOpen(viewingReview)}
+                onClick={() => handleToggleVerified(viewingReview)}
               >
-                <Edit3 size={14} />
-                <span>Edit Review</span>
+                <BadgeCheck size={14} />
+                <span>{viewingReview.is_verified ? "Revoke Verified" : "Mark Verified"}</span>
               </button>
 
               <button
@@ -872,163 +846,6 @@ export function AdminReviews({
                 disabled={isPending}
               >
                 {isPending ? <Loader2 size={14} className="animate-spin" /> : "Confirm Rejection"}
-              </button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-
-      {/* Edit Review Modal */}
-      {editingReview ? (
-        <div className={styles.modalBackdrop} onClick={() => setEditingReview(null)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle}>Edit Review (Formatting &amp; Role Details)</h3>
-              <button
-                type="button"
-                onClick={() => setEditingReview(null)}
-                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-            <p style={{ fontSize: "0.82rem", color: "#94a3b8", marginBottom: "1rem" }}>
-              Note: Changes are logged in the admin audit trail.
-            </p>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
-              <div>
-                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Reviewer Name</label>
-                <input
-                  type="text"
-                  className={styles.searchInput}
-                  value={editName}
-                  onChange={(e) => setEditName(e.target.value)}
-                  style={{ width: "100%", padding: "0.5rem" }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Reviewer Type</label>
-                <select
-                  className={styles.filterSelect}
-                  value={editType}
-                  onChange={(e) => setEditType(e.target.value as ReviewType)}
-                  style={{ width: "100%", padding: "0.5rem" }}
-                >
-                  <option value="client">Client / Business Partner</option>
-                  <option value="employee">Employee / Staff Member</option>
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
-              <div>
-                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Role / Job Title</label>
-                <input
-                  type="text"
-                  className={styles.searchInput}
-                  placeholder="e.g. Full-Stack Engineer"
-                  value={editRole}
-                  onChange={(e) => setEditRole(e.target.value)}
-                  style={{ width: "100%", padding: "0.5rem" }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Rating</label>
-                <select
-                  className={styles.filterSelect}
-                  value={editRating}
-                  onChange={(e) => setEditRating(Number(e.target.value))}
-                  style={{ width: "100%", padding: "0.5rem" }}
-                >
-                  {[1, 2, 3, 4, 5].map((s) => (
-                    <option key={s} value={s}>
-                      {s} Stars
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.75rem", marginBottom: "0.75rem" }}>
-              <div>
-                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
-                  {editType === "employee" ? "Department" : "Service Category"}
-                </label>
-                <input
-                  type="text"
-                  className={styles.searchInput}
-                  value={editType === "employee" ? editDepartment : editService}
-                  onChange={(e) => {
-                    if (editType === "employee") setEditDepartment(e.target.value);
-                    else setEditService(e.target.value);
-                  }}
-                  style={{ width: "100%", padding: "0.5rem" }}
-                />
-              </div>
-              <div>
-                <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
-                  {editType === "employee" ? "Employment Status" : "Location"}
-                </label>
-                {editType === "employee" ? (
-                  <select
-                    className={styles.filterSelect}
-                    value={editEmploymentStatus}
-                    onChange={(e) => setEditEmploymentStatus(e.target.value as any)}
-                    style={{ width: "100%", padding: "0.5rem" }}
-                  >
-                    <option value="current">Current Employee</option>
-                    <option value="former">Former Employee</option>
-                  </select>
-                ) : (
-                  <input
-                    type="text"
-                    className={styles.searchInput}
-                    value={editLocation}
-                    onChange={(e) => setEditLocation(e.target.value)}
-                    style={{ width: "100%", padding: "0.5rem" }}
-                  />
-                )}
-              </div>
-            </div>
-
-            <div style={{ marginBottom: "0.85rem" }}>
-              <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.84rem", color: "#cbd5e1", cursor: "pointer" }}>
-                <input
-                  type="checkbox"
-                  checked={editVerified}
-                  onChange={(e) => setEditVerified(e.target.checked)}
-                />
-                <span>Mark as Verified ({editType === "employee" ? "Verified Employee" : "Verified Client"})</span>
-              </label>
-            </div>
-
-            <div style={{ marginBottom: "1rem" }}>
-              <label style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Review Text</label>
-              <textarea
-                className={styles.searchInput}
-                rows={5}
-                value={editText}
-                onChange={(e) => setEditText(e.target.value)}
-                style={{ width: "100%", padding: "0.6rem", minHeight: "100px" }}
-              />
-            </div>
-
-            <div className={styles.modalActions}>
-              <button
-                type="button"
-                className={styles.actionBtn}
-                onClick={() => setEditingReview(null)}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                className={[styles.actionBtn, styles.btnApprove].join(" ")}
-                onClick={handleEditSave}
-                disabled={isPending}
-              >
-                {isPending ? <Loader2 size={14} className="animate-spin" /> : "Save Changes"}
               </button>
             </div>
           </div>

@@ -1,4 +1,4 @@
-import { createFileRoute, lazyRouteComponent } from "@tanstack/react-router";
+import { createFileRoute, lazyRouteComponent, redirect } from "@tanstack/react-router";
 
 const TAB_TITLES: Record<string, string> = {
   overview: "Overview",
@@ -10,7 +10,6 @@ const TAB_TITLES: Record<string, string> = {
   reviews: "Reviews",
   campaigns: "Campaigns & QR",
   reports: "Moderation Queue",
-  analytics: "Analytics",
   logs: "Admin Logs",
   settings: "Notifications",
   leads: "Leads",
@@ -18,6 +17,15 @@ const TAB_TITLES: Record<string, string> = {
 };
 
 export const Route = createFileRoute("/dimisi-admin/$tab")({
+  beforeLoad: ({ params }) => {
+    if (params.tab === "analytics") {
+      throw redirect({
+        to: "/dimisi-admin/$tab",
+        params: { tab: "overview" },
+        replace: true,
+      });
+    }
+  },
   head: ({ params }) => {
     const sectionLabel = TAB_TITLES[params.tab] || params.tab.charAt(0).toUpperCase() + params.tab.slice(1);
     return {

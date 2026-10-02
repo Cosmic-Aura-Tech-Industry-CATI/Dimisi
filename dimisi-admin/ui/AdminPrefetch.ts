@@ -39,9 +39,6 @@ export function prefetchAdminTab(tab: AdminTab): void {
     case "reports":
       void import("./AdminReports/AdminReports").catch(() => {});
       break;
-    case "analytics":
-      void import("./AdminAnalytics/AdminAnalytics").catch(() => {});
-      break;
     case "logs":
       void import("./AdminLogs/AdminLogs").catch(() => {});
       break;

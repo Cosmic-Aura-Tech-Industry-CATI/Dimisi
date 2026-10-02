@@ -43,8 +43,10 @@ import {
   FolderPlus,
   Save,
   Check,
+  Eye,
   EyeOff,
   Search,
+  ChevronDown,
 } from "lucide-react";
 import {
   type CompanyEvent,
@@ -60,9 +62,6 @@ import {
   validateEvent,
   validateEventCategoryInput,
 } from "@/lib/events.shared";
-import {
-  INITIAL_EVENT_CATEGORIES,
-} from "@/lib/events.data";
 import {
   saveEventFn,
   deleteEventFn,
@@ -94,6 +93,52 @@ const EVENT_MODAL_STEPS: { id: EventModalTab; label: string; num: string }[] = [
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
 
+/**
+ * Optimizes and downscales uploaded image files using an off-screen HTML5 Canvas
+ * to keep payload sizes small (< 150KB), avoiding Express body-size limit rejections and timeouts.
+ */
+function compressImageToDataUrl(file: File, maxDim = 1280, quality = 0.82): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error("Failed to read image file."));
+    reader.onload = (e) => {
+      const src = e.target?.result as string;
+      if (!src) {
+        reject(new Error("Empty image file data."));
+        return;
+      }
+      const img = new Image();
+      img.onerror = () => resolve(src);
+      img.onload = () => {
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) {
+          resolve(src);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, width, height);
+        const mime = file.type === "image/png" ? "image/png" : "image/jpeg";
+        const compressed = canvas.toDataURL(mime, quality);
+        resolve(compressed);
+      };
+      img.src = src;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 export function AdminEvents({
   events,
   gallery,
@@ -111,19 +156,73 @@ export function AdminEvents({
   const [categoryFilter, setCategoryFilter] = useState<string>("All");
   const [searchQuery, setSearchQuery] = useState<string>("");
 
+  // Dropdown Popover States
+  const [isCatDropdownOpen, setIsCatDropdownOpen] = useState(false);
+  const [isStatusDropdownOpen, setIsStatusDropdownOpen] = useState(false);
+  const catDropdownRef = useRef<HTMLDivElement>(null);
+  const statusDropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdowns on click outside
+  useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      if (catDropdownRef.current && !catDropdownRef.current.contains(e.target as Node)) {
+        setIsCatDropdownOpen(false);
+      }
+      if (statusDropdownRef.current && !statusDropdownRef.current.contains(e.target as Node)) {
+        setIsStatusDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleOutsideClick);
+    return () => document.removeEventListener("mousedown", handleOutsideClick);
+  }, []);
+
+  const pendingEventsMap = useRef<Map<string, CompanyEvent>>(new Map());
+  const pendingGalleryMap = useRef<Map<string, EventGalleryItem>>(new Map());
+
+  const [localEvents, setLocalEvents] = useState<CompanyEvent[]>(() => events || []);
+  const [localGallery, setLocalGallery] = useState<EventGalleryItem[]>(() => gallery || []);
+
+  useEffect(() => {
+    setLocalEvents((prev) => {
+      const incoming = Array.isArray(events) ? events : [];
+      const incomingIds = new Set(incoming.map((e) => e.id));
+      const merged = [...incoming];
+      pendingEventsMap.current.forEach((item, id) => {
+        if (!incomingIds.has(id)) {
+          merged.unshift(item);
+        }
+      });
+      return merged;
+    });
+  }, [events]);
+
+  useEffect(() => {
+    setLocalGallery((prev) => {
+      const incoming = Array.isArray(gallery) ? gallery : [];
+      const incomingIds = new Set(incoming.map((g) => g.id));
+      const merged = [...incoming];
+      pendingGalleryMap.current.forEach((item, id) => {
+        if (!incomingIds.has(id)) {
+          merged.unshift(item);
+        }
+      });
+      return merged;
+    });
+  }, [gallery]);
+
   // Dynamic Categories State
   const [categoryList, setCategoryList] = useState<EventCategoryItem[]>(() => {
-    if (initialCategoryItems && initialCategoryItems.length > 0) {
+    if (initialCategoryItems && Array.isArray(initialCategoryItems)) {
       return initialCategoryItems;
     }
-    return INITIAL_EVENT_CATEGORIES;
+    return [];
   });
 
   // Load latest categories from store
   const refreshCategories = useCallback(async () => {
     try {
       const res = await getEventCategoriesFn();
-      if (res && res.categories && res.categories.length > 0) {
+      if (res && Array.isArray(res.categories)) {
         setCategoryList(res.categories);
       }
     } catch (err) {
@@ -133,10 +232,10 @@ export function AdminEvents({
 
   useEffect(() => {
     refreshCategories();
-  }, [refreshCategories, events]);
+  }, [refreshCategories, localEvents]);
 
   useEffect(() => {
-    if (initialCategoryItems && initialCategoryItems.length > 0) {
+    if (initialCategoryItems && Array.isArray(initialCategoryItems)) {
       setCategoryList(initialCategoryItems);
     }
   }, [initialCategoryItems]);
@@ -144,7 +243,7 @@ export function AdminEvents({
   // Compute category event counts dynamically
   const categoryEventCounts = useMemo(() => {
     const counts: Record<string, number> = {};
-    events.forEach((ev) => {
+    localEvents.forEach((ev) => {
       const cat = ev.category?.trim();
       if (cat) {
         counts[cat] = (counts[cat] || 0) + 1;
@@ -152,7 +251,20 @@ export function AdminEvents({
       }
     });
     return counts;
-  }, [events]);
+  }, [localEvents]);
+
+  // Compute category gallery counts dynamically
+  const categoryGalleryCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    localGallery.forEach((g) => {
+      const cat = g.category?.trim();
+      if (cat) {
+        counts[cat] = (counts[cat] || 0) + 1;
+        counts[cat.toLowerCase()] = (counts[cat.toLowerCase()] || 0) + 1;
+      }
+    });
+    return counts;
+  }, [localGallery]);
 
   // Active category items for filter pills & event selector
   const activeCategories = useMemo(() => {
@@ -176,6 +288,29 @@ export function AdminEvents({
     name: string;
     count: number;
   } | null>(null);
+  const [eventDeleteConfirm, setEventDeleteConfirm] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [galleryDeleteConfirm, setGalleryDeleteConfirm] = useState<{
+    id: string;
+    title: string;
+    imageUrl?: string;
+    category?: string;
+    caption?: string;
+  } | null>(null);
+
+  // Global success notification banner
+  const [successNotification, setSuccessNotification] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (successNotification) {
+      const timer = setTimeout(() => {
+        setSuccessNotification(null);
+      }, 6000);
+      return () => clearTimeout(timer);
+    }
+  }, [successNotification]);
 
   // Event modal state
   const [showEventModal, setShowEventModal] = useState(false);
@@ -235,6 +370,7 @@ export function AdminEvents({
   const [galFile, setGalFile] = useState<File | null>(null);
   const [galPreviewUrl, setGalPreviewUrl] = useState<string | null>(null);
   const [galSourceType, setGalSourceType] = useState<"upload" | "url">("upload");
+  const [galFormError, setGalFormError] = useState<string | null>(null);
   const standaloneGalInputRef = useRef<HTMLInputElement>(null);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
@@ -250,13 +386,24 @@ export function AdminEvents({
 
   // Body Lock & ESC Key Listener
   useEffect(() => {
-    if (!showEventModal && !showGalleryModal && !showCatModal) return;
+    if (
+      !showEventModal &&
+      !showGalleryModal &&
+      !showCatModal &&
+      !eventDeleteConfirm &&
+      !galleryDeleteConfirm
+    )
+      return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (showCatModal) {
+        if (eventDeleteConfirm) {
+          setEventDeleteConfirm(null);
+        } else if (galleryDeleteConfirm) {
+          setGalleryDeleteConfirm(null);
+        } else if (showCatModal) {
           setShowCatModal(false);
         } else {
           setShowEventModal(false);
@@ -270,7 +417,7 @@ export function AdminEvents({
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [showEventModal, showGalleryModal, showCatModal]);
+  }, [showEventModal, showGalleryModal, showCatModal, eventDeleteConfirm, galleryDeleteConfirm]);
 
   // CATEGORY TAXONOMY HANDLERS
   const handleOpenCatModal = (catToEdit?: EventCategoryItem) => {
@@ -372,7 +519,10 @@ export function AdminEvents({
   };
 
   const handleDeleteCategoryClick = (cat: EventCategoryItem) => {
-    const count = categoryEventCounts[cat.name.toLowerCase()] || 0;
+    const count =
+      activeTab === "gallery"
+        ? categoryGalleryCounts[cat.name.toLowerCase()] || 0
+        : categoryEventCounts[cat.name.toLowerCase()] || 0;
     setCatDeleteConfirm({
       id: cat.id,
       name: cat.name,
@@ -488,19 +638,17 @@ export function AdminEvents({
     setIsUploadingCover(true);
     setCoverUploadProgress(30);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      setCoverPreviewUrl(dataUrl);
-      setCoverImage(dataUrl);
-      setCoverUploadProgress(100);
-      setTimeout(() => setIsUploadingCover(false), 200);
-    };
-    reader.onerror = () => {
-      setCoverError("Failed to read image file. Please try again.");
-      setIsUploadingCover(false);
-    };
-    reader.readAsDataURL(file);
+    compressImageToDataUrl(file, 1400, 0.82)
+      .then((dataUrl) => {
+        setCoverPreviewUrl(dataUrl);
+        setCoverImage(dataUrl);
+        setCoverUploadProgress(100);
+        setTimeout(() => setIsUploadingCover(false), 200);
+      })
+      .catch(() => {
+        setCoverError("Failed to read image file. Please try again.");
+        setIsUploadingCover(false);
+      });
   }, []);
 
   const handleCoverDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -527,14 +675,13 @@ export function AdminEvents({
 
     fileArray.forEach((file) => {
       if (ALLOWED_IMAGE_TYPES.includes(file.type) && file.size <= MAX_IMAGE_SIZE_BYTES) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const dataUrl = e.target?.result as string;
-          if (dataUrl) {
-            setGalleryImages((prev) => [...prev, dataUrl]);
-          }
-        };
-        reader.readAsDataURL(file);
+        compressImageToDataUrl(file, 1280, 0.82)
+          .then((dataUrl) => {
+            if (dataUrl) {
+              setGalleryImages((prev) => [...prev, dataUrl]);
+            }
+          })
+          .catch(() => {});
       }
     });
   }, []);
@@ -715,7 +862,38 @@ export function AdminEvents({
       try {
         const res = await saveEvent({ data: input });
         if (res.success) {
+          if (res.event) {
+            const savedEvent = res.event;
+            pendingEventsMap.current.set(savedEvent.id, savedEvent);
+            setLocalEvents((prev) => {
+              const idx = prev.findIndex((e) => e.id === savedEvent.id);
+              if (idx >= 0) {
+                const next = [...prev];
+                next[idx] = savedEvent;
+                return next;
+              }
+              return [savedEvent, ...prev];
+            });
+          }
+          if (!editingEvent) {
+            setActiveTab("events");
+            setStatusFilter("All");
+            setCategoryFilter("All");
+            setSearchQuery("");
+          }
           setShowEventModal(false);
+          setFormError(null);
+          if ((res as any).verified !== false) {
+            setSuccessNotification(
+              editingEvent
+                ? `Event "${res.event?.title || title}" updated successfully!`
+                : `Event "${res.event?.title || title}" published successfully!`
+            );
+          } else {
+            setSuccessNotification(
+              "Event creation request succeeded, but the item could not be confirmed in the database. Please check the server response."
+            );
+          }
           onRefresh();
         } else {
           setFormError(res.error || "Failed to save event.");
@@ -726,13 +904,30 @@ export function AdminEvents({
     });
   };
 
-  const handleDeleteEvent = (id: string, evTitle: string) => {
-    if (window.confirm(`Delete company event "${evTitle}"? This will also unlink its gallery photos.`)) {
-      startTransition(async () => {
-        await deleteEvent({ data: { id } });
+  const handleDeleteEventClick = (id: string, evTitle: string) => {
+    setEventDeleteConfirm({ id, title: evTitle });
+  };
+
+  const handleConfirmDeleteEvent = () => {
+    if (!eventDeleteConfirm) return;
+    const { id, title: evTitle } = eventDeleteConfirm;
+
+    startTransition(async () => {
+      try {
+        const res = await deleteEvent({ data: { id } });
+        if (res.success) {
+          pendingEventsMap.current.delete(id);
+          setLocalEvents((prev) => prev.filter((e) => e.id !== id));
+          setSuccessNotification(`Company event "${evTitle}" removed successfully.`);
+          setEventDeleteConfirm(null);
+        } else {
+          setSuccessNotification(res.error || `Failed to delete event "${evTitle}".`);
+        }
         onRefresh();
-      });
-    }
+      } catch (err) {
+        setSuccessNotification(err instanceof Error ? err.message : `Failed to delete event "${evTitle}".`);
+      }
+    });
   };
 
   // STANDALONE GALLERY ACTIONS
@@ -740,69 +935,146 @@ export function AdminEvents({
     setEditingGalItem(null);
     setGalTitle("");
     setGalCaption("");
-    setGalImage("https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80");
-    setGalCategory("Interfaces");
+    const defaultCat = activeCategories[0]?.name || categoryList[0]?.name || "General";
+    setGalCategory(defaultCat);
     setGalEventId("");
     setGalAspect("normal");
     setGalFile(null);
     setGalPreviewUrl("https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80");
+    setGalImage("https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80");
     setGalSourceType("upload");
+    setGalFormError(null);
     setShowGalleryModal(true);
   };
 
   const handleSaveGalleryItem = (e: React.FormEvent) => {
     e.preventDefault();
+    setGalFormError(null);
+
+    const effectiveTitle = galTitle.trim() || `${galCategory || "DIMISI"} Photo`;
+    const effectiveCaption = galCaption.trim() || `${effectiveTitle} Archive`;
+    const effectiveImage = galImage.trim() || galPreviewUrl || DEFAULT_EVENT_FALLBACK_IMAGE;
+
+    if (!effectiveImage) {
+      setGalFormError("Please select or upload a photo image.");
+      return;
+    }
+
     const input: GalleryItemInput = {
       id: editingGalItem?.id,
-      title: galTitle.trim() || "Event Photo",
-      caption: galCaption.trim() || "DIMISI Event Archive",
-      image_url: galImage.trim(),
-      category: galCategory,
+      title: effectiveTitle,
+      caption: effectiveCaption,
+      image_url: effectiveImage,
+      category: galCategory || activeCategories[0]?.name || categoryList[0]?.name || "General",
       event_id: galEventId || undefined,
       aspect_ratio: galAspect,
+      file: galFile || undefined,
     };
 
     startTransition(async () => {
-      const res = await saveGallery({ data: input });
-      if (res.success) {
-        setShowGalleryModal(false);
-        onRefresh();
+      try {
+        const res = await saveGallery({ data: input });
+        if (res.success) {
+          if (res.item) {
+            const savedItem = res.item;
+            pendingGalleryMap.current.set(savedItem.id, savedItem);
+            setLocalGallery((prev) => {
+              const idx = prev.findIndex((g) => g.id === savedItem.id);
+              if (idx >= 0) {
+                const next = [...prev];
+                next[idx] = savedItem;
+                return next;
+              }
+              return [savedItem, ...prev];
+            });
+          }
+          if (!editingGalItem) {
+            setActiveTab("gallery");
+            setStatusFilter("All");
+            setCategoryFilter("All");
+            setSearchQuery("");
+          }
+          setShowGalleryModal(false);
+          setGalFormError(null);
+          if ((res as any).verified !== false) {
+            setSuccessNotification(
+              editingGalItem
+                ? "Photo updated in gallery successfully!"
+                : "Photo added to gallery successfully!"
+            );
+          } else {
+            setSuccessNotification(
+              "Photo creation request succeeded, but the item could not be confirmed in the database. Please check the server response."
+            );
+          }
+          onRefresh();
+        } else {
+          setGalFormError(res.error || "Failed to add photo to gallery.");
+        }
+      } catch (err) {
+        setGalFormError(err instanceof Error ? err.message : "Failed to add photo to gallery.");
       }
     });
   };
 
-  const handleDeleteGalleryItem = (id: string) => {
-    if (window.confirm("Remove this photo from the global gallery?")) {
-      startTransition(async () => {
-        await deleteGallery({ data: { id } });
+  const handleDeleteGalleryClick = (item: EventGalleryItem) => {
+    setGalleryDeleteConfirm({
+      id: item.id,
+      title: item.title,
+      imageUrl: item.image_url,
+      category: item.category,
+      caption: item.caption,
+    });
+  };
+
+  const handleConfirmDeleteGallery = () => {
+    if (!galleryDeleteConfirm) return;
+    const { id, title: gTitle } = galleryDeleteConfirm;
+
+    startTransition(async () => {
+      try {
+        const res = await deleteGallery({ data: { id } });
+        if (res.success) {
+          pendingGalleryMap.current.delete(id);
+          setLocalGallery((prev) => prev.filter((g) => g.id !== id));
+          setSuccessNotification(`Photo "${gTitle}" removed from gallery successfully.`);
+          setGalleryDeleteConfirm(null);
+        } else {
+          setSuccessNotification(res.error || "Failed to remove photo.");
+        }
         onRefresh();
-      });
-    }
+      } catch (err) {
+        setSuccessNotification(err instanceof Error ? err.message : "Failed to remove photo.");
+      }
+    });
   };
 
   // Filtered Events List
   const filteredEvents = useMemo(() => {
-    return events.filter((ev) => {
+    return localEvents.filter((ev) => {
       // Status filter
-      if (statusFilter !== "All" && ev.status.toLowerCase() !== statusFilter.toLowerCase()) {
+      if (statusFilter !== "All" && (ev.status || "").toLowerCase() !== statusFilter.toLowerCase()) {
         return false;
       }
       // Category filter
-      if (categoryFilter !== "All" && ev.category.trim().toLowerCase() !== categoryFilter.trim().toLowerCase()) {
+      if (
+        categoryFilter !== "All" &&
+        (ev.category || "").trim().toLowerCase() !== categoryFilter.trim().toLowerCase()
+      ) {
         return false;
       }
       // Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const matchTitle = ev.title.toLowerCase().includes(q);
-        const matchLoc = ev.location.toLowerCase().includes(q);
-        const matchSlug = ev.slug.toLowerCase().includes(q);
-        const matchDesc = ev.description.toLowerCase().includes(q);
+        const matchTitle = (ev.title || "").toLowerCase().includes(q);
+        const matchLoc = (ev.location || "").toLowerCase().includes(q);
+        const matchSlug = (ev.slug || "").toLowerCase().includes(q);
+        const matchDesc = (ev.description || "").toLowerCase().includes(q);
         if (!matchTitle && !matchLoc && !matchSlug && !matchDesc) return false;
       }
       return true;
     });
-  }, [events, statusFilter, categoryFilter, searchQuery]);
+  }, [localEvents, statusFilter, categoryFilter, searchQuery]);
 
   return (
     <div className={styles.wrapper}>
@@ -826,7 +1098,7 @@ export function AdminEvents({
               onClick={() => setActiveTab("events")}
             >
               <Calendar size={14} />
-              <span>Events ({events.length})</span>
+              <span>Events ({localEvents.length})</span>
             </button>
             <button
               type="button"
@@ -837,19 +1109,31 @@ export function AdminEvents({
               onClick={() => setActiveTab("gallery")}
             >
               <ImageIcon size={14} />
-              <span>Photo Gallery ({gallery.length})</span>
+              <span>Photo Gallery ({localGallery.length})</span>
             </button>
           </div>
 
-          <button
-            type="button"
-            className={styles.manageCatBtn}
-            onClick={() => handleOpenCatModal()}
-            title="Manage Dynamic Event Categories & Taxonomies"
-          >
-            <SlidersHorizontal size={15} />
-            <span>Manage Categories ({categoryList.length})</span>
-          </button>
+          {activeTab === "events" ? (
+            <button
+              type="button"
+              className={styles.manageCatBtn}
+              onClick={() => handleOpenCatModal()}
+              title="Manage Dynamic Event Categories & Taxonomies"
+            >
+              <SlidersHorizontal size={15} />
+              <span>Manage Event Categories ({categoryList.length})</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              className={styles.manageCatBtn}
+              onClick={() => handleOpenCatModal()}
+              title="Manage Dynamic Gallery Categories & Taxonomies"
+            >
+              <SlidersHorizontal size={15} />
+              <span>Manage Gallery Categories ({categoryList.length})</span>
+            </button>
+          )}
 
           {activeTab === "events" ? (
             <button type="button" className={styles.createBtn} onClick={openCreateEvent}>
@@ -865,47 +1149,33 @@ export function AdminEvents({
         </div>
       </div>
 
+      {/* Top Global Success / Info Notification */}
+      {successNotification && (
+        <div className={styles.successBanner} role="status">
+          <div className={styles.successBannerContent}>
+            <CheckCircle2 size={16} />
+            <span>{successNotification}</span>
+          </div>
+          <button
+            type="button"
+            className={styles.alertCloseBtn}
+            onClick={() => setSuccessNotification(null)}
+            title="Dismiss notification"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
       {/* TAB 1: EVENTS LIST */}
       {activeTab === "events" && (
         <div className={styles.postsSection}>
-          {/* Filters & Search Control Bar */}
+          {/* Filters Bar: Search + Status Dropdown + Category Dropdown */}
           <div className={styles.filtersBar}>
-            {/* Dynamic Category Filter Pills */}
-            <div className={styles.catPillsScroll}>
-              <button
-                type="button"
-                className={[
-                  styles.catPill,
-                  categoryFilter === "All" ? styles.catPillActive : "",
-                ].join(" ")}
-                onClick={() => setCategoryFilter("All")}
-              >
-                All Categories ({categoryList.length})
-              </button>
-              {activeCategories.map((c) => {
-                const count = categoryEventCounts[c.name.toLowerCase()] || 0;
-                const isActive = categoryFilter.toLowerCase() === c.name.toLowerCase();
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    className={[
-                      styles.catPill,
-                      isActive ? styles.catPillActive : "",
-                    ].join(" ")}
-                    onClick={() => setCategoryFilter(c.name)}
-                  >
-                    <span>{c.name}</span>
-                    <span className={styles.catPillCount}>({count})</span>
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Status & Search Secondary Controls */}
             <div className={styles.secondaryFiltersRow}>
+              {/* Search Box */}
               <div className={styles.searchBox}>
-                <Search size={14} className={styles.searchIcon} />
+                <Search size={15} className={styles.searchIcon} />
                 <input
                   type="text"
                   value={searchQuery}
@@ -916,36 +1186,222 @@ export function AdminEvents({
                 {searchQuery && (
                   <button
                     type="button"
-                    className={styles.searchClearBtn}
+                    className={styles.clearSearchBtn}
                     onClick={() => setSearchQuery("")}
                     title="Clear search"
                   >
-                    <X size={12} />
+                    <X size={13} />
                   </button>
                 )}
               </div>
 
-              <div className={styles.statusPillsGroup}>
-                {[
-                  { id: "All", label: "All Status" },
-                  { id: "upcoming", label: "Upcoming" },
-                  { id: "ongoing", label: "Live Now" },
-                  { id: "completed", label: "Concluded" },
-                ].map((st) => (
+              {/* Right Filter Controls: Status Dropdown + Category Dropdown */}
+              <div className={styles.filterRightActions}>
+                {(categoryFilter !== "All" || statusFilter !== "All" || searchQuery) && (
                   <button
-                    key={st.id}
+                    type="button"
+                    className={styles.resetFiltersBtn}
+                    onClick={() => {
+                      setCategoryFilter("All");
+                      setStatusFilter("All");
+                      setSearchQuery("");
+                    }}
+                  >
+                    Reset Filters
+                  </button>
+                )}
+
+                {/* Status Dropdown */}
+                <div className={styles.statusDropdownWrapper} ref={statusDropdownRef}>
+                  <button
                     type="button"
                     className={[
-                      styles.statusPillBtn,
-                      statusFilter.toLowerCase() === st.id.toLowerCase()
-                        ? styles.statusPillBtnActive
+                      styles.statusDropdownTrigger,
+                      statusFilter !== "All" || isStatusDropdownOpen
+                        ? styles.statusDropdownTriggerActive
                         : "",
                     ].join(" ")}
-                    onClick={() => setStatusFilter(st.id)}
+                    onClick={() => setIsStatusDropdownOpen((prev) => !prev)}
+                    aria-expanded={isStatusDropdownOpen}
+                    aria-haspopup="listbox"
+                    aria-label="Filter events by status"
                   >
-                    {st.label}
+                    <div className={styles.catDropdownTriggerLeft}>
+                      <Eye size={13} className={styles.dropdownIcon} />
+                      <span className={styles.catDropdownTriggerText}>
+                        {statusFilter === "All"
+                          ? "All Status"
+                          : statusFilter === "upcoming"
+                            ? "Upcoming"
+                            : statusFilter === "ongoing"
+                              ? "Live Now"
+                              : statusFilter === "completed"
+                                ? "Concluded"
+                                : statusFilter}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      size={14}
+                      className={[
+                        styles.catDropdownChevron,
+                        isStatusDropdownOpen ? styles.catDropdownChevronOpen : "",
+                      ].join(" ")}
+                    />
                   </button>
-                ))}
+
+                  {isStatusDropdownOpen && (
+                    <div className={styles.statusDropdownMenu} role="listbox">
+                      <button
+                        type="button"
+                        className={[
+                          styles.catDropdownItem,
+                          statusFilter === "All" ? styles.catDropdownItemActive : "",
+                        ].join(" ")}
+                        onClick={() => {
+                          setStatusFilter("All");
+                          setIsStatusDropdownOpen(false);
+                        }}
+                      >
+                        <div className={styles.catDropdownItemLeft}>
+                          {statusFilter === "All" ? (
+                            <Check size={14} className={styles.catDropdownCheck} />
+                          ) : (
+                            <span className={styles.catDropdownCheckPlaceholder} />
+                          )}
+                          <span>All Status</span>
+                        </div>
+                        <span className={styles.catDropdownItemCount}>({localEvents.length})</span>
+                      </button>
+
+                      <div className={styles.catDropdownDivider} />
+
+                      {[
+                        { id: "upcoming", label: "Upcoming" },
+                        { id: "ongoing", label: "Live Now" },
+                        { id: "completed", label: "Concluded" },
+                      ].map((st) => {
+                        const count = localEvents.filter((e) => e.status === st.id).length;
+                        const isSelected = statusFilter.toLowerCase() === st.id.toLowerCase();
+                        return (
+                          <button
+                            key={st.id}
+                            type="button"
+                            className={[
+                              styles.catDropdownItem,
+                              isSelected ? styles.catDropdownItemActive : "",
+                            ].join(" ")}
+                            onClick={() => {
+                              setStatusFilter(st.id);
+                              setIsStatusDropdownOpen(false);
+                            }}
+                          >
+                            <div className={styles.catDropdownItemLeft}>
+                              {isSelected ? (
+                                <Check size={14} className={styles.catDropdownCheck} />
+                              ) : (
+                                <span className={styles.catDropdownCheckPlaceholder} />
+                              )}
+                              <span>{st.label}</span>
+                            </div>
+                            <span className={styles.catDropdownItemCount}>({count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* Category Dropdown */}
+                <div className={styles.catDropdownWrapper} ref={catDropdownRef}>
+                  <button
+                    type="button"
+                    className={[
+                      styles.catDropdownTrigger,
+                      categoryFilter !== "All" || isCatDropdownOpen
+                        ? styles.catDropdownTriggerActive
+                        : "",
+                    ].join(" ")}
+                    onClick={() => setIsCatDropdownOpen((prev) => !prev)}
+                    aria-expanded={isCatDropdownOpen}
+                    aria-haspopup="listbox"
+                    aria-label="Filter events by category"
+                  >
+                    <div className={styles.catDropdownTriggerLeft}>
+                      {categoryFilter !== "All" ? (
+                        <Tag size={13} className={styles.dropdownIcon} />
+                      ) : (
+                        <SlidersHorizontal size={13} className={styles.dropdownIcon} />
+                      )}
+                      <span className={styles.catDropdownTriggerText}>
+                        {categoryFilter === "All" ? "All Categories" : categoryFilter}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      size={14}
+                      className={[
+                        styles.catDropdownChevron,
+                        isCatDropdownOpen ? styles.catDropdownChevronOpen : "",
+                      ].join(" ")}
+                    />
+                  </button>
+
+                  {isCatDropdownOpen && (
+                    <div className={styles.catDropdownMenu} role="listbox">
+                      <button
+                        type="button"
+                        className={[
+                          styles.catDropdownItem,
+                          categoryFilter === "All" ? styles.catDropdownItemActive : "",
+                        ].join(" ")}
+                        onClick={() => {
+                          setCategoryFilter("All");
+                          setIsCatDropdownOpen(false);
+                        }}
+                      >
+                        <div className={styles.catDropdownItemLeft}>
+                          {categoryFilter === "All" ? (
+                            <Check size={14} className={styles.catDropdownCheck} />
+                          ) : (
+                            <span className={styles.catDropdownCheckPlaceholder} />
+                          )}
+                          <span>All Categories</span>
+                        </div>
+                        <span className={styles.catDropdownItemCount}>({localEvents.length})</span>
+                      </button>
+
+                      <div className={styles.catDropdownDivider} />
+
+                      {activeCategories.map((c) => {
+                        const count = categoryEventCounts[c.name.toLowerCase()] || 0;
+                        const isSelected = categoryFilter.toLowerCase() === c.name.toLowerCase();
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            className={[
+                              styles.catDropdownItem,
+                              isSelected ? styles.catDropdownItemActive : "",
+                            ].join(" ")}
+                            onClick={() => {
+                              setCategoryFilter(c.name);
+                              setIsCatDropdownOpen(false);
+                            }}
+                          >
+                            <div className={styles.catDropdownItemLeft}>
+                              {isSelected ? (
+                                <Check size={14} className={styles.catDropdownCheck} />
+                              ) : (
+                                <span className={styles.catDropdownCheckPlaceholder} />
+                              )}
+                              <span>{c.name}</span>
+                            </div>
+                            <span className={styles.catDropdownItemCount}>({count})</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -966,7 +1422,7 @@ export function AdminEvents({
                 <thead>
                   <tr>
                     <th className={styles.thCenter}>Cover</th>
-                    <th>Event Title &amp; Slug</th>
+                    <th>Event Title</th>
                     <th>Category</th>
                     <th>Date &amp; Timing</th>
                     <th>Location &amp; Venue</th>
@@ -1013,31 +1469,24 @@ export function AdminEvents({
                             className={styles.thumbImg}
                             loading="lazy"
                             decoding="async"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = DEFAULT_EVENT_FALLBACK_IMAGE;
+                            }}
                           />
                         </td>
 
-                        {/* 2. Event Title & Slug */}
+                        {/* 2. Event Title */}
                         <td>
                           <div className={styles.titleCol}>
                             <span className={styles.postTitle}>{ev.title}</span>
-                            <div className={styles.slugRow}>
-                              <a
-                                href="/events"
-                                target="_blank"
-                                rel="noreferrer"
-                                className={styles.slugCodeLink}
-                                title="Open Live Events"
-                              >
-                                <LinkIcon size={11} style={{ marginRight: 3, flexShrink: 0 }} />
-                                <span>/events/{ev.slug}</span>
-                              </a>
-                              {ev.is_featured && (
+                            {ev.is_featured && (
+                              <div className={styles.spotlightRow}>
                                 <span className={styles.featuredSpotlightBadge}>
                                   <Star size={10} style={{ fill: "currentColor" }} />
                                   <span>SPOTLIGHT</span>
                                 </span>
-                              )}
-                            </div>
+                              </div>
+                            )}
                           </div>
                         </td>
 
@@ -1127,7 +1576,7 @@ export function AdminEvents({
                             <button
                               type="button"
                               className={styles.delBtn}
-                              onClick={() => handleDeleteEvent(ev.id, ev.title)}
+                              onClick={() => handleDeleteEventClick(ev.id, ev.title)}
                               title="Delete Event"
                             >
                               <Trash2 size={14} />
@@ -1146,34 +1595,47 @@ export function AdminEvents({
 
       {/* TAB 2: GALLERY GRID */}
       {activeTab === "gallery" && (
-        <div className={styles.galleryAdminGrid}>
-          {gallery.map((g) => (
-            <div key={g.id} className={styles.galAdminCard}>
-              <img
-                src={g.image_url}
-                alt={g.title}
-                className={styles.galAdminThumb}
-                loading="lazy"
-                decoding="async"
-              />
-              <div className={styles.galAdminInfo}>
-                <span className={styles.galCategoryTag}>{g.category}</span>
-                <h5 className={styles.galItemTitle}>{g.title}</h5>
-                <p className={styles.galItemCaption}>{g.caption}</p>
-                <div className={styles.galCardActions}>
-                  <button
-                    type="button"
-                    className={styles.delBtn}
-                    onClick={() => handleDeleteGalleryItem(g.id)}
-                    title="Remove Photo"
-                  >
-                    <Trash2 size={14} />
-                  </button>
+        localGallery.length === 0 ? (
+          <div className={styles.emptyTableTd} style={{ width: "100%", padding: "3rem 1.5rem" }}>
+            <div className={styles.emptyStateContainer}>
+              <ImageIcon size={36} className={styles.emptyIcon} />
+              <h4>No gallery photos found</h4>
+              <p>Get started by clicking "Add Gallery Photo" above to upload your first photo.</p>
+            </div>
+          </div>
+        ) : (
+          <div className={styles.galleryAdminGrid}>
+            {localGallery.map((g) => (
+              <div key={g.id} className={styles.galAdminCard}>
+                <img
+                  src={g.image_url}
+                  alt={g.title}
+                  className={styles.galAdminThumb}
+                  loading="lazy"
+                  decoding="async"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = DEFAULT_EVENT_FALLBACK_IMAGE;
+                  }}
+                />
+                <div className={styles.galAdminInfo}>
+                  <span className={styles.galCategoryTag}>{g.category}</span>
+                  <h5 className={styles.galItemTitle}>{g.title}</h5>
+                  <p className={styles.galItemCaption}>{g.caption}</p>
+                  <div className={styles.galCardActions}>
+                    <button
+                      type="button"
+                      className={styles.delBtn}
+                      onClick={() => handleDeleteGalleryClick(g)}
+                      title="Remove Photo"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )
       )}
 
       {/* CATEGORY TAXONOMY MANAGEMENT MODAL */}
@@ -1197,9 +1659,15 @@ export function AdminEvents({
                   <SlidersHorizontal size={20} className={styles.catModalIcon} />
                 </div>
                 <div>
-                  <h3 className={styles.modalTitle}>Event Category Taxonomy &amp; Topics</h3>
+                  <h3 className={styles.modalTitle}>
+                    {activeTab === "gallery"
+                      ? "Gallery Category Taxonomy & Topics"
+                      : "Event Category Taxonomy & Topics"}
+                  </h3>
                   <p className={styles.modalSub}>
-                    Manage dynamic event categories, filter taxonomies, slugs, and active display states.
+                    {activeTab === "gallery"
+                      ? "Manage dynamic gallery categories, descriptions, and active filter display states."
+                      : "Manage dynamic event categories, descriptions, and active filter display states."}
                   </p>
                 </div>
               </div>
@@ -1236,7 +1704,7 @@ export function AdminEvents({
                   <h5>Delete Category: "{catDeleteConfirm.name}"?</h5>
                   <p>
                     {catDeleteConfirm.count > 0
-                      ? `Warning: There are currently ${catDeleteConfirm.count} event(s) tagged with this category. Deleting this category will remove it from the taxonomy and active filters.`
+                      ? `Warning: There are currently ${catDeleteConfirm.count} ${activeTab === "gallery" ? "photo(s)" : "event(s)"} tagged with this category. Deleting this category will remove it from the taxonomy and active filters.`
                       : 'Are you sure you want to permanently delete this category?'}
                   </p>
                   <div className={styles.deleteWarningActions}>
@@ -1268,11 +1736,11 @@ export function AdminEvents({
                   <h4 className={styles.catFormTitle}>
                     {editingCatId ? (
                       <>
-                        <Edit2 size={15} /> Edit Category
+                        <Edit2 size={15} /> Edit {activeTab === "gallery" ? "Gallery" : "Event"} Category
                       </>
                     ) : (
                       <>
-                        <FolderPlus size={15} /> Create New Category
+                        <FolderPlus size={15} /> Create New {activeTab === "gallery" ? "Gallery" : "Event"} Category
                       </>
                     )}
                   </h4>
@@ -1301,17 +1769,6 @@ export function AdminEvents({
                         }
                       }}
                       placeholder="e.g. AI & Autonomy Summit"
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>URL / Filter Slug *</label>
-                    <input
-                      type="text"
-                      required
-                      value={catSlug}
-                      onChange={(e) => setCatSlug(e.target.value)}
-                      placeholder="e.g. ai-autonomy-summit"
                     />
                   </div>
 
@@ -1345,7 +1802,7 @@ export function AdminEvents({
                         }
                         className={styles.selectInput}
                       >
-                        <option value="active">Active (Visible in Filter &amp; Events)</option>
+                        <option value="active">Active (Visible in Filter &amp; {activeTab === "gallery" ? "Gallery" : "Events"})</option>
                         <option value="inactive">Inactive (Hidden)</option>
                       </select>
                     </div>
@@ -1377,11 +1834,13 @@ export function AdminEvents({
               <div className={styles.catListCard}>
                 <div className={styles.catListHeader}>
                   <h4 className={styles.catListTitle}>
-                    <span>Configured Categories</span>
+                    <span>Configured {activeTab === "gallery" ? "Gallery" : "Event"} Categories</span>
                     <span className={styles.catCountBadge}>{categoryList.length}</span>
                   </h4>
                   <span className={styles.catListSub}>
-                    Active categories appear on the public and admin event filter bars.
+                    {activeTab === "gallery"
+                      ? "Active categories appear in the gallery photo creation and filter views."
+                      : "Active categories appear on the public and admin event filter bars."}
                   </span>
                 </div>
 
@@ -1390,31 +1849,48 @@ export function AdminEvents({
                     <thead>
                       <tr>
                         <th style={{ width: "50px" }}>Order</th>
-                        <th>Category &amp; Slug</th>
-                        <th style={{ width: "90px" }}>Events</th>
+                        <th>Category</th>
+                        <th style={{ width: "90px" }}>{activeTab === "gallery" ? "Photos" : "Events"}</th>
                         <th style={{ width: "95px" }}>Status</th>
                         <th style={{ width: "110px", textAlign: "right" }}>Actions</th>
                       </tr>
                     </thead>
                     <tbody>
-                      {categoryList
-                        .sort((a, b) => a.order_index - b.order_index)
-                        .map((cat) => {
-                          const count = categoryEventCounts[cat.name.toLowerCase()] || 0;
-                          const isBeingEdited = editingCatId === cat.id;
-                          return (
-                            <tr
-                              key={cat.id}
-                              className={[
-                                isBeingEdited ? styles.catRowEditing : "",
-                                cat.status === "inactive" ? styles.catRowInactive : "",
-                              ].join(" ")}
-                            >
+                      {categoryList.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={5}
+                            style={{
+                              textAlign: "center",
+                              padding: "2.5rem 1rem",
+                              color: "rgba(255, 255, 255, 0.4)",
+                              fontSize: "0.85rem",
+                            }}
+                          >
+                            No {activeTab === "gallery" ? "gallery" : "event"} categories found. Create your first category on the left.
+                          </td>
+                        </tr>
+                      ) : (
+                        categoryList
+                          .sort((a, b) => a.order_index - b.order_index)
+                          .map((cat) => {
+                            const count =
+                              activeTab === "gallery"
+                                ? categoryGalleryCounts[cat.name.toLowerCase()] || 0
+                                : categoryEventCounts[cat.name.toLowerCase()] || 0;
+                            const isBeingEdited = editingCatId === cat.id;
+                            return (
+                              <tr
+                                key={cat.id}
+                                className={[
+                                  isBeingEdited ? styles.catRowEditing : "",
+                                  cat.status === "inactive" ? styles.catRowInactive : "",
+                                ].join(" ")}
+                              >
                               <td className={styles.orderCell}>{cat.order_index}</td>
                               <td>
                                 <div className={styles.catItemMeta}>
                                   <span className={styles.catItemName}>{cat.name}</span>
-                                  <code className={styles.catItemSlug}>#{cat.slug}</code>
                                   {cat.description && (
                                     <span className={styles.catItemDesc}>
                                       {cat.description}
@@ -1424,7 +1900,7 @@ export function AdminEvents({
                               </td>
                               <td>
                                 <span className={styles.catPostCountBadge}>
-                                  {count} event{count !== 1 ? "s" : ""}
+                                  {count} {activeTab === "gallery" ? (count !== 1 ? "photos" : "photo") : (count !== 1 ? "events" : "event")}
                                 </span>
                               </td>
                               <td>
@@ -1473,7 +1949,8 @@ export function AdminEvents({
                               </td>
                             </tr>
                           );
-                        })}
+                        })
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -1559,9 +2036,24 @@ export function AdminEvents({
 
             {/* Global Error Alert */}
             {formError && (
-              <div className={styles.errorAlert}>
-                <AlertCircle size={16} />
-                <span>{formError}</span>
+              <div className={styles.errorAlert} style={{ margin: "0.75rem 1.75rem 0" }}>
+                <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                <div style={{ flex: 1, fontSize: "0.82rem" }}>
+                  <strong>{formError.includes("logged in") || formError.includes("Unauthorized") ? "Session Expired:" : "Error:"}</strong> {formError}
+                  {(formError.includes("logged in") || formError.includes("Unauthorized")) && (
+                    <div style={{ marginTop: "0.25rem", fontSize: "0.78rem", color: "#fca5a5" }}>
+                      Your admin session cookie has expired after 15 minutes of inactivity. Please refresh the page to sign in again.
+                    </div>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  className={styles.alertCloseBtn}
+                  onClick={() => setFormError(null)}
+                  title="Dismiss error"
+                >
+                  <X size={14} />
+                </button>
               </div>
             )}
 
@@ -1577,58 +2069,58 @@ export function AdminEvents({
                 {/* STEP 1: BASIC INFO & SCHEDULE */}
                 {modalTab === "basic" && (
                   <div className={styles.tabPane}>
-                    <div className={styles.formGrid2}>
-                      <div className={styles.formGroup}>
-                        <label>Event Title *</label>
-                        <input
-                          type="text"
-                          required
-                          value={title}
-                          className={fieldErrors.title ? styles.inputError : ""}
-                          onChange={(e) => {
-                            setTitle(e.target.value);
-                            if (fieldErrors.title) {
-                              setFieldErrors((prev) => {
-                                const copy = { ...prev };
-                                delete copy.title;
-                                return copy;
-                              });
-                            }
-                            if (!editingEvent) setSlug(slugifyEvent(e.target.value));
-                          }}
-                          placeholder="e.g. Kalesh App Global Launch 2026"
-                        />
-                        {fieldErrors.title && (
-                          <span className={styles.fieldErrorText}>{fieldErrors.title}</span>
-                        )}
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label>URL Slug *</label>
-                        <input
-                          type="text"
-                          required
-                          value={slug}
-                          onChange={(e) => setSlug(e.target.value)}
-                          placeholder="e.g. kalesh-app-global-launch-2026"
-                        />
-                      </div>
+                    <div className={styles.formGroup}>
+                      <label>Event Title *</label>
+                      <input
+                        type="text"
+                        required
+                        value={title}
+                        className={fieldErrors.title ? styles.inputError : ""}
+                        onChange={(e) => {
+                          setTitle(e.target.value);
+                          if (fieldErrors.title) {
+                            setFieldErrors((prev) => {
+                              const copy = { ...prev };
+                              delete copy.title;
+                              return copy;
+                            });
+                          }
+                          if (!editingEvent) setSlug(slugifyEvent(e.target.value));
+                        }}
+                        placeholder="e.g. Kalesh App Global Launch 2026"
+                      />
+                      {fieldErrors.title && (
+                        <span className={styles.fieldErrorText}>{fieldErrors.title}</span>
+                      )}
                     </div>
 
                     <div className={styles.formGrid3}>
                       <div className={styles.formGroup}>
-                        <label>Category *</label>
+                        <div className={styles.labelWithAction}>
+                          <label>Category *</label>
+                          <button
+                            type="button"
+                            className={styles.manageCatInlineLink}
+                            onClick={() => handleOpenCatModal()}
+                            title="Manage Dynamic Categories"
+                          >
+                            + Manage Categories
+                          </button>
+                        </div>
                         <select
                           value={category}
                           onChange={(e) => setCategory(e.target.value)}
                           className={styles.selectInput}
                         >
+                          {activeCategories.length === 0 && (
+                            <option value="">-- No Categories Found (Please Create One First) --</option>
+                          )}
                           {activeCategories.map((c) => (
                             <option key={c.id} value={c.name}>
                               {c.name}
                             </option>
                           ))}
-                          {!activeCategories.some((c) => c.name === category) && (
+                          {category && !activeCategories.some((c) => c.name === category) && (
                             <option value={category}>{category}</option>
                           )}
                         </select>
@@ -2169,6 +2661,29 @@ export function AdminEvents({
                       </label>
                     </div>
 
+                    {/* Step 4 Submission Error Banner */}
+                    {formError && (
+                      <div className={styles.errorAlert} style={{ marginTop: "1rem" }}>
+                        <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                        <div style={{ flex: 1, fontSize: "0.82rem" }}>
+                          <strong>{formError.includes("logged in") || formError.includes("Unauthorized") ? "Session Expired:" : "Submission Error:"}</strong> {formError}
+                          {(formError.includes("logged in") || formError.includes("Unauthorized")) && (
+                            <div style={{ marginTop: "0.25rem", fontSize: "0.78rem", color: "#fca5a5" }}>
+                              Your admin session cookie has expired after 15 minutes of inactivity. Please refresh the page to sign in again.
+                            </div>
+                          )}
+                        </div>
+                        <button
+                          type="button"
+                          className={styles.alertCloseBtn}
+                          onClick={() => setFormError(null)}
+                          title="Dismiss error"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    )}
+
                     {/* Summary Review Card */}
                     <div className={styles.reviewCard}>
                       <h4 className={styles.reviewTitle}>Event Summary Review</h4>
@@ -2281,11 +2796,31 @@ export function AdminEvents({
 
             <form onSubmit={handleSaveGalleryItem} className={styles.modalForm}>
               <div className={styles.modalBodyScroll} data-lenis-prevent>
+                {galFormError && (
+                  <div className={styles.errorAlert} style={{ marginBottom: "1rem" }}>
+                    <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1, fontSize: "0.82rem" }}>
+                      <strong>{galFormError.includes("logged in") || galFormError.includes("Unauthorized") ? "Session Expired:" : "Error:"}</strong> {galFormError}
+                      {(galFormError.includes("logged in") || galFormError.includes("Unauthorized")) && (
+                        <div style={{ marginTop: "0.25rem", fontSize: "0.78rem", color: "#fca5a5" }}>
+                          Your admin session cookie has expired after 15 minutes of inactivity. Please refresh the page to sign in again.
+                        </div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.alertCloseBtn}
+                      onClick={() => setGalFormError(null)}
+                      title="Dismiss error"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                )}
                 <div className={styles.formGroup}>
                   <label>Photo Title</label>
                   <input
                     type="text"
-                    required
                     value={galTitle}
                     onChange={(e) => setGalTitle(e.target.value)}
                     placeholder="e.g. Main Stage Keynote Light Study"
@@ -2304,17 +2839,33 @@ export function AdminEvents({
 
                 <div className={styles.formGrid2}>
                   <div className={styles.formGroup}>
-                    <label>Category</label>
+                    <div className={styles.labelWithAction}>
+                      <label>Category *</label>
+                      <button
+                        type="button"
+                        className={styles.manageCatInlineLink}
+                        onClick={() => handleOpenCatModal()}
+                        title="Manage Dynamic Categories"
+                      >
+                        + Manage Categories
+                      </button>
+                    </div>
                     <select
                       value={galCategory}
                       onChange={(e) => setGalCategory(e.target.value)}
                       className={styles.selectInput}
                     >
-                      <option value="Interfaces">Interfaces</option>
-                      <option value="Motion">Motion</option>
-                      <option value="AI & Systems">AI &amp; Systems</option>
-                      <option value="Culture">Culture</option>
-                      <option value="Environments">Environments</option>
+                      {activeCategories.length === 0 && (
+                        <option value="">-- No Categories Found (Please Create One First) --</option>
+                      )}
+                      {activeCategories.map((c) => (
+                        <option key={c.id} value={c.name}>
+                          {c.name}
+                        </option>
+                      ))}
+                      {galCategory && !activeCategories.some((c) => c.name === galCategory) && (
+                        <option value={galCategory}>{galCategory}</option>
+                      )}
                     </select>
                   </div>
 
@@ -2373,13 +2924,21 @@ export function AdminEvents({
                         onChange={(e) => {
                           if (e.target.files && e.target.files[0]) {
                             const file = e.target.files[0];
-                            const reader = new FileReader();
-                            reader.onload = (ev) => {
-                              const dataUrl = ev.target?.result as string;
-                              setGalPreviewUrl(dataUrl);
-                              setGalImage(dataUrl);
-                            };
-                            reader.readAsDataURL(file);
+                            setGalFile(file);
+                            compressImageToDataUrl(file, 1400, 0.82)
+                              .then((dataUrl) => {
+                                setGalPreviewUrl(dataUrl);
+                                setGalImage(dataUrl);
+                              })
+                              .catch(() => {
+                                const reader = new FileReader();
+                                reader.onload = (ev) => {
+                                  const dataUrl = ev.target?.result as string;
+                                  setGalPreviewUrl(dataUrl);
+                                  setGalImage(dataUrl);
+                                };
+                                reader.readAsDataURL(file);
+                              });
                           }
                         }}
                       />
@@ -2412,6 +2971,26 @@ export function AdminEvents({
                 </div>
               </div>
 
+              {/* Bottom error indicator right above footer buttons */}
+              {galFormError && (
+                <div style={{ padding: "0 1.75rem 0.75rem" }}>
+                  <div className={styles.errorAlert}>
+                    <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                    <div style={{ flex: 1, fontSize: "0.82rem" }}>
+                      <strong>{galFormError.includes("logged in") || galFormError.includes("Unauthorized") ? "Session Expired:" : "Submission Error:"}</strong> {galFormError}
+                    </div>
+                    <button
+                      type="button"
+                      className={styles.alertCloseBtn}
+                      onClick={() => setGalFormError(null)}
+                      title="Dismiss error"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                </div>
+              )}
+
               <div className={styles.modalFooter}>
                 <div className={styles.footerLeft} />
                 <div className={styles.footerRight}>
@@ -2423,11 +3002,173 @@ export function AdminEvents({
                     Cancel
                   </button>
                   <button type="submit" disabled={isPending} className={styles.saveSubmitBtn}>
-                    {isPending ? "Saving..." : "Add to Gallery"}
+                    {isPending ? "Adding Photo..." : editingGalItem ? "Update Photo" : "Add to Gallery"}
                   </button>
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+         DEDICATED EVENT DELETE CONFIRMATION MODAL
+         ========================================================================= */}
+      {eventDeleteConfirm && (
+        <div
+          className={styles.modalBackdrop}
+          role="dialog"
+          aria-modal="true"
+          data-lenis-prevent
+          onClick={() => setEventDeleteConfirm(null)}
+        >
+          <div
+            className={styles.deleteConfirmModal}
+            data-lenis-prevent
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.deleteModalHeader}>
+              <div className={styles.deleteIconWrapper}>
+                <Trash2 size={22} className={styles.deleteModalTrashIcon} />
+              </div>
+              <button
+                type="button"
+                className={styles.modalClose}
+                onClick={() => setEventDeleteConfirm(null)}
+                title="Close (Esc)"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className={styles.deleteModalBody}>
+              <h3 className={styles.deleteModalTitle}>Delete Company Event</h3>
+              <p className={styles.deleteModalDescription}>
+                Are you sure you want to permanently delete{" "}
+                <span className={styles.deleteHighlight}>
+                  "{eventDeleteConfirm.title}"
+                </span>
+                ?
+              </p>
+              <div className={styles.deleteWarningBox}>
+                <AlertTriangle size={18} className={styles.deleteWarningBoxIcon} />
+                <span>
+                  This action is permanent and cannot be undone. The event will be immediately removed from the live database, unlinking all associated gallery items and registrations.
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.deleteModalFooter}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={() => setEventDeleteConfirm(null)}
+                disabled={isPending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.deleteConfirmBtn}
+                onClick={handleConfirmDeleteEvent}
+                disabled={isPending}
+              >
+                <Trash2 size={15} />
+                <span>{isPending ? "Deleting..." : "Delete Event"}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+         DEDICATED GALLERY PHOTO DELETE CONFIRMATION MODAL
+         ========================================================================= */}
+      {galleryDeleteConfirm && (
+        <div
+          className={styles.modalBackdrop}
+          role="dialog"
+          aria-modal="true"
+          data-lenis-prevent
+          onClick={() => setGalleryDeleteConfirm(null)}
+        >
+          <div
+            className={styles.deleteConfirmModal}
+            data-lenis-prevent
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.deleteModalHeader}>
+              <div className={styles.deleteIconWrapper}>
+                <Trash2 size={22} className={styles.deleteModalTrashIcon} />
+              </div>
+              <button
+                type="button"
+                className={styles.modalClose}
+                onClick={() => setGalleryDeleteConfirm(null)}
+                title="Close (Esc)"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className={styles.deleteModalBody}>
+              <h3 className={styles.deleteModalTitle}>Delete Gallery Photo</h3>
+              <p className={styles.deleteModalDescription}>
+                Are you sure you want to permanently delete this photo from the gallery?
+              </p>
+
+              {/* Photo Preview Card */}
+              <div className={styles.deletePreviewCard}>
+                {galleryDeleteConfirm.imageUrl && (
+                  <img
+                    src={galleryDeleteConfirm.imageUrl}
+                    alt={galleryDeleteConfirm.title}
+                    className={styles.deletePreviewThumb}
+                    loading="lazy"
+                    decoding="async"
+                    onError={(e) => {
+                      (e.currentTarget as HTMLImageElement).src = DEFAULT_EVENT_FALLBACK_IMAGE;
+                    }}
+                  />
+                )}
+                <div className={styles.deletePreviewInfo}>
+                  <span className={styles.deletePreviewTitle}>{galleryDeleteConfirm.title}</span>
+                  {galleryDeleteConfirm.category && (
+                    <span className={styles.deletePreviewCategory}>
+                      <Tag size={11} />
+                      <span>{galleryDeleteConfirm.category}</span>
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className={styles.deleteWarningBox}>
+                <AlertTriangle size={18} className={styles.deleteWarningBoxIcon} />
+                <span>
+                  This action is permanent and cannot be undone. The photo will be immediately removed from the live database and public gallery.
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.deleteModalFooter}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={() => setGalleryDeleteConfirm(null)}
+                disabled={isPending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.deleteConfirmBtn}
+                onClick={handleConfirmDeleteGallery}
+                disabled={isPending}
+              >
+                <Trash2 size={15} />
+                <span>{isPending ? "Deleting..." : "Delete Photo"}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

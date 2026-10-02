@@ -47,6 +47,22 @@ function isH3SwallowedErrorBody(body: string): boolean {
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      const url = new URL(request.url);
+      if (url.pathname.startsWith("/api/")) {
+        const backendTarget =
+          (typeof process !== "undefined" && process.env?.VITE_BACKEND_TARGET) ||
+          (typeof process !== "undefined" && process.env?.VITE_API_BASE_URL) ||
+          "https://api.dimisi.tech";
+        const targetUrl = new URL(url.pathname + url.search, backendTarget);
+        return await fetch(targetUrl.toString(), {
+          method: request.method,
+          headers: request.headers,
+          body: request.method !== "GET" && request.method !== "HEAD" ? request.body : undefined,
+          // @ts-expect-error duplex required for streaming bodies in Node fetch
+          duplex: "half",
+        });
+      }
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);

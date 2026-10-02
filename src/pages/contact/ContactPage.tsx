@@ -18,6 +18,7 @@ import { Reveal } from "@/components/common/Reveal/Reveal";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
 import { submitLeadFn } from "@/lib/leads.functions";
 import { getVisitorContext } from "@/lib/visitor-tracker";
+import { addAdminNotification, getNotificationSettings } from "@/services";
 import { SILVER_LOGO_URL } from "@/assets/logos";
 import pageStyles from "@/styles/page.module.css";
 import styles from "./ContactPage.module.css";
@@ -144,6 +145,21 @@ export function ContactPage() {
           sessionId: visitorCtx?.sessionId,
         },
       });
+
+      // Dispatch real-time in-app notification to admin topbar bell if enabled
+      try {
+        const settings = getNotificationSettings();
+        if (settings.notify_new_lead) {
+          addAdminNotification({
+            category: "lead",
+            title: `New Lead: ${form.name.trim() || "Prospective Client"}`,
+            message: `Inquiry received for ${form.inquiryType || "General Inquiry"} from ${form.email.trim().toLowerCase()}.`,
+            targetTab: "leads",
+          });
+        }
+      } catch (e) {
+        console.warn("[contact] Notification dispatch error:", e);
+      }
 
       setSent(true);
     } catch (err: unknown) {
