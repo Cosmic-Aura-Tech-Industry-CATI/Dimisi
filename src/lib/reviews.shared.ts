@@ -87,15 +87,45 @@ export type AdminReview = {
   consent_to_publish: boolean;
   status: ReviewStatus;
   is_featured: boolean;
+  is_active?: boolean | undefined;
+  is_reported?: boolean | undefined;
+  report?: {
+    reason: string;
+    note?: string | null;
+    reporterName?: string | null;
+    reporterEmail?: string | null;
+    reportedAt?: string | null;
+  } | null | undefined;
   moderation_reason: string | null;
   moderated_by: string | null;
   submitter_ip: string | null;
+  user_agent?: string | null | undefined;
   submitted_at: string;
   approved_at: string | null;
   rejected_at: string | null;
   archived_at: string | null;
   updated_at: string;
 };
+
+/** Checks if a string is a valid 24-character hexadecimal MongoDB ObjectId. */
+export function isMongoId(id?: string | null): boolean {
+  if (!id || typeof id !== "string") return false;
+  return /^[0-9a-fA-F]{24}$/.test(id.trim());
+}
+
+/** Extracts clean 24-char MongoDB ObjectId by stripping internal UI prefixes (e.g. rep-, rev-, camp-). */
+export function extractMongoId(id?: string | null): string {
+  if (!id || typeof id !== "string") return "";
+  const trimmed = id.trim();
+  const stripped = trimmed.replace(/^(rep|rev|camp|job)-+/i, "");
+  if (/^[0-9a-fA-F]{24}$/.test(stripped)) {
+    return stripped;
+  }
+  if (/^[0-9a-fA-F]{24}$/.test(trimmed)) {
+    return trimmed;
+  }
+  return stripped;
+}
 
 /** Safely normalizes reviewer type, defaulting null/undefined to "client". */
 export function normalizeReviewerType(type?: unknown): ReviewType {

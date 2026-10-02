@@ -10,6 +10,7 @@ export const ADMIN_ROLES: {
   label: string;
   shortLabel: string;
   description: string;
+  capabilities: string[];
   color: string;
   bg: string;
   border: string;
@@ -19,6 +20,12 @@ export const ADMIN_ROLES: {
     label: "Super Admin",
     shortLabel: "SUPER ADMIN",
     description: "Full, unrestricted access to all system settings, admin accounts, roles, and CMS modules.",
+    capabilities: [
+      "Grant, modify, and revoke administrator accounts",
+      "Manage all CMS content (Services, Work, Careers, Blog, Events)",
+      "Access Reviews, Moderation Queue, and Campaigns",
+      "Manage System Settings, Notifications, and Audit Logs",
+    ],
     color: "#ffb300",
     bg: "rgba(255, 179, 0, 0.14)",
     border: "rgba(255, 179, 0, 0.35)",
@@ -27,7 +34,13 @@ export const ADMIN_ROLES: {
     id: "admin",
     label: "Admin",
     shortLabel: "ADMIN",
-    description: "Broad management access to all content, reviews, campaigns, analytics, and leads. Cannot manage Super Admins or system roles.",
+    description: "Broad management access to all content, reviews, campaigns, and leads.",
+    capabilities: [
+      "View administrator roster (cannot elevate/change roles)",
+      "Manage all CMS content (Services, Work, Careers, Blog, Events)",
+      "Moderate Reviews, manage Campaigns, and view Leads",
+      "View Dashboard reports and Activity Logs",
+    ],
     color: "#60a5fa",
     bg: "rgba(96, 165, 250, 0.14)",
     border: "rgba(96, 165, 250, 0.35)",
@@ -36,7 +49,13 @@ export const ADMIN_ROLES: {
     id: "editor",
     label: "Editor",
     shortLabel: "EDITOR",
-    description: "Content-focused access. Can create, edit, and publish Services, Case Studies, Careers, Blogs, and Events.",
+    description: "Content-focused editorial access across all publishing channels.",
+    capabilities: [
+      "Create, edit, and publish Services & Industries",
+      "Manage Case Studies & Product Portfolios",
+      "Manage Job Openings & Hiring Pipeline",
+      "Write and publish Articles, Blog Posts, and Gallery Events",
+    ],
     color: "#34d399",
     bg: "rgba(52, 211, 153, 0.14)",
     border: "rgba(52, 211, 153, 0.35)",
@@ -45,7 +64,12 @@ export const ADMIN_ROLES: {
     id: "moderator",
     label: "Moderator",
     shortLabel: "MODERATOR",
-    description: "Community and moderation access. Can approve/reject customer reviews, resolve moderation queue items, and view notifications.",
+    description: "Community and quality assurance access for public submissions.",
+    capabilities: [
+      "Approve, reject, and verify Customer Reviews",
+      "Manage the Moderation Queue & Flagged Items",
+      "View and handle Notification Alerts",
+    ],
     color: "#c084fc",
     bg: "rgba(192, 132, 252, 0.14)",
     border: "rgba(192, 132, 252, 0.35)",
@@ -54,7 +78,12 @@ export const ADMIN_ROLES: {
     id: "analyst",
     label: "Analyst",
     shortLabel: "ANALYST",
-    description: "Read-only analytics and reporting access for metrics, leads, and review campaign statistics.",
+    description: "Read-only reporting access for metrics, leads, and performance.",
+    capabilities: [
+      "View real-time Traffic & Performance KPIs",
+      "Inspect Lead generation data & Contact submissions",
+      "Review Campaign metrics & Conversion logs (Read-Only)",
+    ],
     color: "#38bdf8",
     bg: "rgba(56, 189, 248, 0.14)",
     border: "rgba(56, 189, 248, 0.35)",
@@ -250,7 +279,6 @@ export const TAB_PERMISSION_MAP: Record<string, Permission> = {
   reviews: "reviews.view",
   campaigns: "campaigns.view",
   reports: "moderation.view",
-  analytics: "analytics.view",
   logs: "logs.view",
   settings: "notifications.manage",
   leads: "leads.view",

@@ -1,99 +1,204 @@
 .wrap {
-  max-width: 720px;
+  max-width: 820px;
   font-family: var(--dm-font-body, "Sora", sans-serif);
   color: var(--dm-warm, #fbf3e9);
+  padding-bottom: 2rem;
 }
 
 .titleBox h2 {
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
-  font-size: 1.55rem;
+  font-size: 1.65rem;
   color: var(--dm-warm, #fbf3e9);
-  margin: 0 0 0.3rem;
+  margin: 0 0 0.35rem;
 }
 
 .titleBox p {
   color: var(--dm-dim, #a09587);
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   margin: 0 0 1.75rem;
+  line-height: 1.5;
 }
 
 .card {
-  background: rgba(19, 16, 25, 0.75);
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.1));
-  border-radius: 18px;
+  background: rgba(19, 16, 25, 0.8);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
+  border-radius: 20px;
   padding: 2.25rem;
   display: flex;
   flex-direction: column;
-  gap: 1.75rem;
-  backdrop-filter: blur(16px);
-  box-shadow: 0 20px 60px -15px rgba(0, 0, 0, 0.7);
+  gap: 2rem;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 24px 70px -15px rgba(0, 0, 0, 0.75);
+  margin-bottom: 2rem;
+}
+
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  margin-bottom: -0.5rem;
 }
 
 .sectionTitle {
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   font-weight: 700;
   color: var(--dm-warm, #fbf3e9);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.sectionDesc {
+  font-size: 0.84rem;
+  color: var(--dm-dim, #a09587);
   margin: 0;
 }
 
 .toggleList {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.9rem;
 }
 
 .toggleItem {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
+  gap: 1.2rem;
+  padding: 1.05rem 1.25rem;
+  background: rgba(10, 8, 14, 0.65);
+  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.09));
+  border-radius: 14px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.toggleItem:hover {
+  background: rgba(18, 14, 25, 0.75);
+  border-color: rgba(255, 214, 170, 0.18);
+  transform: translateY(-1px);
+}
+
+.toggleLeft {
+  display: flex;
+  align-items: flex-start;
   gap: 1rem;
-  padding: 0.95rem 1.15rem;
-  background: rgba(10, 8, 14, 0.6);
-  border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.08));
-  border-radius: 12px;
+  flex: 1;
+}
+
+.triggerIconWrap {
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
 }
 
 .toggleLabel {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: 0.3rem;
+  flex: 1;
+}
+
+.triggerTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
 }
 
 .toggleTitle {
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
-  font-size: 0.92rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--dm-warm, #fbf3e9);
+}
+
+.targetBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #38bdf8;
+  font-family: var(--dm-font-mono, monospace);
+  font-size: 0.7rem;
+  font-weight: 500;
 }
 
 .toggleDesc {
   font-size: 0.82rem;
   color: var(--dm-dim, #a09587);
   line-height: 1.45;
+  margin: 0;
 }
 
 .switch {
-  width: 1.25rem;
-  height: 1.25rem;
+  width: 1.35rem;
+  height: 1.35rem;
   accent-color: var(--dm-orange, #ff7a18);
   cursor: pointer;
-  margin-top: 0.2rem;
+  flex-shrink: 0;
+}
+
+/* Email Config Grid */
+.emailGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+@media (max-width: 680px) {
+  .emailGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.45rem;
+  gap: 0.5rem;
+}
+
+.labelRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .label {
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
-  font-size: 0.74rem;
+  font-size: 0.76rem;
   font-weight: 600;
-  letter-spacing: 0.1em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: rgba(255, 244, 230, 0.7);
+  color: rgba(255, 244, 230, 0.8);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.corporatePill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 9999px;
+  background: rgba(52, 211, 153, 0.15);
+  border: 1px solid rgba(52, 211, 153, 0.35);
+  color: #34d399;
+  font-size: 0.68rem;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: normal;
 }
 
 .input {
@@ -101,12 +206,13 @@
   background: rgba(10, 8, 14, 0.75);
   border: 1px solid var(--dm-line, rgba(255, 214, 170, 0.12));
   color: var(--dm-warm, #fbf3e9);
-  padding: 0.75rem 0.95rem;
-  border-radius: 10px;
+  padding: 0.8rem 1rem;
+  border-radius: 11px;
   font-family: var(--dm-font-body, "Sora", sans-serif);
   font-size: 0.88rem;
   outline: none;
-  transition: border-color 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
 }
 
 .input:focus {
@@ -114,23 +220,126 @@
   box-shadow: 0 0 16px rgba(255, 171, 46, 0.2);
 }
 
+.inputReadOnly {
+  background: rgba(10, 8, 14, 0.5);
+  border-color: rgba(52, 211, 153, 0.2);
+  color: #34d399;
+  font-family: var(--dm-font-mono, monospace);
+  cursor: not-allowed;
+}
+
+.subText {
+  font-size: 0.76rem;
+  color: var(--dm-dim, #a09587);
+  margin: 0;
+  line-height: 1.4;
+}
+
+/* Testing Section */
+.testCard {
+  background: rgba(10, 8, 14, 0.5);
+  border: 1px dashed rgba(255, 214, 170, 0.2);
+  border-radius: 14px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.testHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.testTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: #ffd79a;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.testBtnsGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.testBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.45rem 0.85rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--dm-warm, #fbf3e9);
+  border-radius: 8px;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.testBtn:hover {
+  background: rgba(255, 122, 24, 0.18);
+  border-color: rgba(255, 122, 24, 0.4);
+  color: #ff9d42;
+  transform: translateY(-1px);
+}
+
+.testToast {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 10px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  font-size: 0.82rem;
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Save Bar */
+.actionsBar {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+  padding-top: 0.5rem;
+}
+
 .btnSave {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.6rem;
   background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff7a18 40%, #ffd79a));
   color: #0a0810;
   border: none;
-  padding: 0.75rem 1.75rem;
+  padding: 0.85rem 2rem;
   border-radius: 999px;
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
   font-weight: 700;
-  font-size: 0.86rem;
+  font-size: 0.88rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   cursor: pointer;
   box-shadow: 0 8px 24px rgba(255, 122, 24, 0.35);
-  width: fit-content;
   transition: transform 0.2s var(--dm-ease, ease), box-shadow 0.2s;
 }
 
@@ -145,10 +354,13 @@
 }
 
 .feedback {
-  padding: 0.85rem 1.15rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
   border-radius: 10px;
-  font-size: 0.88rem;
-  background: rgba(52, 211, 153, 0.12);
-  border: 1px solid rgba(52, 211, 153, 0.3);
+  font-size: 0.86rem;
+  background: rgba(52, 211, 153, 0.14);
+  border: 1px solid rgba(52, 211, 153, 0.35);
   color: #34d399;
 }

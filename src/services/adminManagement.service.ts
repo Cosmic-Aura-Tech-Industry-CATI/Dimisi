@@ -30,9 +30,23 @@ export interface BackendPanelUserDoc {
   updatedAt: string;
 }
 
+export interface PanelUserFilters {
+  page?: number;
+  limit?: number;
+  role?: string;
+  isActive?: boolean;
+}
+
 export interface BackendAdminsListResponse {
   success: boolean;
   message: string;
+  results?: number;
+  pagination?: {
+    page: number;
+    limit: number;
+    total: number;
+    pages: number;
+  };
   admins: BackendPanelUserDoc[];
 }
 
@@ -49,8 +63,11 @@ export interface GrantAdminPayload {
 
 export interface NormalizedAdminUser {
   user_id: string;
+  employee_id?: string | null;
+  emp_id?: string | null;
   email: string | null;
   full_name: string | null;
+  department?: string | null;
   designation: string | null;
   role: AdminRole;
   is_active: boolean;
@@ -59,13 +76,18 @@ export interface NormalizedAdminUser {
 
 /**
  * Safely normalizes backend IPanelUser documents into the clean frontend AdminUser model.
+ * Note: Backend queries PanelUser by `{ user: userId }` (Base User ID). Therefore,
+ * `user_id` MUST resolve to the Base User's MongoDB ObjectId.
  */
 export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | undefined): NormalizedAdminUser {
   if (!doc) {
     return {
       user_id: "usr-" + Date.now().toString(36),
+      employee_id: null,
+      emp_id: null,
       email: null,
       full_name: "Unknown",
+      department: null,
       designation: "Not set",
       role: "admin",
       is_active: true,
@@ -74,18 +96,44 @@ export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | unde
   }
 
   const populatedUser = typeof doc.user === "object" && doc.user !== null ? doc.user : null;
+  // Always prioritize the base user's ID (`user._id`) since backend looks up by `{ user: userId }`
   const rawUserId = populatedUser?._id || (typeof doc.user === "string" ? doc.user : "") || doc._id;
+  const empId =
+    populatedUser?.empId ||
+    (populatedUser as any)?.employeeId ||
+    (populatedUser as any)?.emp_id ||
+    (doc as any)?.empId ||
+    (doc as any)?.employeeId ||
+    null;
 
-  const email = populatedUser?.email || null;
+  const email = populatedUser?.email || (typeof (doc as any)?.email === "string" ? (doc as any).email : null);
   const fullName =
     populatedUser?.name ||
     populatedUser?.fullName ||
     (email ? email.split("@")[0].replace(/[._-]/g, " ") : "Administrator");
 
+  let departmentStr: string | null = null;
+  if (populatedUser?.department) {
+    if (typeof populatedUser.department === "string") {
+      const trimmed = populatedUser.department.trim();
+      if (!/^[0-9a-fA-F]{24}$/.test(trimmed)) {
+        departmentStr = trimmed || null;
+      }
+    } else if (typeof populatedUser.department === "object") {
+      departmentStr = populatedUser.department.name || populatedUser.department.title || null;
+    }
+  }
+
   let designationStr = "Not set";
   if (populatedUser?.designation) {
     if (typeof populatedUser.designation === "string") {
-      designationStr = populatedUser.designation.trim() || "Not set";
+      const trimmed = populatedUser.designation.trim();
+      // If backend stored raw 24-hex Mongo ObjectId for designation, provide clean title
+      if (/^[0-9a-fA-F]{24}$/.test(trimmed)) {
+        designationStr = doc.role === "super_admin" ? "Super Admin" : "Administrator";
+      } else {
+        designationStr = trimmed || "Not set";
+      }
     } else if (typeof populatedUser.designation === "object") {
       designationStr =
         populatedUser.designation.title || populatedUser.designation.name || "Not set";
@@ -94,8 +142,11 @@ export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | unde
 
   return {
     user_id: String(rawUserId),
+    employee_id: empId ? String(empId) : null,
+    emp_id: empId ? String(empId) : null,
     email: email,
     full_name: fullName,
+    department: departmentStr,
     designation: designationStr,
     role: (doc.role as AdminRole) || "admin",
     is_active: doc.isActive !== undefined ? Boolean(doc.isActive) : true,
@@ -107,8 +158,17 @@ export function normalizeBackendPanelUser(doc: BackendPanelUserDoc | null | unde
  * 1. GET ALL PANEL ADMINS
  * Endpoint: GET /api/v1/admin-panel/users/admins
  */
-export async function getAllPanelAdmins(): Promise<BackendPanelUserDoc[]> {
-  const res = await apiRequest<BackendAdminsListResponse>("/api/v1/admin-panel/users/admins", {
+export async function getAllPanelAdmins(filters?: PanelUserFilters): Promise<BackendPanelUserDoc[]> {
+  const queryParams = new URLSearchParams();
+  if (filters?.page) queryParams.append("page", String(filters.page));
+  if (filters?.limit) queryParams.append("limit", String(filters.limit));
+  if (filters?.role) queryParams.append("role", filters.role);
+  if (filters?.isActive !== undefined) queryParams.append("isActive", String(filters.isActive));
+
+  const qs = queryParams.toString();
+  const endpoint = `/api/v1/admin-panel/users/admins${qs ? `?${qs}` : ""}`;
+
+  const res = await apiRequest<BackendAdminsListResponse>(endpoint, {
     method: "GET",
   });
 
@@ -249,6 +309,31 @@ export async function deactivatePanelAdmin(userId: string): Promise<{
   };
 }
 
+/**
+ * 7. REVOKE PANEL ADMIN ACCESS
+ * Endpoint: DELETE /api/v1/admin-panel/users/:userId/revoke
+ */
+export async function revokePanelAdmin(userId: string): Promise<{
+  success: boolean;
+  message: string;
+  admin?: BackendPanelUserDoc;
+}> {
+  if (!userId) throw new Error("User ID is required.");
+
+  const res = await apiRequest<{ success: boolean; message: string; admin?: BackendPanelUserDoc }>(
+    `/api/v1/admin-panel/users/${encodeURIComponent(userId)}/revoke`,
+    {
+      method: "DELETE",
+    },
+  );
+
+  return {
+    success: true,
+    message: res?.message || "Administrator access revoked successfully.",
+    admin: res?.admin,
+  };
+}
+
 // Aliases for compatibility
 export const fetchAdminsApi = getAllPanelAdmins;
 export const grantAdminAccessApi = async (payload: { email: string; role: AdminRole | string }) => {
@@ -267,7 +352,6 @@ export const updateAdminActiveApi = async (userId: string, isActive: boolean) =>
   return deactivatePanelAdmin(userId);
 };
 export const deleteAdminApi = async (userId: string): Promise<{ success: boolean }> => {
-  // Backend does not expose a DELETE endpoint; deactivate the user instead.
-  await deactivatePanelAdmin(userId);
+  await revokePanelAdmin(userId);
   return { success: true };
 };

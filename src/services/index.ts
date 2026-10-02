@@ -16,10 +16,14 @@ export {
   loginAdmin,
   logoutAdmin,
   getStoredAdminSession,
-  decodeJwtPayload,
+  clearAdminSession,
+  getRemainingSessionSeconds,
+  ADMIN_SESSION_LIFETIME_MS,
+  transformBackendPanelUser,
   type AdminLoginCredentials,
   type BackendLoginResponse,
   type AdminAuthSession,
+  type AdminAuthUser,
 } from "./adminAuth.service";
 
 // 3. Admin & User Management Services
@@ -30,6 +34,7 @@ export {
   updatePanelAdminRole,
   activatePanelAdmin,
   deactivatePanelAdmin,
+  revokePanelAdmin,
   fetchAdminsApi,
   grantAdminAccessApi,
   updateAdminRoleApi,
@@ -41,6 +46,7 @@ export {
   type BackendAdminSingleResponse,
   type GrantAdminPayload,
   type NormalizedAdminUser,
+  type PanelUserFilters,
 } from "./adminManagement.service";
 
 // 4. Service Categories Services
@@ -121,5 +127,166 @@ export {
   type DepartmentItem,
 } from "./department.service";
 
+// 9. Blog Category Taxonomy API
+export {
+  getAllBlogCategoriesApi,
+  createBlogCategoryApi,
+  updateBlogCategoryApi,
+  deleteBlogCategoryApi,
+  normalizeBackendBlogCategory,
+  resolveBlogCategoryName,
+  resolveBlogCategoryIdForPayload,
+  type BackendBlogCategoryDoc,
+  type BackendBlogCategoryListResponse,
+  type BackendBlogCategorySingleResponse,
+  type CreateBlogCategoryPayload,
+  type UpdateBlogCategoryPayload,
+} from "./blogCategory.service";
+
+// 10. Blog & Editorial Publication API
+export {
+  getPublicActiveBlogsApi,
+  getAllAdminBlogsApi,
+  getBlogByIdApi,
+  createBlogApi,
+  updateBlogApi,
+  deleteBlogApi,
+  toggleBlogActiveApi,
+  setBlogFeaturedApi,
+  getBlogConfigApi,
+  updateBlogConfigApi,
+  normalizeBackendBlog,
+  DEFAULT_BLOG_FALLBACK_IMAGE,
+  type BackendBlogDoc,
+  type BackendBlogListResponse,
+  type BackendBlogSingleResponse,
+  type BackendBlogConfigResponse,
+} from "./blog.service";
+
+// 11. Event Category Taxonomy API
+export {
+  getAllEventCategoriesApi,
+  createEventCategoryApi,
+  updateEventCategoryApi,
+  deleteEventCategoryApi,
+  normalizeBackendEventCategory,
+  resolveEventCategoryName,
+  resolveEventCategoryIdForPayload,
+  type BackendEventCategoryDoc,
+  type BackendEventCategoryListResponse,
+  type BackendEventCategorySingleResponse,
+  type CreateEventCategoryPayload,
+  type UpdateEventCategoryPayload,
+} from "./eventCategory.service";
+
+// 12. Event & Photo Gallery API
+export {
+  getPublicActiveEventsApi,
+  getPublicActiveGalleryApi,
+  getAllAdminEventsApi,
+  getAllAdminGalleryApi,
+  getEventByIdApi,
+  createEventApi,
+  createGalleryItemApi,
+  updateEventApi,
+  deleteEventApi,
+  normalizeBackendEvent,
+  normalizeBackendGalleryItem,
+  DEFAULT_EVENT_FALLBACK_IMAGE,
+  type BackendEventDoc,
+  type BackendEventListResponse,
+  type BackendEventSingleResponse,
+} from "./event.service";
+
+// 13. Campaign & QR API
+export {
+  getAllAdminCampaignsApi,
+  createAdminCampaignApi,
+  toggleAdminCampaignApi,
+  deleteAdminCampaignApi,
+  normalizeBackendCampaign,
+  type BackendCampaignDoc,
+  type BackendCampaignListResponse,
+  type BackendCampaignSingleResponse,
+  type CreateCampaignPayload,
+} from "./campaign.service";
+
+// 14. Reviews & Testimonials API
+export {
+  getPublicReviewsApi,
+  submitPublicReviewApi,
+  reportReviewApi,
+  getAllAdminReviewsApi,
+  getReviewKpisApi,
+  updateReviewStatusApi,
+  deleteReviewApi,
+  keepReviewApi,
+  toggleReviewActiveApi,
+  toggleReviewVerifyApi,
+  normalizeBackendReview,
+  normalizeBackendPublicReview,
+  normalizeBackendReport,
+  type BackendReviewDoc,
+  type BackendReviewListResponse,
+  type BackendReviewSingleResponse,
+  type BackendReviewKpiResponse,
+  type SubmitReviewPayload,
+  type ReportReviewPayload,
+} from "./review.service";
+
+// 15. Leads CRM & Contact Inquiries API
+export {
+  submitLeadApi,
+  getAllAdminLeadsApi,
+  getLeadDetailsApi,
+  updateLeadApi,
+  deleteLeadApi,
+  normalizeBackendLead,
+  type BackendLeadDoc,
+  type BackendVisitorSessionDoc,
+  type BackendLeadListResponse,
+  type BackendLeadSingleResponse,
+  type SubmitLeadPayload,
+  type UpdateLeadPayload,
+} from "./lead.service";
+
+// 16. Admin Activity & Audit Logs API
+export {
+  getPanelActivityLogsApi,
+  normalizeBackendActivityLog,
+  type BackendActivityLogDoc,
+  type BackendActivityLogsResponse,
+  type AdminActivityLogItem,
+} from "./activity.service";
+
+// 17. Application Configuration & Settings API
+export {
+  getFullAppConfigApi,
+  getSectionConfigApi,
+  updateAppConfigApi,
+  updateSectionConfigApi,
+  type BackendAppConfigResponse,
+} from "./config.service";
+
+// 18. Admin Notifications & Alert Center API
+export {
+  getNotificationSettings,
+  saveNotificationSettings,
+  getAdminNotifications,
+  markNotificationAsRead,
+  markAllNotificationsAsRead,
+  clearAllNotifications,
+  deleteNotification,
+  addAdminNotification,
+  triggerTestNotification,
+  syncLiveCounts,
+  NOTIFICATIONS_EVENT,
+} from "./notification.service";
+export {
+  type AdminNotificationItem,
+  type NotificationCategory,
+  type NotificationSettings,
+  DEFAULT_NOTIFICATION_SETTINGS,
+} from "../lib/notifications.types";
 
 

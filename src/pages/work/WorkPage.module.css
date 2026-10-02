@@ -186,8 +186,188 @@
   transform: translateY(-2px);
 }
 
+.featuredHeroAnchor {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.75rem 1.35rem;
+  border-radius: 10px;
+  background: rgba(255, 179, 0, 0.08);
+  border: 1px solid rgba(255, 179, 0, 0.35);
+  color: var(--dm-amber, #ffb300);
+  font-weight: 700;
+  font-size: 0.9rem;
+  text-decoration: none;
+  box-shadow: 0 0 20px rgba(255, 122, 0, 0.12);
+  transition: all 0.25s ease;
+}
+
+.featuredHeroAnchor:hover {
+  background: rgba(255, 179, 0, 0.16);
+  color: #ffffff;
+  border-color: rgba(255, 179, 0, 0.6);
+  box-shadow: 0 0 26px rgba(255, 122, 0, 0.25);
+  transform: translateY(-2px);
+}
+
+.amberStarIcon {
+  color: var(--dm-amber, #ffb300);
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+.cardFeaturedBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  font-weight: 800;
+  padding: 0.25rem 0.65rem;
+  border-radius: 6px;
+  background: linear-gradient(135deg, rgba(255, 179, 0, 0.95), rgba(255, 122, 0, 0.95));
+  color: #0b0c14;
+  border: 1px solid rgba(255, 230, 160, 0.6);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  box-shadow: 0 2px 10px rgba(255, 122, 0, 0.35);
+}
+
+.cardFeaturedBadge svg {
+  fill: currentColor;
+}
+
 /* =========================================================================
-   2. CASE STUDIES / SELECTED PROJECTS SECTION
+   2. FEATURED SPOTLIGHT SECTION
+   ========================================================================= */
+
+.featuredSection {
+  position: relative;
+  width: 100%;
+  padding: clamp(3rem, 6vw, 5rem) 0 clamp(2rem, 4vw, 3rem);
+  background: radial-gradient(ellipse 80% 40% at 50% 0%, rgba(255, 122, 0, 0.06), transparent 80%);
+}
+
+.featuredSectionEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--dm-amber, #ffb300);
+  padding: 0.3rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 179, 0, 0.08);
+  border: 1px solid rgba(255, 179, 0, 0.25);
+}
+
+.featuredGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(420px, 1fr));
+  gap: 2rem;
+}
+
+@media (max-width: 640px) {
+  .featuredGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.featuredGridItem {
+  display: flex;
+  width: 100%;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 520px;
+}
+
+.featuredCard {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  border-radius: 24px;
+  background: linear-gradient(150deg, #181a28 0%, #0c0d16 100%);
+  border: 1px solid rgba(255, 179, 0, 0.35);
+  box-shadow:
+    0 16px 42px -10px rgba(0, 0, 0, 0.75),
+    0 0 32px rgba(255, 122, 0, 0.1);
+  overflow: hidden;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.3s ease,
+              box-shadow 0.3s ease;
+}
+
+.featuredCard:hover {
+  border-color: rgba(255, 179, 0, 0.7);
+  box-shadow:
+    0 24px 56px -10px rgba(0, 0, 0, 0.88),
+    0 0 45px rgba(255, 122, 0, 0.25);
+  transform: translateY(-4px);
+}
+
+.featuredCardVisual {
+  position: relative;
+  width: 100%;
+  height: 250px;
+  overflow: hidden;
+}
+
+.featuredCard:hover .cardCoverImg {
+  transform: scale(1.06);
+}
+
+.featuredCardBody {
+  padding: 1.85rem;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+
+.featuredCardHeaderRow {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.featuredProjectTitle {
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1.25;
+  color: #ffffff;
+  margin: 0;
+  transition: color 0.25s ease;
+}
+
+.featuredCard:hover .featuredProjectTitle {
+  color: var(--dm-amber, #ffb300);
+}
+
+.techStackRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin: 0.5rem 0 1rem;
+}
+
+.techChip {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.25rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.78);
+}
+
+/* =========================================================================
+   3. CASE STUDIES / SELECTED PROJECTS SECTION
    ========================================================================= */
 
 .projectsSection {
@@ -306,6 +486,8 @@
 .gridItem {
   display: flex;
   width: 100%;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 480px;
 }
 
 .projectCard {
@@ -314,13 +496,13 @@
   flex-direction: column;
   width: 100%;
   border-radius: 22px;
-  background: linear-gradient(150deg, rgba(20, 22, 33, 0.78), rgba(10, 11, 18, 0.88));
+  background: linear-gradient(150deg, #151724 0%, #0b0c14 100%);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
   overflow: hidden;
   box-shadow: 0 12px 36px -10px rgba(0, 0, 0, 0.65);
-  transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.35s ease,
+              box-shadow 0.35s ease;
 }
 
 .projectCard:hover {
@@ -329,6 +511,21 @@
     0 20px 50px -10px rgba(0, 0, 0, 0.85),
     0 0 30px rgba(255, 122, 0, 0.2);
   transform: translateY(-4px);
+}
+
+.featuredProjectCard {
+  border-color: rgba(255, 179, 0, 0.35) !important;
+  background: linear-gradient(150deg, #181a28 0%, #0d0e17 100%) !important;
+  box-shadow:
+    0 14px 40px -10px rgba(0, 0, 0, 0.75),
+    0 0 28px rgba(255, 122, 0, 0.1) !important;
+}
+
+.featuredProjectCard:hover {
+  border-color: rgba(255, 179, 0, 0.7) !important;
+  box-shadow:
+    0 22px 54px -10px rgba(0, 0, 0, 0.88),
+    0 0 40px rgba(255, 122, 0, 0.25) !important;
 }
 
 .cardVisual {

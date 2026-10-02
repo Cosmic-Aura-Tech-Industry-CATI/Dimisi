@@ -29,6 +29,10 @@ import {
   getReviewCaptcha,
   submitReview,
 } from "@/lib/reviews.functions";
+import { optimizeImageFile, validateImageFile } from "@/lib/image-optimizer";
+import { resolveDefaultCampaignId } from "@/services/campaign.service";
+import { ApiError } from "@/services/apiClient";
+import { addAdminNotification, getNotificationSettings } from "@/services";
 import styles from "./ReviewSubmitPage.module.css";
 
 const RATING_DESCRIPTIONS: Record<number, string> = {
@@ -74,7 +78,12 @@ export function ReviewSubmitPage({
   });
 
   const [hoverRating, setHoverRating] = useState<number>(0);
-  const [photoData, setPhotoData] = useState<{ name: string; type: string; dataUrl: string } | null>(null);
+  const [photoData, setPhotoData] = useState<{
+    name: string;
+    type: string;
+    dataUrl: string;
+    file?: File;
+  } | null>(null);
   const [captcha, setCaptcha] = useState<{ question: string; token: string } | null>(null);
   const [captchaAnswer, setCaptchaAnswer] = useState("");
   const [honeypot, setHoneypot] = useState("");
@@ -107,6 +116,18 @@ export function ReviewSubmitPage({
         .catch(() => {
           // ignore campaign load error
         });
+    } else {
+      // Generic /review visitor: proactively resolve default campaign ID to prevent submission failures
+      resolveDefaultCampaignId().then((campId) => {
+        if (active && campId) {
+          setCampaign((prev) => prev || {
+            id: campId,
+            campaign_name: "Client Experience Review",
+            service_name: null,
+            location: "DIMISI HQ, New Delhi",
+          });
+        }
+      });
     }
 
     loadCaptcha()
@@ -129,38 +150,39 @@ export function ReviewSubmitPage({
     });
   };
 
-  const handlePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!(PHOTO_TYPES as readonly string[]).includes(file.type as any)) {
-      setErrors((prev) => ({ ...prev, photo: "Photo must be JPG, PNG, or WebP." }));
+    const validation = validateImageFile(file);
+    if (!validation.valid) {
+      setErrors((prev) => ({ ...prev, photo: validation.error || "Unsupported image format." }));
       return;
     }
 
-    if (file.size > PHOTO_MAX_BYTES) {
-      setErrors((prev) => ({ ...prev, photo: "Photo size must be under 3 MB." }));
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = () => {
+    try {
+      const optimized = await optimizeImageFile(file, { maxDimension: 1200, quality: 0.82 });
       setPhotoData({
-        name: file.name,
-        type: file.type,
-        dataUrl: reader.result as string,
+        name: optimized.file.name,
+        type: optimized.file.type,
+        dataUrl: optimized.dataUrl,
+        file: optimized.file,
       });
       setErrors((prev) => {
         const { photo, ...rest } = prev;
         return rest;
       });
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      setErrors((prev) => ({
+        ...prev,
+        photo: err instanceof Error ? err.message : "Failed to process photo.",
+      }));
+    }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (honeypot) return; // bot detected
+    if (honeypot || isPending) return; // bot detected or already submitting
 
     const validationErrors = validateReview(formData);
     if (!captchaAnswer.trim()) {
@@ -187,6 +209,7 @@ export function ReviewSubmitPage({
         await sendReview({
           data: {
             ...(campaignSlug ? { slug: campaignSlug } : {}),
+            ...(campaign?.id ? { campaignId: campaign.id } : {}),
             customerName: formData.customerName,
             ...(formData.customerEmail ? { customerEmail: formData.customerEmail } : {}),
             ...(formData.customerPhone ? { customerPhone: formData.customerPhone } : {}),
@@ -201,12 +224,50 @@ export function ReviewSubmitPage({
             consent: formData.consent,
             captchaToken: captcha?.token ?? "",
             captchaAnswer: captchaAnswer.trim(),
-            ...(photoData ? { photo: photoData } : {}),
+            photoFile: photoData?.file || null,
+            ...(photoData?.dataUrl ? { customerPhoto: photoData.dataUrl } : {}),
           },
         });
+
+        // Dispatch real-time in-app notification to admin topbar bell if enabled
+        try {
+          const settings = getNotificationSettings();
+          if (settings.notify_on_submit) {
+            addAdminNotification({
+              category: "review",
+              title: `New Review: ${formData.customerName.trim()} (${formData.rating}★)`,
+              message: `${formData.rating}-star review submitted by ${formData.customerName.trim()} for ${formData.serviceName || "DIMISI Technologies"}.`,
+              targetTab: "reviews",
+            });
+          }
+        } catch (e) {
+          console.warn("[review] Notification dispatch error:", e);
+        }
+
         setSubmitted(true);
-      } catch (err) {
-        setSubmitError(err instanceof Error ? err.message : "Unable to submit your review. Please try again.");
+      } catch (err: unknown) {
+        let msg = "Something went wrong while submitting your review. Please try again.";
+        if (err instanceof ApiError) {
+          if (err.status === 401) {
+            msg = "This review link is public. Please refresh the page and try again.";
+          } else if (err.status === 413) {
+            msg = "Your photo is too large. Please choose another image.";
+          } else if (err.status === 404) {
+            msg = "This review campaign could not be found.";
+          } else if (err.status === 409) {
+            msg = "A review with this email address has already been submitted for this campaign.";
+          } else if (err.status === 400 && err.message && !err.message.includes("undefined")) {
+            msg = err.message;
+          }
+        } else if (err instanceof Error && err.message && !err.message.includes("undefined")) {
+          msg = err.message;
+        }
+
+        if (import.meta.env?.DEV) {
+          console.error("[ReviewSubmitPage Error]", err);
+        }
+
+        setSubmitError(msg);
         refreshCaptcha();
       }
     });

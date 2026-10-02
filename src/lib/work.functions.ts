@@ -135,12 +135,12 @@ export async function getAdminWorkData(): Promise<{
       getAllCasestudiesApi(),
     ]);
 
-    if (catsResult.status === "fulfilled" && Array.isArray(catsResult.value) && catsResult.value.length > 0) {
+    if (catsResult.status === "fulfilled" && Array.isArray(catsResult.value)) {
       catItems = catsResult.value;
       workStore.setCategories(catItems);
     }
 
-    if (projectsResult.status === "fulfilled" && Array.isArray(projectsResult.value) && projectsResult.value.length > 0) {
+    if (projectsResult.status === "fulfilled" && Array.isArray(projectsResult.value)) {
       projectsList = projectsResult.value;
       workStore.setProjects(projectsList);
     }
@@ -308,18 +308,44 @@ export const deleteCasestudyCategoryFn = deleteWorkCategoryFn;
  */
 export async function saveProjectFn({
   data,
+  id,
 }: {
-  data: ProjectInput;
+  data: ProjectInput | FormData;
+  id?: string | undefined;
 }): Promise<{ success: boolean; project?: ProjectItem; error?: string }> {
   try {
+    const categories = workStore.getCategoryItems();
+    let remoteSaved: ProjectItem | null = null;
+    let apiError: string | null = null;
+
+    if (data instanceof FormData) {
+      const formId = (data.get("id") as string) || id;
+      try {
+        if (formId && isMongoId(formId)) {
+          remoteSaved = await updateCasestudyApi(formId, data, categories);
+        } else {
+          remoteSaved = await createCasestudyApi(data, categories);
+        }
+      } catch (err: unknown) {
+        console.warn("Backend save FormData case study failed:", err);
+        apiError = err instanceof Error ? err.message : "Backend update failed.";
+      }
+
+      if (remoteSaved) {
+        workStore.saveProject(remoteSaved);
+      }
+
+      return {
+        success: !apiError && !!remoteSaved,
+        project: remoteSaved || undefined,
+        ...(apiError ? { error: apiError } : {}),
+      };
+    }
+
     const validation = validateProjectInput(data);
     if (!validation.valid) {
       return { success: false, error: validation.error || "Validation failed." };
     }
-
-    const categories = workStore.getCategoryItems();
-    let remoteSaved: ProjectItem | null = null;
-    let apiError: string | null = null;
 
     try {
       if (data.id && isMongoId(data.id)) {
@@ -350,17 +376,19 @@ export async function saveProjectFn({
       apiError = err instanceof Error ? err.message : "Backend update failed.";
     }
 
+    if (apiError || !remoteSaved) {
+      return {
+        success: false,
+        error: apiError || "Failed to save case study on server.",
+      };
+    }
+
     // Update in-memory store
-    const localSaved = workStore.saveProject({
-      ...data,
-      id: remoteSaved?.id || data.id,
-      slug: remoteSaved?.slug || data.slug,
-    });
+    workStore.saveProject(remoteSaved);
 
     return {
-      success: !apiError,
-      project: remoteSaved || localSaved,
-      ...(apiError ? { error: apiError } : {}),
+      success: true,
+      project: remoteSaved,
     };
   } catch (err) {
     return {

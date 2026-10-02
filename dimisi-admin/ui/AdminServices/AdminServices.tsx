@@ -1,13 +1,10 @@
 import {
   useState,
-  useTransition,
   useRef,
   useEffect,
   useCallback,
   useMemo,
-  type DragEvent,
   type ChangeEvent,
-  type ClipboardEvent,
 } from "react";
 import {
   Layers,
@@ -16,66 +13,50 @@ import {
   Trash2,
   CheckCircle2,
   Star,
-  Eye,
-  EyeOff,
   Image as ImageIcon,
   ExternalLink,
   HelpCircle,
-  Clock,
   Zap,
   Sparkles,
   X,
   ChevronRight,
   ChevronLeft,
-  ChevronDown,
-  UploadCloud,
-  FileCheck,
   AlertCircle,
   AlertTriangle,
   RefreshCw,
-  SlidersHorizontal,
-  Save,
-  Check,
   Search,
   Tag,
-  Globe,
-  Building2,
+  FolderPlus,
+  Settings,
 } from "lucide-react";
 import {
   type CompanyService,
-  type IndustrySector,
   type ServiceInput,
-  type IndustryInput,
   type ServiceProcessStep,
   type ServiceBenefit,
   type ServiceFaq,
-  type ServiceGalleryImage,
   type ServiceCategoryItem,
   type ServiceCategoryInput,
   slugifyService,
   slugifyServiceCategory,
   validateServiceInput,
-  validateIndustryInput,
   validateServiceCategoryInput,
 } from "@/lib/services.shared";
-import { INITIAL_SERVICE_CATEGORIES } from "@/lib/services.data";
 import {
   saveServiceFn,
   deleteServiceFn,
   toggleServiceActivationFn,
   toggleServiceFeaturedFn,
-  saveIndustryFn,
-  deleteIndustryFn,
   getServiceCategoriesFn,
   saveServiceCategoryFn,
   deleteServiceCategoryFn,
 } from "@/lib/services.functions";
-import { resolveCategoryName, isMongoId } from "@/services/service.service";
+import { resolveCategoryName, isMongoId, DEFAULT_SERVICE_FALLBACK_IMAGE } from "@/services/service.service";
+import shared from "../styles/admin.module.css";
 import styles from "./AdminServices.module.css";
 
 interface AdminServicesProps {
   services: CompanyService[];
-  industries: IndustrySector[];
   categoryItems?: ServiceCategoryItem[];
   categoryCounts?: Record<string, number>;
   onRefresh: () => void;
@@ -84,44 +65,31 @@ interface AdminServicesProps {
 type ServiceModalTab = "overview" | "media" | "features" | "process" | "benefits";
 
 const MODAL_STEPS: { id: ServiceModalTab; label: string; num: string }[] = [
-  { id: "overview", label: "1. Overview & Core Info", num: "01" },
-  { id: "media", label: "2. Service Image & Gallery", num: "02" },
-  { id: "features", label: "3. Deliverables & Tech", num: "03" },
-  { id: "process", label: "4. 6-Step Workflow", num: "04" },
-  { id: "benefits", label: "5. Benefits & FAQs", num: "05" },
+  { id: "overview", label: "Overview & Core Info", num: "01" },
+  { id: "media", label: "Service Image & Gallery", num: "02" },
+  { id: "features", label: "Deliverables & Tech", num: "03" },
+  { id: "process", label: "6-Step Workflow", num: "04" },
+  { id: "benefits", label: "Benefits & FAQs", num: "05" },
 ];
-
-const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
-
-function formatFileSize(bytes: number): string {
-  if (!bytes || bytes <= 0) return "0 B";
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
 
 export function AdminServices({
   services,
-  industries,
   categoryItems: initialCategoryItems,
   categoryCounts: initialCategoryCounts,
   onRefresh,
 }: AdminServicesProps) {
-  const [isPending, startTransition] = useTransition();
-  const saveService = saveServiceFn;
-  const deleteService = deleteServiceFn;
-  const saveIndustry = saveIndustryFn;
-  const deleteIndustry = deleteIndustryFn;
-
-  // Active Section: Services list vs Industries list
-  const [activeSection, setActiveSection] = useState<"services" | "industries">("services");
+  // Category Filtering & Search State
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>("all");
-  const [isCatDropdownOpen, setIsCatDropdownOpen] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
-  const catDropdownRef = useRef<HTMLDivElement>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [featuredOnly, setFeaturedOnly] = useState<boolean>(false);
 
-  // Dynamic Categories State
+  // Status & Feedback State
+  const [busy, setBusy] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  // Live Categories State
   const [categoryList, setCategoryList] = useState<ServiceCategoryItem[]>(() => {
     if (initialCategoryItems && Array.isArray(initialCategoryItems)) {
       return initialCategoryItems;
@@ -129,7 +97,6 @@ export function AdminServices({
     return [];
   });
 
-  // Refresh categories from backend API or store
   const refreshCategories = useCallback(async () => {
     try {
       const res = await getServiceCategoriesFn();
@@ -142,2972 +109,1603 @@ export function AdminServices({
   }, []);
 
   useEffect(() => {
-    if (initialCategoryItems && Array.isArray(initialCategoryItems) && initialCategoryItems.length > 0) {
+    if (initialCategoryItems && Array.isArray(initialCategoryItems)) {
       setCategoryList(initialCategoryItems);
     } else {
-      refreshCategories();
+      void refreshCategories();
     }
   }, [initialCategoryItems, refreshCategories]);
 
-  // Click outside and Escape key handler for Category Popover Dropdown
-  useEffect(() => {
-    const handlePointerDownOutside = (e: MouseEvent | TouchEvent) => {
-      if (catDropdownRef.current && !catDropdownRef.current.contains(e.target as Node)) {
-        setIsCatDropdownOpen(false);
-      }
-    };
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setIsCatDropdownOpen(false);
-      }
-    };
-    if (isCatDropdownOpen) {
-      document.addEventListener("mousedown", handlePointerDownOutside);
-      document.addEventListener("touchstart", handlePointerDownOutside);
-      document.addEventListener("keydown", handleKeyDown);
-    }
-    return () => {
-      document.removeEventListener("mousedown", handlePointerDownOutside);
-      document.removeEventListener("touchstart", handlePointerDownOutside);
-      document.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [isCatDropdownOpen]);
-
-  // Compute category service counts dynamically
-  const categoryServiceCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    services.forEach((s) => {
-      const cat = s.category?.trim();
-      if (cat) {
-        counts[cat] = (counts[cat] || 0) + 1;
-        counts[cat.toLowerCase()] = (counts[cat.toLowerCase()] || 0) + 1;
-      }
-    });
-    return counts;
-  }, [services]);
-
-  // Active category items for dropdown selector
-  const activeCategories = useMemo(() => {
-    return categoryList
-      .filter((c) => c.status === "active")
-      .sort((a, b) => a.order_index - b.order_index);
-  }, [categoryList]);
-
-  // Currently selected category item (if any)
-  const selectedCategoryItem = useMemo(() => {
-    if (selectedCategoryId === "all") return null;
-    return (
-      categoryList.find(
-        (c) => c.id === selectedCategoryId || (c as any)._id === selectedCategoryId,
-      ) || null
-    );
-  }, [selectedCategoryId, categoryList]);
-
-  // Dropdown trigger display label
-  const dropdownTriggerLabel = useMemo(() => {
-    if (!selectedCategoryItem) {
-      return `All Categories (${categoryList.length})`;
-    }
-    return selectedCategoryItem.name;
-  }, [selectedCategoryItem, categoryList.length]);
-
-  // Filtered Services List
-  const filteredServices = useMemo(() => {
-    const selectedCat =
-      selectedCategoryId !== "all"
-        ? categoryList.find(
-            (c) => c.id === selectedCategoryId || (c as any)._id === selectedCategoryId,
-          )
-        : null;
-
-    return services.filter((s) => {
-      // 1. Category Filter
-      if (selectedCategoryId !== "all") {
-        const rawCat = s.category;
-        const resolvedCatName = resolveCategoryName(rawCat, categoryList).toLowerCase();
-        const selectedCatName = (selectedCat?.name || "").toLowerCase();
-        const selectedCatSlug = (selectedCat?.slug || "").toLowerCase();
-        const targetId = selectedCat?.id || selectedCategoryId;
-
-        const matchesId =
-          rawCat === targetId ||
-          (typeof rawCat === "object" && (rawCat as any)?._id === targetId);
-
-        const matchesName =
-          typeof rawCat === "string" && rawCat.toLowerCase() === selectedCatName;
-
-        const matchesSlug =
-          typeof rawCat === "string" && rawCat.toLowerCase() === selectedCatSlug;
-
-        const matchesResolved = resolvedCatName === selectedCatName;
-
-        if (!matchesId && !matchesName && !matchesSlug && !matchesResolved) {
-          return false;
-        }
-      }
-
-      // 2. Search Query Filter
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchTitle = s.title.toLowerCase().includes(q);
-        const matchSlug = s.slug.toLowerCase().includes(q);
-        const matchTagline = (s.tagline || "").toLowerCase().includes(q);
-        const matchSummary = (s.summary || "").toLowerCase().includes(q);
-        const matchCat =
-          (s.category || "").toLowerCase().includes(q) ||
-          resolveCategoryName(s.category, categoryList).toLowerCase().includes(q);
-        const matchTech = (s.tech_stack || []).some((t) => t.toLowerCase().includes(q));
-        const matchFeatures = (s.features || []).some((f) => f.toLowerCase().includes(q));
-        if (
-          !matchTitle &&
-          !matchSlug &&
-          !matchTagline &&
-          !matchSummary &&
-          !matchCat &&
-          !matchTech &&
-          !matchFeatures
-        ) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [services, selectedCategoryId, categoryList, searchQuery]);
-
-  // Filtered Industries List
-  const filteredIndustries = useMemo(() => {
-    if (!searchQuery.trim()) return industries;
-    const q = searchQuery.toLowerCase().trim();
-    return industries.filter((ind) => {
-      const matchName = ind.name.toLowerCase().includes(q);
-      const matchSlug = ind.slug.toLowerCase().includes(q);
-      const matchTagline = (ind.tagline || "").toLowerCase().includes(q);
-      const matchDesc = (ind.description || "").toLowerCase().includes(q);
-      const matchBadge = (ind.badge || "").toLowerCase().includes(q);
-      const matchSolutions = (ind.solutions || []).some((sol) => sol.toLowerCase().includes(q));
-      return matchName || matchSlug || matchTagline || matchDesc || matchBadge || matchSolutions;
-    });
-  }, [industries, searchQuery]);
-
-  // CATEGORY TAXONOMY MODAL STATE
-  const [showCatModal, setShowCatModal] = useState(false);
-  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  // Modals State
+  const [isCategoryHubOpen, setIsCategoryHubOpen] = useState(false);
+  const [editingCategory, setEditingCategory] = useState<ServiceCategoryItem | null>(null);
   const [catName, setCatName] = useState("");
-  const [catSlug, setCatSlug] = useState("");
-  const [catDescription, setCatDescription] = useState("");
+  const [catDesc, setCatDesc] = useState("");
+  const [catOrder, setCatOrder] = useState<number>(1);
   const [catStatus, setCatStatus] = useState<"active" | "inactive">("active");
-  const [catOrderIndex, setCatOrderIndex] = useState(1);
-  const [catFormError, setCatFormError] = useState<string | null>(null);
-  const [catSuccessMsg, setCatSuccessMsg] = useState<string | null>(null);
-  const [catDeleteConfirm, setCatDeleteConfirm] = useState<{
-    id: string;
-    name: string;
-    count: number;
-  } | null>(null);
+  const [deleteCatTarget, setDeleteCatTarget] = useState<ServiceCategoryItem | null>(null);
 
-  // SERVICE DELETE CONFIRMATION & ACTION ALERT STATE
-  const [serviceDeleteConfirm, setServiceDeleteConfirm] = useState<{
-    id: string;
-    title: string;
-  } | null>(null);
-  const [isDeletingService, setIsDeletingService] = useState(false);
-  const [actionAlert, setActionAlert] = useState<{
-    type: "success" | "error";
-    message: string;
-  } | null>(null);
-
-  // INDUSTRY MODAL STATE
-  const [showIndustryModal, setShowIndustryModal] = useState(false);
-  const [editingIndustry, setEditingIndustry] = useState<IndustrySector | null>(null);
-  const [indName, setIndName] = useState("");
-  const [indSlug, setIndSlug] = useState("");
-  const [indTagline, setIndTagline] = useState("");
-  const [indDesc, setIndDesc] = useState("");
-  const [indBadge, setIndBadge] = useState("");
-  const [indImage, setIndImage] = useState("");
-  const [indImageFile, setIndImageFile] = useState<File | null>(null);
-  const [indImagePreviewUrl, setIndImagePreviewUrl] = useState<string | null>(null);
-  const [indImageError, setIndImageError] = useState<string | null>(null);
-  const [indSolutions, setIndSolutions] = useState<string[]>([]);
-  const [newSolution, setNewSolution] = useState("");
-  const [indAccentGlow, setIndAccentGlow] = useState("rgba(255, 122, 0, 0.3)");
-  const [indOrderIndex, setIndOrderIndex] = useState(1);
-  const [indFormError, setIndFormError] = useState<string | null>(null);
-  const [indFieldErrors, setIndFieldErrors] = useState<Record<string, string>>({});
-  const indFileInputRef = useRef<HTMLInputElement>(null);
-
-  // SERVICE MODAL STATE
-  const [showServiceModal, setShowServiceModal] = useState(false);
+  // Service Creation / Editing State
+  const [isServiceModalOpen, setIsServiceModalOpen] = useState(false);
+  const [activeStep, setActiveStep] = useState<ServiceModalTab>("overview");
   const [editingService, setEditingService] = useState<CompanyService | null>(null);
-  const [modalTab, setModalTab] = useState<ServiceModalTab>("overview");
+  const [deleteServiceTarget, setDeleteServiceTarget] = useState<CompanyService | null>(null);
 
-  // Service Form Fields
-  const [title, setTitle] = useState("");
-  const [slug, setSlug] = useState("");
-  const [category, setCategory] = useState("");
-  const [tagline, setTagline] = useState("");
-  const [summary, setSummary] = useState("");
+  // Form Fields for Service Wizard
+  const [formTitle, setFormTitle] = useState("");
+  const [formSlug, setFormSlug] = useState("");
+  const [formCategory, setFormCategory] = useState("");
+  const [formTagline, setFormTagline] = useState("");
+  const [formSummary, setFormSummary] = useState("");
+  const [formOrderIndex, setFormOrderIndex] = useState<number>(1);
+  const [formIsActive, setFormIsActive] = useState<boolean>(true);
+  const [formIsFeatured, setFormIsFeatured] = useState<boolean>(false);
 
-  // Primary Image State
-  const [heroImage, setHeroImage] = useState("");
-  const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreviewUrl, setImagePreviewUrl] = useState<string | null>(null);
-  const [isUploadingImage, setIsUploadingImage] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(0);
-  const [imageError, setImageError] = useState<string | null>(null);
-  const [isDragOver, setIsDragOver] = useState(false);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+  // Media
+  const [formHeroImage, setFormHeroImage] = useState("");
+  const [heroImageFile, setHeroImageFile] = useState<File | null>(null);
 
-  useEffect(() => {
-    if (showServiceModal && modalTab && tabRefs.current[modalTab]) {
-      tabRefs.current[modalTab]?.scrollIntoView({
-        behavior: "smooth",
-        block: "nearest",
-        inline: "nearest",
-      });
-    }
-  }, [modalTab, showServiceModal]);
+  // Architecture 4-point
+  const [formWhatIsIt, setFormWhatIsIt] = useState("");
+  const [formWhoIsFor, setFormWhoIsFor] = useState("");
+  const [formProblemSolved, setFormProblemSolved] = useState("");
+  const [formWhyItMatters, setFormWhyItMatters] = useState("");
 
-  // Gallery Images State
-  const [relatedImages, setRelatedImages] = useState<ServiceGalleryImage[]>([]);
-  const [galleryUrlInput, setGalleryUrlInput] = useState<string>("");
-  const [galleryError, setGalleryError] = useState<string | null>(null);
-  const [replacingGalleryIndex, setReplacingGalleryIndex] = useState<number | null>(null);
-  const galleryFileInputRef = useRef<HTMLInputElement>(null);
+  // Lists
+  const [formFeatures, setFormFeatures] = useState<string[]>([]);
+  const [featureInput, setFeatureInput] = useState("");
+  const [formTechStack, setFormTechStack] = useState<string[]>([]);
+  const [techInput, setTechInput] = useState("");
 
-  // 4-Point Architecture Overview State
-  const [whatIsIt, setWhatIsIt] = useState("");
-  const [whoIsFor, setWhoIsFor] = useState("");
-  const [problemSolved, setProblemSolved] = useState("");
-  const [whyItMatters, setWhyItMatters] = useState("");
+  // Process Steps (6 steps)
+  const [formProcessSteps, setFormProcessSteps] = useState<ServiceProcessStep[]>([
+    { step: "01", title: "Discovery & Requirements", description: "Audit user journeys, technical constraints, data schemas, and business goals." },
+    { step: "02", title: "Architecture & UI/UX Wireframing", description: "Interactive prototypes and low-latency database modeling." },
+    { step: "03", title: "Sprint-Based Engineering", description: "Modern modular TypeScript development with bi-weekly deployable builds." },
+    { step: "04", title: "End-to-End Automated Testing", description: "Rigorous unit, integration, accessibility, and performance load tests." },
+    { step: "05", title: "Edge Production Deployment", description: "Zero-downtime blue/green rollouts on global CDNs with SSL & DDoS protection." },
+    { step: "06", title: "Continuous SLA Monitoring", description: "24/7 telemetry monitoring, database tuning, and proactive dependency upgrades." },
+  ]);
 
-  // Deliverables, Process, Benefits, FAQs State
-  const [features, setFeatures] = useState<string[]>([]);
-  const [newFeature, setNewFeature] = useState("");
-  const [processSteps, setProcessSteps] = useState<ServiceProcessStep[]>([]);
-  const [benefits, setBenefits] = useState<ServiceBenefit[]>([]);
-  const [faqs, setFaqs] = useState<ServiceFaq[]>([]);
-  const [techStack, setTechStack] = useState<string[]>([]);
-  const [newTech, setNewTech] = useState("");
-  const [orderIndex, setOrderIndex] = useState(1);
-  const [isFeatured, setIsFeatured] = useState(false);
-  const [isActive, setIsActive] = useState(true);
+  // Benefits & FAQs
+  const [formBenefits, setFormBenefits] = useState<ServiceBenefit[]>([]);
+  const [benefitTitle, setBenefitTitle] = useState("");
+  const [benefitDesc, setBenefitDesc] = useState("");
+  const [benefitMetric, setBenefitMetric] = useState("");
 
-  // Validation State
-  const [formError, setFormError] = useState<string | null>(null);
-  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [formFaqs, setFormFaqs] = useState<ServiceFaq[]>([]);
+  const [faqQuestion, setFaqQuestion] = useState("");
+  const [faqAnswer, setFaqAnswer] = useState("");
 
-  // Body Lock & ESC Key Listener
-  useEffect(() => {
-    if (!showServiceModal && !showCatModal && !showIndustryModal) return;
-    const prevOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (showCatModal) {
-          setShowCatModal(false);
-        } else if (showIndustryModal) {
-          setShowIndustryModal(false);
-        } else if (showServiceModal) {
-          setShowServiceModal(false);
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleKeyDown);
-    return () => {
-      document.body.style.overflow = prevOverflow;
-      window.removeEventListener("keydown", handleKeyDown);
-    };
-  }, [showServiceModal, showCatModal, showIndustryModal]);
-
-  // CATEGORY TAXONOMY HANDLERS
-  const handleOpenCatModal = (catToEdit?: ServiceCategoryItem) => {
-    setCatFormError(null);
-    setCatSuccessMsg(null);
-    setCatDeleteConfirm(null);
-    if (catToEdit) {
-      setEditingCatId(catToEdit.id);
-      setCatName(catToEdit.name);
-      setCatSlug(catToEdit.slug);
-      setCatDescription(catToEdit.description || "");
-      setCatStatus(catToEdit.status);
-      setCatOrderIndex(catToEdit.order_index);
-    } else {
-      setEditingCatId(null);
-      setCatName("");
-      setCatSlug("");
-      setCatDescription("");
-      setCatStatus("active");
-      setCatOrderIndex(categoryList.length + 1);
-    }
-    setShowCatModal(true);
-  };
-
-  const handleResetCatForm = () => {
-    setEditingCatId(null);
-    setCatName("");
-    setCatSlug("");
-    setCatDescription("");
-    setCatStatus("active");
-    setCatOrderIndex(categoryList.length + 1);
-    setCatFormError(null);
-    setCatSuccessMsg(null);
-  };
-
-  const handleSaveCategory = (e: React.FormEvent) => {
-    e.preventDefault();
-    setCatFormError(null);
-    setCatSuccessMsg(null);
-
-    const input: ServiceCategoryInput = {
-      id: editingCatId || undefined,
-      name: catName.trim(),
-      slug: catSlug.trim() || slugifyServiceCategory(catName),
-      description: catDescription.trim() || undefined,
-      status: catStatus,
-      order_index: Number(catOrderIndex) || categoryList.length + 1,
-    };
-
-    const validation = validateServiceCategoryInput(input);
-    if (!validation.valid) {
-      setCatFormError(validation.error || "Please enter a valid category name.");
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        const res = await saveServiceCategoryFn({ data: input });
-        if (res.success && res.category) {
-          setCatSuccessMsg(
-            editingCatId
-              ? `Category "${res.category.name}" updated successfully.`
-              : `Category "${res.category.name}" added successfully.`
-          );
-          await refreshCategories();
-          onRefresh();
-          handleResetCatForm();
-        } else {
-          setCatFormError(res.error || "Failed to save category.");
-        }
-      } catch (err) {
-        setCatFormError(err instanceof Error ? err.message : "Error saving category.");
-      }
-    });
-  };
-
-  const handleToggleCategoryStatus = (cat: ServiceCategoryItem) => {
-    const nextStatus = cat.status === "active" ? "inactive" : "active";
-    setCatFormError(null);
-    setCatSuccessMsg(null);
-
-    // Optimistic UI update
-    setCategoryList((prev) =>
-      prev.map((item) => (item.id === cat.id ? { ...item, status: nextStatus } : item))
-    );
-
-    startTransition(async () => {
-      try {
-        const res = await saveServiceCategoryFn({
-          data: {
-            id: cat.id,
-            name: cat.name,
-            slug: cat.slug,
-            description: cat.description,
-            order_index: cat.order_index,
-            status: nextStatus,
-          },
-        });
-        if (res.success) {
-          await refreshCategories();
-          onRefresh();
-        } else {
-          // Revert optimistic update
-          setCategoryList((prev) =>
-            prev.map((item) => (item.id === cat.id ? { ...item, status: cat.status } : item))
-          );
-          setCatFormError(res.error || "Failed to toggle category status.");
-        }
-      } catch (err) {
-        // Revert optimistic update
-        setCategoryList((prev) =>
-          prev.map((item) => (item.id === cat.id ? { ...item, status: cat.status } : item))
-        );
-        console.warn("Failed to toggle category status", err);
-        setCatFormError(err instanceof Error ? err.message : "Failed to toggle status.");
-      }
-    });
-  };
-
-  const handleDeleteCategoryClick = (cat: ServiceCategoryItem) => {
-    const count = typeof cat.total_service_count === "number" ? cat.total_service_count : (categoryServiceCounts[cat.name.toLowerCase()] || 0);
-    setCatDeleteConfirm({
-      id: cat.id,
-      name: cat.name,
-      count,
-    });
-  };
-
-  const handleConfirmDeleteCategory = () => {
-    if (!catDeleteConfirm) return;
-    const targetId = catDeleteConfirm.id;
-    const previousList = [...categoryList];
-
-    // Optimistically remove from list
-    setCategoryList((prev) => prev.filter((c) => c.id !== targetId));
-
-    startTransition(async () => {
-      try {
-        const res = await deleteServiceCategoryFn({ data: { id: targetId } });
-        if (res.success) {
-          setCatDeleteConfirm(null);
-          setCatSuccessMsg("Category removed successfully.");
-          await refreshCategories();
-          onRefresh();
-        } else {
-          setCategoryList(previousList);
-          setCatFormError(res.error || "Failed to delete category.");
-        }
-      } catch (err) {
-        setCategoryList(previousList);
-        setCatFormError(err instanceof Error ? err.message : "Error deleting category.");
-      }
-    });
-  };
-
-  // INDUSTRY MODAL HANDLERS
-  const handleOpenCreateIndustry = () => {
-    setEditingIndustry(null);
-    setIndName("");
-    setIndSlug("");
-    setIndTagline("");
-    setIndDesc("");
-    setIndBadge("");
-    setIndImage("https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=800&q=80");
-    setIndImageFile(null);
-    setIndImagePreviewUrl("https://images.unsplash.com/photo-1559526324-4b87b5e36e44?auto=format&fit=crop&w=800&q=80");
-    setIndImageError(null);
-    setIndSolutions(["High-Availability Architecture", "Cloud Migration", "Compliance & Security"]);
-    setNewSolution("");
-    setIndAccentGlow("rgba(255, 122, 0, 0.3)");
-    setIndOrderIndex(industries.length + 1);
-    setIndFormError(null);
-    setIndFieldErrors({});
-    setShowIndustryModal(true);
-  };
-
-  const handleOpenEditIndustry = (ind: IndustrySector) => {
-    setEditingIndustry(ind);
-    setIndName(ind.name);
-    setIndSlug(ind.slug);
-    setIndTagline(ind.tagline);
-    setIndDesc(ind.description);
-    setIndBadge(ind.badge);
-    setIndImage(ind.image_url);
-    setIndImageFile(null);
-    setIndImagePreviewUrl(ind.image_url);
-    setIndImageError(null);
-    setIndSolutions(ind.solutions || []);
-    setNewSolution("");
-    setIndAccentGlow(ind.accent_glow || "rgba(255, 122, 0, 0.3)");
-    setIndOrderIndex(ind.order_index);
-    setIndFormError(null);
-    setIndFieldErrors({});
-    setShowIndustryModal(true);
-  };
-
-  const handleSaveIndustry = (e: React.FormEvent) => {
-    e.preventDefault();
-    setIndFormError(null);
-    setIndFieldErrors({});
-
-    const input: IndustryInput = {
-      id: editingIndustry?.id || undefined,
-      name: indName.trim(),
-      slug: indSlug.trim() || slugifyService(indName),
-      tagline: indTagline.trim(),
-      description: indDesc.trim(),
-      badge: indBadge.trim(),
-      image_url: indImage.trim(),
-      solutions: indSolutions,
-      accent_glow: indAccentGlow.trim() || "rgba(255, 122, 0, 0.3)",
-      order_index: Number(indOrderIndex) || industries.length + 1,
-    };
-
-    const validation = validateIndustryInput(input);
-    if (!validation.valid) {
-      setIndFormError(validation.error || "Please complete all required fields.");
-      if (validation.field) {
-        setIndFieldErrors({ [validation.field]: validation.error || "Invalid field." });
-      }
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        const res = await saveIndustry({ data: input });
-        if (res.success) {
-          setShowIndustryModal(false);
-          onRefresh();
-        } else {
-          setIndFormError(res.error || "Failed to save industry sector.");
-        }
-      } catch (err) {
-        setIndFormError(err instanceof Error ? err.message : "Error saving industry sector.");
-      }
-    });
-  };
-
-  const handleDeleteIndustry = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete industry sector "${name}"?`)) {
-      startTransition(async () => {
-        try {
-          const res = await deleteIndustry({ data: { id } });
-          if (res.success) {
-            setActionAlert({
-              type: "success",
-              message: `Industry sector "${name}" deleted successfully.`,
-            });
-            onRefresh();
-          } else {
-            setActionAlert({
-              type: "error",
-              message: res.error || `Failed to delete industry "${name}".`,
-            });
-          }
-        } catch (err) {
-          setActionAlert({
-            type: "error",
-            message: err instanceof Error ? err.message : `Failed to delete industry "${name}".`,
-          });
-        }
-      });
-    }
-  };
-
-  // SERVICE MODAL HANDLERS
+  // Helper to open Service Wizard for Create
   const handleOpenCreateService = () => {
     setEditingService(null);
-    setTitle("");
-    setSlug("");
-    const defaultCatId = activeCategories[0]?.id || "";
-    setCategory(defaultCatId);
-    setTagline("");
-    setSummary("");
-    setHeroImage("https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80");
-    setImageFile(null);
-    setImagePreviewUrl("https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80");
-    setImageError(null);
-    setUploadProgress(0);
-    setIsUploadingImage(false);
-    setRelatedImages([]);
-    setGalleryUrlInput("");
-    setGalleryError(null);
-    setReplacingGalleryIndex(null);
-    setWhatIsIt("");
-    setWhoIsFor("");
-    setProblemSolved("");
-    setWhyItMatters("");
-    setFeatures(["Custom Full-Stack Architecture", "High Concurrency Support", "Sub-Second Latency"]);
-    setProcessSteps([
-      { step: "01", title: "Discovery & Audit", description: "Audit requirements, user journeys, and technical constraints." },
-      { step: "02", title: "Architecture & Wireframes", description: "Interactive UI/UX prototypes and low-latency database modeling." },
-      { step: "03", title: "Modular Engineering", description: "Modern TypeScript development with continuous integration builds." },
-      { step: "04", title: "Automated Testing", description: "Rigorous unit, performance, and accessibility verification." },
-      { step: "05", title: "Edge Deployment", description: "Zero-downtime blue/green rollout with global CDN caching." },
-      { step: "06", title: "24/7 SLA Support", description: "Continuous telemetry monitoring and proactive dependency tuning." },
+    setActiveStep("overview");
+    setFormTitle("");
+    setFormSlug("");
+    setFormCategory(categoryList[0]?.id || categoryList[0]?.name || "Full-Stack Engineering");
+    setFormTagline("");
+    setFormSummary("");
+    const nextOrder =
+      (services || []).length > 0
+        ? Math.max(...(services || []).map((s) => Number(s.order_index) || 0), 0) + 1
+        : 1;
+    setFormOrderIndex(nextOrder);
+    setFormIsActive(true);
+    setFormIsFeatured(false);
+    setFormHeroImage(DEFAULT_SERVICE_FALLBACK_IMAGE);
+    setHeroImageFile(null);
+    setFormWhatIsIt("");
+    setFormWhoIsFor("");
+    setFormProblemSolved("");
+    setFormWhyItMatters("");
+    setFormFeatures(["Custom Solution Architecture", "High-Performance Workflows", "Enterprise Security & SLA"]);
+    setFormTechStack(["TypeScript", "React", "Node.js", "MongoDB"]);
+    setFormBenefits([
+      { title: "High Reliability", description: "Production-grade uptime and error resilience.", metric: "99.99% SLA" },
     ]);
-    setBenefits([
-      { title: "Sub-Second Response", description: "Edge-cached SSR rendering achieving 95+ Google Lighthouse scores.", metric: "< 300ms TTFB" },
-      { title: "Zero Tech Debt", description: "100% type-safe modular codebase engineered for rapid extension.", metric: "100% Type-Safe" },
+    setFormFaqs([
+      { question: "How long does implementation take?", answer: "Sprint-based delivery starts producing working builds in 2 weeks." },
     ]);
-    setFaqs([
-      { question: "What is the typical deployment timeline?", answer: "Most custom production builds ship within 3 to 6 weeks." },
-      { question: "Do you support ongoing maintenance and SLAs?", answer: "Yes, we provide 24/7 telemetry monitoring and continuous performance upgrades." },
-    ]);
-    setTechStack(["React", "TypeScript", "Node.js", "PostgreSQL", "Tailwind CSS"]);
-    setOrderIndex(services.length + 1);
-    setIsFeatured(false);
-    setIsActive(true);
-    setModalTab("overview");
-    setFormError(null);
-    setFieldErrors({});
-    setShowServiceModal(true);
+    setIsServiceModalOpen(true);
   };
 
+  // Helper to open Service Wizard for Edit
   const handleOpenEditService = (srv: CompanyService) => {
     setEditingService(srv);
-    setTitle(srv.title);
-    setSlug(srv.slug);
-
-    let initialCatId = "";
-    if (typeof srv.category === "object" && srv.category !== null) {
-      initialCatId = (srv.category as any)._id || (srv.category as any).id || "";
-    } else if (typeof srv.category === "string") {
-      if (isMongoId(srv.category)) {
-        initialCatId = srv.category;
-      } else {
-        const found = categoryList.find(
-          (c) =>
-            c.name.toLowerCase() === srv.category.toLowerCase() ||
-            c.slug.toLowerCase() === srv.category.toLowerCase()
-        );
-        initialCatId = found?.id || srv.category;
-      }
-    }
-    setCategory(initialCatId || activeCategories[0]?.id || "");
-    setTagline(srv.tagline);
-    setSummary(srv.summary);
-    setHeroImage(srv.hero_image);
-    setImageFile(null);
-    setImagePreviewUrl(srv.hero_image);
-    setImageError(null);
-    setUploadProgress(0);
-    setIsUploadingImage(false);
-    setRelatedImages(srv.related_images || []);
-    setGalleryUrlInput("");
-    setGalleryError(null);
-    setReplacingGalleryIndex(null);
-    setWhatIsIt(srv.what_is_it);
-    setWhoIsFor(srv.who_is_for);
-    setProblemSolved(srv.problem_solved);
-    setWhyItMatters(srv.why_it_matters);
-    setFeatures(srv.features || []);
-    setProcessSteps(srv.process_steps || []);
-    setBenefits(srv.benefits || []);
-    setFaqs(srv.faqs || []);
-    setTechStack(srv.tech_stack || []);
-    setOrderIndex(srv.order_index);
-    setIsFeatured(srv.is_featured);
-    setIsActive(srv.is_active);
-    setModalTab("overview");
-    setFormError(null);
-    setFieldErrors({});
-    setShowServiceModal(true);
+    setActiveStep("overview");
+    setFormTitle(srv.title);
+    setFormSlug(srv.slug);
+    setFormCategory(srv.category);
+    setFormTagline(srv.tagline || "");
+    setFormSummary(srv.summary || "");
+    setFormOrderIndex(srv.order_index ?? 1);
+    setFormIsActive(srv.is_active !== false);
+    setFormIsFeatured(Boolean(srv.is_featured));
+    setFormHeroImage(srv.hero_image || DEFAULT_SERVICE_FALLBACK_IMAGE);
+    setHeroImageFile(null);
+    setFormWhatIsIt(srv.what_is_it || srv.summary || "");
+    setFormWhoIsFor(srv.who_is_for || "");
+    setFormProblemSolved(srv.problem_solved || "");
+    setFormWhyItMatters(srv.why_it_matters || "");
+    setFormFeatures(srv.features || []);
+    setFormTechStack(srv.tech_stack || []);
+    setFormProcessSteps(
+      srv.process_steps && srv.process_steps.length > 0
+        ? srv.process_steps
+        : [
+            { step: "01", title: "Discovery", description: "Requirements gathering and scoping." },
+            { step: "02", title: "Architecture", description: "System modeling and prototypes." },
+            { step: "03", title: "Development", description: "Sprint delivery and integration." },
+          ],
+    );
+    setFormBenefits(srv.benefits || []);
+    setFormFaqs(srv.faqs || []);
+    setIsServiceModalOpen(true);
   };
 
-  // Primary Hero Image Processing & Drag-Drop
-  const handleFileProcess = (file: File) => {
-    setImageError(null);
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      setImageError("Unsupported image format. Please upload JPG, JPEG, PNG, or WEBP.");
-      return;
-    }
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      setImageError("Image size exceeds the 10 MB limit. Please choose a smaller image.");
+  // Save Service handler
+  const handleSaveService = async () => {
+    const cleanTitle = formTitle.trim();
+    if (!cleanTitle || cleanTitle.length < 5) {
+      setError("Service title must be at least 5 characters long.");
       return;
     }
 
-    setImageFile(file);
-    setIsUploadingImage(true);
-    setUploadProgress(20);
+    setBusy(true);
+    setError(null);
+    setNotice(null);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      setImagePreviewUrl(dataUrl);
-      setHeroImage(dataUrl);
-      setUploadProgress(100);
-      setTimeout(() => setIsUploadingImage(false), 250);
+    const cleanHeroImage =
+      formHeroImage.trim().startsWith("blob:") || !formHeroImage.trim()
+        ? DEFAULT_SERVICE_FALLBACK_IMAGE
+        : formHeroImage.trim();
+
+    const servicePayload: ServiceInput = {
+      id: editingService ? editingService.id : undefined,
+      title: cleanTitle,
+      slug: formSlug.trim() || slugifyService(cleanTitle),
+      category: formCategory,
+      tagline: formTagline.trim(),
+      summary: formSummary.trim(),
+      order_index: Number(formOrderIndex) || 1,
+      is_active: formIsActive,
+      is_featured: formIsFeatured,
+      hero_image: cleanHeroImage,
+      related_images: editingService?.related_images || [],
+      what_is_it: formWhatIsIt.trim() || formSummary.trim(),
+      who_is_for: formWhoIsFor.trim(),
+      problem_solved: formProblemSolved.trim(),
+      why_it_matters: formWhyItMatters.trim(),
+      features: formFeatures.map((f) => f.trim()).filter(Boolean),
+      tech_stack: formTechStack.map((t) => t.trim()).filter(Boolean),
+      process_steps: formProcessSteps.map((s, idx) => ({
+        step: String(s.step || (s as any).stepNumber || idx + 1).padStart(2, "0"),
+        title: s.title.trim(),
+        description: s.description.trim(),
+      })),
+      benefits: formBenefits.map((b) => ({
+        title: b.title.trim(),
+        description: b.description.trim(),
+        metric: b.metric?.trim() || undefined,
+      })),
+      faqs: formFaqs.map((f) => ({
+        question: f.question.trim(),
+        answer: f.answer.trim(),
+      })),
     };
-    reader.onerror = () => {
-      setImageError("Failed to read image file. Please try again.");
-      setIsUploadingImage(false);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  // Secondary Gallery Image File Process
-  const handleGalleryFileProcess = (file: File) => {
-    setGalleryError(null);
-    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      setGalleryError("Unsupported image format. Please upload JPG, JPEG, PNG, or WEBP.");
-      return;
-    }
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      setGalleryError("Image size exceeds the 10 MB limit. Please choose a smaller image.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      if (replacingGalleryIndex !== null) {
-        setRelatedImages((prev) => {
-          const copy = [...prev];
-          if (copy[replacingGalleryIndex]) {
-            copy[replacingGalleryIndex] = {
-              ...copy[replacingGalleryIndex],
-              url: dataUrl,
-              alt: file.name,
-            };
-          }
-          return copy;
-        });
-        setReplacingGalleryIndex(null);
-      } else {
-        if (relatedImages.length >= 3) {
-          setGalleryError("Maximum 3 gallery images allowed.");
-          return;
-        }
-        setRelatedImages((prev) => [
-          ...prev,
-          {
-            url: dataUrl,
-            caption: `Feature workflow preview ${prev.length + 1}`,
-            alt: file.name,
-          },
-        ]);
-      }
-    };
-    reader.onerror = () => {
-      setGalleryError("Failed to read gallery image file. Please try again.");
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleGalleryFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleGalleryFileProcess(e.target.files[0]);
-    }
-    if (e.target) {
-      e.target.value = "";
-    }
-  };
-
-  const handleAddGalleryUrl = () => {
-    setGalleryError(null);
-    const cleanUrl = galleryUrlInput.trim();
-    if (!cleanUrl) {
-      setGalleryError("Please enter a valid image URL.");
-      return;
-    }
-    if (relatedImages.length >= 3) {
-      setGalleryError("Maximum 3 gallery images allowed.");
-      return;
-    }
-    setRelatedImages((prev) => [
-      ...prev,
-      {
-        url: cleanUrl,
-        caption: "High-performance architecture workflow preview.",
-        alt: "Service Architecture",
-      },
-    ]);
-    setGalleryUrlInput("");
-  };
-
-  const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragOver(true);
-  };
-
-  const handleDragLeave = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragOver(false);
-  };
-
-  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    setIsDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      handleFileProcess(e.dataTransfer.files[0]);
-    }
-  };
-
-  const handleFileInputChange = (e: ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
-      handleFileProcess(e.target.files[0]);
-    }
-  };
-
-  const handleRemoveImage = () => {
-    setImageFile(null);
-    setImagePreviewUrl(null);
-    setHeroImage("");
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  // Step-by-Step Validation & Navigation
-  const handleNextStep = () => {
-    setFormError(null);
-    const errors: Record<string, string> = {};
-
-    if (modalTab === "overview") {
-      if (!title.trim() || title.trim().length < 3) {
-        errors.title = "Service title must be at least 3 characters long.";
-      }
-      if (!category.trim() || category.trim().length < 2) {
-        errors.category = "Category selection is required.";
-      }
-      if (!summary.trim() || summary.trim().length < 10) {
-        errors.summary = "Full summary description must be at least 10 characters long.";
-      }
-      if (whatIsIt.trim().length > 0 && whatIsIt.trim().length < 10) {
-        errors.what_is_it = "What Is It description must be at least 10 characters long.";
-      }
-      if (Object.keys(errors).length > 0) {
-        setFieldErrors(errors);
-        setFormError("Please complete the required Overview fields before proceeding.");
-        return;
-      }
-      setFieldErrors({});
-      setModalTab("media");
-      return;
-    }
-
-    if (modalTab === "media") {
-      if (!heroImage.trim() && !imageFile) {
-        setImageError("Primary service image is required.");
-        setFormError("Please select or upload a primary service image.");
-        return;
-      }
-      setModalTab("features");
-      return;
-    }
-
-    if (modalTab === "features") {
-      setModalTab("process");
-      return;
-    }
-
-    if (modalTab === "process") {
-      setModalTab("benefits");
-      return;
-    }
-  };
-
-  const handlePrevStep = () => {
-    setFormError(null);
-    if (modalTab === "benefits") setModalTab("process");
-    else if (modalTab === "process") setModalTab("features");
-    else if (modalTab === "features") setModalTab("media");
-    else if (modalTab === "media") setModalTab("overview");
-  };
-
-  // Form Submission
-  const handleSaveService = (e?: React.FormEvent | React.MouseEvent) => {
-    if (e && e.preventDefault) {
-      e.preventDefault();
-    }
-    setFormError(null);
-    setFieldErrors({});
-
-    // Resolve category to a valid MongoDB ObjectId or fallback to first active category
-    let finalCategoryId = category.trim();
-    if (!finalCategoryId && activeCategories.length > 0) {
-      finalCategoryId = activeCategories[0].id;
-    }
-
-    if (finalCategoryId && !isMongoId(finalCategoryId)) {
-      const match = categoryList.find(
-        (c) =>
-          c.id === finalCategoryId ||
-          c.name.toLowerCase() === finalCategoryId.toLowerCase() ||
-          c.slug.toLowerCase() === finalCategoryId.toLowerCase()
-      );
-      if (match && isMongoId(match.id)) {
-        finalCategoryId = match.id;
-      }
-    }
-
-    if (!finalCategoryId || !isMongoId(finalCategoryId)) {
-      const firstValid = activeCategories.find((c) => isMongoId(c.id)) || categoryList.find((c) => isMongoId(c.id));
-      if (firstValid) {
-        finalCategoryId = firstValid.id;
-      }
-    }
-
-    const resolvedWhatIsIt = whatIsIt.trim() || summary.trim() || "Comprehensive engineering service tailored to modern business requirements.";
-
-    const input: ServiceInput = {
-      id: editingService?.id ?? undefined,
-      title: title.trim(),
-      slug: slug.trim() || slugifyService(title),
-      category: finalCategoryId || category.trim() || activeCategories[0]?.id || "",
-      tagline: tagline.trim() || summary.trim().slice(0, 80) || "Engineering service",
-      summary: summary.trim(),
-      hero_image: heroImage.trim() || "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1200&q=80",
-      related_images: relatedImages,
-      what_is_it: resolvedWhatIsIt,
-      who_is_for: whoIsFor.trim() || "Businesses, high-growth startups, and enterprises.",
-      problem_solved: problemSolved.trim() || "Eliminates operational bottlenecks and technical debt.",
-      why_it_matters: whyItMatters.trim() || "Drives measurable commercial performance and scale.",
-      features,
-      process_steps: processSteps,
-      benefits,
-      faqs,
-      tech_stack: techStack,
-      order_index: Number(orderIndex) || 1,
-      is_featured: isFeatured,
-      is_active: isActive,
-    };
-
-    const validation = validateServiceInput(input);
-    if (!validation.valid) {
-      setFormError(validation.error || "Please check the highlighted fields.");
-      if (validation.field) {
-        setFieldErrors({ [validation.field]: validation.error || "Invalid field." });
-        if (
-          validation.field === "title" ||
-          validation.field === "summary" ||
-          validation.field === "what_is_it"
-        ) {
-          setModalTab("overview");
-        } else if (validation.field === "hero_image") {
-          setModalTab("media");
-        }
-      }
-      return;
-    }
-
-    startTransition(async () => {
-      try {
-        const res = await saveService({ data: input });
-        if (res.success) {
-          setShowServiceModal(false);
-          await refreshCategories();
-          onRefresh();
-        } else {
-          setFormError(res.error || "Failed to save service.");
-        }
-      } catch (err) {
-        setFormError(err instanceof Error ? err.message : "Error saving service.");
-      }
-    });
-  };
-
-  const handleDeleteServiceClick = (srv: CompanyService) => {
-    setActionAlert(null);
-    setServiceDeleteConfirm({
-      id: srv.id,
-      title: srv.title,
-    });
-  };
-
-  const handleConfirmDeleteService = async () => {
-    if (!serviceDeleteConfirm) return;
-    const { id, title } = serviceDeleteConfirm;
-    setIsDeletingService(true);
-    setActionAlert(null);
 
     try {
-      const res = await deleteService({ data: { id } });
-      if (res.success) {
-        setServiceDeleteConfirm(null);
-        setActionAlert({
-          type: "success",
-          message: `Service "${title}" was successfully deleted from the backend.`,
-        });
-        await refreshCategories();
-        onRefresh();
-      } else {
-        setServiceDeleteConfirm(null);
-        setActionAlert({
-          type: "error",
-          message: res.error || `Failed to delete service "${title}" from backend.`,
-        });
+      const res = await saveServiceFn({ data: servicePayload, serviceId: editingService?.id });
+
+      if (!res.success) {
+        throw new Error(res.error || "Failed to save service.");
       }
-    } catch (err) {
-      setServiceDeleteConfirm(null);
-      setActionAlert({
-        type: "error",
-        message: err instanceof Error ? err.message : `Failed to delete service "${title}".`,
-      });
+
+      setNotice(`Service "${cleanTitle}" saved successfully.`);
+      setIsServiceModalOpen(false);
+      onRefresh();
+      void refreshCategories();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save service.");
     } finally {
-      setIsDeletingService(false);
+      setBusy(false);
     }
   };
 
-  const handleToggleActive = (srv: CompanyService) => {
-    startTransition(async () => {
-      try {
-        await toggleServiceActivationFn({ data: { id: srv.id } });
+  // Toggle Activation
+  const handleToggleActivation = async (srv: CompanyService) => {
+    setBusy(true);
+    try {
+      const res = await toggleServiceActivationFn({ data: { id: srv.id } });
+      if (res.success) {
+        setNotice(`Service status updated for "${srv.title}".`);
         onRefresh();
-      } catch (err) {
-        console.warn("Failed to toggle service activation:", err);
+      } else {
+        setError(res.error || "Failed to toggle status.");
       }
-    });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to toggle status.");
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleToggleFeatured = (srv: CompanyService) => {
-    startTransition(async () => {
-      try {
-        await toggleServiceFeaturedFn({ data: { id: srv.id } });
+  // Toggle Featured
+  const handleToggleFeatured = async (srv: CompanyService) => {
+    setBusy(true);
+    try {
+      const res = await toggleServiceFeaturedFn({ data: { id: srv.id } });
+      if (res.success) {
+        setNotice(`Featured state updated for "${srv.title}".`);
         onRefresh();
-      } catch (err) {
-        console.warn("Failed to toggle service featured status:", err);
+      } else {
+        setError(res.error || "Failed to toggle featured.");
       }
-    });
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to toggle featured.");
+    } finally {
+      setBusy(false);
+    }
   };
+
+  // Delete Service
+  const executeDeleteService = async () => {
+    if (!deleteServiceTarget) return;
+    setBusy(true);
+    try {
+      const res = await deleteServiceFn({ data: { id: deleteServiceTarget.id } });
+      if (res.success) {
+        setNotice(`Service "${deleteServiceTarget.title}" deleted.`);
+        setDeleteServiceTarget(null);
+        onRefresh();
+        void refreshCategories();
+      } else {
+        setError(res.error || "Failed to delete service.");
+      }
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to delete service.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Category Hub: Open Create Category
+  const handleOpenCreateCategory = () => {
+    setEditingCategory(null);
+    setCatName("");
+    setCatDesc("");
+    setCatOrder(categoryList.length + 1);
+    setCatStatus("active");
+  };
+
+  // Category Hub: Open Edit Category
+  const handleOpenEditCategory = (cat: ServiceCategoryItem) => {
+    setEditingCategory(cat);
+    setCatName(cat.name);
+    setCatDesc(cat.description || "");
+    setCatOrder(cat.order_index ?? 1);
+    setCatStatus(cat.status === "inactive" ? "inactive" : "active");
+  };
+
+  // Category Hub: Save Category
+  const handleSaveCategory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanName = catName.trim();
+    if (!cleanName || cleanName.length < 5) {
+      setError("Category name must be at least 5 characters long.");
+      return;
+    }
+
+    setBusy(true);
+    setError(null);
+    try {
+      const payload: ServiceCategoryInput = {
+        id: editingCategory ? editingCategory.id : undefined,
+        name: cleanName,
+        slug: slugifyServiceCategory(cleanName),
+        description: catDesc.trim() || undefined,
+        order_index: Number(catOrder) || 1,
+        status: catStatus,
+      };
+
+      const res = await saveServiceCategoryFn({ data: payload });
+      if (!res.success) {
+        throw new Error(res.error || "Failed to save service category.");
+      }
+
+      setNotice(`Category "${cleanName}" saved successfully.`);
+      handleOpenCreateCategory();
+      void refreshCategories();
+      onRefresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to save category.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Category Hub: Delete Category
+  const executeDeleteCategory = async () => {
+    if (!deleteCatTarget) return;
+    setBusy(true);
+    const targetId = deleteCatTarget.id;
+    const targetName = deleteCatTarget.name;
+    try {
+      const res = await deleteServiceCategoryFn({ data: { id: targetId } });
+      if (!res.success) {
+        throw new Error(res.error || "Failed to delete category.");
+      }
+      setCategoryList((prev) =>
+        prev.filter((c) => c.id !== targetId && c.name.toLowerCase() !== targetName.toLowerCase()),
+      );
+      setNotice(`Category "${targetName}" and all attached services deleted.`);
+      setDeleteCatTarget(null);
+      await refreshCategories();
+      onRefresh();
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : "Failed to delete category.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  // Filtered Services computation
+  const filteredServices = useMemo(() => {
+    return (services ?? []).filter((srv) => {
+      // Search
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const titleMatch = srv.title.toLowerCase().includes(q);
+        const taglineMatch = srv.tagline?.toLowerCase().includes(q) ?? false;
+        const slugMatch = srv.slug.toLowerCase().includes(q);
+        const catMatch = srv.category.toLowerCase().includes(q);
+        const techMatch = srv.tech_stack?.some((t) => t.toLowerCase().includes(q)) ?? false;
+        if (!titleMatch && !taglineMatch && !slugMatch && !catMatch && !techMatch) {
+          return false;
+        }
+      }
+
+      // Category filter
+      if (selectedCategoryId !== "all") {
+        const targetCat = categoryList.find(
+          (c) => c.id === selectedCategoryId || c.name === selectedCategoryId || c.slug === selectedCategoryId,
+        );
+        const srvCatLower = srv.category.toLowerCase();
+        const srvCatId = (srv as any).category_id;
+        const matchesCat =
+          srvCatLower === catNameLower ||
+          srv.category === selectedCategoryId ||
+          srvCatId === selectedCategoryId ||
+          (targetCat && (srv.category === targetCat.id || srvCatId === targetCat.id));
+        if (!matchesCat) {
+          return false;
+        }
+      }
+
+      // Status filter
+      if (statusFilter === "active" && !srv.is_active) return false;
+      if (statusFilter === "inactive" && srv.is_active) return false;
+
+      // Featured filter
+      if (featuredOnly && !srv.is_featured) return false;
+
+      return true;
+    });
+  }, [services, searchQuery, selectedCategoryId, categoryList, statusFilter, featuredOnly]);
 
   return (
     <div className={styles.wrapper}>
-      {/* Header & Section Actions */}
-      <div className={styles.headerRow}>
+      {/* 1. TOP HEADER BOX */}
+      <div className={styles.headerBox}>
         <div>
-          <h2 className={styles.title}>Services &amp; Industry Sectors</h2>
-          <p className={styles.subtitle}>
-            Manage dynamic service detail pages, taxonomy categories, visual workflows, and industry sectors.
+          <h2 className={styles.pageTitle}>Services &amp; Service Categories</h2>
+          <p className={styles.pageSubtitle}>
+            Configure core digital engineering disciplines, deep architectural deliverables, and service categories.
           </p>
         </div>
+        <div className={styles.headerActions}>
+          <button
+            type="button"
+            className={styles.secondaryBtn}
+            onClick={() => setIsCategoryHubOpen(true)}
+          >
+            <Settings size={16} />
+            <span>Manage Categories ({categoryList.length})</span>
+          </button>
 
-        <div className={styles.actions}>
-          <div className={styles.sectionTabs}>
-            <button
-              type="button"
-              className={[
-                styles.sectionTabBtn,
-                activeSection === "services" ? styles.sectionTabBtnActive : "",
-              ].join(" ")}
-              onClick={() => {
-                setActiveSection("services");
-                setSearchQuery("");
-              }}
-            >
-              <Layers size={14} />
-              <span>Services ({services.length})</span>
-            </button>
-            <button
-              type="button"
-              className={[
-                styles.sectionTabBtn,
-                activeSection === "industries" ? styles.sectionTabBtnActive : "",
-              ].join(" ")}
-              onClick={() => {
-                setActiveSection("industries");
-                setSearchQuery("");
-              }}
-            >
-              <Building2 size={14} />
-              <span>Industries ({industries.length})</span>
-            </button>
-          </div>
-
-          {activeSection === "services" ? (
-            <>
-              <button
-                type="button"
-                className={styles.manageCatBtn}
-                onClick={() => handleOpenCatModal()}
-                title="Manage Dynamic Service Categories"
-              >
-                <SlidersHorizontal size={15} />
-                <span>Manage Categories ({categoryList.length})</span>
-              </button>
-
-              <button
-                type="button"
-                className={styles.createBtn}
-                onClick={handleOpenCreateService}
-              >
-                <Plus size={16} />
-                <span>Add New Service</span>
-              </button>
-            </>
-          ) : (
-            <button
-              type="button"
-              className={styles.createBtn}
-              onClick={handleOpenCreateIndustry}
-            >
-              <Plus size={16} />
-              <span>Add New Industry</span>
-            </button>
-          )}
+          <button
+            type="button"
+            className={styles.primaryBtn}
+            onClick={handleOpenCreateService}
+          >
+            <Plus size={16} />
+            <span>Create New Service</span>
+          </button>
         </div>
       </div>
 
-      {/* SECTION 1: SERVICES TABLE & FILTERS */}
-      {activeSection === "services" && (
-        <>
-          {/* Service Delete Confirmation Warning Box */}
-          {serviceDeleteConfirm && (
-            <div className={styles.deleteWarningAlert} style={{ margin: "0 0 1.25rem 0" }}>
-              <AlertTriangle size={18} className={styles.deleteWarningIcon} />
-              <div className={styles.deleteWarningText}>
-                <h5>Confirm Service Deletion</h5>
-                <p>
-                  Are you sure you want to delete service <strong>"{serviceDeleteConfirm.title}"</strong>?{" "}
-                  This will send a DELETE request to the backend and remove it permanently from the database.
-                </p>
-                <div className={styles.deleteWarningActions}>
-                  <button
-                    type="button"
-                    className={styles.confirmDeleteBtn}
-                    onClick={handleConfirmDeleteService}
-                    disabled={isDeletingService}
-                  >
-                    {isDeletingService ? "Deleting from Backend..." : "Confirm & Delete"}
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.cancelDeleteBtn}
-                    onClick={() => setServiceDeleteConfirm(null)}
-                    disabled={isDeletingService}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+      {/* Global Alerts */}
+      {notice && (
+        <div className={styles.okAlert}>
+          <CheckCircle2 size={18} />
+          <span>{notice}</span>
+          <button
+            type="button"
+            className={styles.modalCloseBtn}
+            onClick={() => setNotice(null)}
+            style={{ marginLeft: "auto" }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
-          {/* Action Feedback Alert Banner */}
-          {actionAlert && (
-            <div
-              className={
-                actionAlert.type === "success"
-                  ? styles.actionAlertSuccess
-                  : styles.actionAlertError
-              }
-              role={actionAlert.type === "error" ? "alert" : "status"}
-              style={{ marginBottom: "1.25rem" }}
+      {error && (
+        <div className={styles.errorAlert}>
+          <AlertCircle size={18} />
+          <span>{error}</span>
+          <button
+            type="button"
+            className={styles.modalCloseBtn}
+            onClick={() => setError(null)}
+            style={{ marginLeft: "auto" }}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
+
+      {/* 2. CATEGORY PILL FILTER BAR */}
+      <div className={styles.categoryBar}>
+        <button
+          type="button"
+          className={[
+            styles.categoryChip,
+            selectedCategoryId === "all" ? styles.categoryChipActive : "",
+          ].join(" ")}
+          onClick={() => setSelectedCategoryId("all")}
+        >
+          <span>All Disciplines</span>
+          <span className={styles.chipCount}>{services?.length ?? 0}</span>
+        </button>
+
+        {categoryList.map((cat) => {
+          const isSelected = selectedCategoryId === cat.id || selectedCategoryId === cat.name;
+          const count =
+            typeof cat.active_service_count === "number"
+              ? cat.active_service_count
+              : typeof cat.total_service_count === "number"
+              ? cat.total_service_count
+              : (services || []).filter(
+                  (s) =>
+                    s.category.toLowerCase() === cat.name.toLowerCase() ||
+                    s.category === cat.id ||
+                    (s as any).category_id === cat.id,
+                ).length;
+
+          return (
+            <button
+              key={cat.id}
+              type="button"
+              className={[
+                styles.categoryChip,
+                isSelected ? styles.categoryChipActive : "",
+              ].join(" ")}
+              onClick={() => setSelectedCategoryId(cat.id)}
             >
-              {actionAlert.type === "success" ? (
-                <CheckCircle2 size={16} className={styles.alertIcon} />
-              ) : (
-                <AlertTriangle size={16} className={styles.alertIcon} />
-              )}
-              <span className={styles.alertText}>{actionAlert.message}</span>
+              <span>{cat.name}</span>
+              <span className={styles.chipCount}>{count}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* 3. TOOLBAR (SEARCH & FILTERS) */}
+      <div className={styles.toolbarCard}>
+        <div className={styles.searchRow}>
+          <div className={styles.searchInputWrap}>
+            <Search size={16} className={styles.searchIcon} />
+            <input
+              type="text"
+              className={styles.searchInput}
+              placeholder="Search by title, tagline, slug, tech stack, or deliverables…"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+            {searchQuery && (
               <button
                 type="button"
-                onClick={() => setActionAlert(null)}
-                className={styles.alertCloseBtn}
-                aria-label="Dismiss message"
+                className={styles.clearSearchBtn}
+                onClick={() => setSearchQuery("")}
+                title="Clear Search"
               >
                 <X size={14} />
               </button>
-            </div>
+            )}
+          </div>
+
+          <div className={styles.filterChips}>
+            <button
+              type="button"
+              className={[
+                styles.filterChip,
+                statusFilter === "active" ? styles.filterChipActive : "",
+              ].join(" ")}
+              onClick={() => setStatusFilter(statusFilter === "active" ? "all" : "active")}
+            >
+              Active Only
+            </button>
+
+            <button
+              type="button"
+              className={[
+                styles.filterChip,
+                statusFilter === "inactive" ? styles.filterChipActive : "",
+              ].join(" ")}
+              onClick={() => setStatusFilter(statusFilter === "inactive" ? "all" : "inactive")}
+            >
+              Inactive Only
+            </button>
+
+            <button
+              type="button"
+              className={[
+                styles.filterChip,
+                featuredOnly ? styles.filterChipActive : "",
+              ].join(" ")}
+              onClick={() => setFeaturedOnly(!featuredOnly)}
+            >
+              <Star size={12} style={{ display: "inline", marginRight: "4px", color: featuredOnly ? "#fbbf24" : "inherit" }} />
+              Featured
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* 4. SERVICES ROSTER TABLE */}
+      <div className={styles.tableCard}>
+        <div className={styles.tableCardHeader}>
+          <h3 className={styles.tableTitle}>
+            <Layers size={18} />
+            <span>Active Services ({filteredServices.length})</span>
+          </h3>
+          {(searchQuery || selectedCategoryId !== "all" || statusFilter !== "all" || featuredOnly) && (
+            <span className={styles.tableSummaryText}>
+              Showing {filteredServices.length} of {services?.length ?? 0} total services
+            </span>
           )}
+        </div>
 
-          {/* Dynamic Filters & Search Control Bar (Search left, Category Dropdown right) */}
-          <div className={styles.filtersBar}>
-            {/* Search Control */}
-            <div className={styles.searchBox}>
-              <Search size={14} className={styles.searchIcon} />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search services by title, slug, summary, or tech..."
-                className={styles.searchInput}
-              />
-              {searchQuery && (
-                <button
-                  type="button"
-                  className={styles.searchClearBtn}
-                  onClick={() => setSearchQuery("")}
-                  title="Clear search"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-
-            {/* Category Filter Dropdown (Right of Search) */}
-            <div className={styles.catDropdownWrapper} ref={catDropdownRef}>
-              <button
-                type="button"
-                className={[
-                  styles.catDropdownTrigger,
-                  selectedCategoryId !== "all" || isCatDropdownOpen
-                    ? styles.catDropdownTriggerActive
-                    : "",
-                ].join(" ")}
-                onClick={() => setIsCatDropdownOpen((prev) => !prev)}
-                aria-expanded={isCatDropdownOpen}
-                aria-haspopup="listbox"
-                aria-label="Filter services by category"
-              >
-                <div className={styles.catDropdownTriggerLeft}>
-                  {selectedCategoryId !== "all" ? (
-                    <Tag size={13} className={styles.dropdownIcon} />
-                  ) : (
-                    <SlidersHorizontal size={13} className={styles.dropdownIcon} />
-                  )}
-                  <span className={styles.catDropdownTriggerText}>
-                    {dropdownTriggerLabel}
-                  </span>
-                </div>
-                <ChevronDown
-                  size={14}
-                  className={[
-                    styles.catDropdownChevron,
-                    isCatDropdownOpen ? styles.catDropdownChevronOpen : "",
-                  ].join(" ")}
-                />
-              </button>
-
-              {isCatDropdownOpen && (
-                <div className={styles.catDropdownMenu} role="listbox" tabIndex={-1}>
-                  {/* Option: All Categories */}
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={selectedCategoryId === "all"}
-                    className={[
-                      styles.catDropdownItem,
-                      selectedCategoryId === "all" ? styles.catDropdownItemActive : "",
-                    ].join(" ")}
-                    onClick={() => {
-                      setSelectedCategoryId("all");
-                      setIsCatDropdownOpen(false);
+        <div className={styles.tableWrap}>
+          <table className={shared.table}>
+            <thead>
+              <tr>
+                <th>Service</th>
+                <th>Category</th>
+                <th>Order</th>
+                <th>Status</th>
+                <th>Featured</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredServices.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={6}
+                    style={{
+                      textAlign: "center",
+                      padding: "3.5rem 1rem",
+                      color: "rgba(255,255,255,0.45)",
                     }}
                   >
-                    <div className={styles.catDropdownItemLeft}>
-                      {selectedCategoryId === "all" ? (
-                        <Check size={14} className={styles.catDropdownCheck} />
-                      ) : (
-                        <span className={styles.catDropdownCheckPlaceholder} />
-                      )}
-                      <span>All Categories</span>
-                    </div>
-                    <span className={styles.catDropdownItemCount}>
-                      ({categoryList.length})
-                    </span>
-                  </button>
-
-                  <div className={styles.catDropdownDivider} />
-
-                  {/* Dynamic Category List */}
-                  {activeCategories.map((c) => {
-                    const count =
-                      categoryServiceCounts[c.name.toLowerCase()] || 0;
-                    const isSelected =
-                      selectedCategoryId === c.id ||
-                      selectedCategoryId === (c as any)._id;
-                    return (
-                      <button
-                        key={c.id}
-                        type="button"
-                        role="option"
-                        aria-selected={isSelected}
-                        className={[
-                          styles.catDropdownItem,
-                          isSelected ? styles.catDropdownItemActive : "",
-                        ].join(" ")}
-                        onClick={() => {
-                          setSelectedCategoryId(c.id);
-                          setIsCatDropdownOpen(false);
-                        }}
-                      >
-                        <div className={styles.catDropdownItemLeft}>
-                          {isSelected ? (
-                            <Check
-                              size={14}
-                              className={styles.catDropdownCheck}
-                            />
-                          ) : (
-                            <span
-                              className={styles.catDropdownCheckPlaceholder}
-                            />
-                          )}
-                          <span title={c.name}>{c.name}</span>
-                        </div>
-                        <span className={styles.catDropdownItemCount}>
-                          ({count})
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Strict Fixed-Grid Services Table */}
-          <div className={styles.tableCard}>
-            <div className={styles.tableResponsive}>
-              <table className={styles.table}>
-                <colgroup>
-                  <col style={{ width: "60px" }} />
-                  <col style={{ width: "85px" }} />
-                  <col style={{ width: "380px" }} />
-                  <col style={{ width: "220px" }} />
-                  <col style={{ width: "140px" }} />
-                  <col style={{ width: "110px" }} />
-                  <col style={{ width: "120px" }} />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>Order</th>
-                    <th>Visual</th>
-                    <th>Service Name &amp; Tagline</th>
-                    <th>Category</th>
-                    <th>Deliverables</th>
-                    <th>Status</th>
-                    <th style={{ textAlign: "right" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredServices.length === 0 ? (
-                    <tr>
-                      <td colSpan={7}>
-                        <div className={styles.emptyTableCard}>
-                          <div className={styles.emptyState}>
-                            <Layers size={32} className={styles.emptyIcon} />
-                            <h4 className={styles.emptyTitle}>No matching services found</h4>
-                            <p className={styles.emptySub}>
-                              {searchQuery || selectedCategoryId !== "all"
-                                ? "Try adjusting your search query or category filter."
-                                : "Click 'Add New Service' to create your first dynamic service page."}
-                            </p>
-                            {(searchQuery || selectedCategoryId !== "all") && (
-                              <button
-                                type="button"
-                                className={styles.clearFilterBtn}
-                                onClick={() => {
-                                  setSearchQuery("");
-                                  setSelectedCategoryId("all");
-                                }}
-                              >
-                                Clear Filters
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredServices.map((srv) => {
-                      const resolvedCat = resolveCategoryName(srv.category, categoryList);
-                      return (
-                        <tr key={srv.id} className={!srv.is_active ? styles.inactiveRow : ""}>
-                          <td className={styles.orderCell}>{srv.order_index}</td>
-                          <td>
-                            <img
-                              src={srv.hero_image || "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80"}
-                              alt={srv.title}
-                              className={styles.thumbImg}
-                              loading="lazy"
-                              decoding="async"
-                              onError={(e) => {
-                                (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=600&q=80";
-                              }}
-                            />
-                          </td>
-                          <td>
-                            <div className={styles.titleCol}>
-                              <span className={styles.srvTitle}>{srv.title}</span>
-                              <span className={styles.srvTagline}>{srv.tagline || srv.summary?.slice(0, 80) || "Comprehensive engineering service"}</span>
-                            </div>
-                          </td>
-                          <td>
-                            <span className={styles.categoryBadge} title={resolvedCat}>
-                              {resolvedCat}
-                            </span>
-                          </td>
-                        <td>
-                          <span className={styles.featCount}>
-                            {srv.features?.length || 0} features
-                          </span>
-                        </td>
-                        <td>
-                          <div className={styles.statusCell}>
-                            <button
-                              type="button"
-                              className={[
-                                styles.toggleIconBtn,
-                                srv.is_active ? styles.activeIcon : styles.inactiveIcon,
-                              ].join(" ")}
-                              onClick={() => handleToggleActive(srv)}
-                              title={srv.is_active ? "Click to deactivate" : "Click to activate"}
-                            >
-                              {srv.is_active ? <Eye size={15} /> : <EyeOff size={15} />}
-                            </button>
-
-                            <button
-                              type="button"
-                              className={[
-                                styles.toggleIconBtn,
-                                srv.is_featured ? styles.starActive : styles.starInactive,
-                              ].join(" ")}
-                              onClick={() => handleToggleFeatured(srv)}
-                              title={srv.is_featured ? "Featured spotlight" : "Click to feature"}
-                            >
-                              <Star size={15} />
-                            </button>
-                          </div>
-                        </td>
-                        <td>
-                          <div className={styles.rowActions} style={{ justifyContent: "flex-end" }}>
-                            <button
-                              type="button"
-                              className={styles.editBtn}
-                              onClick={() => handleOpenEditService(srv)}
-                              title="Edit Full Service Details"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <a
-                              href={`/services/${srv.slug}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className={styles.viewBtn}
-                              title="View Live Service Page"
-                            >
-                              <ExternalLink size={14} />
-                            </a>
-                            <button
-                              type="button"
-                              className={styles.delBtn}
-                              onClick={() => handleDeleteServiceClick(srv)}
-                              disabled={isDeletingService && serviceDeleteConfirm?.id === srv.id}
-                              title={`Delete service "${srv.title}"`}
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })
-                )}
-              </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      )}
-
-      {/* SECTION 2: INDUSTRIES TABLE & SEARCH */}
-      {activeSection === "industries" && (
-        <>
-          {/* Industries Search Control */}
-          <div className={styles.filtersBar}>
-            <div className={styles.secondaryFiltersRow}>
-              <div className={styles.searchBox}>
-                <Search size={14} className={styles.searchIcon} />
-                <input
-                  type="text"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search industries by sector, badge, tagline, or solutions..."
-                  className={styles.searchInput}
-                />
-                {searchQuery && (
-                  <button
-                    type="button"
-                    className={styles.searchClearBtn}
-                    onClick={() => setSearchQuery("")}
-                    title="Clear search"
-                  >
-                    <X size={14} />
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Strict Fixed-Grid Industries Table */}
-          <div className={styles.tableCard}>
-            <div className={styles.tableResponsive}>
-              <table className={styles.table}>
-                <colgroup>
-                  <col style={{ width: "60px" }} />
-                  <col style={{ width: "90px" }} />
-                  <col style={{ width: "240px" }} />
-                  <col style={{ width: "160px" }} />
-                  <col style={{ width: "280px" }} />
-                  <col style={{ width: "180px" }} />
-                  <col style={{ width: "100px" }} />
-                </colgroup>
-                <thead>
-                  <tr>
-                    <th>Order</th>
-                    <th>Visual</th>
-                    <th>Industry Sector</th>
-                    <th>Badge</th>
-                    <th>Tagline &amp; Overview</th>
-                    <th>Solutions</th>
-                    <th style={{ textAlign: "right" }}>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredIndustries.length === 0 ? (
-                    <tr>
-                      <td colSpan={7}>
-                        <div className={styles.emptyTableCard}>
-                          <div className={styles.emptyState}>
-                            <Building2 size={32} className={styles.emptyIcon} />
-                            <h4 className={styles.emptyTitle}>No matching industries found</h4>
-                            <p className={styles.emptySub}>
-                              {searchQuery
-                                ? "Try adjusting your search query."
-                                : "Click 'Add New Industry' to create your first sector card."}
-                            </p>
-                            {searchQuery && (
-                              <button
-                                type="button"
-                                className={styles.clearFilterBtn}
-                                onClick={() => setSearchQuery("")}
-                              >
-                                Clear Search
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                    </tr>
-                  ) : (
-                    filteredIndustries.map((ind) => (
-                      <tr key={ind.id}>
-                        <td className={styles.orderCell}>{ind.order_index}</td>
-                        <td>
+                    {searchQuery || selectedCategoryId !== "all"
+                      ? "No services match your active search filters."
+                      : "No services created yet. Click 'Create New Service' above to add your first engineering discipline."}
+                  </td>
+                </tr>
+              ) : (
+                filteredServices.map((srv) => {
+                  const categoryDisplayName = resolveCategoryName(srv.category, categoryList);
+                  return (
+                    <tr key={srv.id}>
+                      {/* Service Info */}
+                      <td>
+                        <div className={styles.serviceCell}>
                           <img
-                            src={ind.image_url}
-                            alt={ind.name}
-                            className={styles.thumbImg}
+                            src={srv.hero_image || DEFAULT_SERVICE_FALLBACK_IMAGE}
+                            alt={srv.title}
+                            className={styles.serviceThumb}
                             loading="lazy"
-                            decoding="async"
+                            onError={(e) => {
+                              const target = e.currentTarget as HTMLImageElement;
+                              if (target.src !== DEFAULT_SERVICE_FALLBACK_IMAGE) {
+                                target.src = DEFAULT_SERVICE_FALLBACK_IMAGE;
+                              }
+                            }}
                           />
-                        </td>
-                        <td>
-                          <span className={styles.srvTitle}>{ind.name}</span>
-                        </td>
-                        <td>
-                          <span className={styles.industryBadge}>{ind.badge}</span>
-                        </td>
-                        <td>
-                          <div className={styles.titleCol}>
-                            <span className={styles.srvTagline} title={ind.tagline}>
-                              {ind.tagline}
-                            </span>
+                          <div className={styles.serviceInfoCol}>
+                            <span className={styles.serviceTitleText}>{srv.title}</span>
+                            {srv.tagline && (
+                              <span className={styles.serviceTaglineText}>{srv.tagline}</span>
+                            )}
                           </div>
-                        </td>
-                        <td>
-                          <span className={styles.featCount}>
-                            {ind.solutions?.length || 0} solutions
-                          </span>
-                        </td>
-                        <td>
-                          <div className={styles.rowActions} style={{ justifyContent: "flex-end" }}>
-                            <button
-                              type="button"
-                              className={styles.editBtn}
-                              onClick={() => handleOpenEditIndustry(ind)}
-                              title="Edit Industry Details"
-                            >
-                              <Edit2 size={14} />
-                            </button>
-                            <button
-                              type="button"
-                              className={styles.delBtn}
-                              onClick={() => handleDeleteIndustry(ind.id, ind.name)}
-                              title="Delete Industry"
-                            >
-                              <Trash2 size={14} />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </>
-      )}
+                        </div>
+                      </td>
 
-      {/* CATEGORY TAXONOMY MODAL (2-COLUMN ARCHITECTURE) */}
-      {showCatModal && (
-        <div className={styles.modalBackdrop} role="dialog" aria-modal="true" onClick={() => setShowCatModal(false)}>
-          <div
-            className={[styles.modalContent, styles.catModalContent].join(" ")}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
+                      {/* Category */}
+                      <td>
+                        <span className={styles.catBadge}>{categoryDisplayName}</span>
+                      </td>
+
+                      {/* Order Index */}
+                      <td>
+                        <span className={styles.orderBadge}>#{srv.order_index ?? 1}</span>
+                      </td>
+
+                      {/* Status */}
+                      <td>
+                        <button
+                          type="button"
+                          className={[styles.pill, srv.is_active ? styles.on : styles.off].join(" ")}
+                          disabled={busy}
+                          onClick={() => void handleToggleActivation(srv)}
+                          title="Click to toggle status"
+                        >
+                          <span className={styles.statusDot} />
+                          <span>{srv.is_active ? "Active" : "Inactive"}</span>
+                        </button>
+                      </td>
+
+                      {/* Featured */}
+                      <td>
+                        <button
+                          type="button"
+                          className={[
+                            styles.featuredBtn,
+                            srv.is_featured ? styles.featuredBtnActive : "",
+                          ].join(" ")}
+                          disabled={busy}
+                          onClick={() => void handleToggleFeatured(srv)}
+                          title={srv.is_featured ? "Featured on Home" : "Not Featured"}
+                        >
+                          <Star size={18} fill={srv.is_featured ? "#fbbf24" : "none"} />
+                        </button>
+                      </td>
+
+                      {/* Actions */}
+                      <td>
+                        <div className={styles.rowActions}>
+                          <button
+                            type="button"
+                            className={[shared.btn, shared.ghost, styles.actionBtn].join(" ")}
+                            disabled={busy}
+                            onClick={() => handleOpenEditService(srv)}
+                            title="Edit Service"
+                            aria-label={`Edit ${srv.title}`}
+                          >
+                            <Edit2 size={13} />
+                          </button>
+
+                          <a
+                            href={`/services/${srv.slug}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className={[shared.btn, shared.ghost, styles.actionBtn].join(" ")}
+                            title="Preview Public Page"
+                          >
+                            <ExternalLink size={13} />
+                          </a>
+
+                          <button
+                            type="button"
+                            className={[
+                              shared.btn,
+                              shared.ghost,
+                              shared.danger,
+                              styles.actionBtn,
+                            ].join(" ")}
+                            disabled={busy}
+                            onClick={() => setDeleteServiceTarget(srv)}
+                            title="Delete Service"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* =========================================================================
+          CATEGORY MANAGEMENT HUB MODAL
+          ========================================================================= */}
+      {isCategoryHubOpen && (
+        <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
+          <div className={styles.categoryModalCard}>
             <div className={styles.modalHeader}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                <div className={styles.uploadIconCircle} style={{ width: "38px", height: "38px" }}>
-                  <SlidersHorizontal size={18} className={styles.uploadIcon} />
-                </div>
-                <div>
-                  <h3 className={styles.modalTitle}>Service Category Taxonomy</h3>
-                  <p className={styles.modalSub}>
-                    Configure dynamic categories for engineering services, filter pills, and dropdown selectors.
-                  </p>
-                </div>
-              </div>
+              <h3 className={styles.modalHeaderTitle}>
+                <Settings size={20} />
+                <span>Service Categories Management</span>
+              </h3>
               <button
                 type="button"
-                className={styles.modalClose}
-                onClick={() => setShowCatModal(false)}
+                className={styles.modalCloseBtn}
+                onClick={() => setIsCategoryHubOpen(false)}
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Delete Warning Safety Banner */}
-            {catDeleteConfirm && (
-              <div className={styles.deleteWarningAlert}>
-                <AlertTriangle size={18} className={styles.deleteWarningIcon} />
-                <div className={styles.deleteWarningText}>
-                  <h5>Confirm Category Deletion</h5>
-                  <p>
-                    Are you sure you want to delete category{" "}
-                    <strong>"{catDeleteConfirm.name}"</strong>?{" "}
-                    {catDeleteConfirm.count > 0 ? (
-                      <span style={{ color: "#fca5a5" }}>
-                        It is currently associated with <strong>{catDeleteConfirm.count} service(s)</strong>.
-                      </span>
-                    ) : (
-                      "No services are currently assigned to this category."
-                    )}
-                  </p>
-                  <div className={styles.deleteWarningActions}>
-                    <button
-                      type="button"
-                      className={styles.confirmDeleteBtn}
-                      onClick={handleConfirmDeleteCategory}
-                      disabled={isPending}
-                    >
-                      {isPending ? "Deleting..." : "Confirm & Delete"}
-                    </button>
-                    <button
-                      type="button"
-                      className={styles.cancelDeleteBtn}
-                      onClick={() => setCatDeleteConfirm(null)}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* 2-Column Layout */}
-            <div className={styles.catTaxonomyLayout}>
-              {/* Column 1: Add/Edit Category Form */}
-              <div className={styles.catFormCard}>
-                <h4 className={styles.catFormTitle}>
-                  <Tag size={15} />
-                  <span>{editingCatId ? "Edit Category" : "Add New Category"}</span>
+            <div className={styles.modalScrollBody}>
+              {/* Category Form */}
+              <form onSubmit={handleSaveCategory} className={styles.categoryFormCard}>
+                <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#ffffff", fontWeight: 700 }}>
+                  {editingCategory ? `Edit Category: "${editingCategory.name}"` : "Create New Service Category"}
                 </h4>
-                <p className={styles.catFormSub}>
-                  {editingCatId
-                    ? "Modify taxonomy parameters below. Service assignments update automatically."
-                    : "Create a new service taxonomy category."}
-                </p>
 
-                {catFormError && (
-                  <div className={[styles.catFormAlert, styles.catFormAlertError].join(" ")}>
-                    <AlertCircle size={14} />
-                    <span>{catFormError}</span>
-                  </div>
-                )}
-
-                {catSuccessMsg && (
-                  <div className={[styles.catFormAlert, styles.catFormAlertSuccess].join(" ")}>
-                    <CheckCircle2 size={14} />
-                    <span>{catSuccessMsg}</span>
-                  </div>
-                )}
-
-                <form onSubmit={handleSaveCategory} style={{ display: "flex", flexDirection: "column", gap: "0.85rem" }}>
-                  <div className={styles.formGroup}>
-                    <label>Category Name *</label>
+                <div className={styles.formGrid2}>
+                  <div className={styles.field}>
+                    <label className={styles.label} htmlFor="cat-name">
+                      CATEGORY NAME * (5–50 Chars)
+                    </label>
                     <input
+                      id="cat-name"
                       type="text"
+                      className={styles.input}
                       required
+                      placeholder="e.g. Cloud & DevOps"
                       value={catName}
-                      onChange={(e) => {
-                        setCatName(e.target.value);
-                      }}
-                      placeholder="e.g. Autonomous Systems"
-                    />
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Description (Optional)</label>
-                    <textarea
-                      rows={2}
-                      value={catDescription}
-                      onChange={(e) => setCatDescription(e.target.value)}
-                      placeholder="High-level definition for internal taxonomy..."
+                      onChange={(e) => setCatName(e.target.value)}
+                      disabled={busy}
                     />
                   </div>
 
                   <div className={styles.formGrid2}>
-                    <div className={styles.formGroup}>
-                      <label>Status</label>
+                    <div className={styles.field}>
+                      <label className={styles.label} htmlFor="cat-order">
+                        DISPLAY ORDER *
+                      </label>
+                      <input
+                        id="cat-order"
+                        type="number"
+                        min={1}
+                        max={10000}
+                        className={styles.input}
+                        required
+                        value={catOrder}
+                        onChange={(e) => setCatOrder(Number(e.target.value))}
+                        disabled={busy}
+                      />
+                    </div>
+
+                    <div className={styles.field}>
+                      <label className={styles.label} htmlFor="cat-status">
+                        STATUS *
+                      </label>
                       <select
+                        id="cat-status"
+                        className={styles.select}
                         value={catStatus}
                         onChange={(e) => setCatStatus(e.target.value as "active" | "inactive")}
-                        className={styles.selectInput}
+                        disabled={busy}
                       >
-                        <option value="active">Active (Visible)</option>
-                        <option value="inactive">Inactive (Hidden)</option>
+                        <option value="active">Active</option>
+                        <option value="inactive">Inactive</option>
                       </select>
                     </div>
-
-                    <div className={styles.formGroup}>
-                      <label>Display Order</label>
-                      <input
-                        type="number"
-                        value={catOrderIndex}
-                        onChange={(e) => setCatOrderIndex(Number(e.target.value))}
-                      />
-                    </div>
                   </div>
+                </div>
 
-                  <div className={styles.catFormActions}>
+                <div className={styles.field}>
+                  <label className={styles.label} htmlFor="cat-desc">
+                    DESCRIPTION (5–200 Chars)
+                  </label>
+                  <textarea
+                    id="cat-desc"
+                    className={styles.textarea}
+                    placeholder="Brief overview of engineering disciplines in this category…"
+                    value={catDesc}
+                    onChange={(e) => setCatDesc(e.target.value)}
+                    disabled={busy}
+                  />
+                </div>
+
+                <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.65rem" }}>
+                  {editingCategory && (
                     <button
-                      type="submit"
-                      disabled={isPending}
-                      className={styles.catFormSubmitBtn}
+                      type="button"
+                      className={styles.secondaryBtn}
+                      onClick={handleOpenCreateCategory}
                     >
-                      <Save size={14} />
-                      <span>{editingCatId ? "Update Category" : "Add Category"}</span>
+                      Cancel Edit
                     </button>
-                    {editingCatId && (
-                      <button
-                        type="button"
-                        className={styles.catFormResetBtn}
-                        onClick={handleResetCatForm}
-                      >
-                        Cancel
-                      </button>
-                    )}
-                  </div>
-                </form>
-              </div>
-
-              {/* Column 2: Configured Categories Table */}
-              <div className={styles.catListCard}>
-                <div className={styles.catListHeader}>
-                  <h4 className={styles.catListTitle}>
-                    <span>Configured Categories</span>
-                    <span className={styles.catCountBadge}>{categoryList.length}</span>
-                  </h4>
-                  <span className={styles.catListSub}>
-                    Active categories appear in the service filter pills and service creation dropdown.
-                  </span>
+                  )}
+                  <button type="submit" className={styles.primaryBtn} disabled={busy}>
+                    {busy ? "SAVING…" : editingCategory ? "UPDATE CATEGORY" : "ADD CATEGORY"}
+                  </button>
                 </div>
+              </form>
 
-                <div className={styles.catListScrollContainer}>
-                  <table className={styles.catTable}>
-                    <thead>
+              {/* Category List */}
+              <div className={styles.categoryListCard}>
+                <h4 style={{ margin: 0, fontSize: "0.95rem", color: "#ffffff", fontWeight: 700 }}>
+                  Existing Service Categories ({categoryList.length})
+                </h4>
+
+                <table className={shared.table}>
+                  <thead>
+                    <tr>
+                      <th>Name &amp; Slug</th>
+                      <th>Description</th>
+                      <th>Order</th>
+                      <th>Services</th>
+                      <th>Status</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {categoryList.length === 0 ? (
                       <tr>
-                        <th style={{ width: "50px" }}>Order</th>
-                        <th>Category</th>
-                        <th style={{ width: "90px" }}>Services</th>
-                        <th style={{ width: "95px" }}>Status</th>
-                        <th style={{ width: "100px", textAlign: "right" }}>Actions</th>
+                        <td colSpan={6} style={{ textAlign: "center", padding: "1.5rem", color: "rgba(255,255,255,0.4)" }}>
+                          No categories found. Create one above.
+                        </td>
                       </tr>
-                    </thead>
-                    <tbody>
-                      {categoryList
-                        .sort((a, b) => a.order_index - b.order_index)
-                        .map((cat) => {
-                          const count = typeof cat.total_service_count === "number" ? cat.total_service_count : (categoryServiceCounts[cat.name.toLowerCase()] || 0);
-                          const isBeingEdited = editingCatId === cat.id;
-                          return (
-                            <tr
-                              key={cat.id}
-                              className={[
-                                isBeingEdited ? styles.catRowEditing : "",
-                                cat.status === "inactive" ? styles.catRowInactive : "",
-                              ].join(" ")}
-                            >
-                              <td className={styles.orderCell}>{cat.order_index}</td>
-                              <td>
-                                <div className={styles.catItemMeta}>
-                                  <span className={styles.catItemName}>{cat.name}</span>
-                                  {cat.description && (
-                                    <span className={styles.catItemDesc}>
-                                      {cat.description}
-                                    </span>
-                                  )}
-                                </div>
-                              </td>
-                              <td>
-                                <span className={styles.catPostCountBadge}>
-                                  {count} service{count !== 1 ? "s" : ""}
-                                </span>
-                              </td>
-                              <td>
-                                <button
-                                  type="button"
-                                  className={[
-                                    styles.catStatusPill,
-                                    cat.status === "active"
-                                      ? styles.catStatusPillActive
-                                      : styles.catStatusPillInactive,
-                                  ].join(" ")}
-                                  onClick={() => handleToggleCategoryStatus(cat)}
-                                  title={
-                                    cat.status === "active"
-                                      ? "Active — Click to Deactivate"
-                                      : "Inactive — Click to Activate"
-                                  }
-                                >
-                                  {cat.status === "active" ? (
-                                    <Check size={11} />
-                                  ) : (
-                                    <EyeOff size={11} />
-                                  )}
-                                  <span>{cat.status === "active" ? "Active" : "Inactive"}</span>
-                                </button>
-                              </td>
-                              <td>
-                                <div className={styles.catRowActions}>
-                                  <button
-                                    type="button"
-                                    className={styles.editBtn}
-                                    onClick={() => handleOpenCatModal(cat)}
-                                    title="Edit Category Details"
-                                  >
-                                    <Edit2 size={13} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={styles.delBtn}
-                                    onClick={() => handleDeleteCategoryClick(cat)}
-                                    title="Delete Category"
-                                  >
-                                    <Trash2 size={13} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })}
-                    </tbody>
-                  </table>
-                </div>
+                    ) : (
+                      categoryList.map((c) => (
+                        <tr key={c.id}>
+                          <td>
+                            <strong>{c.name}</strong>
+                            <div style={{ fontSize: "0.72rem", color: "rgba(255,255,255,0.4)", fontFamily: "monospace" }}>
+                              /{c.slug}
+                            </div>
+                          </td>
+                          <td style={{ fontSize: "0.78rem", color: "rgba(255,255,255,0.65)", maxWidth: "220px" }}>
+                            {c.description || "—"}
+                          </td>
+                          <td>#{c.order_index ?? 1}</td>
+                          <td>
+                            <span className={styles.chipCount}>
+                              {typeof c.total_service_count === "number" ? c.total_service_count : 0} services
+                            </span>
+                          </td>
+                          <td>
+                            <span className={[styles.pill, c.status === "active" ? styles.on : styles.off].join(" ")}>
+                              <span className={styles.statusDot} />
+                              <span>{c.status}</span>
+                            </span>
+                          </td>
+                          <td>
+                            <div className={styles.rowActions}>
+                              <button
+                                type="button"
+                                className={[shared.btn, shared.ghost, styles.actionBtn].join(" ")}
+                                onClick={() => handleOpenEditCategory(c)}
+                                title="Edit"
+                              >
+                                <Edit2 size={12} />
+                              </button>
+                              <button
+                                type="button"
+                                className={[shared.btn, shared.ghost, shared.danger, styles.actionBtn].join(" ")}
+                                onClick={() => setDeleteCatTarget(c)}
+                                title="Delete Category"
+                              >
+                                <Trash2 size={12} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* INDUSTRY CREATE/EDIT MODAL */}
-      {showIndustryModal && (
-        <div className={styles.modalBackdrop} role="dialog" aria-modal="true" onClick={() => setShowIndustryModal(false)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <div>
-                <h3 className={styles.modalTitle}>
-                  {editingIndustry ? `Edit Industry: ${editingIndustry.name}` : "Add New Industry Sector"}
-                </h3>
-                <p className={styles.modalSub}>
-                  Configure industry sector showcase card, solutions list, accent glow, and visual hero.
-                </p>
-              </div>
-              <button
-                type="button"
-                className={styles.modalClose}
-                onClick={() => setShowIndustryModal(false)}
-              >
-                <X size={18} />
-              </button>
-            </div>
-
-            {indFormError && (
-              <div className={styles.errorAlert}>
-                <AlertCircle size={16} />
-                <span>{indFormError}</span>
-              </div>
-            )}
-
-            <form onSubmit={handleSaveIndustry} className={styles.modalForm}>
-              <div className={styles.modalBodyScroll}>
-                <div className={styles.tabPane}>
-                  <div className={styles.formGrid2}>
-                    <div className={styles.formGroup}>
-                      <label>Industry Name *</label>
-                      <input
-                        type="text"
-                        required
-                        value={indName}
-                        className={indFieldErrors.name ? styles.inputError : ""}
-                        onChange={(e) => {
-                          setIndName(e.target.value);
-                          if (!editingIndustry) setIndSlug(slugifyService(e.target.value));
-                        }}
-                        placeholder="e.g. Healthcare & MedTech"
-                      />
-                      {indFieldErrors.name && (
-                        <span className={styles.fieldErrorText}>{indFieldErrors.name}</span>
-                      )}
-                    </div>
-
-                    <div className={styles.formGroup}>
-                      <label>URL Slug *</label>
-                      <input
-                        type="text"
-                        required
-                        value={indSlug}
-                        onChange={(e) => setIndSlug(e.target.value)}
-                        placeholder="e.g. healthcare"
-                      />
-                    </div>
-                  </div>
-
-                  <div className={styles.formGrid2}>
-                    <div className={styles.formGroup}>
-                      <label>Badge Label *</label>
-                      <input
-                        type="text"
-                        required
-                        value={indBadge}
-                        className={indFieldErrors.badge ? styles.inputError : ""}
-                        onChange={(e) => setIndBadge(e.target.value)}
-                        placeholder="e.g. MedTech & Health"
-                      />
-                      {indFieldErrors.badge && (
-                        <span className={styles.fieldErrorText}>{indFieldErrors.badge}</span>
-                      )}
-                    </div>
-
-                    <div className={styles.formGroup}>
-                      <label>Display Order (1, 2, 3...)</label>
-                      <input
-                        type="number"
-                        value={indOrderIndex}
-                        onChange={(e) => setIndOrderIndex(Number(e.target.value))}
-                      />
-                    </div>
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Short Tagline *</label>
-                    <input
-                      type="text"
-                      required
-                      value={indTagline}
-                      className={indFieldErrors.tagline ? styles.inputError : ""}
-                      onChange={(e) => setIndTagline(e.target.value)}
-                      placeholder="e.g. HIPAA-compliant medical cloud architectures and telemetry pipelines."
-                    />
-                    {indFieldErrors.tagline && (
-                      <span className={styles.fieldErrorText}>{indFieldErrors.tagline}</span>
-                    )}
-                  </div>
-
-                  <div className={styles.formGroup}>
-                    <label>Full Overview Description *</label>
-                    <textarea
-                      rows={3}
-                      required
-                      value={indDesc}
-                      className={indFieldErrors.description ? styles.inputError : ""}
-                      onChange={(e) => setIndDesc(e.target.value)}
-                      placeholder="Detailed overview of engineering capabilities and industry domain expertise..."
-                    />
-                    {indFieldErrors.description && (
-                      <span className={styles.fieldErrorText}>{indFieldErrors.description}</span>
-                    )}
-                  </div>
-
-                  <div className={styles.formGrid2}>
-                    <div className={styles.formGroup}>
-                      <label>Showcase Image URL *</label>
-                      <input
-                        type="url"
-                        required
-                        value={indImage}
-                        className={indFieldErrors.image_url ? styles.inputError : ""}
-                        onChange={(e) => setIndImage(e.target.value)}
-                        placeholder="https://images.unsplash.com/..."
-                      />
-                      {indFieldErrors.image_url && (
-                        <span className={styles.fieldErrorText}>{indFieldErrors.image_url}</span>
-                      )}
-                    </div>
-
-                    <div className={styles.formGroup}>
-                      <label>Accent Glow (CSS color)</label>
-                      <input
-                        type="text"
-                        value={indAccentGlow}
-                        onChange={(e) => setIndAccentGlow(e.target.value)}
-                        placeholder="e.g. rgba(255, 122, 0, 0.3)"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Solutions List */}
-                  <div className={styles.sectionDividerBox}>
-                    <h4 className={styles.sectionDividerTitle}>
-                      <Sparkles size={14} />
-                      <span>Key Solutions &amp; Deliverables</span>
-                    </h4>
-
-                    {indSolutions.length > 0 && (
-                      <div className={styles.chipsRow}>
-                        {indSolutions.map((sol, idx) => (
-                          <span key={idx} className={styles.chip}>
-                            <Check size={12} className={styles.chipCheck} />
-                            <span>{sol}</span>
-                            <button
-                              type="button"
-                              className={styles.chipDel}
-                              onClick={() => setIndSolutions(indSolutions.filter((_, i) => i !== idx))}
-                            >
-                              ×
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-                    )}
-
-                    <div className={styles.addInputRow}>
-                      <input
-                        type="text"
-                        value={newSolution}
-                        onChange={(e) => setNewSolution(e.target.value)}
-                        placeholder="Add solution bullet (e.g. EHR/EMR Interoperability)"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter") {
-                            e.preventDefault();
-                            if (newSolution.trim() && !indSolutions.includes(newSolution.trim())) {
-                              setIndSolutions([...indSolutions, newSolution.trim()]);
-                              setNewSolution("");
-                            }
-                          }
-                        }}
-                      />
-                      <button
-                        type="button"
-                        className={styles.smallAddBtn}
-                        onClick={() => {
-                          if (newSolution.trim() && !indSolutions.includes(newSolution.trim())) {
-                            setIndSolutions([...indSolutions, newSolution.trim()]);
-                            setNewSolution("");
-                          }
-                        }}
-                      >
-                        Add Solution
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className={styles.modalFooter}>
-                <div className={styles.footerLeft}>
-                  <button
-                    type="button"
-                    className={styles.cancelBtn}
-                    onClick={() => setShowIndustryModal(false)}
-                  >
-                    Cancel
-                  </button>
-                </div>
-                <div className={styles.footerRight}>
-                  <button
-                    type="submit"
-                    disabled={isPending}
-                    className={styles.saveSubmitBtn}
-                  >
-                    {isPending
-                      ? "Saving..."
-                      : editingIndustry
-                      ? "Update Industry"
-                      : "Create Industry"}
-                  </button>
-                </div>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* FULL SERVICE CREATE/EDIT MODAL */}
-      {showServiceModal && (
-        <div className={styles.modalBackdrop} role="dialog" aria-modal="true" onClick={() => setShowServiceModal(false)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
+      {/* =========================================================================
+          5-STEP SERVICE CREATION & EDITING WIZARD MODAL
+          ========================================================================= */}
+      {isServiceModalOpen && (
+        <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
+          <div className={styles.wizardModalCard}>
             {/* Modal Header */}
             <div className={styles.modalHeader}>
-              <div>
-                <h3 className={styles.modalTitle}>
-                  {editingService ? `Edit Service: ${editingService.title}` : "Add New Dynamic Service"}
-                </h3>
-                <p className={styles.modalSub}>
-                  Configure full architecture overviews, service hero images, 6-step workflows, and FAQs.
-                </p>
-              </div>
+              <h3 className={styles.modalHeaderTitle}>
+                <Sparkles size={20} className={styles.cardIcon} />
+                <span>{editingService ? `Edit Service: "${editingService.title}"` : "Create New Engineering Service"}</span>
+              </h3>
               <button
                 type="button"
-                className={styles.modalClose}
-                onClick={() => setShowServiceModal(false)}
+                className={styles.modalCloseBtn}
+                onClick={() => setIsServiceModalOpen(false)}
               >
                 <X size={18} />
               </button>
             </div>
 
-            {/* Stepper Progress Bar */}
-            <div className={styles.modalTabsBar} role="tablist" aria-label="Service Form Steps">
-              {MODAL_STEPS.map((t) => (
+            {/* Step Navigation Tabs */}
+            <div className={styles.stepNav}>
+              {MODAL_STEPS.map((step) => (
                 <button
-                  key={t.id}
-                  ref={(el) => {
-                    tabRefs.current[t.id] = el;
-                  }}
-                  role="tab"
-                  aria-selected={modalTab === t.id}
+                  key={step.id}
                   type="button"
                   className={[
-                    styles.modalTabBtn,
-                    modalTab === t.id ? styles.modalTabBtnActive : "",
+                    styles.stepTab,
+                    activeStep === step.id ? styles.stepTabActive : "",
                   ].join(" ")}
-                  onClick={() => setModalTab(t.id)}
+                  onClick={() => setActiveStep(step.id)}
                 >
-                  {t.label}
+                  <span className={styles.stepNum}>{step.num}</span>
+                  <span>{step.label}</span>
                 </button>
               ))}
             </div>
 
-            {/* Error Banner */}
-            {formError && (
-              <div className={styles.errorAlert}>
-                <AlertCircle size={16} />
-                <span>{formError}</span>
-              </div>
-            )}
+            {/* Wizard Body */}
+            <div className={styles.wizardBody}>
+              {/* STEP 1: OVERVIEW & CORE INFO */}
+              {activeStep === "overview" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                  <div>
+                    <h4 className={styles.stepGroupTitle}>Core Information</h4>
+                    <p className={styles.stepGroupSub}>
+                      Set primary titles, category mappings, and display ordering.
+                    </p>
+                  </div>
 
-            <form onSubmit={handleSaveService} noValidate className={styles.modalForm}>
-              <div className={styles.modalBodyScroll}>
-                {/* STEP 1: OVERVIEW & CORE INFO */}
-                {modalTab === "overview" && (
-                  <div className={styles.tabPane}>
-                    <div className={styles.formGroup}>
-                      <label>Service Title *</label>
+                  <div className={styles.formGrid2}>
+                    <div className={styles.field}>
+                      <label className={styles.label} htmlFor="s-title">
+                        SERVICE TITLE * (5–50 Chars)
+                      </label>
                       <input
+                        id="s-title"
                         type="text"
+                        className={styles.input}
                         required
-                        value={title}
-                        className={fieldErrors.title ? styles.inputError : ""}
+                        placeholder="e.g. AI-Powered Workflow Automation"
+                        value={formTitle}
                         onChange={(e) => {
-                          setTitle(e.target.value);
-                          if (fieldErrors.title) {
-                            setFieldErrors((prev) => {
-                              const copy = { ...prev };
-                              delete copy.title;
-                              return copy;
-                            });
+                          setFormTitle(e.target.value);
+                          if (!editingService) {
+                            setFormSlug(slugifyService(e.target.value));
                           }
-                          if (!editingService) setSlug(slugifyService(e.target.value));
                         }}
-                        placeholder="e.g. Artificial Intelligence & Multi-Agent Systems"
                       />
-                      {fieldErrors.title && (
-                        <span className={styles.fieldErrorText}>{fieldErrors.title}</span>
-                      )}
+                    </div>
+
+                    <div className={styles.field}>
+                      <label className={styles.label} htmlFor="s-category">
+                        SERVICE CATEGORY *
+                      </label>
+                      <select
+                        id="s-category"
+                        className={styles.select}
+                        value={formCategory}
+                        onChange={(e) => setFormCategory(e.target.value)}
+                      >
+                        {categoryList.map((c) => (
+                          <option key={c.id} value={c.id}>
+                            {c.name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className={styles.formGrid2}>
+                    <div className={styles.field}>
+                      <label className={styles.label} htmlFor="s-slug">
+                        URL SLUG * (Auto-Generated)
+                      </label>
+                      <input
+                        id="s-slug"
+                        type="text"
+                        className={styles.input}
+                        required
+                        placeholder="e.g. ai-powered-workflow-automation"
+                        value={formSlug}
+                        onChange={(e) => setFormSlug(e.target.value)}
+                      />
                     </div>
 
                     <div className={styles.formGrid2}>
-                      <div className={styles.formGroup}>
-                        <div className={styles.labelWithAction}>
-                          <label>Category Taxonomy *</label>
-                          <button
-                            type="button"
-                            className={styles.manageCatInlineLink}
-                            onClick={() => handleOpenCatModal()}
-                          >
-                            + Manage Categories
-                          </button>
-                        </div>
-                        <select
-                          value={
-                            activeCategories.find((c) => c.id === category || c.name.toLowerCase() === category.toLowerCase())?.id ||
-                            category
-                          }
-                          required
-                          className={[styles.selectInput, fieldErrors.category ? styles.inputError : ""].join(" ")}
-                          onChange={(e) => {
-                            setCategory(e.target.value);
-                            if (fieldErrors.category) {
-                              setFieldErrors((prev) => {
-                                const copy = { ...prev };
-                                delete copy.category;
-                                return copy;
-                              });
-                            }
-                          }}
-                        >
-                          {activeCategories.map((c) => (
-                            <option key={c.id} value={c.id}>
-                              {c.name}
-                            </option>
-                          ))}
-                          {category &&
-                            !activeCategories.some((c) => c.id === category || c.name.toLowerCase() === category.toLowerCase()) && (
-                              <option value={category}>{category} (Custom / Legacy)</option>
-                            )}
-                        </select>
-                        {fieldErrors.category && (
-                          <span className={styles.fieldErrorText}>{fieldErrors.category}</span>
-                        )}
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label>Display Order (1, 2, 3...)</label>
+                      <div className={styles.field}>
+                        <label className={styles.label} htmlFor="s-order">
+                          ORDER INDEX *
+                        </label>
                         <input
+                          id="s-order"
                           type="number"
-                          value={orderIndex}
-                          onChange={(e) => setOrderIndex(Number(e.target.value))}
-                        />
-                      </div>
-                    </div>
-
-                    <div className={styles.formGroup}>
-                      <label>Short Tagline *</label>
-                      <input
-                        type="text"
-                        required
-                        value={tagline}
-                        onChange={(e) => setTagline(e.target.value)}
-                        placeholder="e.g. Scalable, high-performance web systems built for business scale."
-                      />
-                    </div>
-
-                    <div className={styles.formGroup}>
-                      <label>Full Summary Description *</label>
-                      <textarea
-                        rows={3}
-                        required
-                        value={summary}
-                        className={fieldErrors.summary ? styles.inputError : ""}
-                        onChange={(e) => {
-                          setSummary(e.target.value);
-                          if (fieldErrors.summary) {
-                            setFieldErrors((prev) => {
-                              const copy = { ...prev };
-                              delete copy.summary;
-                              return copy;
-                            });
-                          }
-                          if (!whatIsIt || whatIsIt === summary) {
-                            setWhatIsIt(e.target.value);
-                          }
-                        }}
-                        placeholder="Detailed high-level summary of the service offering..."
-                      />
-                      {fieldErrors.summary && (
-                        <span className={styles.fieldErrorText}>{fieldErrors.summary}</span>
-                      )}
-                    </div>
-
-                    {/* 4-Pillar Architecture Overview Fields */}
-                    <div className={styles.sectionDividerBox}>
-                      <h4 className={styles.sectionDividerTitle}>
-                        <Sparkles size={14} />
-                        <span>4-Pillar Architecture Overview</span>
-                      </h4>
-                      <p className={styles.sectionDividerSub}>
-                        Detailed architecture insights shown on the dynamic service detail page.
-                      </p>
-
-                      <div className={styles.formGroup}>
-                        <label>1. What Is It? (Core Technical Definition) *</label>
-                        <textarea
-                          rows={2}
-                          value={whatIsIt}
-                          className={fieldErrors.what_is_it ? styles.inputError : ""}
-                          onChange={(e) => {
-                            setWhatIsIt(e.target.value);
-                            if (fieldErrors.what_is_it) {
-                              setFieldErrors((prev) => {
-                                const copy = { ...prev };
-                                delete copy.what_is_it;
-                                return copy;
-                              });
-                            }
-                          }}
-                          placeholder="Explain what the service is from an engineering & architecture standpoint..."
-                        />
-                        {fieldErrors.what_is_it && (
-                          <span className={styles.fieldErrorText}>{fieldErrors.what_is_it}</span>
-                        )}
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label>2. Who Is It For? (Target Audience &amp; Organizations)</label>
-                        <textarea
-                          rows={2}
-                          value={whoIsFor}
-                          onChange={(e) => setWhoIsFor(e.target.value)}
-                          placeholder="e.g. Startups building MVP products, scale-ups, and enterprises modernizing legacy systems."
+                          min={1}
+                          className={styles.input}
+                          required
+                          value={formOrderIndex}
+                          onChange={(e) => setFormOrderIndex(Number(e.target.value))}
                         />
                       </div>
 
-                      <div className={styles.formGroup}>
-                        <label>3. Problem Solved (Core Business Pain Points Addressed)</label>
-                        <textarea
-                          rows={2}
-                          value={problemSolved}
-                          onChange={(e) => setProblemSolved(e.target.value)}
-                          placeholder="e.g. Eliminates slow load times, high server costs, and poor user retention."
-                        />
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label>4. Why It Matters (Commercial &amp; Strategic Impact)</label>
-                        <textarea
-                          rows={2}
-                          value={whyItMatters}
-                          onChange={(e) => setWhyItMatters(e.target.value)}
-                          placeholder="e.g. Increases customer conversion rates by 35% and guarantees 99.99% uptime."
-                        />
+                      <div className={styles.field}>
+                        <label className={styles.label} htmlFor="s-active">
+                          STATUS
+                        </label>
+                        <select
+                          id="s-active"
+                          className={styles.select}
+                          value={formIsActive ? "active" : "inactive"}
+                          onChange={(e) => setFormIsActive(e.target.value === "active")}
+                        >
+                          <option value="active">Active (Published)</option>
+                          <option value="inactive">Inactive (Draft)</option>
+                        </select>
                       </div>
                     </div>
                   </div>
-                )}
 
-                {/* STEP 2: MEDIA & VISUAL GALLERY */}
-                {modalTab === "media" && (
-                  <div className={styles.tabPane}>
-                    {/* Primary Hero Showcase Media */}
-                    <div className={styles.uploadSectionBox}>
-                      <div className={styles.uploadSectionHeader}>
-                        <h4 className={styles.uploadSectionTitle}>
-                          <ImageIcon size={16} /> Primary Hero Showcase Image *
-                        </h4>
-                        <span className={styles.uploadBadge}>Hero Visual</span>
-                      </div>
-                      <div className={styles.imageSpecChips}>
-                        <span className={styles.specChip}>Recommended: 1920 × 1080 px · 16:9</span>
-                        <span className={styles.specChip}>Formats: JPG, JPEG, PNG, WEBP</span>
-                        <span className={styles.specChip}>Maximum size: 10 MB</span>
-                      </div>
+                  <div className={styles.field}>
+                    <label className={styles.label} htmlFor="s-tagline">
+                      TAGLINE (Max 100 Chars)
+                    </label>
+                    <input
+                      id="s-tagline"
+                      type="text"
+                      className={styles.input}
+                      placeholder="e.g. Autonomous AI agents engineered for enterprise throughput."
+                      value={formTagline}
+                      onChange={(e) => setFormTagline(e.target.value)}
+                    />
+                  </div>
 
-                      <div
-                        className={[
-                          styles.dropzone,
-                          isDragOver ? styles.dropzoneActive : "",
-                          imageError ? styles.dropzoneError : "",
-                        ].join(" ")}
-                        onDragOver={handleDragOver}
-                        onDragLeave={handleDragLeave}
-                        onDrop={handleDrop}
-                        onClick={() => {
-                          if (!imagePreviewUrl) fileInputRef.current?.click();
-                        }}
-                      >
-                        <input
-                          type="file"
-                          ref={fileInputRef}
-                          style={{ display: "none" }}
-                          accept="image/jpeg,image/png,image/jpg,image/webp"
-                          onChange={handleFileInputChange}
-                        />
+                  <div className={styles.field}>
+                    <label className={styles.label} htmlFor="s-summary">
+                      SUMMARY * (10–200 Chars)
+                    </label>
+                    <textarea
+                      id="s-summary"
+                      className={styles.textarea}
+                      required
+                      placeholder="Brief overview explaining what this engineering service provides and business value…"
+                      value={formSummary}
+                      onChange={(e) => setFormSummary(e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
 
-                        {imagePreviewUrl ? (
-                          <div className={styles.previewContainer}>
-                            <img
-                              src={imagePreviewUrl}
-                              alt="Hero Preview"
-                              className={styles.dropzonePreviewImg}
-                              loading="lazy"
-                              decoding="async"
-                            />
-                            <div className={styles.previewMetaRow}>
-                              <span className={styles.fileInfoBadge}>
-                                <FileCheck size={14} className={styles.checkIcon} />
-                                <span>
-                                  {imageFile ? `${imageFile.name} (${formatFileSize(imageFile.size)})` : "Hero Image Ready"}
-                                </span>
-                              </span>
-                              <div className={styles.previewActions}>
-                                <button
-                                  type="button"
-                                  className={styles.replaceImgBtn}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    fileInputRef.current?.click();
-                                  }}
-                                >
-                                  Replace Image
-                                </button>
-                                <button
-                                  type="button"
-                                  className={styles.removeImgBtn}
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleRemoveImage();
-                                  }}
-                                >
-                                  Remove
-                                </button>
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className={styles.dropzoneEmpty}>
-                            <div className={styles.uploadIconCircle}>
-                              <UploadCloud size={24} className={styles.uploadIcon} />
-                            </div>
-                            <p className={styles.dropzonePrompt}>
-                              Drag &amp; drop service photo here, or{" "}
-                              <span className={styles.browseLink}>browse</span>
-                            </p>
-                            <span className={styles.dropzoneSub}>
-                              JPG, PNG, JPEG, or WEBP up to 10MB
-                            </span>
-                          </div>
-                        )}
+              {/* STEP 2: MEDIA & GALLERY */}
+              {activeStep === "media" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  <div>
+                    <h4 className={styles.stepGroupTitle}>Service Media &amp; Cloudinary Gallery</h4>
+                    <p className={styles.stepGroupSub}>
+                      Upload high-resolution hero banners and product imagery.
+                    </p>
+                  </div>
 
-                        {isUploadingImage && (
-                          <div className={styles.uploadProgressBar}>
-                            <div
-                              className={styles.uploadProgressFill}
-                              style={{ width: `${uploadProgress}%` }}
-                            />
-                          </div>
-                        )}
-                      </div>
-
-                      {imageError && (
-                        <span className={styles.imageErrorText}>
-                          <AlertCircle size={14} />
-                          <span>{imageError}</span>
-                        </span>
-                      )}
-
-                      <div className={styles.manualUrlRow}>
-                        <label>Or enter Direct Image URL:</label>
-                        <input
-                          type="url"
-                          value={heroImage}
-                          onChange={(e) => {
-                            setHeroImage(e.target.value);
-                            setImagePreviewUrl(e.target.value);
-                            setImageError(null);
-                          }}
-                          placeholder="https://images.unsplash.com/..."
-                        />
-                      </div>
-                    </div>
-
-                    {/* Secondary Showcase Gallery */}
-                    <div className={styles.gallerySectionBox}>
+                  <div className={styles.field}>
+                    <label className={styles.label}>HERO IMAGE BANNER *</label>
+                    <label className={styles.fileDropArea}>
                       <input
                         type="file"
-                        ref={galleryFileInputRef}
+                        accept="image/*"
                         style={{ display: "none" }}
-                        accept="image/jpeg,image/png,image/jpg,image/webp"
-                        onChange={handleGalleryFileInputChange}
-                      />
-
-                      <h4 className={styles.uploadSectionTitle}>
-                        <Layers size={16} />
-                        <span>Secondary Gallery Showcase (Up to 3 Images)</span>
-                      </h4>
-
-                      <div className={styles.imageSpecChips}>
-                        <span className={styles.specChip}>Recommended: 1600 × 900 px · 16:9</span>
-                        <span className={styles.specChip}>Formats: JPG, JPEG, PNG, WEBP</span>
-                        <span className={styles.specChip}>Maximum size: 10 MB</span>
-                      </div>
-
-                      {galleryError && (
-                        <div className={styles.errorAlert} style={{ margin: "0.25rem 0" }}>
-                          <AlertCircle size={14} />
-                          <span>{galleryError}</span>
-                        </div>
-                      )}
-
-                      {relatedImages.length > 0 && (
-                        <div className={styles.relatedImgsGrid}>
-                          {relatedImages.map((img, idx) => (
-                            <div key={idx} className={styles.relatedImgCard}>
-                              <div className={styles.relatedImgCardHeader}>
-                                <span className={styles.relatedImgBadge}>Image #{idx + 1}</span>
-                                <div className={styles.relatedImgActions}>
-                                  <button
-                                    type="button"
-                                    className={styles.galleryReplaceBtn}
-                                    title="Replace Image"
-                                    onClick={() => {
-                                      setReplacingGalleryIndex(idx);
-                                      galleryFileInputRef.current?.click();
-                                    }}
-                                  >
-                                    <UploadCloud size={12} /> Replace
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className={styles.removeStepBtn}
-                                    title="Remove Image"
-                                    onClick={() => {
-                                      setRelatedImages(relatedImages.filter((_, i) => i !== idx));
-                                      setGalleryError(null);
-                                    }}
-                                  >
-                                    <Trash2 size={12} /> Remove
-                                  </button>
-                                </div>
-                              </div>
-                              <img
-                                src={img.url}
-                                alt={img.alt || `Gallery preview ${idx + 1}`}
-                                className={styles.relatedImgThumb}
-                                loading="lazy"
-                                decoding="async"
-                              />
-                              <input
-                                type="text"
-                                value={img.caption || ""}
-                                onChange={(e) => {
-                                  const copy = [...relatedImages];
-                                  copy[idx] = { ...copy[idx], caption: e.target.value };
-                                  setRelatedImages(copy);
-                                }}
-                                placeholder="Caption description..."
-                                className={styles.captionInput}
-                              />
-                              <input
-                                type="text"
-                                value={img.alt || ""}
-                                onChange={(e) => {
-                                  const copy = [...relatedImages];
-                                  copy[idx] = { ...copy[idx], alt: e.target.value };
-                                  setRelatedImages(copy);
-                                }}
-                                placeholder="Alt description text..."
-                                className={styles.captionInput}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                      )}
-
-                      {relatedImages.length < 3 && (
-                        <div className={styles.galleryAddBox}>
-                          <div className={styles.galleryAddOptions}>
-                            <div className={styles.galleryAddUrlRow}>
-                              <input
-                                type="url"
-                                value={galleryUrlInput}
-                                onChange={(e) => {
-                                  setGalleryUrlInput(e.target.value);
-                                  setGalleryError(null);
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    handleAddGalleryUrl();
-                                  }
-                                }}
-                                placeholder="Add image URL (https://images.unsplash.com/...)"
-                                className={styles.galleryUrlInputField}
-                              />
-                              <button
-                                type="button"
-                                className={styles.smallAddBtn}
-                                onClick={handleAddGalleryUrl}
-                              >
-                                + Add URL
-                              </button>
-                            </div>
-                            <div className={styles.galleryOrDivider}>OR</div>
-                            <div className={styles.galleryUploadBtnWrap}>
-                              <button
-                                type="button"
-                                className={styles.galleryUploadBtn}
-                                onClick={() => {
-                                  setReplacingGalleryIndex(null);
-                                  galleryFileInputRef.current?.click();
-                                }}
-                              >
-                                <UploadCloud size={14} /> Upload from Device
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 3: DELIVERABLES & TECH STACK */}
-                {modalTab === "features" && (
-                  <div className={styles.tabPane}>
-                    {/* Deliverables Features */}
-                    <div className={styles.sectionDividerBox}>
-                      <h4 className={styles.sectionDividerTitle}>
-                        <CheckCircle2 size={14} />
-                        <span>Key Deliverables &amp; Core Features</span>
-                      </h4>
-
-                      <div className={styles.chipsRow}>
-                        {features.map((feat, idx) => (
-                          <span key={idx} className={styles.chip}>
-                            <Check size={12} className={styles.chipCheck} />
-                            <span>{feat}</span>
-                            <button
-                              type="button"
-                              className={styles.chipDel}
-                              onClick={() => setFeatures(features.filter((_, i) => i !== idx))}
-                            >
-                              ×
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className={styles.addInputRow}>
-                        <input
-                          type="text"
-                          value={newFeature}
-                          onChange={(e) => setNewFeature(e.target.value)}
-                          placeholder="Add deliverable (e.g. High Concurrency WebSockets)"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              if (newFeature.trim() && !features.includes(newFeature.trim())) {
-                                setFeatures([...features, newFeature.trim()]);
-                                setNewFeature("");
-                              }
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className={styles.smallAddBtn}
-                          onClick={() => {
-                            if (newFeature.trim() && !features.includes(newFeature.trim())) {
-                              setFeatures([...features, newFeature.trim()]);
-                              setNewFeature("");
-                            }
-                          }}
-                        >
-                          Add Feature
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Tech Stack */}
-                    <div className={styles.sectionDividerBox}>
-                      <h4 className={styles.sectionDividerTitle}>
-                        <Zap size={14} />
-                        <span>Technologies &amp; Frameworks</span>
-                      </h4>
-
-                      <div className={styles.chipsRow}>
-                        {techStack.map((tech, idx) => (
-                          <span key={idx} className={styles.chip}>
-                            <span>{tech}</span>
-                            <button
-                              type="button"
-                              className={styles.chipDel}
-                              onClick={() => setTechStack(techStack.filter((_, i) => i !== idx))}
-                            >
-                              ×
-                            </button>
-                          </span>
-                        ))}
-                      </div>
-
-                      <div className={styles.addInputRow}>
-                        <input
-                          type="text"
-                          value={newTech}
-                          onChange={(e) => setNewTech(e.target.value)}
-                          placeholder="Add technology (e.g. Next.js, PostgreSQL)"
-                          onKeyDown={(e) => {
-                            if (e.key === "Enter") {
-                              e.preventDefault();
-                              if (newTech.trim() && !techStack.includes(newTech.trim())) {
-                                setTechStack([...techStack, newTech.trim()]);
-                                setNewTech("");
-                              }
-                            }
-                          }}
-                        />
-                        <button
-                          type="button"
-                          className={styles.smallAddBtn}
-                          onClick={() => {
-                            if (newTech.trim() && !techStack.includes(newTech.trim())) {
-                              setTechStack([...techStack, newTech.trim()]);
-                              setNewTech("");
-                            }
-                          }}
-                        >
-                          Add Tech
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 4: 6-STEP WORKFLOW */}
-                {modalTab === "process" && (
-                  <div className={styles.tabPane}>
-                    <div className={styles.sectionDividerBox}>
-                      <h4 className={styles.sectionDividerTitle}>
-                        <Clock size={14} />
-                        <span>Structured 6-Step Engineering Workflow</span>
-                      </h4>
-
-                      <div className={styles.stepsList}>
-                        {processSteps.map((step, idx) => (
-                          <div key={idx} className={styles.stepCard}>
-                            <div className={styles.stepHeaderRow}>
-                              <span className={styles.stepNumBadge}>Step {step.step || `0${idx + 1}`}</span>
-                              <button
-                                type="button"
-                                className={styles.removeStepBtn}
-                                onClick={() => setProcessSteps(processSteps.filter((_, i) => i !== idx))}
-                              >
-                                <Trash2 size={13} /> Remove Step
-                              </button>
-                            </div>
-                            <input
-                              type="text"
-                              value={step.title}
-                              onChange={(e) => {
-                                const copy = [...processSteps];
-                                copy[idx] = { ...copy[idx], title: e.target.value };
-                                setProcessSteps(copy);
-                              }}
-                              placeholder="Step title (e.g. Discovery & Requirements)"
-                            />
-                            <textarea
-                              rows={2}
-                              value={step.description}
-                              onChange={(e) => {
-                                const copy = [...processSteps];
-                                copy[idx] = { ...copy[idx], description: e.target.value };
-                                setProcessSteps(copy);
-                              }}
-                              placeholder="Step description..."
-                            />
-                          </div>
-                        ))}
-                      </div>
-
-                      {processSteps.length < 6 && (
-                        <button
-                          type="button"
-                          className={styles.addStepBtn}
-                          onClick={() =>
-                            setProcessSteps([
-                              ...processSteps,
-                              {
-                                step: `0${processSteps.length + 1}`,
-                                title: "New Workflow Milestone",
-                                description: "Description of milestone deliverables.",
-                              },
-                            ])
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setHeroImageFile(file);
+                            setFormHeroImage(URL.createObjectURL(file));
                           }
-                        >
-                          <Plus size={14} /> Add Workflow Step
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                {/* STEP 5: BENEFITS & FAQS */}
-                {modalTab === "benefits" && (
-                  <div className={styles.tabPane}>
-                    {/* Benefits Section */}
-                    <div className={styles.sectionDividerBox}>
-                      <h4 className={styles.sectionDividerTitle}>
-                        <Sparkles size={14} />
-                        <span>Quantified Benefits &amp; Metrics</span>
-                      </h4>
-
-                      <div className={styles.benefitsList}>
-                        {benefits.map((b, idx) => (
-                          <div key={idx} className={styles.benefitCard}>
-                            <div className={styles.formGrid2}>
-                              <input
-                                type="text"
-                                value={b.title}
-                                onChange={(e) => {
-                                  const copy = [...benefits];
-                                  copy[idx] = { ...copy[idx], title: e.target.value };
-                                  setBenefits(copy);
-                                }}
-                                placeholder="Benefit title (e.g. Sub-Second TTFB)"
-                              />
-                              <input
-                                type="text"
-                                value={b.metric || ""}
-                                onChange={(e) => {
-                                  const copy = [...benefits];
-                                  copy[idx] = { ...copy[idx], metric: e.target.value };
-                                  setBenefits(copy);
-                                }}
-                                placeholder="Metric highlight (e.g. < 400ms)"
-                              />
-                            </div>
-                            <textarea
-                              rows={2}
-                              value={b.description}
-                              onChange={(e) => {
-                                const copy = [...benefits];
-                                copy[idx] = { ...copy[idx], description: e.target.value };
-                                setBenefits(copy);
-                              }}
-                              placeholder="Description..."
-                            />
-                            <button
-                              type="button"
-                              className={styles.removeStepBtn}
-                              onClick={() => setBenefits(benefits.filter((_, i) => i !== idx))}
-                            >
-                              <Trash2 size={13} /> Remove Benefit
-                            </button>
-                          </div>
-                        ))}
+                        }}
+                      />
+                      <ImageIcon size={32} color="#ffb300" />
+                      <div style={{ fontSize: "0.85rem", color: "#ffffff", fontWeight: 600 }}>
+                        {heroImageFile ? heroImageFile.name : "Click to select a new Hero Image from your computer"}
                       </div>
-
-                      <button
-                        type="button"
-                        className={styles.addStepBtn}
-                        onClick={() =>
-                          setBenefits([
-                            ...benefits,
-                            { title: "High Reliability", description: "Engineered for 99.99% uptime.", metric: "99.99% SLA" },
-                          ])
-                        }
-                      >
-                        <Plus size={14} /> Add Benefit
-                      </button>
-                    </div>
-
-                    {/* FAQs Section */}
-                    <div className={styles.sectionDividerBox}>
-                      <h4 className={styles.sectionDividerTitle}>
-                        <HelpCircle size={14} />
-                        <span>Frequently Asked Questions</span>
-                      </h4>
-
-                      <div className={styles.faqsList}>
-                        {faqs.map((faq, idx) => (
-                          <div key={idx} className={styles.faqCard}>
-                            <input
-                              type="text"
-                              value={faq.question}
-                              onChange={(e) => {
-                                const copy = [...faqs];
-                                copy[idx] = { ...copy[idx], question: e.target.value };
-                                setFaqs(copy);
-                              }}
-                              placeholder="Question (e.g. What is the typical project timeline?)"
-                            />
-                            <textarea
-                              rows={2}
-                              value={faq.answer}
-                              onChange={(e) => {
-                                const copy = [...faqs];
-                                copy[idx] = { ...copy[idx], answer: e.target.value };
-                                setFaqs(copy);
-                              }}
-                              placeholder="Answer..."
-                            />
-                            <button
-                              type="button"
-                              className={styles.removeStepBtn}
-                              onClick={() => setFaqs(faqs.filter((_, i) => i !== idx))}
-                            >
-                              <Trash2 size={13} /> Remove FAQ
-                            </button>
-                          </div>
-                        ))}
+                      <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)" }}>
+                        Supports JPG, PNG, WEBP up to 10MB (Cloudinary processed)
                       </div>
+                    </label>
 
-                      <button
-                        type="button"
-                        className={styles.addStepBtn}
-                        onClick={() =>
-                          setFaqs([
-                            ...faqs,
-                            { question: "How do we get started?", answer: "Schedule an architecture discovery session with our engineering team." },
-                          ])
-                        }
-                      >
-                        <Plus size={14} /> Add FAQ
-                      </button>
+                    <div style={{ marginTop: "0.85rem" }}>
+                      <label className={styles.label} style={{ fontSize: "0.75rem" }}>
+                        OR PASTE DIRECT IMAGE URL:
+                      </label>
+                      <input
+                        type="url"
+                        className={styles.input}
+                        placeholder="https://images.unsplash.com/..."
+                        value={formHeroImage.startsWith("blob:") ? "" : formHeroImage}
+                        onChange={(e) => {
+                          setHeroImageFile(null);
+                          setFormHeroImage(e.target.value);
+                        }}
+                      />
                     </div>
 
-                    {/* Visibility & Status Settings */}
-                    <div className={styles.toggleRow} style={{ marginTop: "1rem" }}>
-                      <label className={styles.checkboxLabel}>
-                        <input
-                          type="checkbox"
-                          checked={isActive}
-                          onChange={(e) => setIsActive(e.target.checked)}
-                        />
-                        <span>Active &amp; Visible on Public Website</span>
-                      </label>
-
-                      <label className={styles.checkboxLabel}>
-                        <input
-                          type="checkbox"
-                          checked={isFeatured}
-                          onChange={(e) => setIsFeatured(e.target.checked)}
-                        />
-                        <span>Featured Spotlight Badge</span>
-                      </label>
-                    </div>
+                    {formHeroImage && (
+                      <div style={{ marginTop: "0.85rem" }}>
+                        <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.6)", display: "block", marginBottom: "4px" }}>
+                          Current Image Preview:
+                        </span>
+                        <div className={styles.previewImgWrap}>
+                          <img src={formHeroImage} alt="Hero Preview" className={styles.previewImg} />
+                        </div>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
-
-              {/* Modal Sticky Footer */}
-              <div className={styles.modalFooter}>
-                <div className={styles.footerLeft}>
-                  {modalTab !== "overview" && (
-                    <button
-                      type="button"
-                      className={styles.prevBtn}
-                      onClick={handlePrevStep}
-                    >
-                      <ChevronLeft size={16} />
-                      <span>Previous Step</span>
-                    </button>
-                  )}
                 </div>
+              )}
 
-                <div className={styles.footerRight}>
+              {/* STEP 3: DELIVERABLES & TECH STACK */}
+              {activeStep === "features" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  <div>
+                    <h4 className={styles.stepGroupTitle}>4-Point Architecture Deep-Dive</h4>
+                    <p className={styles.stepGroupSub}>
+                      Detail the architectural scope, target audience, problem solved, and key deliverables.
+                    </p>
+                  </div>
+
+                  <div className={styles.formGrid2}>
+                    <div className={styles.field}>
+                      <label className={styles.label} htmlFor="s-what">WHAT IS IT? * (Max 500 Chars)</label>
+                      <textarea
+                        id="s-what"
+                        className={styles.textarea}
+                        placeholder="Detailed technical explanation of what this service builds…"
+                        value={formWhatIsIt}
+                        onChange={(e) => setFormWhatIsIt(e.target.value)}
+                      />
+                    </div>
+
+                    <div className={styles.field}>
+                      <label className={styles.label} htmlFor="s-who">WHO IS IT FOR? (Max 500 Chars)</label>
+                      <textarea
+                        id="s-who"
+                        className={styles.textarea}
+                        placeholder="Target companies (e.g. Series-A startups, healthcare providers, fintechs)…"
+                        value={formWhoIsFor}
+                        onChange={(e) => setFormWhoIsFor(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className={styles.formGrid2}>
+                    <div className={styles.field}>
+                      <label className={styles.label} htmlFor="s-problem">PROBLEM SOLVED (Max 500 Chars)</label>
+                      <textarea
+                        id="s-problem"
+                        className={styles.textarea}
+                        placeholder="Specific pain point or bottleneck this architecture eliminates…"
+                        value={formProblemSolved}
+                        onChange={(e) => setFormProblemSolved(e.target.value)}
+                      />
+                    </div>
+
+                    <div className={styles.field}>
+                      <label className={styles.label} htmlFor="s-why">WHY IT MATTERS (Max 500 Chars)</label>
+                      <textarea
+                        id="s-why"
+                        className={styles.textarea}
+                        placeholder="Commercial impact, revenue increase, or cost reduction metrics…"
+                        value={formWhyItMatters}
+                        onChange={(e) => setFormWhyItMatters(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Features List */}
+                  <div className={styles.field}>
+                    <label className={styles.label}>KEY DELIVERABLES &amp; CAPABILITIES</label>
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <input
+                        type="text"
+                        className={styles.input}
+                        placeholder="e.g. Real-Time WebSockets & Push Engine"
+                        value={featureInput}
+                        onChange={(e) => setFeatureInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            if (featureInput.trim()) {
+                              setFormFeatures([...formFeatures, featureInput.trim()]);
+                              setFeatureInput("");
+                            }
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className={styles.secondaryBtn}
+                        onClick={() => {
+                          if (featureInput.trim()) {
+                            setFormFeatures([...formFeatures, featureInput.trim()]);
+                            setFeatureInput("");
+                          }
+                        }}
+                      >
+                        Add
+                      </button>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+                      {formFeatures.map((f, idx) => (
+                        <span key={idx} className={styles.categoryChip}>
+                          <CheckCircle2 size={12} color="#34d399" />
+                          <span>{f}</span>
+                          <X
+                            size={12}
+                            style={{ cursor: "pointer", marginLeft: "4px" }}
+                            onClick={() => setFormFeatures(formFeatures.filter((_, i) => i !== idx))}
+                          />
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Tech Stack Chips */}
+                  <div className={styles.field}>
+                    <label className={styles.label}>TECH STACK &amp; FRAMEWORKS</label>
+                    <div style={{ display: "flex", gap: "0.5rem" }}>
+                      <input
+                        type="text"
+                        className={styles.input}
+                        placeholder="e.g. Next.js, Redis, MongoDB, GraphQL"
+                        value={techInput}
+                        onChange={(e) => setTechInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            if (techInput.trim()) {
+                              setFormTechStack([...formTechStack, techInput.trim()]);
+                              setTechInput("");
+                            }
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        className={styles.secondaryBtn}
+                        onClick={() => {
+                          if (techInput.trim()) {
+                            setFormTechStack([...formTechStack, techInput.trim()]);
+                            setTechInput("");
+                          }
+                        }}
+                      >
+                        Add
+                      </button>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "0.4rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+                      {formTechStack.map((t, idx) => (
+                        <span key={idx} className={styles.categoryChip}>
+                          <Tag size={12} color="#ffb300" />
+                          <span>{t}</span>
+                          <X
+                            size={12}
+                            style={{ cursor: "pointer", marginLeft: "4px" }}
+                            onClick={() => setFormTechStack(formTechStack.filter((_, i) => i !== idx))}
+                          />
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* STEP 4: 6-STEP WORKFLOW */}
+              {activeStep === "process" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                  <div>
+                    <h4 className={styles.stepGroupTitle}>6-Step Engineering Workflow</h4>
+                    <p className={styles.stepGroupSub}>
+                      Define the step-by-step execution timeline presented on the public service page.
+                    </p>
+                  </div>
+
+                  {formProcessSteps.map((step, idx) => (
+                    <div key={idx} className={styles.itemCardRow}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                        <span className={styles.orderBadge}>Step {step.step}</span>
+                        <input
+                          type="text"
+                          className={styles.input}
+                          placeholder="Step Title"
+                          value={step.title}
+                          onChange={(e) => {
+                            const next = [...formProcessSteps];
+                            next[idx].title = e.target.value;
+                            setFormProcessSteps(next);
+                          }}
+                        />
+                      </div>
+                      <textarea
+                        className={styles.textarea}
+                        placeholder="Detailed execution description for this stage…"
+                        value={step.description}
+                        onChange={(e) => {
+                          const next = [...formProcessSteps];
+                          next[idx].description = e.target.value;
+                          setFormProcessSteps(next);
+                        }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* STEP 5: BENEFITS & FAQS */}
+              {activeStep === "benefits" && (
+                <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+                  {/* ROI Benefits */}
+                  <div>
+                    <h4 className={styles.stepGroupTitle}>ROI Value Metrics &amp; Benefits</h4>
+                    <p className={styles.stepGroupSub}>Highlight measurable business outcomes.</p>
+
+                    <div className={styles.itemCardRow} style={{ marginBottom: "1rem" }}>
+                      <div className={styles.formGrid2}>
+                        <input
+                          type="text"
+                          className={styles.input}
+                          placeholder="Benefit Title (e.g. Sub-Second TTFB)"
+                          value={benefitTitle}
+                          onChange={(e) => setBenefitTitle(e.target.value)}
+                        />
+                        <input
+                          type="text"
+                          className={styles.input}
+                          placeholder="Highlight Metric (e.g. < 400ms TTFB)"
+                          value={benefitMetric}
+                          onChange={(e) => setBenefitMetric(e.target.value)}
+                        />
+                      </div>
+                      <textarea
+                        className={styles.textarea}
+                        placeholder="Detailed value explanation…"
+                        value={benefitDesc}
+                        onChange={(e) => setBenefitDesc(e.target.value)}
+                      />
+                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <button
+                          type="button"
+                          className={styles.secondaryBtn}
+                          onClick={() => {
+                            if (benefitTitle.trim()) {
+                              setFormBenefits([
+                                ...formBenefits,
+                                { title: benefitTitle.trim(), description: benefitDesc.trim(), metric: benefitMetric.trim() || undefined },
+                              ]);
+                              setBenefitTitle("");
+                              setBenefitDesc("");
+                              setBenefitMetric("");
+                            }
+                          }}
+                        >
+                          Add Benefit
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      {formBenefits.map((b, idx) => (
+                        <div key={idx} className={styles.categoryChip} style={{ justifyContent: "space-between", borderRadius: "8px", padding: "0.6rem 0.85rem" }}>
+                          <div>
+                            <strong>{b.title}</strong> {b.metric && <span style={{ color: "#ffb300", marginLeft: "8px" }}>({b.metric})</span>}
+                            <p style={{ margin: "2px 0 0", fontSize: "0.76rem", color: "rgba(255,255,255,0.6)" }}>{b.description}</p>
+                          </div>
+                          <Trash2
+                            size={14}
+                            color="#f87171"
+                            style={{ cursor: "pointer", flexShrink: 0 }}
+                            onClick={() => setFormBenefits(formBenefits.filter((_, i) => i !== idx))}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* FAQs */}
+                  <div style={{ borderTop: "1px solid rgba(255,255,255,0.08)", paddingTop: "1.25rem" }}>
+                    <h4 className={styles.stepGroupTitle}>Frequently Asked Questions</h4>
+
+                    <div className={styles.itemCardRow} style={{ marginBottom: "1rem" }}>
+                      <input
+                        type="text"
+                        className={styles.input}
+                        placeholder="Question (e.g. Can we integrate our existing microservices?)"
+                        value={faqQuestion}
+                        onChange={(e) => setFaqQuestion(e.target.value)}
+                      />
+                      <textarea
+                        className={styles.textarea}
+                        placeholder="Answer…"
+                        value={faqAnswer}
+                        onChange={(e) => setFaqAnswer(e.target.value)}
+                      />
+                      <div style={{ display: "flex", justifyContent: "flex-end" }}>
+                        <button
+                          type="button"
+                          className={styles.secondaryBtn}
+                          onClick={() => {
+                            if (faqQuestion.trim() && faqAnswer.trim()) {
+                              setFormFaqs([...formFaqs, { question: faqQuestion.trim(), answer: faqAnswer.trim() }]);
+                              setFaqQuestion("");
+                              setFaqAnswer("");
+                            }
+                          }}
+                        >
+                          Add FAQ
+                        </button>
+                      </div>
+                    </div>
+
+                    <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      {formFaqs.map((faq, idx) => (
+                        <div key={idx} className={styles.categoryChip} style={{ justifyContent: "space-between", borderRadius: "8px", padding: "0.6rem 0.85rem" }}>
+                          <div>
+                            <strong>{faq.question}</strong>
+                            <p style={{ margin: "2px 0 0", fontSize: "0.76rem", color: "rgba(255,255,255,0.6)" }}>{faq.answer}</p>
+                          </div>
+                          <Trash2
+                            size={14}
+                            color="#f87171"
+                            style={{ cursor: "pointer", flexShrink: 0 }}
+                            onClick={() => setFormFaqs(formFaqs.filter((_, i) => i !== idx))}
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Wizard Footer */}
+            <div className={styles.wizardFooter}>
+              <div style={{ display: "flex", gap: "0.5rem" }}>
+                {activeStep !== "overview" && (
                   <button
                     type="button"
-                    className={styles.cancelBtn}
-                    onClick={() => setShowServiceModal(false)}
+                    className={styles.secondaryBtn}
+                    onClick={() => {
+                      const idx = MODAL_STEPS.findIndex((s) => s.id === activeStep);
+                      if (idx > 0) setActiveStep(MODAL_STEPS[idx - 1].id);
+                    }}
                   >
-                    Cancel
+                    <ChevronLeft size={16} />
+                    <span>Previous</span>
                   </button>
-
-                  {modalTab !== "benefits" ? (
-                    <button
-                      type="button"
-                      className={styles.nextBtn}
-                      onClick={handleNextStep}
-                    >
-                      <span>Next Step</span>
-                      <ChevronRight size={16} />
-                    </button>
-                  ) : (
-                    <button
-                      type="submit"
-                      onClick={handleSaveService}
-                      disabled={isPending || isUploadingImage}
-                      className={styles.saveSubmitBtn}
-                    >
-                      {isUploadingImage
-                        ? "Uploading Image..."
-                        : isPending
-                        ? "Saving Service..."
-                        : editingService
-                        ? "Update Service"
-                        : "Create Service"}
-                    </button>
-                  )}
-                </div>
+                )}
+                {activeStep !== "benefits" && (
+                  <button
+                    type="button"
+                    className={styles.secondaryBtn}
+                    onClick={() => {
+                      const idx = MODAL_STEPS.findIndex((s) => s.id === activeStep);
+                      if (idx < MODAL_STEPS.length - 1) setActiveStep(MODAL_STEPS[idx + 1].id);
+                    }}
+                  >
+                    <span>Next</span>
+                    <ChevronRight size={16} />
+                  </button>
+                )}
               </div>
-            </form>
+
+              <button
+                type="button"
+                className={styles.primaryBtn}
+                disabled={busy}
+                onClick={handleSaveService}
+              >
+                {busy ? "SAVING SERVICE…" : editingService ? "UPDATE SERVICE" : "CREATE SERVICE"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          DELETE SERVICE CONFIRMATION MODAL
+          ========================================================================= */}
+      {deleteServiceTarget && (
+        <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
+          <div className={styles.categoryModalCard} style={{ maxWidth: "480px" }}>
+            <div className={styles.modalHeader}>
+              <h4 style={{ margin: 0, color: "#f87171", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <Trash2 size={18} />
+                <span>Delete Engineering Service?</span>
+              </h4>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setDeleteServiceTarget(null)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className={styles.modalScrollBody} style={{ gap: "1rem" }}>
+              <p style={{ margin: 0, fontSize: "0.86rem", color: "rgba(255,255,255,0.75)", lineHeight: 1.45 }}>
+                Are you sure you want to delete <strong>&quot;{deleteServiceTarget.title}&quot;</strong>? This will remove its public page and all associated assets from Cloudinary.
+              </p>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.65rem", marginTop: "0.5rem" }}>
+                <button
+                  type="button"
+                  className={styles.secondaryBtn}
+                  onClick={() => setDeleteServiceTarget(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={styles.primaryBtn}
+                  style={{ background: "#dc2626" }}
+                  disabled={busy}
+                  onClick={executeDeleteService}
+                >
+                  {busy ? "Deleting…" : "Confirm Delete"}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+          DELETE CATEGORY CONFIRMATION MODAL (CASCADE WARNING)
+          ========================================================================= */}
+      {deleteCatTarget && (
+        <div className={styles.modalBackdrop} role="dialog" aria-modal="true">
+          <div className={styles.categoryModalCard} style={{ maxWidth: "520px" }}>
+            <div className={styles.modalHeader}>
+              <h4 style={{ margin: 0, color: "#f87171", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <AlertTriangle size={20} />
+                <span>Cascade Delete Category?</span>
+              </h4>
+              <button
+                type="button"
+                className={styles.modalCloseBtn}
+                onClick={() => setDeleteCatTarget(null)}
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className={styles.modalScrollBody} style={{ gap: "1rem" }}>
+              <div className={styles.dangerAlertBox}>
+                <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: "2px" }} />
+                <span>
+                  <strong>CRITICAL WARNING:</strong> Deleting category <strong>&quot;{deleteCatTarget.name}&quot;</strong> will permanently delete all services assigned to this category via an ACID MongoDB transaction on the backend.
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end", gap: "0.65rem", marginTop: "0.5rem" }}>
+                <button
+                  type="button"
+                  className={styles.secondaryBtn}
+                  onClick={() => setDeleteCatTarget(null)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={styles.primaryBtn}
+                  style={{ background: "#dc2626" }}
+                  disabled={busy}
+                  onClick={executeDeleteCategory}
+                >
+                  {busy ? "Deleting…" : "Confirm Cascade Delete"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

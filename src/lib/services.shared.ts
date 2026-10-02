@@ -1,4 +1,7 @@
-/** Shared, client-safe types and helpers for DIMISI Dynamic Services & Industries. */
+/** 
+ * Centralized, client-safe types and helpers for DIMISI Dynamic Services & Service Categories.
+ * Fully aligned with Express Backend API (/api/v1/admin-panel/services/* and /service-category/*).
+ */
 
 export interface ServiceProcessStep {
   step: string;
@@ -28,6 +31,7 @@ export interface CompanyService {
   title: string;
   slug: string;
   category: string;
+  category_id?: string;
   summary: string;
   tagline: string;
   hero_image: string;
@@ -51,6 +55,7 @@ export interface CompanyService {
   is_featured: boolean;
   is_active: boolean;
   accent_color?: string | null | undefined;
+  upload_status?: "pending" | "success" | "failed" | undefined;
   created_at: string;
   updated_at: string;
 }
@@ -77,32 +82,7 @@ export interface ServiceInput {
   is_featured?: boolean | null | undefined;
   is_active?: boolean | null | undefined;
   accent_color?: string | null | undefined;
-}
-
-export interface IndustrySector {
-  id: string;
-  name: string;
-  slug: string;
-  tagline: string;
-  description: string;
-  badge: string;
-  image_url: string;
-  solutions: string[];
-  accent_glow?: string | null | undefined;
-  order_index: number;
-}
-
-export interface IndustryInput {
-  id?: string | null | undefined;
-  name: string;
-  slug?: string | null | undefined;
-  tagline: string;
-  description: string;
-  badge: string;
-  image_url: string;
-  solutions: string[];
-  accent_glow?: string | null | undefined;
-  order_index?: number | null | undefined;
+  upload_status?: "pending" | "success" | "failed" | undefined;
 }
 
 export interface ServiceCategoryItem {
@@ -129,15 +109,43 @@ export interface ServiceCategoryInput {
 
 export interface PublicServicesPayload {
   services: CompanyService[];
-  industries: IndustrySector[];
   categories?: string[] | undefined;
   categoryItems?: ServiceCategoryItem[] | undefined;
+  industries?: any[];
   stats: {
     totalServices: number;
-    totalIndustries: number;
+    totalCategories: number;
+    totalIndustries?: number;
     uptimeSla: string;
     satisfactionScore: string;
   };
+}
+
+// Backward-compatibility alias for legacy overview types
+export interface IndustrySector {
+  id: string;
+  name: string;
+  slug: string;
+  tagline: string;
+  description: string;
+  badge: string;
+  image_url: string;
+  solutions: string[];
+  accent_glow?: string | null | undefined;
+  order_index: number;
+}
+
+export interface IndustryInput {
+  id?: string | null | undefined;
+  name: string;
+  slug?: string | null | undefined;
+  tagline: string;
+  description: string;
+  badge: string;
+  image_url: string;
+  solutions: string[];
+  accent_glow?: string | null | undefined;
+  order_index?: number | null | undefined;
 }
 
 export function slugifyService(title: string): string {
@@ -188,52 +196,45 @@ export function validateServiceCategoryInput(input: Partial<ServiceCategoryInput
   return { valid: true };
 }
 
-export function validateIndustryInput(input: Partial<IndustryInput>): {
-  valid: boolean;
-  error?: string;
-  field?: string;
-} {
-  const name = input.name?.trim() || "";
-  const tagline = input.tagline?.trim() || "";
-  const description = input.description?.trim() || "";
-  const badge = input.badge?.trim() || "";
-  const imageUrl = input.image_url?.trim() || "";
-
-  if (name.length < 2) {
-    return { valid: false, error: "Industry name must be at least 2 characters long.", field: "name" };
-  }
-  if (tagline.length < 5) {
-    return { valid: false, error: "Tagline must be at least 5 characters long.", field: "tagline" };
-  }
-  if (description.length < 10) {
-    return { valid: false, error: "Description must be at least 10 characters long.", field: "description" };
-  }
-  if (badge.length < 2) {
-    return { valid: false, error: "Industry badge label is required.", field: "badge" };
-  }
-  if (!imageUrl) {
-    return { valid: false, error: "Industry image URL is required.", field: "image_url" };
-  }
-  return { valid: true };
-}
-
 export function validateServiceInput(input: ServiceInput): { valid: boolean; error?: string; field?: string } {
   const title = input.title?.trim() || "";
   const summary = input.summary?.trim() || "";
+  const tagline = input.tagline?.trim() || "";
   const heroImage = input.hero_image?.trim() || "";
   const whatIsIt = input.what_is_it?.trim() || summary;
 
-  if (title.length < 3) {
-    return { valid: false, error: "Service title must be at least 3 characters long.", field: "title" };
+  if (title.length < 5) {
+    return { valid: false, error: "Service title must be at least 5 characters long (5-50 characters).", field: "title" };
+  }
+  if (title.length > 50) {
+    return { valid: false, error: "Service title cannot exceed 50 characters.", field: "title" };
+  }
+  if (tagline.length > 100) {
+    return { valid: false, error: "Tagline cannot exceed 100 characters.", field: "tagline" };
   }
   if (summary.length < 10) {
-    return { valid: false, error: "Service summary must be at least 10 characters long.", field: "summary" };
+    return { valid: false, error: "Service summary must be at least 10 characters long (10-200 characters).", field: "summary" };
+  }
+  if (summary.length > 200) {
+    return { valid: false, error: "Service summary cannot exceed 200 characters.", field: "summary" };
   }
   if (heroImage.length === 0) {
     return { valid: false, error: "Primary service image is required.", field: "hero_image" };
   }
   if (whatIsIt.length < 10) {
     return { valid: false, error: "Overview 'What is it' description must be at least 10 characters long.", field: "what_is_it" };
+  }
+  if (whatIsIt.length > 500) {
+    return { valid: false, error: "Overview 'What is it' description cannot exceed 500 characters.", field: "what_is_it" };
+  }
+  if (input.who_is_for && input.who_is_for.trim().length > 500) {
+    return { valid: false, error: "Target audience ('Who is it for') cannot exceed 500 characters.", field: "who_is_for" };
+  }
+  if (input.problem_solved && input.problem_solved.trim().length > 500) {
+    return { valid: false, error: "Problem solved description cannot exceed 500 characters.", field: "problem_solved" };
+  }
+  if (input.why_it_matters && input.why_it_matters.trim().length > 500) {
+    return { valid: false, error: "Why it matters description cannot exceed 500 characters.", field: "why_it_matters" };
   }
   return { valid: true };
 }

@@ -172,24 +172,25 @@ function RootComponent() {
   const isAdmin = pathname.startsWith("/dimisi-admin");
   useSmoothScroll(isAdmin);
   // The cinematic intro plays on first visit per browser session, before the site appears.
-  const [intro, setIntro] = useState(() => {
-    if (typeof window === "undefined") return false;
+  const [intro, setIntro] = useState(false);
+
+  useEffect(() => {
     try {
-      if (window.sessionStorage.getItem("dimisi_intro_seen") === "1") return false;
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return false;
+      if (window.sessionStorage.getItem("dimisi_intro_seen") === "1") return;
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
       const conn = (
         navigator as Navigator & {
           connection?: { saveData?: boolean; effectiveType?: string };
         }
       ).connection;
       if (conn?.saveData || conn?.effectiveType === "2g" || conn?.effectiveType === "slow-2g") {
-        return false;
+        return;
       }
-      return true;
+      setIntro(true);
     } catch {
-      return false;
+      setIntro(false);
     }
-  });
+  }, []);
 
   useEffect(() => {
     if (isAdmin || !intro) {

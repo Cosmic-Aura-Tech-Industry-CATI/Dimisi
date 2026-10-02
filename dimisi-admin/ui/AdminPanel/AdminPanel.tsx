@@ -40,9 +40,6 @@ const AdminCampaigns = lazy(() =>
 const AdminReports = lazy(() =>
   import("../AdminReports/AdminReports").then((m) => ({ default: m.AdminReports }))
 );
-const AdminAnalytics = lazy(() =>
-  import("../AdminAnalytics/AdminAnalytics").then((m) => ({ default: m.AdminAnalytics }))
-);
 const AdminLogs = lazy(() =>
   import("../AdminLogs/AdminLogs").then((m) => ({ default: m.AdminLogs }))
 );
@@ -76,6 +73,7 @@ import {
 import {
   getAdminBlogData,
 } from "@/lib/blog.functions";
+import { syncLiveCounts } from "@/services";
 import type { CompanyEvent, EventGalleryItem, EventCategoryItem } from "@/lib/events.shared";
 import type { CompanyService, IndustrySector, ServiceCategoryItem } from "@/lib/services.shared";
 import type { ProjectItem, WorkCategoryItem } from "@/lib/work.shared";
@@ -122,7 +120,7 @@ const DEFAULT_STATS: ReviewStats = {
   openReportsCount: 0,
 };
 
-/** DIMISI admin panel — reviews, campaigns, moderation, analytics, leads, admins with RBAC enforcement. */
+/** DIMISI admin panel — reviews, campaigns, moderation, leads, admins with RBAC enforcement. */
 const DEFAULT_OVERVIEW: AdminOverview = {
   isAdmin: true,
   role: "super_admin",
@@ -150,7 +148,6 @@ const VALID_ADMIN_TABS: AdminTab[] = [
   "reviews",
   "campaigns",
   "reports",
-  "analytics",
   "logs",
   "settings",
   "leads",
@@ -224,23 +221,24 @@ export function AdminPanel() {
         if (raw) {
           const parsed = JSON.parse(raw);
           if (parsed?.user) {
+            const u = parsed.user;
             return {
               isAdmin: true,
-              role: (parsed.user.role as AdminRole) || "admin",
+              role: (u.role as AdminRole) || "admin",
               stats: { users: 1, leads: 0, leadsToday: 0, notifyOptIn: 0 },
               leads: [],
               admins: [
                 {
-                  user_id: parsed.user.id || "usr-me",
-                  email: parsed.user.email || null,
-                  full_name: parsed.user.full_name || parsed.user.name || "Administrator",
-                  designation: "Administrator",
-                  role: (parsed.user.role as AdminRole) || "admin",
-                  is_active: true,
+                  user_id: u.id,
+                  email: u.email || null,
+                  full_name: u.name || u.user_metadata?.full_name || "Administrator",
+                  designation: u.designation || u.user_metadata?.designation || "Administrator",
+                  role: (u.role as AdminRole) || "admin",
+                  is_active: u.isActive !== false,
                   created_at: new Date().toISOString(),
                 },
               ],
-              selfId: parsed.user.id || "",
+              selfId: u.id,
             };
           }
         }
@@ -323,7 +321,7 @@ export function AdminPanel() {
       under_development_notice_heading: "Publication Lab Under Active Development",
       under_development_notice_text: "Blog section under development. Please visit again after some time.",
     },
-    categories: ["All Posts", "Web", "Mobile", "AI", "Cloud", "Startups", "Technology Trends"],
+    categories: ["All Posts"],
     categoryItems: [],
   });
   const [error, setError] = useState<string | null>(null);
@@ -334,10 +332,26 @@ export function AdminPanel() {
       .catch((err) => console.warn("Failed to refresh reviews data", err));
   }, [loadReviewsData]);
 
-  const refreshEvents = useCallback(() => {
-    loadEventsData()
-      .then((res) => setEventsData(res))
-      .catch((err) => console.warn("Failed to refresh events data", err));
+  const refreshEvents = useCallback(async () => {
+    try {
+      if (import.meta.env?.DEV) {
+        console.debug("[EVENTS DEBUG] REFRESH START (AdminPanel)");
+      }
+      const res = await loadEventsData();
+      if (res) {
+        if (import.meta.env?.DEV) {
+          console.debug("[EVENTS DEBUG] PARENT STATE updated with:", {
+            eventsCount: res.events?.length ?? 0,
+            galleryCount: res.gallery?.length ?? 0,
+          });
+        }
+        setEventsData(res);
+      }
+      return res;
+    } catch (err) {
+      console.warn("Failed to refresh events data", err);
+      return null;
+    }
   }, [loadEventsData]);
 
   const refreshServices = useCallback(() => {
@@ -391,8 +405,7 @@ export function AdminPanel() {
       } else if (
         newTab === "reviews" ||
         newTab === "campaigns" ||
-        newTab === "reports" ||
-        newTab === "analytics"
+        newTab === "reports"
       ) {
         refreshReviews();
       } else if (newTab === "overview" || newTab === "admins" || newTab === "leads") {
@@ -427,7 +440,7 @@ export function AdminPanel() {
         } else if (tab === "events") {
           const res = await loadEventsData();
           if (active) setEventsData(res);
-        } else if (tab === "reviews" || tab === "campaigns" || tab === "reports" || tab === "analytics") {
+        } else if (tab === "reviews" || tab === "campaigns" || tab === "reports") {
           const res = await loadReviewsData();
           if (active) setReviewsData(res);
         } else {
@@ -457,21 +470,21 @@ export function AdminPanel() {
         });
       }
 
-      // Background fetch remaining tabs
+      // Background fetch remaining tabs (skip the currently active tab to avoid race conditions)
       Promise.allSettled([
-        loadEventsData(),
-        loadServicesData(),
-        loadWorkData(),
-        loadCareersData(),
-        loadBlogData(),
+        tab !== "events" ? loadEventsData() : Promise.resolve(null),
+        tab !== "services" ? loadServicesData() : Promise.resolve(null),
+        tab !== "work" ? loadWorkData() : Promise.resolve(null),
+        tab !== "careers" ? loadCareersData() : Promise.resolve(null),
+        tab !== "blog" ? loadBlogData() : Promise.resolve(null),
       ])
         .then(([resEvents, resServices, resWork, resCareers, resBlog]) => {
           if (active) {
-            if (resEvents.status === "fulfilled") setEventsData(resEvents.value);
-            if (resServices.status === "fulfilled") setServicesData(resServices.value);
-            if (resWork.status === "fulfilled") setWorkData(resWork.value);
-            if (resCareers.status === "fulfilled") setCareersData(resCareers.value);
-            if (resBlog.status === "fulfilled") setBlogData(resBlog.value);
+            if (resEvents.status === "fulfilled" && resEvents.value) setEventsData(resEvents.value);
+            if (resServices.status === "fulfilled" && resServices.value) setServicesData(resServices.value);
+            if (resWork.status === "fulfilled" && resWork.value) setWorkData(resWork.value);
+            if (resCareers.status === "fulfilled" && resCareers.value) setCareersData(resCareers.value);
+            if (resBlog.status === "fulfilled" && resBlog.value) setBlogData(resBlog.value);
           }
         })
         .catch((err) => {
@@ -486,9 +499,24 @@ export function AdminPanel() {
     };
   }, [user, tab]);
 
+  // Synchronize live operational counts into active topbar notification alerts
+  useEffect(() => {
+    if (reviewsData?.stats || data?.stats) {
+      syncLiveCounts({
+        pendingReviews: reviewsData?.stats?.pendingCount || 0,
+        openReports: reviewsData?.stats?.openReportsCount || 0,
+        leadsToday: data?.stats?.leadsToday || 0,
+      });
+    }
+  }, [
+    reviewsData?.stats?.pendingCount,
+    reviewsData?.stats?.openReportsCount,
+    data?.stats?.leadsToday,
+  ]);
+
   async function signOut() {
     try {
-      logoutAdmin();
+      await logoutAdmin();
     } catch {}
     void navigate({ to: "/", replace: true });
   }
@@ -553,23 +581,23 @@ export function AdminPanel() {
 
   const currentData: AdminOverview = data ?? {
     isAdmin: true,
-    role: "super_admin",
+    role: user?.role || "super_admin",
     stats: { users: 1, leads: 0, leadsToday: 0, notifyOptIn: 0 },
     leads: [],
     admins: user
       ? [
           {
-            user_id: user.id || "usr-me",
+            user_id: user.id,
             email: user.email || null,
-            full_name: (user as any).user_metadata?.full_name || (user as any).name || "Administrator",
-            designation: "Administrator",
-            role: "super_admin",
-            is_active: true,
+            full_name: user.name || user.user_metadata?.full_name || "Administrator",
+            designation: user.designation || user.user_metadata?.designation || "Administrator",
+            role: user.role || "super_admin",
+            is_active: user.isActive !== false,
             created_at: new Date().toISOString(),
           },
         ]
       : [],
-    selfId: user?.id || "usr-me",
+    selfId: user?.id || "",
   };
 
   const userRole = currentData.role ?? "admin";
@@ -592,6 +620,14 @@ export function AdminPanel() {
         profile={
           <AdminProfile
             userId={currentData.selfId}
+            employeeId={
+              self?.employee_id ||
+              self?.emp_id ||
+              (self as any)?.empId ||
+              (user as any)?.user_metadata?.employee_id ||
+              (user as any)?.user_metadata?.emp_id ||
+              (user as any)?.empId
+            }
             email={user.email}
             fullName={self?.full_name ?? null}
             designation={self?.designation ?? null}
@@ -666,11 +702,10 @@ export function AdminPanel() {
                 />
               )}
 
-              {/* SERVICES & SECTORS MANAGEMENT TAB */}
+              {/* SERVICES & CATEGORIES MANAGEMENT TAB */}
               {tab === "services" && (
                 <AdminServices
                   services={servicesData.services || []}
-                  industries={servicesData.industries || []}
                   categoryItems={servicesData.categoryItems || []}
                   categoryCounts={servicesData.categoryCounts || {}}
                   onRefresh={refreshServices}
@@ -737,14 +772,9 @@ export function AdminPanel() {
                 <AdminReports reports={reviewsData.reports || []} onRefresh={refreshReviews} />
               )}
 
-              {/* ANALYTICS TAB */}
-              {tab === "analytics" && (
-                <AdminAnalytics data={reviewsData} />
-              )}
-
               {/* ADMIN LOGS TAB */}
               {tab === "logs" && (
-                <AdminLogs currentUserRole={userRole} />
+                <AdminLogs currentUserRole={userRole} currentAdmins={currentData.admins} />
               )}
 
               {/* SETTINGS TAB */}

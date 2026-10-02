@@ -14,6 +14,7 @@ import {
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import { TiltCard } from "@/components/common/TiltCard/TiltCard";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
+import { BlogContentRenderer } from "@/components/blog/BlogContentRenderer";
 import type { BlogPostItem } from "@/lib/blog.shared";
 import pageStyles from "@/styles/page.module.css";
 import styles from "./BlogDetailPage.module.css";
@@ -100,7 +101,9 @@ export function BlogDetailPage({ post, relatedPosts = [] }: BlogDetailPageProps)
                 />
                 <div>
                   <span className={styles.authorName}>{post.author_name}</span>
-                  <span className={styles.authorRole}>{post.author_role || "Engineering & Research"}</span>
+                  <span className={styles.authorRole}>
+                    {post.author_role || "Engineering & Research"}
+                  </span>
                 </div>
               </div>
 
@@ -130,11 +133,7 @@ export function BlogDetailPage({ post, relatedPosts = [] }: BlogDetailPageProps)
         <div className={styles.container}>
           <Reveal variant="fade" delay={100}>
             <div className={styles.coverWrapper}>
-              <img
-                src={post.cover_image}
-                alt={post.title}
-                className={styles.coverImage}
-              />
+              <img src={post.cover_image} alt={post.title} className={styles.coverImage} />
               {post.cover_caption && (
                 <span className={styles.coverCaption}>{post.cover_caption}</span>
               )}
@@ -147,53 +146,7 @@ export function BlogDetailPage({ post, relatedPosts = [] }: BlogDetailPageProps)
       <section className={styles.contentSection} aria-label="Article Content">
         <div className={styles.articleContainer}>
           <div className={styles.articleBody}>
-            {/* Split paragraphs or markdown headings */}
-            {post.content.split("\n\n").map((block, idx) => {
-              const trimmed = block.trim();
-              if (trimmed.startsWith("## ")) {
-                return (
-                  <h2 key={idx} className={styles.contentH2}>
-                    {trimmed.replace("## ", "")}
-                  </h2>
-                );
-              }
-              if (trimmed.startsWith("### ")) {
-                return (
-                  <h3 key={idx} className={styles.contentH3}>
-                    {trimmed.replace("### ", "")}
-                  </h3>
-                );
-              }
-              if (trimmed.startsWith("```")) {
-                const codeLines = trimmed
-                  .replace(/```[a-z]*\n?/i, "")
-                  .replace(/```$/, "")
-                  .trim();
-                return (
-                  <pre key={idx} className={styles.codeBlock}>
-                    <code>{codeLines}</code>
-                  </pre>
-                );
-              }
-              if (trimmed.startsWith("- ") || trimmed.startsWith("1. ")) {
-                const lines = trimmed.split("\n");
-                return (
-                  <ul key={idx} className={styles.contentList}>
-                    {lines.map((l, lIdx) => (
-                      <li key={lIdx}>
-                        <CheckCircle2 size={15} className={styles.listCheck} />
-                        <span>{l.replace(/^[-*]|\d+\.\s*/, "").replace(/\*\*(.*?)\*\*/g, "$1")}</span>
-                      </li>
-                    ))}
-                  </ul>
-                );
-              }
-              return (
-                <p key={idx} className={styles.contentParagraph}>
-                  {trimmed}
-                </p>
-              );
-            })}
+            <BlogContentRenderer content={post.content} />
           </div>
 
           {/* Article Tags */}
@@ -259,7 +212,8 @@ export function BlogDetailPage({ post, relatedPosts = [] }: BlogDetailPageProps)
             <div className={styles.ctaCard}>
               <h2 className={styles.ctaHeading}>Stay at the Frontier of Product Engineering</h2>
               <p className={styles.ctaSub}>
-                Have a project or technical challenge in mind? Let's engineer scalable software together.
+                Have a project or technical challenge in mind? Let's engineer scalable software
+                together.
               </p>
               <div className={styles.ctaButtons}>
                 <MagneticButton to="/contact" variant="solid">

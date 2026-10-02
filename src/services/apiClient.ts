@@ -4,16 +4,24 @@
  * Configured via VITE_API_BASE_URL (defaults to https://api.dimisi.tech).
  */
 
-export const API_BASE_URL =
-  (typeof import.meta !== "undefined" &&
-    import.meta.env &&
-    typeof import.meta.env.VITE_API_BASE_URL === "string" &&
-    import.meta.env.VITE_API_BASE_URL.trim()) ||
-  (typeof process !== "undefined" &&
-    process.env &&
-    typeof process.env.VITE_API_BASE_URL === "string" &&
-    process.env.VITE_API_BASE_URL.trim()) ||
-  "https://api.dimisi.tech";
+export const API_BASE_URL = (() => {
+  const envUrl =
+    (typeof import.meta !== "undefined" &&
+      import.meta.env &&
+      typeof import.meta.env.VITE_API_BASE_URL === "string" &&
+      import.meta.env.VITE_API_BASE_URL.trim()) ||
+    (typeof process !== "undefined" &&
+      process.env &&
+      typeof process.env.VITE_API_BASE_URL === "string" &&
+      process.env.VITE_API_BASE_URL.trim()) ||
+    "";
+
+  if (envUrl) {
+    return envUrl.replace(/\/+$/, "");
+  }
+
+  return "https://api.dimisi.tech";
+})();
 
 if (typeof window !== "undefined" && import.meta.env?.DEV) {
   console.info("[API CONFIG]", API_BASE_URL);
@@ -31,11 +39,14 @@ export class ApiError extends Error {
   }
 }
 
-export interface RequestOptions extends RequestInit {
-  timeoutMs?: number;
-  token?: string;
+export interface RequestOptions extends Omit<RequestInit, "headers"> {
+  headers?: HeadersInit | undefined;
+  timeoutMs?: number | undefined;
+  token?: string | undefined;
   /** In-memory cache TTL in ms for GET requests. Default: 30000ms. Set 0 to disable. */
-  cacheTtlMs?: number;
+  cacheTtlMs?: number | undefined;
+  /** Internal flag for automatic retry after token refresh */
+  _isRetry?: boolean | undefined;
 }
 
 // In-memory cache & in-flight promise deduplication map
@@ -45,17 +56,25 @@ interface CacheEntry {
 }
 const apiGetCache = new Map<string, CacheEntry>();
 const inFlightRequests = new Map<string, Promise<any>>();
+let cacheGeneration = 0;
 
 /** Clears all or matching cached GET responses. */
 export function clearApiCache(endpointPrefix?: string): void {
+  cacheGeneration++;
   if (!endpointPrefix) {
     apiGetCache.clear();
+    inFlightRequests.clear();
     return;
   }
   const norm = endpointPrefix.startsWith("/") ? endpointPrefix : `/${endpointPrefix}`;
   for (const key of apiGetCache.keys()) {
     if (key.includes(norm)) {
       apiGetCache.delete(key);
+    }
+  }
+  for (const key of inFlightRequests.keys()) {
+    if (key.includes(norm)) {
+      inFlightRequests.delete(key);
     }
   }
 }
@@ -68,7 +87,7 @@ export async function apiRequest<T = any>(
   endpoint: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const { timeoutMs = 15000, token, cacheTtlMs = 30000, headers = {}, ...rest } = options;
+  const { timeoutMs = 30000, token, cacheTtlMs = 30000, headers = {}, ...rest } = options;
 
   // Normalize full URL
   const normalizedEndpoint = endpoint.startsWith("/") ? endpoint : `/${endpoint}`;
@@ -95,6 +114,8 @@ export async function apiRequest<T = any>(
     }
   }
 
+  const requestGeneration = cacheGeneration;
+
   const execute = async (): Promise<T> => {
     const startTime = typeof performance !== "undefined" ? performance.now() : Date.now();
     const defaultHeaders: Record<string, string> = {
@@ -108,8 +129,10 @@ export async function apiRequest<T = any>(
         const raw = localStorage.getItem("dimisi_admin_session");
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed?.token && !parsed.token.includes("cookie")) {
+          if (parsed?.token && typeof parsed.token === "string" && !parsed.token.includes("cookie")) {
             authToken = parsed.token;
+          } else if (parsed?.accessToken && typeof parsed.accessToken === "string" && !parsed.accessToken.includes("cookie")) {
+            authToken = parsed.accessToken;
           }
         }
       } catch {}
@@ -204,6 +227,38 @@ export async function apiRequest<T = any>(
           }
         }
 
+        // On 401 Unauthorized for admin-panel routes, invalidate local session cleanly
+        const isAuthRoute =
+          normalizedEndpoint.includes("/auth/login") ||
+          normalizedEndpoint.includes("/auth/logout");
+
+        const isPanelRoute = normalizedEndpoint.startsWith("/api/v1/admin-panel/");
+        const isVisitorRoute =
+          normalizedEndpoint.includes("/visitors/") ||
+          normalizedEndpoint.endsWith("/active") ||
+          normalizedEndpoint.includes("/public");
+
+        if (
+          response.status === 401 &&
+          isPanelRoute &&
+          !isAuthRoute &&
+          !isVisitorRoute &&
+          typeof window !== "undefined"
+        ) {
+          try {
+            localStorage.removeItem("dimisi_admin_session");
+            clearApiCache();
+            window.dispatchEvent(
+              new CustomEvent("dimisi-auth-change", {
+                detail: {
+                  expired: true,
+                  message: "Your 15-minute security session has expired. Please sign in again.",
+                },
+              }),
+            );
+          } catch {}
+        }
+
         if (import.meta.env?.DEV && method === "DELETE") {
           console.error(`[DELETE FAILED] ${normalizedEndpoint} — ${errorMessage} (status: ${response.status})`);
         }
@@ -214,7 +269,7 @@ export async function apiRequest<T = any>(
       // Successful mutation: invalidate GET cache so subsequent fetches pull fresh data from backend
       if (method !== "GET") {
         clearApiCache();
-      } else if (cacheTtlMs > 0 && typeof window !== "undefined") {
+      } else if (cacheTtlMs > 0 && typeof window !== "undefined" && requestGeneration === cacheGeneration) {
         apiGetCache.set(cacheKey, { timestamp: Date.now(), data });
       }
 

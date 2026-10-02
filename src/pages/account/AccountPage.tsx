@@ -3,6 +3,7 @@ import { useNavigate } from "@tanstack/react-router";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
 import { useAuth } from "@/hooks/useAuth";
 import { getProfileFn, updateProfileFn } from "@/lib/profiles.functions";
+import { logoutAdmin } from "@/services/adminAuth.service";
 import styles from "@/styles/auth.module.css";
 
 export function AccountPage() {
@@ -52,8 +53,9 @@ export function AccountPage() {
   }
 
   async function signOut() {
-    localStorage.removeItem("dimisi_admin_session");
-    window.dispatchEvent(new Event("dimisi-auth-change"));
+    try {
+      await logoutAdmin();
+    } catch {}
     void navigate({ to: "/", replace: true });
   }
 

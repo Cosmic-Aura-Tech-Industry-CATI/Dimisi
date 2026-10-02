@@ -40,6 +40,7 @@ import {
   type JobOpening,
   type CultureBenefit,
   validateJobApplicationInput,
+  saveLocalResumeToVault,
 } from "@/lib/careers.shared";
 import pageStyles from "@/styles/page.module.css";
 import styles from "./CareerPage.module.css";
@@ -158,7 +159,7 @@ export function CareerPage() {
 
   // Open Apply Modal Handler
   const handleOpenApplyModal = (job?: JobOpening | null) => {
-    const targetJob = job || jobs[0] || null;
+    const targetJob = job || (jobs.length > 0 ? jobs[0] : null);
     setSelectedJobForApply(targetJob);
     setFormErrors({});
     setSubmitError(null);
@@ -184,10 +185,10 @@ export function CareerPage() {
       return;
     }
 
-    if (file.size > 10 * 1024 * 1024) {
+    if (file.size > 5 * 1024 * 1024) {
       setFormErrors((prev) => ({
         ...prev,
-        resume: "File size exceeds 10 MB limit. Please upload a smaller file.",
+        resume: "File size exceeds 5 MB limit. Please upload a smaller file.",
       }));
       return;
     }
@@ -248,8 +249,14 @@ export function CareerPage() {
     e.preventDefault();
     setSubmitError(null);
 
+    const targetJobId = selectedJobForApply?.id || (jobs.length > 0 ? jobs[0].id : "");
+    if (!targetJobId) {
+      setSubmitError("There are currently no active openings available. Please check back later.");
+      return;
+    }
+
     const inputData = {
-      job_id: selectedJobForApply?.id || "general-inquiry",
+      job_id: targetJobId,
       full_name: fullName,
       email,
       phone,
@@ -272,6 +279,17 @@ export function CareerPage() {
     setIsSubmitting(true);
 
     try {
+      if (resumeDataUrl) {
+        saveLocalResumeToVault(email, {
+          dataUrl: resumeDataUrl,
+          name: resumeName || resumeFile?.name || "Resume.pdf",
+          size: resumeSize || resumeFile?.size || 0,
+          type: resumeFile?.type || "application/pdf",
+          email: email.trim().toLowerCase(),
+          fullName: fullName.trim(),
+        });
+      }
+
       const res = await submitJobApplicationFn({ data: inputData, resumeFile });
       if (res.success) {
         setIsSuccess(true);
@@ -287,7 +305,19 @@ export function CareerPage() {
         setAdditionalInfo("");
         handleRemoveResume();
       } else {
-        setSubmitError(res.error || "Unable to submit your application right now. Please try again.");
+        const rawErr = (res.error || "").toLowerCase();
+        if (
+          rawErr.includes("already applied") ||
+          rawErr.includes("duplicate") ||
+          rawErr.includes("11000") ||
+          rawErr.includes("already submitted")
+        ) {
+          setSubmitError(
+            "You have already applied for this position with this email address. Our talent acquisition team is already reviewing your profile and will get in touch soon!"
+          );
+        } else {
+          setSubmitError(res.error || "Unable to submit your application right now. Please try again.");
+        }
       }
     } catch {
       setSubmitError("Unable to submit your application right now. Please try again.");
@@ -1164,7 +1194,7 @@ export function CareerPage() {
                             Drag &amp; drop your resume here, or <span className={styles.dropZoneLink}>Browse</span>
                           </p>
                           <p className={styles.dropZoneMeta}>
-                            Supported formats: <strong>PDF, DOC, DOCX</strong> • Max file size: <strong>10 MB</strong>
+                            Supported formats: <strong>PDF, DOC, DOCX</strong> • Max file size: <strong>5 MB</strong>
                           </p>
                         </div>
                       </div>

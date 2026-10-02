@@ -46,6 +46,7 @@ export function AdminShell({
           title={ADMIN_NAV.find((n) => n.id === tab)?.label ?? "Admin"}
           onToggleNav={() => setOpen((v) => !v)}
           profile={profile}
+          onTab={onTab}
         />
         <main className={styles.content} data-lenis-prevent>
           <div className={styles.contentInner}>

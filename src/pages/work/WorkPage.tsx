@@ -14,6 +14,7 @@ import {
   ArrowRight,
   AlertTriangle,
   RefreshCw,
+  Star,
 } from "lucide-react";
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import { TiltCard } from "@/components/common/TiltCard/TiltCard";
@@ -25,7 +26,7 @@ import pageStyles from "@/styles/page.module.css";
 import styles from "./WorkPage.module.css";
 
 export function WorkPage() {
-  const [filterType, setFilterType] = useState<"all" | ProjectType>("all");
+  const [filterType, setFilterType] = useState<"all" | "featured" | ProjectType>("all");
 
   // Fetch live dynamic case studies from backend API & store
   const {
@@ -49,10 +50,22 @@ export function WorkPage() {
 
   const workCount = useMemo(() => projects.filter((p) => p.type === "work").length, [projects]);
   const productCount = useMemo(() => projects.filter((p) => p.type === "product").length, [projects]);
+  const featuredProjects = useMemo(() => projects.filter((p) => p.is_featured), [projects]);
+  const featuredCount = featuredProjects.length;
 
   const filteredProjects = useMemo(() => {
-    if (filterType === "all") return projects;
-    return projects.filter((p) => p.type === filterType);
+    let list = projects;
+    if (filterType === "featured") {
+      return list.filter((p) => p.is_featured);
+    }
+    if (filterType !== "all") {
+      list = list.filter((p) => p.type === filterType);
+    }
+    // Priority sorting: starred / featured projects float to the top
+    return [...list].sort((a, b) => {
+      if (a.is_featured === b.is_featured) return 0;
+      return a.is_featured ? -1 : 1;
+    });
   }, [projects, filterType]);
 
   return (
@@ -114,6 +127,13 @@ export function WorkPage() {
                 <ArrowUpRight size={18} />
               </MagneticButton>
 
+              {featuredProjects.length > 0 && (
+                <a href="#featured-spotlight" className={styles.featuredHeroAnchor}>
+                  <Star size={15} className={styles.amberStarIcon} />
+                  <span>Featured Work ({featuredProjects.length})</span>
+                </a>
+              )}
+
               <a href="#case-studies" className={styles.secondaryAnchor}>
                 <span>Explore Selected Projects</span>
                 <ChevronRight size={16} />
@@ -123,7 +143,153 @@ export function WorkPage() {
         </div>
       </section>
 
-      {/* 2. SELECTED PROJECTS / CASE STUDIES SECTION */}
+      {/* 2. DEDICATED FEATURED SPOTLIGHT SECTION */}
+      {!isLoading && featuredProjects.length > 0 && filterType === "all" && (
+        <section
+          className={styles.featuredSection}
+          id="featured-spotlight"
+          aria-label="Featured Spotlight Projects"
+        >
+          <div className={styles.container}>
+            <div className={styles.sectionHeaderCenter}>
+              <Reveal variant="fade">
+                <div className={styles.featuredSectionEyebrow}>
+                  <Star className={styles.amberStarIcon} size={14} />
+                  <span>Spotlight Portfolio</span>
+                </div>
+              </Reveal>
+              <Reveal variant="up" delay={60}>
+                <h2 className={styles.sectionTitle}>
+                  Featured <span className={styles.gradientText}>Innovations</span>
+                </h2>
+              </Reveal>
+              <Reveal variant="up" delay={100}>
+                <p className={styles.sectionSub}>
+                  Handpicked case studies and production systems recognized for architectural excellence
+                  and outsized business impact.
+                </p>
+              </Reveal>
+            </div>
+
+            <div className={styles.featuredGrid}>
+              {featuredProjects.map((project, index) => (
+                <Reveal key={`featured-${project.id}`} delay={index * 80} className={styles.featuredGridItem}>
+                  <TiltCard className={styles.featuredCard}>
+                    <div className={styles.featuredCardVisual}>
+                      <img
+                        src={project.cover_image || DEFAULT_CASESTUDY_FALLBACK_IMAGE}
+                        alt={project.title}
+                        className={styles.cardCoverImg}
+                        loading="lazy"
+                        decoding="async"
+                        onError={(e) => {
+                          const target = e.currentTarget as HTMLImageElement;
+                          if (target.src !== DEFAULT_CASESTUDY_FALLBACK_IMAGE) {
+                            target.src = DEFAULT_CASESTUDY_FALLBACK_IMAGE;
+                          }
+                        }}
+                      />
+                      <div className={styles.cardImgOverlay} />
+
+                      {/* Featured Spotlight Badge + Type Badge */}
+                      <div className={styles.typeBadgeWrapper}>
+                        <span className={styles.cardFeaturedBadge}>
+                          <Star size={11} />
+                          <span>Featured Spotlight</span>
+                        </span>
+                        <span
+                          className={[
+                            styles.typeBadge,
+                            project.type === "product" ? styles.productBadge : styles.workBadge,
+                          ].join(" ")}
+                        >
+                          {project.type === "product" ? "Our Product" : "Our Work"}
+                        </span>
+                        <span className={styles.categoryBadge}>{project.category}</span>
+                      </div>
+
+                      {project.website_url && (
+                        <a
+                          href={project.website_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={styles.extLinkFloating}
+                          title={`Visit ${project.title} live website`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <Globe size={13} />
+                          <span>Live Site</span>
+                          <ExternalLink size={12} />
+                        </a>
+                      )}
+                    </div>
+
+                    <div className={styles.featuredCardBody}>
+                      <div className={styles.featuredCardHeaderRow}>
+                        <h3 className={styles.featuredProjectTitle}>{project.title}</h3>
+                      </div>
+                      {project.tagline && (
+                        <p className={styles.projectTagline}>{project.tagline}</p>
+                      )}
+                      {project.overview && (
+                        <p className={styles.projectOverview}>{project.overview}</p>
+                      )}
+
+                      {/* Tech stack tags */}
+                      {project.tech_stack && project.tech_stack.length > 0 && (
+                        <div className={styles.techStackRow}>
+                          {project.tech_stack.slice(0, 4).map((tech, idx) => (
+                            <span key={`feat-tech-${tech}-${idx}`} className={styles.techChip}>
+                              {tech}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+
+                      {/* Quick Metrics / Outcomes Highlights */}
+                      {project.metrics && project.metrics.length > 0 && (
+                        <div className={styles.metricsRow}>
+                          {project.metrics.slice(0, 3).map((m, idx) => (
+                            <div key={`feat-m-${m.label}-${idx}`} className={styles.metricChip}>
+                              <span className={styles.chipVal}>{m.value}</span>
+                              <span className={styles.chipLbl}>{m.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className={styles.cardFooter}>
+                      <Link
+                        to="/work/$slug"
+                        params={{ slug: project.slug }}
+                        className={styles.detailLink}
+                      >
+                        <span>Explore Case Study</span>
+                        <ArrowUpRight className={styles.arrowIcon} />
+                      </Link>
+
+                      {project.website_url && (
+                        <a
+                          href={project.website_url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className={styles.visitSiteLink}
+                        >
+                          <span>Visit Website</span>
+                          <ArrowRight size={13} />
+                        </a>
+                      )}
+                    </div>
+                  </TiltCard>
+                </Reveal>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* 3. SELECTED PROJECTS / CASE STUDIES SECTION */}
       <section className={styles.projectsSection} id="case-studies" aria-label="Selected Projects">
         <div className={styles.container}>
           <div className={styles.sectionHeaderCenter}>
@@ -160,6 +326,23 @@ export function WorkPage() {
                   <span>All</span>
                   <span className={styles.tabBadge}>{projects.length}</span>
                 </button>
+
+                {featuredCount > 0 && (
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={filterType === "featured"}
+                    className={[
+                      styles.filterTab,
+                      filterType === "featured" ? styles.filterTabActive : "",
+                    ].join(" ")}
+                    onClick={() => setFilterType("featured")}
+                  >
+                    <Star size={14} className={styles.amberStarIcon} />
+                    <span>Featured</span>
+                    <span className={styles.tabBadge}>{featuredCount}</span>
+                  </button>
+                )}
 
                 <button
                   type="button"
@@ -245,12 +428,16 @@ export function WorkPage() {
                 <FolderGit2 size={28} />
               </div>
               <h3 className={styles.stateTitle}>
-                {filterType !== "all"
+                {filterType === "featured"
+                  ? "No featured case studies found"
+                  : filterType !== "all"
                   ? "No case studies found in this section"
                   : "No projects available at the moment."}
               </h3>
               <p className={styles.stateText}>
-                {filterType !== "all"
+                {filterType === "featured"
+                  ? "There are currently no projects marked as featured. Check back shortly or view all projects."
+                  : filterType !== "all"
                   ? "There are currently no active case studies under this filter. View all projects or check back shortly."
                   : "Our project showcase is being refreshed. Check back shortly or discuss tailored digital solutions with our team."}
               </p>
@@ -276,7 +463,12 @@ export function WorkPage() {
             <div className={styles.projectsGrid}>
               {filteredProjects.map((project, index) => (
                 <Reveal key={project.id} delay={index * 60} className={styles.gridItem}>
-                  <TiltCard className={styles.projectCard}>
+                  <TiltCard
+                    className={[
+                      styles.projectCard,
+                      project.is_featured ? styles.featuredProjectCard : "",
+                    ].join(" ")}
+                  >
                     {/* Card Visual Header with Cover Image */}
                     <div className={styles.cardVisual}>
                       <img
@@ -284,6 +476,7 @@ export function WorkPage() {
                         alt={project.title}
                         className={styles.cardCoverImg}
                         loading="lazy"
+                        decoding="async"
                         onError={(e) => {
                           const target = e.currentTarget as HTMLImageElement;
                           if (target.src !== DEFAULT_CASESTUDY_FALLBACK_IMAGE) {
@@ -293,8 +486,14 @@ export function WorkPage() {
                       />
                       <div className={styles.cardImgOverlay} />
 
-                      {/* Type Badge (Our Work vs Our Product) */}
+                      {/* Type Badge & Featured Badge */}
                       <div className={styles.typeBadgeWrapper}>
+                        {project.is_featured && (
+                          <span className={styles.cardFeaturedBadge}>
+                            <Star size={11} />
+                            <span>Featured</span>
+                          </span>
+                        )}
                         <span
                           className={[
                             styles.typeBadge,
