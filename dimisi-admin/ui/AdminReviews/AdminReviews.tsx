@@ -245,7 +245,16 @@ export function AdminReviews({
             onClick={() => setStatusTab("pending")}
           >
             <span>Pending</span>
-            <span className={[styles.tabBadge, pendingCount > 0 ? styles.tabBadgeActive : ""].join(" ")}>
+            <span
+              className={[
+                styles.tabBadge,
+                statusTab === "pending"
+                  ? styles.tabBadgeActive
+                  : pendingCount > 0
+                  ? styles.tabBadgePendingAlert
+                  : "",
+              ].join(" ")}
+            >
               {pendingCount}
             </span>
           </button>

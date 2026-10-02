@@ -868,7 +868,7 @@ export function AdminLogs({ currentUserRole, currentAdmins }: AdminLogsProps) {
                   </div>
                 </th>
 
-                {/* 2. ACTOR (Avatar + Name + Email + Real Employee ID) */}
+                {/* 2. ACTOR / PERFORMED BY */}
                 <th
                   className={[styles.thSortable, styles.colActor].join(" ")}
                   onClick={() => handleSort("adminName")}
@@ -879,17 +879,27 @@ export function AdminLogs({ currentUserRole, currentAdmins }: AdminLogsProps) {
                   </div>
                 </th>
 
-                {/* 3. ROLE & SCOPE */}
+                {/* 3. EMAIL ID */}
+                <th className={styles.colEmail}>
+                  <span>Email ID</span>
+                </th>
+
+                {/* 4. EMPLOYEE ID */}
+                <th className={styles.colEmpId}>
+                  <span>Employee ID</span>
+                </th>
+
+                {/* 5. ROLE & SCOPE */}
                 <th className={styles.colRoleScope}>
                   <span>Role & Scope</span>
                 </th>
 
-                {/* 4. ACTIVITY & TARGET */}
+                {/* 6. ACTIVITY & TARGET */}
                 <th className={styles.colActivity}>
                   <span>Activity & Target</span>
                 </th>
 
-                {/* 5. MODULE */}
+                {/* 7. MODULE */}
                 <th
                   className={[styles.thSortable, styles.colModule].join(" ")}
                   onClick={() => handleSort("module")}
@@ -900,7 +910,7 @@ export function AdminLogs({ currentUserRole, currentAdmins }: AdminLogsProps) {
                   </div>
                 </th>
 
-                {/* 6. STATUS & DOSSIER */}
+                {/* 8. STATUS & DOSSIER */}
                 <th
                   className={[styles.thSortable, styles.colStatus].join(" ")}
                   onClick={() => handleSort("status")}
@@ -915,7 +925,7 @@ export function AdminLogs({ currentUserRole, currentAdmins }: AdminLogsProps) {
             <tbody>
               {isLoading && filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={8}>
                     <div className={styles.emptyState}>
                       <div
                         className={styles.emptyIconBox}
@@ -932,7 +942,7 @@ export function AdminLogs({ currentUserRole, currentAdmins }: AdminLogsProps) {
                 </tr>
               ) : errorMessage && filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={8}>
                     <div className={styles.emptyState}>
                       <div
                         className={styles.emptyIconBox}
@@ -956,7 +966,7 @@ export function AdminLogs({ currentUserRole, currentAdmins }: AdminLogsProps) {
                 </tr>
               ) : filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={8}>
                     <div className={styles.emptyState}>
                       <div className={styles.emptyIconBox}>
                         <Search size={28} />
@@ -1006,40 +1016,28 @@ export function AdminLogs({ currentUserRole, currentAdmins }: AdminLogsProps) {
                         </div>
                       </td>
 
-                      {/* 2. ACTOR (Avatar + Full Name + Email + Real Employee ID) */}
+                      {/* 2. ACTOR / PERFORMED BY */}
                       <td className={styles.colActor}>
-                        <div className={styles.actorGroup}>
-                          {log.avatar ? (
-                            <img
-                              src={log.avatar}
-                              alt={log.adminName}
-                              className={styles.avatarImg}
-                              onError={(e) => {
-                                (e.target as HTMLElement).style.display = "none";
-                              }}
-                            />
-                          ) : (
-                            <span className={styles.avatar}>
-                              {initials(log.adminName, log.email)}
-                            </span>
-                          )}
-                          <div className={styles.actorInfo}>
-                            <span className={styles.actorName}>
-                              {log.adminName || "DIMISI Admin"}
-                            </span>
-                            <div className={styles.actorMetaRow}>
-                              <span className={styles.actorEmail} title={log.email || ""}>
-                                {log.email || "—"}
-                              </span>
-                              <span
-                                className={styles.actorEmpBadge}
-                                title={`Employee ID: ${log.employeeId || "—"}`}
-                              >
-                                {log.employeeId || "—"}
-                              </span>
-                            </div>
-                          </div>
-                        </div>
+                        <span className={styles.actorName}>
+                          {log.adminName || "DIMISI Admin"}
+                        </span>
+                      </td>
+
+                      {/* 3. EMAIL ID */}
+                      <td className={styles.colEmail}>
+                        <span className={styles.actorEmailText} title={log.email || ""}>
+                          {log.email || "—"}
+                        </span>
+                      </td>
+
+                      {/* 4. EMPLOYEE ID */}
+                      <td className={styles.colEmpId}>
+                        <span
+                          className={styles.actorEmpBadge}
+                          title={`Employee ID: ${log.employeeId || "—"}`}
+                        >
+                          {log.employeeId || "—"}
+                        </span>
                       </td>
 
                       {/* 3. ROLE & SCOPE */}

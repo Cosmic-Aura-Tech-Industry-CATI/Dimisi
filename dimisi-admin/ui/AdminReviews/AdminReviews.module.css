@@ -122,11 +122,19 @@
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
   color: inherit;
+  border: 1px solid transparent;
 }
 
 .tabBadgeActive {
   background: rgba(10, 8, 14, 0.25);
   color: #0a0810;
+  border-color: transparent;
+}
+
+.tabBadgePendingAlert {
+  background: rgba(255, 171, 46, 0.18);
+  color: var(--dm-amber, #ffab2e);
+  border-color: rgba(255, 171, 46, 0.4);
 }
 
 .filtersRow {
