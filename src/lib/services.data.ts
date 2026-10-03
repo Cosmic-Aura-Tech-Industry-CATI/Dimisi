@@ -1852,6 +1852,12 @@ class MemoryServicesStore {
     return this._services.length < initLen;
   }
 
+  // ============================================================================
+  // LEGACY INDUSTRY STORE METHODS (RETAINED FOR LOCAL MEMORY STORE FALLBACK)
+  // WHY THIS IS USED:
+  // These methods maintain local memory parity for the initial prototype seed data.
+  // In live production, categories are managed via backend MongoDB REST endpoints.
+  // ============================================================================
   saveIndustry(input: IndustryInput): IndustrySector {
     const slug = input.slug ? slugifyService(input.slug) : slugifyService(input.name);
 

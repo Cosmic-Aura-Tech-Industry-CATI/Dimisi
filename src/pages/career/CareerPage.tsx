@@ -1,5 +1,6 @@
 import { useState, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLoaderData } from "@tanstack/react-router";
 import {
   ArrowUpRight,
   ChevronRight,
@@ -96,10 +97,15 @@ export function CareerPage() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
+  // Seed query with route loader data to prevent redundant initial duplicate fetch
+  const routeLoaderData = useLoaderData({ strict: false });
+
   // Live dynamic query synced with DIMISI Admin Panel
   const { data: payload } = useQuery({
     queryKey: ["publicCareers"],
     queryFn: () => getPublicCareersData(),
+    ...(routeLoaderData ? { initialData: routeLoaderData as any } : {}),
+    staleTime: 60 * 1000,
   });
 
   const hero = payload?.hero || {

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import {
   ArrowUpRight,
@@ -37,6 +37,33 @@ export function ServiceDetailPage({ service }: ServiceDetailPageProps) {
   const toggleFaq = (idx: number) => {
     setOpenFaqIdx((prev) => (prev === idx ? null : idx));
   };
+
+  // ============================================================================
+  // CLEANER FUNCTION: LIGHTBOX ESCAPE LISTENER & BODY SCROLL LOCK
+  // WHY THIS IS USED:
+  // 1. Prevents background page scrolling while the full-screen lightbox modal is open.
+  // 2. Enables the Escape key to close the lightbox cleanly.
+  // 3. The cleanup return function restores original scroll behavior and unbinds event listeners.
+  // ============================================================================
+  useEffect(() => {
+    if (!activeLightboxImg) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setActiveLightboxImg(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeLightboxImg]);
 
   return (
     <div className={pageStyles.page}>

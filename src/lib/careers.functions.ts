@@ -544,14 +544,14 @@ export async function submitJobApplicationFn({
  * 10. GET SINGLE APPLICATION BY ID
  * Endpoint: GET /api/v1/admin-panel/application/:id
  */
-export async function getApplicationByIdApi(id: string): Promise<JobApplicationItem> {
+export async function getApplicationByIdApi(id: string, signal?: AbortSignal): Promise<JobApplicationItem> {
   const cleanId = extractMongoId(id) || id.trim();
   if (!cleanId) throw new Error("Application ID is required.");
 
   if (isMongoId(cleanId)) {
     const res = await apiRequest<BackendApplicationSingleResponse>(
       `/api/v1/admin-panel/application/${encodeURIComponent(cleanId)}`,
-      { method: "GET" },
+      { method: "GET", ...(signal ? { signal } : {}) },
     );
     const doc = res?.data?.application;
     if (!doc) throw new Error(res?.message || "Application not found.");

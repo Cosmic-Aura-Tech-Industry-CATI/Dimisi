@@ -58,12 +58,37 @@ const apiGetCache = new Map<string, CacheEntry>();
 const inFlightRequests = new Map<string, Promise<any>>();
 let cacheGeneration = 0;
 
+// Mutex lock & subscriber queue for silent 401 token refresh:
+// Prevents duplicate parallel /refresh-token calls when multiple requests fail simultaneously with 401.
+let isRefreshing = false;
+let refreshSubscribers: ((success: boolean) => void)[] = [];
+
+function subscribeTokenRefresh(cb: (success: boolean) => void) {
+  refreshSubscribers.push(cb);
+}
+
+function notifyTokenRefreshed(success: boolean) {
+  refreshSubscribers.forEach((cb) => cb(success));
+  refreshSubscribers = [];
+}
+
+/**
+ * Cleaner function: Flushes and rejects any pending queued requests waiting for a refresh token.
+ * Prevents hung promises and memory leaks when the user logs out or session is terminated.
+ */
+export function clearRefreshQueue(): void {
+  isRefreshing = false;
+  refreshSubscribers.forEach((cb) => cb(false));
+  refreshSubscribers = [];
+}
+
 /** Clears all or matching cached GET responses. */
 export function clearApiCache(endpointPrefix?: string): void {
   cacheGeneration++;
   if (!endpointPrefix) {
     apiGetCache.clear();
     inFlightRequests.clear();
+    clearRefreshQueue(); // Clean up pending refresh queue
     return;
   }
   const norm = endpointPrefix.startsWith("/") ? endpointPrefix : `/${endpointPrefix}`;
@@ -227,12 +252,15 @@ export async function apiRequest<T = any>(
           }
         }
 
-        // On 401 Unauthorized for admin-panel routes, invalidate local session cleanly
+        // Check for 401 Unauthorized on panel/activity routes to attempt silent token refresh
         const isAuthRoute =
           normalizedEndpoint.includes("/auth/login") ||
-          normalizedEndpoint.includes("/auth/logout");
+          normalizedEndpoint.includes("/auth/logout") ||
+          normalizedEndpoint.includes("/auth/refresh-token");
 
-        const isPanelRoute = normalizedEndpoint.startsWith("/api/v1/admin-panel/");
+        const isPanelRoute =
+          normalizedEndpoint.startsWith("/api/v1/admin-panel/") ||
+          normalizedEndpoint.startsWith("/api/v1/activity/");
         const isVisitorRoute =
           normalizedEndpoint.includes("/visitors/") ||
           normalizedEndpoint.endsWith("/active") ||
@@ -243,20 +271,48 @@ export async function apiRequest<T = any>(
           isPanelRoute &&
           !isAuthRoute &&
           !isVisitorRoute &&
+          !options._isRetry &&
           typeof window !== "undefined"
         ) {
+          // 1. Agar koi refresh call pehle se in-flight hai, to is request ko queue me wait karwayein (Mutex)
+          if (isRefreshing) {
+            return new Promise<T>((resolve, reject) => {
+              subscribeTokenRefresh((success) => {
+                if (success) {
+                  // Token refresh ho chuka hai, original request ko fresh cookie ke sath retry karein
+                  resolve(apiRequest<T>(endpoint, { ...options, _isRetry: true }));
+                } else {
+                  reject(new ApiError(errorMessage || "Session expired. Please sign in again.", 401, data));
+                }
+              });
+            });
+          }
+
+          // 2. Primary lock holder bankar background me refresh-token call karein
+          isRefreshing = true;
           try {
-            localStorage.removeItem("dimisi_admin_session");
-            clearApiCache();
-            window.dispatchEvent(
-              new CustomEvent("dimisi-auth-change", {
-                detail: {
-                  expired: true,
-                  message: "Your 15-minute security session has expired. Please sign in again.",
-                },
-              }),
-            );
+            // Dynamic import circular dependency ko break karta hai
+            const { refreshAdminSession } = await import("./adminAuth.service");
+            const refreshed = await refreshAdminSession();
+            isRefreshing = false;
+            notifyTokenRefreshed(refreshed);
+
+            if (refreshed) {
+              // Failed request ko fresh access token ke sath seamlessly retry karein!
+              return await apiRequest<T>(endpoint, { ...options, _isRetry: true });
+            }
+          } catch {
+            isRefreshing = false;
+            notifyTokenRefreshed(false);
+          }
+
+          // 3. Agar refresh token bhi expire (30 days) ya revoke ho chuka hai, tabhi session clear karein
+          try {
+            const { clearAdminSession } = await import("./adminAuth.service");
+            clearAdminSession("Your session has expired. Please sign in again.");
           } catch {}
+
+          throw new ApiError("Your session has expired. Please sign in again.", 401, data);
         }
 
         if (import.meta.env?.DEV && method === "DELETE") {

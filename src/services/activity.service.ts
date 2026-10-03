@@ -313,6 +313,8 @@ export async function getPanelActivityLogsApi(filters: {
   entityType?: string;
   actorId?: string;
   admins?: any[];
+  /** AbortSignal: Allows useEffect cleanup/cleaner function to cancel in-flight requests on filter change or unmount */
+  signal?: AbortSignal;
 } = {}): Promise<{
   logs: AdminActivityLogItem[];
   adminLogs: AdminLog[];
@@ -331,9 +333,16 @@ export async function getPanelActivityLogsApi(filters: {
   const query = params.toString() ? `?${params.toString()}` : "";
 
   try {
+    // Pass signal conditionally using spread syntax:
+    // exactOptionalPropertyTypes: true rule ke mutabik agar signal ho tabhi property add hogi,
+    // warna property object me nahi jayegi (TS2379 strict warning fix).
     const res = await apiRequest<any>(
       `/api/v1/activity/panel${query}`,
-      { method: "GET", cacheTtlMs: 0 },
+      {
+        method: "GET",
+        cacheTtlMs: 0,
+        ...(filters.signal ? { signal: filters.signal } : {}),
+      },
     );
 
     let rawLogs: BackendActivityLogDoc[] = [];
@@ -366,7 +375,11 @@ export async function getPanelActivityLogsApi(filters: {
       page,
       totalPages,
     };
-  } catch (err) {
+  } catch (err: any) {
+    // If request was aborted by cleaner function (user changed filter/tab), do not log warning
+    if (err?.name === "AbortError" || filters.signal?.aborted) {
+      throw err;
+    }
     console.warn("Failed to fetch panel activity logs from backend:", err);
     return {
       logs: [],

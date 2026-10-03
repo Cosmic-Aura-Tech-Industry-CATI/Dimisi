@@ -1,4 +1,4 @@
-import { useState, useTransition, useRef, useEffect, useMemo } from "react";
+import { useState, useTransition, useRef, useEffect, useMemo, useCallback } from "react";
 import {
   Briefcase,
   Plus,
@@ -251,15 +251,36 @@ export function AdminCareers({
     return counts;
   }, [applications]);
 
+  // Cleaner ref for dossier detail fetch
+  const dossierAbortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    // Cleaner function: abort in-flight dossier request if component unmounts
+    return () => {
+      dossierAbortRef.current?.abort();
+    };
+  }, []);
+
   // Handle Application Actions
   const handleOpenApplicationDetails = (app: JobApplicationItem) => {
     setSelectedApplication(app);
+
+    // Cancel any previous in-flight dossier request
+    if (dossierAbortRef.current) {
+      dossierAbortRef.current.abort();
+    }
+    const controller = new AbortController();
+    dossierAbortRef.current = controller;
+
     if (app.id && isMongoId(app.id)) {
-      getApplicationByIdApi(app.id)
+      getApplicationByIdApi(app.id, controller.signal)
         .then((fresh) => {
-          if (fresh) setSelectedApplication(fresh);
+          if (!controller.signal.aborted && fresh) {
+            setSelectedApplication(fresh);
+          }
         })
         .catch((err) => {
+          if (err?.name === "AbortError" || controller.signal.aborted) return;
           console.warn("Could not fetch latest application detail from API:", err);
         });
     }
@@ -392,26 +413,35 @@ export function AdminCareers({
   const [loadingDepartments, setLoadingDepartments] = useState(false);
   const [departmentsError, setDepartmentsError] = useState<string | null>(null);
 
-  const fetchDepartments = async () => {
+  const fetchDepartments = useCallback(async (signal?: AbortSignal) => {
     setLoadingDepartments(true);
     setDepartmentsError(null);
     try {
       const liveDepts = await getAllActiveDepartmentsApi();
+      if (signal?.aborted) return;
       if (liveDepts && liveDepts.length > 0) {
         setDepartments(liveDepts);
       } else {
         setDepartments(DEFAULT_DEPARTMENTS);
       }
-    } catch {
+    } catch (err: any) {
+      if (err?.name === "AbortError" || signal?.aborted) return;
       setDepartments(DEFAULT_DEPARTMENTS);
     } finally {
-      setLoadingDepartments(false);
+      if (!signal?.aborted) {
+        setLoadingDepartments(false);
+      }
     }
-  };
+  }, []);
 
   useEffect(() => {
-    fetchDepartments();
-  }, []);
+    // Cleaner function: aborts pending departmental lookups if component unmounts
+    const controller = new AbortController();
+    void fetchDepartments(controller.signal);
+    return () => {
+      controller.abort();
+    };
+  }, [fetchDepartments]);
 
   // Job Form State
   const [title, setTitle] = useState("");
@@ -1365,82 +1395,149 @@ export function AdminCareers({
                   {/* Section 3: RESUME */}
                   <div className={styles.appDetailSection}>
                     <h4 className={styles.appDetailSectionTitle}>RESUME</h4>
-                    {selectedApplication.status === "pending" || selectedApplication.resume_url === "PENDING" ? (
-                      <div className={styles.resumeDisplayCard}>
-                        <div className={styles.resumeDisplayLeft}>
-                          <div className={styles.resumeFileIconCircle}>
-                            <RotateCw size={22} className={styles.spinIcon} />
-                          </div>
-                          <div className={styles.resumeFileInfo}>
-                            <div className={styles.resumeFileName}>Resume Upload Pending</div>
-                            <div className={styles.resumeFileMeta}>
-                              <span>Candidate application received; file storage is synchronizing.</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : selectedApplication.status === "failed" ? (
-                      <div
-                        className={styles.resumeDisplayCard}
-                        style={{ borderColor: "rgba(239, 68, 68, 0.4)", background: "rgba(239, 68, 68, 0.05)" }}
-                      >
-                        <div className={styles.resumeDisplayLeft}>
-                          <div
-                            className={styles.resumeFileIconCircle}
-                            style={{ background: "rgba(239, 68, 68, 0.15)", color: "#ef4444" }}
-                          >
-                            <AlertCircle size={22} />
-                          </div>
-                          <div className={styles.resumeFileInfo}>
-                            <div className={styles.resumeFileName} style={{ color: "#ef4444" }}>
-                              Resume Processing Failed
-                            </div>
-                            <div className={styles.resumeFileMeta}>
-                              <span>{selectedApplication.failure_reason || "File could not be stored in cloud storage."}</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className={styles.resumeDisplayCard}>
-                        <div className={styles.resumeDisplayLeft}>
-                          <div className={styles.resumeFileIconCircle}>
-                            <FileText size={22} />
-                          </div>
-                          <div className={styles.resumeFileInfo}>
-                            <div className={styles.resumeFileName}>
-                              {selectedApplication.resume_name}
-                            </div>
-                            <div className={styles.resumeFileMeta}>
-                              <span className={styles.formatPill}>
-                                {selectedApplication.resume_name.split(".").pop()?.toUpperCase() || "PDF"}
-                              </span>
-                              <span>•</span>
-                              <span>{formatFileSize(selectedApplication.resume_size)}</span>
-                            </div>
-                          </div>
-                        </div>
+                    {(() => {
+                      // Accurate resume availability check matching applicant table:
+                      // Evaluates Cloudinary/Backend URL (resume_url) or data URL
+                      const vaultData =
+                        (!selectedApplication.resume_data_url || selectedApplication.resume_data_url === "PENDING")
+                          ? (selectedApplication.email ? getLocalResumeFromVault(selectedApplication.email) : null) ||
+                            (selectedApplication.id ? getLocalResumeFromVault(selectedApplication.id) : null)
+                          : null;
+                      const effectiveResumeDataUrl = vaultData?.dataUrl || selectedApplication.resume_data_url;
+                      const hasResume = Boolean(
+                        (effectiveResumeDataUrl &&
+                          effectiveResumeDataUrl !== "PENDING" &&
+                          effectiveResumeDataUrl.length > 10) ||
+                          (selectedApplication.resume_url &&
+                            selectedApplication.resume_url !== "PENDING" &&
+                            selectedApplication.resume_url.startsWith("http"))
+                      );
 
-                        <div className={styles.resumeDisplayActions}>
-                          <button
-                            type="button"
-                            className={styles.previewResumeBtn}
-                            onClick={() => setSelectedResume(selectedApplication)}
+                      // 1. If resume file exists, display the interactive resume card with View & Download actions
+                      // (Do not block based on candidate's hiring application status "pending"!)
+                      if (hasResume) {
+                        const effectiveAppForResume = {
+                          ...selectedApplication,
+                          resume_data_url: effectiveResumeDataUrl || selectedApplication.resume_data_url,
+                          resume_name: vaultData?.name || selectedApplication.resume_name || "Candidate_Resume.pdf",
+                        };
+
+                        return (
+                          <div className={styles.resumeDisplayCard}>
+                            <div className={styles.resumeDisplayLeft}>
+                              <div className={styles.resumeFileIconCircle}>
+                                <FileText size={22} />
+                              </div>
+                              <div className={styles.resumeFileInfo}>
+                                <div className={styles.resumeFileName}>
+                                  {effectiveAppForResume.resume_name}
+                                </div>
+                                <div className={styles.resumeFileMeta}>
+                                  <span className={styles.formatPill}>
+                                    {effectiveAppForResume.resume_name.split(".").pop()?.toUpperCase() || "PDF"}
+                                  </span>
+                                  {selectedApplication.resume_size > 0 && (
+                                    <>
+                                      <span>•</span>
+                                      <span>{formatFileSize(selectedApplication.resume_size)}</span>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className={styles.resumeDisplayActions}>
+                              <button
+                                type="button"
+                                className={styles.previewResumeBtn}
+                                onClick={() => setSelectedResume(effectiveAppForResume)}
+                                title="View candidate resume"
+                              >
+                                <Eye size={14} />
+                                <span>View Resume</span>
+                              </button>
+                              <button
+                                type="button"
+                                className={styles.downloadResumeBtn}
+                                onClick={() => handleDownloadResume(effectiveAppForResume)}
+                                title="Download candidate resume"
+                              >
+                                <Download size={14} />
+                                <span>Download Resume</span>
+                              </button>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // 2. If resume processing failed on backend storage
+                      if (selectedApplication.status === "failed") {
+                        return (
+                          <div
+                            className={styles.resumeDisplayCard}
+                            style={{ borderColor: "rgba(239, 68, 68, 0.4)", background: "rgba(239, 68, 68, 0.05)" }}
                           >
-                            <Eye size={14} />
-                            <span>View Resume</span>
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.downloadResumeBtn}
-                            onClick={() => handleDownloadResume(selectedApplication)}
-                          >
-                            <Download size={14} />
-                            <span>Download Resume</span>
-                          </button>
+                            <div className={styles.resumeDisplayLeft}>
+                              <div
+                                className={styles.resumeFileIconCircle}
+                                style={{ background: "rgba(239, 68, 68, 0.15)", color: "#ef4444" }}
+                              >
+                                <AlertCircle size={22} />
+                              </div>
+                              <div className={styles.resumeFileInfo}>
+                                <div className={styles.resumeFileName} style={{ color: "#ef4444" }}>
+                                  Resume Processing Failed
+                                </div>
+                                <div className={styles.resumeFileMeta}>
+                                  <span>{selectedApplication.failure_reason || "File could not be stored in cloud storage."}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // 3. Only show "Resume Upload Pending" if the resume URL itself is truly PENDING in cloud worker
+                      if (
+                        selectedApplication.resume_url === "PENDING" ||
+                        selectedApplication.resume_data_url === "PENDING"
+                      ) {
+                        return (
+                          <div className={styles.resumeDisplayCard}>
+                            <div className={styles.resumeDisplayLeft}>
+                              <div className={styles.resumeFileIconCircle}>
+                                <RotateCw size={22} className={styles.spinIcon} />
+                              </div>
+                              <div className={styles.resumeFileInfo}>
+                                <div className={styles.resumeFileName}>Resume Upload Pending</div>
+                                <div className={styles.resumeFileMeta}>
+                                  <span>Candidate application received; file storage is synchronizing.</span>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      // 4. Fallback when no resume was attached
+                      return (
+                        <div className={styles.resumeDisplayCard}>
+                          <div className={styles.resumeDisplayLeft}>
+                            <div className={styles.resumeFileIconCircle} style={{ opacity: 0.6 }}>
+                              <FileText size={22} />
+                            </div>
+                            <div className={styles.resumeFileInfo}>
+                              <div className={styles.resumeFileName} style={{ opacity: 0.7 }}>
+                                No Resume Attached
+                              </div>
+                              <div className={styles.resumeFileMeta}>
+                                <span>No resume file was attached with this application.</span>
+                              </div>
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      );
+                    })()}
                   </div>
 
                   {/* Section 4: ADDITIONAL INFORMATION */}

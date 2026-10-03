@@ -3,7 +3,7 @@
  * Seamlessly interfaces with Express Backend:
  * - Login:  POST /api/v1/admin-panel/auth/login
  * - Logout: POST /api/v1/admin-panel/auth/logout
- * - Refresh: POST /api/v1/auth/refresh
+ * - Refresh: POST /api/v1/admin-panel/auth/refresh-token
  */
 import { apiRequest, clearApiCache } from "./apiClient";
 import {
@@ -175,7 +175,57 @@ export function clearAdminSession(reason?: string): void {
 }
 
 /**
- * Retrieve current active admin session if not expired.
+ * Refreshes the admin session silently using backend POST /api/v1/admin-panel/auth/refresh-token.
+ * HttpOnly cookie 'refreshToken' is automatically sent by the browser.
+ * On success, backend extends the 30-day session and sets a fresh 15-minute 'accessToken' cookie.
+ * Frontend updates local session 'expires_at' to fresh 15 minutes.
+ */
+export async function refreshAdminSession(signal?: AbortSignal): Promise<boolean> {
+  if (typeof window === "undefined") return false;
+  try {
+    const res = await apiRequest<{ status?: string; message?: string }>(
+      "/api/v1/admin-panel/auth/refresh-token",
+      {
+        method: "POST",
+        cacheTtlMs: 0,
+        _isRetry: true, // Prevents infinite recursion in apiClient 401 interceptor
+        ...(signal ? { signal } : {}),
+      },
+    );
+
+    if (res?.status === "success") {
+      const raw = localStorage.getItem(ADMIN_SESSION_KEY);
+      if (raw) {
+        const session = JSON.parse(raw) as AdminAuthSession;
+        if (session && session.user) {
+          session.expires_at = Date.now() + ADMIN_SESSION_LIFETIME_MS;
+          localStorage.setItem(ADMIN_SESSION_KEY, JSON.stringify(session));
+          window.dispatchEvent(
+            new CustomEvent("dimisi-auth-change", {
+              detail: { refreshed: true, user: session.user },
+            }),
+          );
+          return true;
+        }
+      }
+    }
+    return false;
+  } catch (err: any) {
+    if (err?.name === "AbortError" || signal?.aborted) {
+      return false;
+    }
+    // Refresh token expired or user is banned/inactive on backend (401 or 403)
+    if (err?.status === 401 || err?.status === 403) {
+      clearAdminSession("Your session has expired. Please sign in again.");
+    }
+    return false;
+  }
+}
+
+/**
+ * Retrieve current active admin session from localStorage.
+ * Does not prematurely kill session on client side if 15 minutes pass;
+ * silent refresh handles extending the session seamlessly.
  */
 export function getStoredAdminSession(): AdminAuthSession | null {
   if (typeof window === "undefined") return null;
@@ -184,13 +234,6 @@ export function getStoredAdminSession(): AdminAuthSession | null {
     if (!raw) return null;
     const session = JSON.parse(raw) as AdminAuthSession;
     if (!session.user || !session.user.id) return null;
-
-    // Check if 15-minute session expired
-    if (typeof session.expires_at === "number" && Date.now() > session.expires_at) {
-      clearAdminSession("Security session expired (15m limit). Please sign in again.");
-      return null;
-    }
-
     return session;
   } catch {
     return null;
