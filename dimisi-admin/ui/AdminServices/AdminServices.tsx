@@ -261,7 +261,14 @@ export function AdminServices({
     setActiveStep("overview");
     setFormTitle(srv.title);
     setFormSlug(srv.slug);
-    setFormCategory(srv.category);
+    const matchedCategory = categoryList.find(
+      (c) =>
+        c.id === srv.category_id ||
+        c.id === srv.category ||
+        c.name.toLowerCase() === (srv.category || "").toLowerCase() ||
+        c.slug.toLowerCase() === (srv.category || "").toLowerCase(),
+    );
+    setFormCategory(matchedCategory?.id || srv.category_id || srv.category || categoryList[0]?.id || "");
     setFormTagline(srv.tagline || "");
     setFormSummary(srv.summary || "");
     setFormOrderIndex(srv.order_index ?? 1);
@@ -1144,6 +1151,11 @@ export function AdminServices({
                             {c.name}
                           </option>
                         ))}
+                        {formCategory && !categoryList.some((c) => c.id === formCategory) && (
+                          <option value={formCategory}>
+                            {editingService?.category || formCategory} (Current)
+                          </option>
+                        )}
                       </select>
                     </div>
                   </div>

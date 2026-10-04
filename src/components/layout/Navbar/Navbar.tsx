@@ -2,14 +2,12 @@ import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { NAV_LINKS } from "@/constants/site";
 import { LOCKUP_URL } from "@/assets/logos";
-import { useAuth } from "@/hooks/useAuth";
 import styles from "./Navbar.module.css";
 
 export function Navbar() {
   const [scrolled, setScrolled] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [open, setOpen] = useState(false);
-  const { user } = useAuth();
 
   useEffect(() => {
     let last = window.scrollY;
@@ -99,26 +97,6 @@ export function Navbar() {
           Contact Us
         </Link>
 
-        <Link
-          to={user ? "/account" : "/auth"}
-          className={styles.userBtn}
-          aria-label={user ? "Your account" : "Sign in or sign up"}
-          title={user ? "Your account" : "Sign in / Sign up"}
-          onClick={() => setOpen(false)}
-        >
-          <svg viewBox="0 0 24 24" width="19" height="19" aria-hidden="true">
-            <circle cx="12" cy="8" r="3.6" fill="none" stroke="currentColor" strokeWidth="1.6" />
-            <path
-              d="M4.6 20c.9-3.7 3.9-5.8 7.4-5.8s6.5 2.1 7.4 5.8"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.6"
-              strokeLinecap="round"
-            />
-          </svg>
-          {user ? <span className={styles.userDot} aria-hidden="true" /> : null}
-        </Link>
-
         <button
           type="button"
           className={styles.burger}
@@ -146,15 +124,6 @@ export function Navbar() {
               {link.label}
             </Link>
           ))}
-          <Link
-            to={user ? "/account" : "/auth"}
-            className={styles.sheetLink}
-            style={{ animationDelay: `${NAV_LINKS.length * 60}ms` }}
-            onClick={() => setOpen(false)}
-          >
-            <span className={styles.sheetIndex}>0{NAV_LINKS.length + 1}</span>
-            {user ? "My Account" : "Sign In / Sign Up"}
-          </Link>
         </div>
       ) : null}
     </header>
