@@ -27,6 +27,8 @@ const DEFAULT_EVENT_IMG =
 
 export function HomeEventsGallery() {
   // Real-time dynamic fetch from existing single source of truth
+  // WHY staleTime IS USED:
+  // Prevents aggressive refetch spam when user switches browser tabs or refocuses window.
   const {
     data: payload,
     isLoading,
@@ -35,6 +37,7 @@ export function HomeEventsGallery() {
   } = useQuery({
     queryKey: ["publicEvents"],
     queryFn: () => getPublicEvents(),
+    staleTime: 1000 * 60 * 5, // 5 min cache
   });
 
   const rawEvents = payload?.events || [];
@@ -97,10 +100,29 @@ export function HomeEventsGallery() {
     [activeLightboxIdx, curatedGallery],
   );
 
+  // ============================================================================
+  // CLEANER FUNCTION: MODAL & LIGHTBOX EVENT TEARDOWN + BODY SCROLL LOCK
+  // WHY THIS IS USED:
+  // 1. Only attaches the keydown listener when an event modal or lightbox is active,
+  //    preventing global key event pollution when user is scrolling the home page.
+  // 2. Locks body scroll so the background page doesn't scroll behind the dialog.
+  // 3. The cleaner function ALWAYS restores original body overflow and removes the
+  //    keydown listener when dialog closes or component unmounts.
+  // ============================================================================
   useEffect(() => {
+    const hasOpenModal = activeModalEvent !== null || activeLightboxIdx !== null;
+    if (!hasOpenModal) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleKeyDown]);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [activeModalEvent, activeLightboxIdx, handleKeyDown]);
 
   const activeLightboxItem =
     activeLightboxIdx !== null ? curatedGallery[activeLightboxIdx] : null;

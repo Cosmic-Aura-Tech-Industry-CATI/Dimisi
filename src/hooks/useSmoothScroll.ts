@@ -10,6 +10,13 @@ export function useSmoothScroll(disabled = false): void {
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduced) return;
 
+    // Mobile / touch devices (iPhone, iPad, Android) perform best with 100% native OS 120Hz momentum scrolling.
+    // Bypassing JS scroll interception on touch devices eliminates rubber-band lag and frees the main thread.
+    const isTouchOnly =
+      window.matchMedia("(pointer: coarse)").matches &&
+      !window.matchMedia("(pointer: fine)").matches;
+    if (isTouchOnly) return;
+
     const perf = getPerfProfile();
     const lenis = new Lenis({
       // Slightly snappier on weaker devices so scroll never feels laggy.

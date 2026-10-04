@@ -79,6 +79,7 @@ export function ScrollScene({
     let visible = false;
     let current = 0;
     let target = 0;
+    let isSleeping = true;
 
     const clamp01 = (n: number) => Math.max(0, Math.min(1, n));
     const ease = (t: number) => t * t * (3 - 2 * t);
@@ -113,7 +114,6 @@ export function ScrollScene({
       if (a <= 0.001) {
         el.style.transform = "translate3d(0,0,0)";
         el.style.opacity = "1";
-        el.style.filter = "none";
         el.style.willChange = "auto";
         el.style.pointerEvents = "auto";
         return;
@@ -171,23 +171,43 @@ export function ScrollScene({
 
       // Smooth opacity curve from depth into full solid visibility
       const op = Math.max(0.08, 1 - Math.min(1, a * 0.90));
-      // Subtle depth-of-field blur on entry/exit (capped on mobile)
-      const blurPx = isMobile ? Math.min(3, 3 * a) : Math.min(5, 5 * a);
 
       el.style.transformOrigin = "50% 50%";
-      el.style.willChange = "transform, opacity, filter";
+      // Use pure GPU composite layers (transform + opacity), avoiding expensive filter: blur
+      el.style.willChange = "transform, opacity";
       el.style.transform = `perspective(1200px) translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg) rotateZ(${rotZ.toFixed(2)}deg) scale(${sc.toFixed(4)})`;
       el.style.opacity = op.toFixed(3);
-      el.style.filter = blurPx > 0.3 ? `blur(${blurPx.toFixed(1)}px)` : "none";
       el.style.pointerEvents = op < 0.2 ? "none" : "auto";
     };
 
     const tick = () => {
       measure();
-      current += (target - current) * (isMobile ? 0.22 : 0.16);
-      if (Math.abs(target - current) < 0.0004) current = target;
+      current += (target - current) * (isMobile ? 0.24 : 0.18);
+      const delta = Math.abs(target - current);
+
+      if (delta < 0.0005) {
+        current = target;
+        paint();
+        // Self-sleeping: stop RAF when animation has reached resting target
+        isSleeping = true;
+        raf = 0;
+        return;
+      }
+
       paint();
       raf = visible && !document.hidden ? requestAnimationFrame(tick) : 0;
+    };
+
+    const wake = () => {
+      if (!visible || document.hidden) return;
+      measure();
+      if (Math.abs(target - current) > 0.0005) {
+        if (isSleeping || !raf) {
+          isSleeping = false;
+          if (raf) cancelAnimationFrame(raf);
+          raf = requestAnimationFrame(tick);
+        }
+      }
     };
 
     const io = new IntersectionObserver(
@@ -195,11 +215,29 @@ export function ScrollScene({
         const now = !!entry?.isIntersecting;
         if (now === visible) return;
         visible = now;
-        if (visible && !raf) raf = requestAnimationFrame(tick);
+        if (visible) {
+          wake();
+        } else {
+          isSleeping = true;
+          if (raf) {
+            cancelAnimationFrame(raf);
+            raf = 0;
+          }
+        }
       },
-      { rootMargin: "35% 0px" },
+      { rootMargin: "25% 0px" },
     );
     io.observe(el);
+
+    // Awaken only on actual scroll/resize events instead of polling
+    const onScroll = () => {
+      if (visible && isSleeping) {
+        wake();
+      }
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
 
     measure();
     current = target;
@@ -208,7 +246,10 @@ export function ScrollScene({
     return () => {
       io.disconnect();
       visible = false;
+      isSleeping = true;
       if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
     };
   }, [variant, strength]);
 

@@ -12,6 +12,8 @@ export function TiltCard({ children, className, intensity = 10 }: TiltCardProps)
   const ref = useRef<HTMLDivElement>(null);
 
   const onMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    // On touch devices (smartphones/tablets), touch drags are for scrolling, not 3D tilt
+    if (e.pointerType === "touch") return;
     const el = ref.current;
     if (!el) return;
     const rect = el.getBoundingClientRect();

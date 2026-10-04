@@ -105,27 +105,51 @@ function dataUrlToFile(dataUrl: string, filename: string): File | null {
 
 /**
  * 1. GET PUBLIC EVENTS & GALLERY PAYLOAD
+ * PARALLELIZED ARCHITECTURE:
+ * Fetches categories, active events, and active gallery in parallel via Promise.allSettled.
+ * Eliminates previous waterfall where categories blocked events and gallery queries.
  * Authoritative: Returns empty arrays if database is empty.
  */
 export async function getPublicEvents(): Promise<PublicEventsPayload> {
-  let categoriesRes: EventCategoryItem[] = [];
-  try {
-    categoriesRes = await getAllEventCategoriesApi();
-  } catch {
-    categoriesRes = [];
-  }
-
-  const [eventsRes, galleryRes] = await Promise.all([
-    getPublicActiveEventsApi(undefined, categoriesRes).catch(() => [] as CompanyEvent[]),
-    getPublicActiveGalleryApi(undefined, categoriesRes).catch(() => [] as EventGalleryItem[]),
+  const [categoriesSettled, eventsSettled, gallerySettled] = await Promise.allSettled([
+    getAllEventCategoriesApi(),
+    getPublicActiveEventsApi(),
+    getPublicActiveGalleryApi(),
   ]);
 
-  const safeEvents = Array.isArray(eventsRes) ? eventsRes : [];
-  const safeGallery = Array.isArray(galleryRes) ? galleryRes : [];
-  const safeCategories = Array.isArray(categoriesRes) ? categoriesRes : [];
+  const categoriesRes: EventCategoryItem[] =
+    categoriesSettled.status === "fulfilled" && Array.isArray(categoriesSettled.value)
+      ? categoriesSettled.value
+      : [];
+
+  const rawEvents: CompanyEvent[] =
+    eventsSettled.status === "fulfilled" && Array.isArray(eventsSettled.value)
+      ? eventsSettled.value
+      : [];
+
+  const safeGallery: EventGalleryItem[] =
+    gallerySettled.status === "fulfilled" && Array.isArray(gallerySettled.value)
+      ? gallerySettled.value
+      : [];
+
+  // Map category names to events if category object or ID is present
+  const safeEvents = rawEvents.map((evt) => {
+    if (categoriesRes.length > 0 && evt.category) {
+      const match = categoriesRes.find(
+        (c) =>
+          c.id === evt.category ||
+          c.name.toLowerCase() === evt.category.toLowerCase() ||
+          c.slug.toLowerCase() === evt.category.toLowerCase(),
+      );
+      if (match) {
+        return { ...evt, category: match.name, category_id: match.id };
+      }
+    }
+    return evt;
+  });
 
   const dynamicCategories = new Set<string>();
-  safeCategories.forEach((cat) => {
+  categoriesRes.forEach((cat) => {
     if (cat.name && cat.name.trim() && cat.status === "active") {
       dynamicCategories.add(cat.name.trim());
     }

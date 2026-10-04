@@ -64,7 +64,8 @@ export function AmbientBrandField({ scrollRef }: { scrollRef: React.RefObject<nu
   useEffect(() => setMounted(true), []);
 
   const objects = useMemo<Obj[]>(() => {
-    const total = typeof window === "undefined" ? 86 : scaleCount(86, 22);
+    // Optimized particle count: 54 on high-tier desktop, 16-24 on mobile/tablets
+    const total = typeof window === "undefined" ? 54 : scaleCount(54, 16);
     const kinds = shuffle(Array.from({ length: total }, (_, i) => pickKind(i, total)));
     return kinds.map((kind) => {
       const depth = rand(0.05, 1);
@@ -117,6 +118,17 @@ export function AmbientBrandField({ scrollRef }: { scrollRef: React.RefObject<nu
     let explicitPause = false;
     let idleTimer: number | undefined;
 
+    // Cache dimensions to avoid synchronous reflows inside RAF loop
+    let w = layer.clientWidth || window.innerWidth || 1;
+    let h = layer.clientHeight || window.innerHeight || 1;
+    const onResize = () => {
+      if (layer) {
+        w = layer.clientWidth || window.innerWidth || 1;
+        h = layer.clientHeight || window.innerHeight || 1;
+      }
+    };
+    window.addEventListener("resize", onResize, { passive: true });
+
     const startLoop = () => {
       if (!running) {
         running = true;
@@ -168,8 +180,6 @@ export function AmbientBrandField({ scrollRef }: { scrollRef: React.RefObject<nu
       lastScroll = s;
       // constant drift forward + extra thrust from scrolling → endless approach loop
       const advance = dt * 0.045 + ds * 1.6;
-      const w = layer.clientWidth || 1;
-      const h = layer.clientHeight || 1;
 
       for (let i = 0; i < objects.length; i += 1) {
         const o = objects[i] as Obj;
@@ -267,6 +277,7 @@ export function AmbientBrandField({ scrollRef }: { scrollRef: React.RefObject<nu
       document.removeEventListener("visibilitychange", onVis);
       window.removeEventListener("dm:pause3d", onPause);
       window.removeEventListener("dm:resume3d", onResume);
+      window.removeEventListener("resize", onResize);
       window.removeEventListener("scroll", onActivity);
       window.removeEventListener("pointermove", onActivity);
       window.removeEventListener("touchstart", onActivity);

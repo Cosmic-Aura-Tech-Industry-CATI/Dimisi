@@ -4,19 +4,21 @@ import { Reveal } from "@/components/common/Reveal/Reveal";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
 import { RotatingWord } from "@/components/common/RotatingWord/RotatingWord";
 import { TechIcon } from "@/components/common/TechIcon/TechIcon";
-import { TiltCard } from "@/components/common/TiltCard/TiltCard";
-import { SectionHeading } from "@/components/common/SectionHeading/SectionHeading";
 import { ScrollScene } from "@/components/common/ScrollScene/ScrollScene";
 import { StoryVideo } from "@/components/media/StoryVideo/StoryVideo";
-import { ProjectsShowcase } from "@/components/home/ProjectsShowcase/ProjectsShowcase";
+
+// Dynamic Live Showcase Sections (connected to Admin Panel & Backend APIs):
 import { ServicesForward } from "@/components/home/ServicesForward/ServicesForward";
-import { CompanyHighlights } from "@/components/home/CompanyHighlights/CompanyHighlights";
-import { WhyChooseUs } from "@/components/home/WhyChooseUs/WhyChooseUs";
+import { ProjectsShowcase } from "@/components/home/ProjectsShowcase/ProjectsShowcase";
 import { SelectedCaseStudies } from "@/components/home/SelectedCaseStudies/SelectedCaseStudies";
+import { WhyChooseUs } from "@/components/home/WhyChooseUs/WhyChooseUs";
+import { CompanyHighlights } from "@/components/home/CompanyHighlights/CompanyHighlights";
 import { HomeEventsGallery } from "@/components/home/HomeEventsGallery/HomeEventsGallery";
 import { LiveReviewsMotion } from "@/components/home/LiveReviewsMotion/LiveReviewsMotion";
-import { useCountUp } from "@/hooks/useCountUp";
+
 import { COMPANY } from "@/constants/site";
+import { TECHNOLOGIES } from "@/data/home";
+import styles from "./Home.module.css";
 
 const HERO_ROTATING_WORDS = [
   "Intelligent",
@@ -26,58 +28,29 @@ const HERO_ROTATING_WORDS = [
   "Resilient",
   "Next-Gen",
 ];
-import {
-  CASE_STUDIES,
-  FAQS,
-  FEATURES,
-  PARTNERS,
-  PROCESS,
-  STATS,
-  TECHNOLOGIES,
-} from "@/data/home";
-import { SERVICES } from "@/data/services";
-import styles from "./Home.module.css";
 
-function StatCard({ value, suffix, label }: { value: number; suffix: string; label: string }) {
-  const { ref, value: shown } = useCountUp(value);
-  return (
-    <div className={styles.stat}>
-      <span className={styles.statValue} ref={ref}>
-        {shown}
-        {suffix}
-      </span>
-      <span className={styles.statLabel}>{label}</span>
-    </div>
-  );
-}
-
-function FaqRow({ q, a }: { q: string; a: string }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className={[styles.faqItem, open ? styles.open : ""].join(" ")}>
-      <button
-        type="button"
-        className={styles.faqBtn}
-        onClick={() => setOpen((o) => !o)}
-        aria-expanded={open}
-      >
-        {q}
-        <span className={styles.plus} aria-hidden="true">
-          +
-        </span>
-      </button>
-      <div className={styles.answer}>
-        <p className={styles.answerText}>{a}</p>
-      </div>
-    </div>
-  );
-}
-
+// ============================================================================
+// PUBLIC HOME PAGE ROUTE COMPONENT
+// STRUCTURE & NARRATIVE ORDER:
+// 1. Hero Section: SplitText + Rotating Word + Brand Film Modal + Mission statement.
+// 2. Tech Marquee: Infinite 360° scroll showing supported core technologies.
+// 3. Dynamic Services: Live capabilities & categories synchronized from Admin Panel.
+// 4. Products & Work: Unified showcase featuring In-house Platform (Kalesh) and
+//    live client production case studies managed in Admin Work.
+// 5. Engineering Culture: Why Choose Us (7 pillars) & Company Highlights.
+// 6. Events & Moments: Dynamic events hub and visual gallery from Admin Events.
+// 7. Live Verified Reviews: Real-time dual-row customer & staff feed from Admin Reviews.
+// 8. Bottom Conversion CTA: Direct contact trigger.
+// ============================================================================
 export function Home() {
   const [storyOpen, setStoryOpen] = useState(false);
+
   return (
     <div className={styles.page}>
+      {/* 0. BRAND FILM MODAL OVERLAY */}
       {storyOpen ? <StoryVideo onClose={() => setStoryOpen(false)} /> : null}
+
+      {/* 1. HERO SECTION */}
       <section className={[styles.section, styles.hero].join(" ")}>
         <Reveal variant="fade">
           <p className={styles.badge}>Owl wisdom · DIMISI Technologies Pvt Ltd</p>
@@ -112,6 +85,7 @@ export function Home() {
         </div>
       </section>
 
+      {/* 2. TECH MARQUEE STRIP */}
       <div className={styles.marquee} aria-hidden="true">
         <div className={styles.track}>
           {[...TECHNOLOGIES, ...TECHNOLOGIES].map((t, i) => (
@@ -123,34 +97,43 @@ export function Home() {
         </div>
       </div>
 
-      <ScrollScene variant="center">
-        <ProjectsShowcase />
-      </ScrollScene>
-
+      {/* 3. DYNAMIC SERVICES & DISCIPLINES (LIVE FROM ADMIN SERVICES API) */}
       <ScrollScene variant="lift">
         <ServicesForward />
       </ScrollScene>
 
-      <ScrollScene variant="top">
-        <WhyChooseUs />
+      {/* 4. OUR PRODUCTS & OUR WORK (IN-HOUSE PRODUCTS + LIVE CLIENT CASE STUDIES) */}
+      {/* 4A: Proprietary Flagship Product (Kalesh Sphere) */}
+      <ScrollScene variant="center">
+        <ProjectsShowcase />
       </ScrollScene>
 
-      <ScrollScene variant="right">
-        <CompanyHighlights />
-      </ScrollScene>
-
+      {/* 4B: Live Production Client Case Studies (Dynamic from Admin Work / Casestudies) */}
       <ScrollScene variant="lift">
         <SelectedCaseStudies />
       </ScrollScene>
 
+      {/* 5. WHY CHOOSE US — 7 ENGINEERING COMMITMENTS */}
+      <ScrollScene variant="top">
+        <WhyChooseUs />
+      </ScrollScene>
+
+      {/* 6. COMPANY SCALE & HIGHLIGHTS AT A GLANCE */}
+      <ScrollScene variant="right">
+        <CompanyHighlights />
+      </ScrollScene>
+
+      {/* 7. EVENTS & MOMENTS GALLERY (LIVE FROM ADMIN EVENTS API) */}
       <ScrollScene variant="lift">
         <HomeEventsGallery />
       </ScrollScene>
 
+      {/* 8. LIVE VERIFIED REVIEWS FEED (LIVE FROM ADMIN REVIEWS API) */}
       <ScrollScene variant="right">
         <LiveReviewsMotion />
       </ScrollScene>
 
+      {/* 9. BOTTOM CONVERSION CTA */}
       <ScrollScene variant="center">
         <section className={styles.section}>
           <div className={styles.cta}>

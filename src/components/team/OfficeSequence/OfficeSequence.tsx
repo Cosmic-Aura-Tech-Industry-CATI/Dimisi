@@ -27,10 +27,11 @@ export function OfficeSequence({ office, index }: { office: Office; index: numbe
     }
 
     let raf = 0;
+    let visible = false;
     let cur = { d: 0, e: 0, x: 0, p: 0 };
     const dir = index % 2 === 0 ? 1 : -1;
 
-    const loop = () => {
+    const tick = () => {
       const rect = el.getBoundingClientRect();
       const total = rect.height - window.innerHeight;
       const p = total > 0 ? clamp01(-rect.top / total) : 0;
@@ -43,21 +44,69 @@ export function OfficeSequence({ office, index }: { office: Office; index: numbe
       const pan = (p - 0.5) * 2 * dir;
 
       cur = {
-        d: cur.d + (door - cur.d) * 0.16,
-        e: cur.e + (enter - cur.e) * 0.16,
-        x: cur.x + (exit - cur.x) * 0.16,
-        p: cur.p + (pan - cur.p) * 0.12,
+        d: cur.d + (door - cur.d) * 0.18,
+        e: cur.e + (enter - cur.e) * 0.18,
+        x: cur.x + (exit - cur.x) * 0.18,
+        p: cur.p + (pan - cur.p) * 0.14,
       };
 
       el.style.setProperty("--door", cur.d.toFixed(4));
       el.style.setProperty("--enter", cur.e.toFixed(4));
       el.style.setProperty("--exit", cur.x.toFixed(4));
       el.style.setProperty("--pan", cur.p.toFixed(4));
-      raf = requestAnimationFrame(loop);
+
+      const delta =
+        Math.abs(door - cur.d) +
+        Math.abs(enter - cur.e) +
+        Math.abs(exit - cur.x) +
+        Math.abs(pan - cur.p);
+
+      if (delta < 0.001) {
+        // Sleep RAF when motion is settled
+        raf = 0;
+        return;
+      }
+
+      raf = visible && !document.hidden ? requestAnimationFrame(tick) : 0;
     };
 
-    raf = requestAnimationFrame(loop);
-    return () => cancelAnimationFrame(raf);
+    const wake = () => {
+      if (!visible || document.hidden || raf) return;
+      raf = requestAnimationFrame(tick);
+    };
+
+    const io = new IntersectionObserver(
+      ([entry]) => {
+        const now = Boolean(entry?.isIntersecting);
+        if (now === visible) return;
+        visible = now;
+        if (visible) {
+          wake();
+        } else {
+          if (raf) {
+            cancelAnimationFrame(raf);
+            raf = 0;
+          }
+        }
+      },
+      { rootMargin: "25% 0px" },
+    );
+    io.observe(el);
+
+    const onScroll = () => {
+      if (visible && !raf) wake();
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll, { passive: true });
+
+    return () => {
+      io.disconnect();
+      visible = false;
+      if (raf) cancelAnimationFrame(raf);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+    };
   }, [index]);
 
   return (
