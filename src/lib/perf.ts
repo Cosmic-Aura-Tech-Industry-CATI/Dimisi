@@ -44,17 +44,22 @@ export function getPerfProfile(): PerfProfile {
   score += width >= 1280 ? 2 : width >= 768 ? 1 : 0;
   score += cores >= 8 ? 2 : cores >= 4 ? 1 : 0;
   score += memory >= 8 ? 2 : memory >= 4 ? 1 : 0;
-  if (coarse) score -= 1;
-  if (saveData) score -= 2;
+  // Mobile / touch devices need lighter GPU fill-rate footprint to guarantee 60-120fps
+  if (coarse) score -= 2;
+  if (saveData) score -= 3;
 
   const tier: PerfTier = reducedMotion || score <= 1 ? "low" : score >= 5 ? "high" : "medium";
 
+  // Clamp DPR strictly: high-tier max 1.5 (prevents 4K/Retina fill-rate blowout),
+  // medium-tier max 1.25, low-tier max 1.0.
+  const rawDpr = typeof window !== "undefined" ? window.devicePixelRatio || 1 : 1;
+
   cached =
     tier === "high"
-      ? { tier, dpr: [1, Math.min(1.75, window.devicePixelRatio || 1)], quality: 1, reducedMotion, antialias: true }
+      ? { tier, dpr: [1, Math.min(1.5, rawDpr)], quality: 0.9, reducedMotion, antialias: true }
       : tier === "medium"
-        ? { tier, dpr: [1, 1.35], quality: 0.6, reducedMotion, antialias: true }
-        : { tier, dpr: [1, 1], quality: 0.3, reducedMotion, antialias: false };
+        ? { tier, dpr: [1, Math.min(1.25, rawDpr)], quality: 0.55, reducedMotion, antialias: true }
+        : { tier, dpr: [1, 1], quality: 0.28, reducedMotion, antialias: false };
 
   return cached;
 }

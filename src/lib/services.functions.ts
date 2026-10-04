@@ -41,9 +41,15 @@ export { isMongoId };
 export async function getPublicServicesData(): Promise<PublicServicesPayload> {
   let catItems = servicesStore.categoryItems;
 
+  // Fetch active categories and public visitor services in parallel.
+  // CRITICAL ARCHITECTURE NOTE:
+  // We strictly call `getVisitorServicesApi()` for public visitors.
+  // Previously, `.catch(() => getAllServicesApi())` was used as a fallback, which caused a 401 Unauthorized
+  // network error for non-admin visitors because `/api/v1/admin-panel/services/all` requires Admin JWT authentication.
+  // Now, if live visitor endpoint fails, we gracefully fall back to local cached services without leaking 401 errors.
   const [catRes, srvRes] = await Promise.allSettled([
     getAllServiceCategoriesApi(),
-    getVisitorServicesApi().catch(() => getAllServicesApi()),
+    getVisitorServicesApi(),
   ]);
 
   if (catRes.status === "fulfilled" && Array.isArray(catRes.value)) {
@@ -57,7 +63,7 @@ export async function getPublicServicesData(): Promise<PublicServicesPayload> {
   if (srvRes.status === "fulfilled" && Array.isArray(srvRes.value)) {
     liveServices = srvRes.value;
   } else if (srvRes.status === "rejected") {
-    console.warn("Could not load live services for public services:", srvRes.reason);
+    console.warn("Could not load live services for public services, falling back to cached services:", srvRes.reason);
     liveServices = servicesStore.services;
   }
 
@@ -116,22 +122,21 @@ export async function getServiceBySlug({
   if (service) return service;
 
   // 2. Fetch fresh live visitor services from backend
+  // WHY THIS IS USED:
+  // Public visitors browsing `/services/$slug` need live data from backend MongoDB.
+  // We use `getVisitorServicesApi()` because it is an unauthenticated public route.
+  // We do NOT call `getAllServicesApi()` here to avoid triggering 401 Unauthorized errors in browser console.
   try {
     const catItems = servicesStore.categoryItems;
-    let liveServices: CompanyService[] = [];
-    try {
-      liveServices = await getVisitorServicesApi(undefined, catItems);
-    } catch {
-      liveServices = await getAllServicesApi(undefined, catItems);
-    }
+    const liveServices = await getVisitorServicesApi(undefined, catItems).catch(() => []);
 
-    if (Array.isArray(liveServices)) {
+    if (Array.isArray(liveServices) && liveServices.length > 0) {
       servicesStore.setServices(liveServices);
       service = servicesStore.getServiceBySlug(trimmedSlug);
       if (service) return service;
     }
   } catch (err) {
-    console.warn("Live lookup for service by slug failed:", err);
+    console.warn("Live lookup for service by slug failed, checking local store cache:", err);
   }
 
   // 3. If slug is a MongoDB ObjectId, attempt direct ID lookup
@@ -516,7 +521,14 @@ export async function toggleServiceFeaturedFn({
   }
 }
 
-// Backward-compatibility shims
+// ============================================================================
+// LEGACY SHIMS (BACKWARD COMPATIBILITY)
+// WHY THESE EXIST:
+// Earlier prototypes of the application referenced 'Industry' sectors alongside Services.
+// In the current architecture, categories are dynamically driven by `serviceCategory.service.ts`
+// and MongoDB collections. These functions are preserved as safe no-op shims so that any
+// legacy references do not break TypeScript build or external consumers.
+// ============================================================================
 export async function saveIndustryFn({
   data,
 }: {

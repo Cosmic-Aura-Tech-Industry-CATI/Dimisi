@@ -421,36 +421,51 @@ export function AdminPanel() {
       return;
     }
     let active = true;
+    const controller = new AbortController();
 
     // 1. High priority: Fetch active tab first for instant interactive responsiveness
     const loadActiveTab = async () => {
       try {
         if (tab === "services") {
           const res = await loadServicesData();
-          if (active) setServicesData(res);
+          if (active && !controller.signal.aborted) setServicesData(res);
         } else if (tab === "work") {
           const res = await loadWorkData();
-          if (active) setWorkData(res);
+          if (active && !controller.signal.aborted) setWorkData(res);
         } else if (tab === "careers") {
           const res = await loadCareersData();
-          if (active) setCareersData(res);
+          if (active && !controller.signal.aborted) setCareersData(res);
         } else if (tab === "blog") {
           const res = await loadBlogData();
-          if (active) setBlogData(res);
+          if (active && !controller.signal.aborted) setBlogData(res);
         } else if (tab === "events") {
           const res = await loadEventsData();
-          if (active) setEventsData(res);
+          if (active && !controller.signal.aborted) setEventsData(res);
         } else if (tab === "reviews" || tab === "campaigns" || tab === "reports") {
           const res = await loadReviewsData();
-          if (active) setReviewsData(res);
+          if (active && !controller.signal.aborted) setReviewsData(res);
+        } else if (tab === "logs") {
+          // LOGS TAB OPTIMIZATION:
+          // Admin Logs ke liye sirf admin identity lookup chahiye (agar pehle se loaded na ho).
+          // Reviews, Campaigns, Leads, aur baaki heavy modules yahan bilkul call NAHI honge.
+          if (!data || !Array.isArray(data.admins) || data.admins.length <= 1) {
+            try {
+              const resOverview = await load();
+              if (active && !controller.signal.aborted && resOverview) setData(resOverview);
+            } catch (err: any) {
+              if (err?.name === "AbortError" || controller.signal.aborted) return;
+              console.warn("Logs tab admin lookup warning:", err);
+            }
+          }
         } else {
           const [resOverview, resReviews] = await Promise.allSettled([load(), loadReviewsData()]);
-          if (active) {
+          if (active && !controller.signal.aborted) {
             if (resOverview.status === "fulfilled") setData(resOverview.value);
             if (resReviews.status === "fulfilled") setReviewsData(resReviews.value);
           }
         }
-      } catch (err) {
+      } catch (err: any) {
+        if (err?.name === "AbortError" || controller.signal.aborted) return;
         console.warn("Active tab data fetch warning:", err);
       }
     };
@@ -458,12 +473,19 @@ export function AdminPanel() {
     // 2. Progressive background hydration for secondary modules
     const hydrateBackground = async () => {
       await loadActiveTab();
-      if (!active) return;
+      if (!active || controller.signal.aborted) return;
+
+      // LOGS TAB SHIELD:
+      // Agar user Logs tab par hai, to baaki 10 modules (Events, Services, Careers, Blogs, Reviews)
+      // ka eager background download STOP rakhein. User jab kisi tab par click karega tabhi wo on-demand load hoga.
+      if (tab === "logs") {
+        return;
+      }
 
       // Ensure overview core is loaded
       if (tab !== "overview") {
         Promise.allSettled([load(), loadReviewsData()]).then(([resOverview, resReviews]) => {
-          if (active) {
+          if (active && !controller.signal.aborted) {
             if (resOverview.status === "fulfilled") setData(resOverview.value);
             if (resReviews.status === "fulfilled") setReviewsData(resReviews.value);
           }
@@ -479,7 +501,7 @@ export function AdminPanel() {
         tab !== "blog" ? loadBlogData() : Promise.resolve(null),
       ])
         .then(([resEvents, resServices, resWork, resCareers, resBlog]) => {
-          if (active) {
+          if (active && !controller.signal.aborted) {
             if (resEvents.status === "fulfilled" && resEvents.value) setEventsData(resEvents.value);
             if (resServices.status === "fulfilled" && resServices.value) setServicesData(resServices.value);
             if (resWork.status === "fulfilled" && resWork.value) setWorkData(resWork.value);
@@ -487,15 +509,18 @@ export function AdminPanel() {
             if (resBlog.status === "fulfilled" && resBlog.value) setBlogData(resBlog.value);
           }
         })
-        .catch((err) => {
+        .catch((err: any) => {
+          if (err?.name === "AbortError" || controller.signal.aborted) return;
           console.warn("Admin panel background hydration warning:", err);
         });
     };
 
     hydrateBackground();
 
+    // Cleaner function: aborts pending background requests when switching tabs or unmounting
     return () => {
       active = false;
+      controller.abort();
     };
   }, [user, tab]);
 

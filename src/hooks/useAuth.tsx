@@ -1,14 +1,15 @@
 /**
  * DIMISI Technologies — Unified Admin Authentication Hook
  * Manages reactive admin session state, cross-tab synchronization,
- * and live 15-minute session countdown matching Backend JWT architecture.
+ * live countdown, and proactive silent background refresh matching Backend JWT architecture.
  */
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import {
   getStoredAdminSession,
   getRemainingSessionSeconds,
   logoutAdmin,
   clearAdminSession,
+  refreshAdminSession,
   type AdminAuthUser,
   type AdminAuthSession,
   type AdminRole,
@@ -36,6 +37,9 @@ export function useAuth(): UseAuthReturn {
   const [loading, setLoading] = useState<boolean>(true);
   const [remainingSeconds, setRemainingSeconds] = useState<number>(() => getRemainingSessionSeconds());
 
+  // Guard to prevent overlapping background refresh attempts
+  const isRefreshingRef = useRef<boolean>(false);
+
   const checkLocalSession = useCallback((): boolean => {
     if (typeof window === "undefined") return false;
     try {
@@ -52,6 +56,9 @@ export function useAuth(): UseAuthReturn {
   }, []);
 
   useEffect(() => {
+    // Cleaner function controller for background refresh requests on unmount
+    const abortController = new AbortController();
+
     // 1. Initial local session check
     const hasSession = checkLocalSession();
     if (!hasSession) {
@@ -83,19 +90,45 @@ export function useAuth(): UseAuthReturn {
     window.addEventListener("dimisi-auth-change", onAuthChange as EventListener);
     window.addEventListener("storage", onAuthChange as EventListener);
 
-    // 3. Live 1-second countdown ticker for 15-minute security session
+    // 3. Live 1-second countdown ticker with proactive silent refresh
     const countdownTimer = setInterval(() => {
       const remaining = getRemainingSessionSeconds();
       setRemainingSeconds(remaining);
-      if (remaining <= 0 && getStoredAdminSession()) {
-        clearAdminSession("Security session expired (15m limit). Please sign in again.");
+
+      const currentStored = getStoredAdminSession();
+      if (!currentStored) return;
+
+      // Proactive silent refresh: When 2 minutes or less remain on the 15-minute access token,
+      // silently request a fresh token from backend before it expires
+      if (remaining <= 120 && !isRefreshingRef.current) {
+        isRefreshingRef.current = true;
+        refreshAdminSession(abortController.signal)
+          .then((refreshed) => {
+            isRefreshingRef.current = false;
+            if (refreshed) {
+              checkLocalSession();
+            } else if (getRemainingSessionSeconds() <= 0) {
+              // Refresh token is expired/invalid (e.g. 30 days passed or revoked), log out
+              clearAdminSession("Security session expired. Please sign in again.");
+            }
+          })
+          .catch((err) => {
+            isRefreshingRef.current = false;
+            // Ignore abort error caused by cleaner function on unmount
+            if (err?.name === "AbortError" || abortController.signal.aborted) return;
+            if (getRemainingSessionSeconds() <= 0) {
+              clearAdminSession("Security session expired. Please sign in again.");
+            }
+          });
       }
     }, 1000);
 
+    // Cleaner function: Clean up event listeners, countdown interval, and abort in-flight refresh requests
     return () => {
       window.removeEventListener("dimisi-auth-change", onAuthChange as EventListener);
       window.removeEventListener("storage", onAuthChange as EventListener);
       clearInterval(countdownTimer);
+      abortController.abort();
     };
   }, [checkLocalSession]);
 
@@ -104,9 +137,14 @@ export function useAuth(): UseAuthReturn {
   }, []);
 
   const refreshSession = useCallback(async () => {
-    // Manual local session re-check
-    const found = checkLocalSession();
-    return found;
+    try {
+      const success = await refreshAdminSession();
+      if (success) {
+        checkLocalSession();
+        return true;
+      }
+    } catch {}
+    return false;
   }, [checkLocalSession]);
 
   const isExpiringSoon = remainingSeconds > 0 && remainingSeconds <= 120; // Under 2 minutes remaining

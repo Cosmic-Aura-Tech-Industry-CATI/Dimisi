@@ -26,7 +26,6 @@ import {
   RefreshCw,
   Search,
   Tag,
-  FolderPlus,
   Settings,
 } from "lucide-react";
 import {
@@ -58,6 +57,7 @@ import styles from "./AdminServices.module.css";
 interface AdminServicesProps {
   services: CompanyService[];
   categoryItems?: ServiceCategoryItem[];
+  /** @deprecated Dynamic counts are calculated directly from MongoDB docs and filter count */
   categoryCounts?: Record<string, number>;
   onRefresh: () => void;
 }
@@ -75,7 +75,7 @@ const MODAL_STEPS: { id: ServiceModalTab; label: string; num: string }[] = [
 export function AdminServices({
   services,
   categoryItems: initialCategoryItems,
-  categoryCounts: initialCategoryCounts,
+  categoryCounts: _initialCategoryCounts,
   onRefresh,
 }: AdminServicesProps) {
   // Category Filtering & Search State
@@ -89,7 +89,7 @@ export function AdminServices({
   const [notice, setNotice] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Live Categories State
+  // Live Categories State: initialized from parent AdminPanel hydration
   const [categoryList, setCategoryList] = useState<ServiceCategoryItem[]>(() => {
     if (initialCategoryItems && Array.isArray(initialCategoryItems)) {
       return initialCategoryItems;
@@ -97,24 +97,32 @@ export function AdminServices({
     return [];
   });
 
-  const refreshCategories = useCallback(async () => {
+  // WHY THIS FUNCTION IS USED:
+  // Allows manual category list refresh and post-mutation (create/update/delete) syncing.
+  // Supports an optional AbortSignal to abort pending HTTP requests on unmount.
+  const refreshCategories = useCallback(async (signal?: AbortSignal) => {
     try {
       const res = await getServiceCategoriesFn();
+      if (signal?.aborted) return;
       if (res && Array.isArray(res.categories)) {
         setCategoryList(res.categories);
       }
-    } catch (err) {
+    } catch (err: any) {
+      if (signal?.aborted || err?.name === "AbortError") return;
       console.warn("Failed to load service categories", err);
     }
   }, []);
 
+  // SYNCHRONIZATION WITH PARENT HYDRATION (PREVENTING DUPLICATE FETCH):
+  // Parent AdminPanel already fetches both services and categories via `loadServicesData()`.
+  // When `initialCategoryItems` updates from parent, we sync it directly into state.
+  // We intentionally do NOT trigger `refreshCategories()` when initialCategoryItems is empty on mount,
+  // preventing redundant parallel HTTP calls to `/api/v1/admin-panel/service-category/all`.
   useEffect(() => {
-    if (initialCategoryItems && Array.isArray(initialCategoryItems)) {
+    if (initialCategoryItems && Array.isArray(initialCategoryItems) && initialCategoryItems.length > 0) {
       setCategoryList(initialCategoryItems);
-    } else {
-      void refreshCategories();
     }
-  }, [initialCategoryItems, refreshCategories]);
+  }, [initialCategoryItems]);
 
   // Modals State
   const [isCategoryHubOpen, setIsCategoryHubOpen] = useState(false);
@@ -130,6 +138,43 @@ export function AdminServices({
   const [activeStep, setActiveStep] = useState<ServiceModalTab>("overview");
   const [editingService, setEditingService] = useState<CompanyService | null>(null);
   const [deleteServiceTarget, setDeleteServiceTarget] = useState<CompanyService | null>(null);
+
+  // ============================================================================
+  // CLEANER FUNCTION: MODAL EVENT TEARDOWN & BODY SCROLL LOCK
+  // WHY THIS IS USED:
+  // 1. Prevents background page scrolling while modal dialogs are active.
+  // 2. Adds global Escape key listener for accessible modal closing.
+  // 3. The returned cleanup function ALWAYS restores body scroll and unbinds event listeners
+  //    when modals close or when the component unmounts.
+  // ============================================================================
+  useEffect(() => {
+    const hasOpenModal =
+      isServiceModalOpen ||
+      isCategoryHubOpen ||
+      Boolean(deleteServiceTarget) ||
+      Boolean(deleteCatTarget);
+
+    if (!hasOpenModal) return;
+
+    const originalOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        if (deleteServiceTarget) setDeleteServiceTarget(null);
+        else if (deleteCatTarget) setDeleteCatTarget(null);
+        else if (isServiceModalOpen) setIsServiceModalOpen(false);
+        else if (isCategoryHubOpen) setIsCategoryHubOpen(false);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.body.style.overflow = originalOverflow;
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isServiceModalOpen, isCategoryHubOpen, deleteServiceTarget, deleteCatTarget]);
 
   // Form Fields for Service Wizard
   const [formTitle, setFormTitle] = useState("");

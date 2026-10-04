@@ -183,6 +183,7 @@ html {
   /* clip (not hidden) keeps position: fixed layers working while killing
      sideways scroll caused by cinematic off-screen transforms */
   overflow-x: clip;
+  -webkit-overflow-scrolling: touch;
 }
 
 body {
@@ -190,6 +191,7 @@ body {
   color: var(--dm-warm);
   font-family: var(--dm-font-body);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
   overflow-x: clip;
   overscroll-behavior-x: none;
 }

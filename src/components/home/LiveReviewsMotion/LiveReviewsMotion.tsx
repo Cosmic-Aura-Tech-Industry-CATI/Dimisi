@@ -121,6 +121,13 @@ function ReviewCard({ review }: { review: PublicReview }) {
 
 export function LiveReviewsMotion() {
   // Fetch dynamic reviews from the exact single source of truth used across the platform
+  // ============================================================================
+  // LIVE VERIFIED REVIEWS DYNAMIC QUERY
+  // WHY THIS IS USED:
+  // Fetches approved and featured reviews directly from Admin Panel / MongoDB.
+  // `staleTime` of 5 minutes avoids redundant background network refetches while user
+  // scrolls or refocuses the browser window.
+  // ============================================================================
   const {
     data: serverPayload,
     isLoading,
@@ -129,6 +136,7 @@ export function LiveReviewsMotion() {
   } = useQuery({
     queryKey: ["livePublicReviews"],
     queryFn: () => getPublicReviews({ data: { pageSize: 32, sort: "newest" } }),
+    staleTime: 1000 * 60 * 5, // 5 min cache
   });
 
   // Extract deduplicated list prioritizing featured reviews

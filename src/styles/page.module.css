@@ -14,18 +14,22 @@
   padding: clamp(3rem, 8vh, 6rem) clamp(1.2rem, 5vw, 4rem);
   max-width: 78rem;
   margin: 0 auto;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 600px;
 }
 
 .grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1.1rem;
+  contain: layout style;
 }
 
 .gridWide {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 1.1rem;
+  contain: layout style;
 }
 
 .eyebrow {

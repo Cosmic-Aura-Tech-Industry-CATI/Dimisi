@@ -542,11 +542,14 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
   gap: 1.5rem;
+  contain: layout style;
 }
 
 .gridItem {
   display: flex;
   width: 100%;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 480px;
 }
 
 .eventCard {
@@ -812,10 +815,13 @@
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 1.25rem;
+  contain: layout style;
 }
 
 .mosaicItem {
   display: flex;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 320px;
 }
 
 .spanTall {

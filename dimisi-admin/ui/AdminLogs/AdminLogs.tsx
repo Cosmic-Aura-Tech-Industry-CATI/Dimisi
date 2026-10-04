@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useEffect, useCallback, useRef } from "react";
 import {
   ScrollText,
   Search,
@@ -267,9 +267,21 @@ export function AdminLogs({ currentUserRole, currentAdmins }: AdminLogsProps) {
   const [copiedJson, setCopiedJson] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
 
+  // Stable reference for currentAdmins:
+  // Isse parent component ke kisi bhi re-render par loadLiveLogs bina wajah dobara trigger nahi hoga (Double-Call Prevention)
+  const adminsRef = useRef(currentAdmins);
+  adminsRef.current = currentAdmins;
+
+  // Track unique admin count/ids so loadLiveLogs only updates when real admin list changes
+  const adminsKey = useMemo(() => {
+    if (!Array.isArray(currentAdmins) || currentAdmins.length === 0) return "";
+    return currentAdmins.map((a: any) => a?.user_id || a?.id || a?.email || "").join(",");
+  }, [currentAdmins]);
+
   // Load logs directly from the backend activity service with dynamic admin lookups
+  // Parameter `signal?: AbortSignal` add kiya gaya hai taaki in-flight requests ko cancel kiya ja sake
   const loadLiveLogs = useCallback(
-    async (isBackground = false) => {
+    async (isBackground = false, signal?: AbortSignal) => {
       if (!isBackground) {
         setIsLoading(true);
       }
@@ -284,8 +296,12 @@ export function AdminLogs({ currentUserRole, currentAdmins }: AdminLogsProps) {
           ...(bounds.startDate ? { startDate: bounds.startDate } : {}),
           ...(bounds.endDate ? { endDate: bounds.endDate } : {}),
           ...(entityType ? { entityType } : {}),
-          admins: currentAdmins,
+          admins: adminsRef.current,
+          signal,
         });
+
+        // Agar user ne tab change kiya ya filter badla aur request cancel ho gayi to state update na karein
+        if (signal?.aborted) return;
 
         if (Array.isArray(res.adminLogs)) {
           setLogs(res.adminLogs);
@@ -293,6 +309,11 @@ export function AdminLogs({ currentUserRole, currentAdmins }: AdminLogsProps) {
           setServerTotalPages(res.totalPages);
         }
       } catch (err: any) {
+        // CLEANUP HANDLING: Agar request AbortController dwara abort hui hai to silent rahein (koi warning/error na dikhayein)
+        if (err?.name === "AbortError" || signal?.aborted) {
+          return;
+        }
+
         console.warn("Failed to load activity logs:", err);
         if (
           err?.status === 401 ||
@@ -308,17 +329,30 @@ export function AdminLogs({ currentUserRole, currentAdmins }: AdminLogsProps) {
           );
         }
       } finally {
-        if (!isBackground) {
+        // Agar request abort ho chuki hai to loading spinner state ko update karne ki zaroorat nahi hai
+        if (!isBackground && !signal?.aborted) {
           setIsLoading(false);
         }
       }
     },
-    [page, pageSize, dateFilter, moduleFilter, currentAdmins]
+    [page, pageSize, dateFilter, moduleFilter, adminsKey]
   );
 
   // Initial and reactive load on page, pageSize, dateFilter, or moduleFilter change
+  // Yahan CLEANER FUNCTION add kiya gaya hai using AbortController
   useEffect(() => {
-    void loadLiveLogs();
+    // 1. AbortController banate hain jo active HTTP request ko track karta hai
+    const controller = new AbortController();
+
+    // 2. In-flight fetch ko signal pass karte hain
+    void loadLiveLogs(false, controller.signal);
+
+    // 3. CLEANER / CLEANUP FUNCTION:
+    // Jab component unmount ho ya user date/module/page filter badle,
+    // to previous pending request browser level par cancel ho jaati hai (Race Condition prevention).
+    return () => {
+      controller.abort();
+    };
   }, [loadLiveLogs]);
 
   // Reset page to 1 when filters or page size change

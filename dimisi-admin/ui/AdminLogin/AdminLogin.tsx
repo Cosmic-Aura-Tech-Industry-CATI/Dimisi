@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Eye, EyeOff, ShieldCheck, Clock } from "lucide-react";
-import { loginAdmin } from "@/services/adminAuth.service";
+import { loginAdmin, ADMIN_EXPIRED_NOTICE_KEY } from "@/services/adminAuth.service";
 import { ApiError } from "@/services/apiClient";
 import styles from "../styles/admin.module.css";
 
@@ -19,9 +19,9 @@ export function AdminLogin() {
   const [busy, setBusy] = useState(false);
   const [sessionNotice, setSessionNotice] = useState<string | null>(() => {
     if (typeof window !== "undefined") {
-      const expiredReason = sessionStorage.getItem("dimisi_admin_session_expired");
+      const expiredReason = sessionStorage.getItem(ADMIN_EXPIRED_NOTICE_KEY);
       if (expiredReason) {
-        sessionStorage.removeItem("dimisi_admin_session_expired");
+        sessionStorage.removeItem(ADMIN_EXPIRED_NOTICE_KEY);
         return expiredReason;
       }
     }

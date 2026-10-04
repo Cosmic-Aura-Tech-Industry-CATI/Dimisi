@@ -550,11 +550,14 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
   gap: 1.5rem;
+  contain: layout style;
 }
 
 .gridItem {
   display: flex;
   width: 100%;
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 360px;
 }
 
 .jobCard {
@@ -566,10 +569,17 @@
   border-radius: 20px;
   background: linear-gradient(150deg, rgba(20, 22, 33, 0.78), rgba(10, 11, 18, 0.88));
   border: 1px solid rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.65);
   transition: all 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 768px) {
+  .jobCard {
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+  }
 }
 
 .jobCard:hover {

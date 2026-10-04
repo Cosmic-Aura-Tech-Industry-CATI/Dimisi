@@ -8,10 +8,13 @@
   padding: clamp(5rem, 12vh, 9rem) clamp(1.2rem, 5vw, 4rem);
   max-width: 78rem;
   margin: 0 auto;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 700px;
 }
 
 /* ---------- hero ---------- */
 .hero {
+  content-visibility: visible !important;
   min-height: 100svh;
   display: flex;
   flex-direction: column;
