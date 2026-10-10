@@ -348,7 +348,59 @@ export function AdminServices({
     };
 
     try {
-      const res = await saveServiceFn({ data: servicePayload, serviceId: editingService?.id });
+      let res;
+      if (heroImageFile instanceof File) {
+        const fd = new FormData();
+        if (editingService?.id) fd.append("id", editingService.id);
+        fd.append("title", cleanTitle);
+        fd.append("slug", formSlug.trim() || slugifyService(cleanTitle));
+        fd.append("category", formCategory);
+        if (formTagline.trim()) fd.append("tagline", formTagline.trim());
+        if (formSummary.trim()) fd.append("summary", formSummary.trim());
+        fd.append("orderIndex", String(Number(formOrderIndex) || 1));
+        fd.append("isActive", String(formIsActive));
+        fd.append("isFeatured", String(formIsFeatured));
+        fd.append("heroImage", heroImageFile);
+        if (formWhatIsIt.trim() || formSummary.trim()) fd.append("whatIsIt", formWhatIsIt.trim() || formSummary.trim());
+        if (formWhoIsFor.trim()) fd.append("whoIsFor", formWhoIsFor.trim());
+        if (formProblemSolved.trim()) fd.append("problemSolved", formProblemSolved.trim());
+        if (formWhyItMatters.trim()) fd.append("whyItMatters", formWhyItMatters.trim());
+        fd.append("features", JSON.stringify(formFeatures.map((f) => f.trim()).filter(Boolean)));
+        fd.append("techStack", JSON.stringify(formTechStack.map((t) => t.trim()).filter(Boolean)));
+        fd.append(
+          "processSteps",
+          JSON.stringify(
+            formProcessSteps.map((s, idx) => ({
+              step: String(s.step || (s as any).stepNumber || idx + 1).padStart(2, "0"),
+              title: s.title.trim(),
+              description: s.description.trim(),
+            })),
+          ),
+        );
+        fd.append(
+          "benefits",
+          JSON.stringify(
+            formBenefits.map((b) => ({
+              title: b.title.trim(),
+              description: b.description.trim(),
+              metric: b.metric?.trim() || undefined,
+            })),
+          ),
+        );
+        fd.append(
+          "faqs",
+          JSON.stringify(
+            formFaqs.map((f) => ({
+              question: f.question.trim(),
+              answer: f.answer.trim(),
+            })),
+          ),
+        );
+
+        res = await saveServiceFn({ data: fd, serviceId: editingService?.id });
+      } else {
+        res = await saveServiceFn({ data: servicePayload, serviceId: editingService?.id });
+      }
 
       if (!res.success) {
         throw new Error(res.error || "Failed to save service.");
