@@ -52,8 +52,11 @@ export function Home() {
 
       {/* 1. HERO SECTION */}
       <section className={[styles.section, styles.hero].join(" ")}>
-        <Reveal variant="fade">
-          <p className={styles.badge}>Owl wisdom · DIMISI Technologies Pvt Ltd</p>
+        <Reveal variant="fade" className={styles.centerReveal}>
+          <p className={styles.badge}>
+            <span className={styles.badgeDot} aria-hidden="true" />
+            Owl wisdom · DIMISI Technologies Pvt Ltd
+          </p>
         </Reveal>
         <h1
           className={styles.heroTitle}
@@ -65,10 +68,10 @@ export function Home() {
             <span> Software</span>
           </span>
         </h1>
-        <Reveal variant="up" delay={220}>
+        <Reveal variant="up" delay={220} className={styles.centerReveal}>
           <p className={styles.heroSub}>{COMPANY.mission}</p>
         </Reveal>
-        <Reveal variant="up" delay={320}>
+        <Reveal variant="up" delay={320} className={styles.centerReveal}>
           <div className={styles.heroActions}>
             <MagneticButton to="/contact">Talk to us</MagneticButton>
             <MagneticButton variant="ghost" onClick={() => setStoryOpen(true)}>
@@ -80,8 +83,9 @@ export function Home() {
           </div>
         </Reveal>
         <div className={styles.scrollCue}>
+          <span className={[styles.cueLine, styles.cueLineReverse].join(" ")} aria-hidden="true" />
+          <span>Scroll to move the camera</span>
           <span className={styles.cueLine} aria-hidden="true" />
-          Scroll to move the camera
         </div>
       </section>
 

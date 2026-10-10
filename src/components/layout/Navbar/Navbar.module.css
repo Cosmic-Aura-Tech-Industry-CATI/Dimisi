@@ -115,39 +115,6 @@
   margin-left: auto;
 }
 
-.userBtn {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-  height: 40px;
-  flex: 0 0 auto;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 159, 28, 0.32);
-  background: rgba(255, 255, 255, 0.04);
-  color: var(--dm-amber);
-  text-decoration: none;
-  transition: all 0.35s var(--dm-ease);
-}
-
-.userBtn:hover {
-  color: #fff3e2;
-  background: rgba(255, 159, 28, 0.16);
-  box-shadow: 0 0 24px rgba(255, 159, 28, 0.35);
-}
-
-.userDot {
-  position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
-  background: #6ee7a8;
-  box-shadow: 0 0 10px rgba(110, 231, 168, 0.9);
-}
-
 .cta {
   padding: 0.6rem 1.1rem;
   border-radius: 999px;

@@ -441,110 +441,83 @@ export async function createServiceApi(
   payload: ServiceInput | FormData,
   categories?: ServiceCategoryItem[],
 ): Promise<CompanyService> {
-  let title = "";
-  let rawCat: string | undefined;
-  let tagline: string | undefined;
-  let slug: string | undefined;
-  let summary: string | undefined;
-  let heroImage: string | undefined;
-  let relatedImages: Array<{ url: string; caption?: string; alt?: string }> = [];
-  let whatIsIt: string | undefined;
-  let whoIsFor: string | undefined;
-  let problemSolved: string | undefined;
-  let whyItMatters: string | undefined;
-  let features: string[] = [];
-  let processSteps: Array<{ step: string; title: string; description: string }> = [];
-  let benefits: Array<{ title: string; description: string; metric?: string }> = [];
-  let faqs: Array<{ question: string; answer: string }> = [];
-  let techStack: string[] = [];
-  let orderIndex = 1;
-  let isFeatured = false;
-  let isActive = true;
+  let body: any;
 
   if (payload instanceof FormData) {
-    title = (payload.get("title") as string) || "";
-    rawCat = (payload.get("category") as string) || undefined;
-    tagline = (payload.get("tagline") as string) || undefined;
-    slug = (payload.get("slug") as string) || undefined;
-    summary = (payload.get("summary") as string) || undefined;
-    heroImage = (payload.get("hero_image") as string) || (payload.get("heroImage") as string) || undefined;
-    whatIsIt = (payload.get("whatIsIt") as string) || (payload.get("what_is_it") as string) || undefined;
-    whoIsFor = (payload.get("whoIsFor") as string) || (payload.get("who_is_for") as string) || undefined;
-    problemSolved = (payload.get("problemSolved") as string) || (payload.get("problem_solved") as string) || undefined;
-    whyItMatters = (payload.get("whyItMatters") as string) || (payload.get("why_it_matters") as string) || undefined;
-    features = normalizeStringList(payload.get("features"));
-    techStack = normalizeStringList(payload.get("techStack") || payload.get("tech_stack"));
-    processSteps = normalizeProcessSteps(parseJsonArrayField(payload.get("processSteps") || payload.get("process_steps"), []));
-    benefits = normalizeBenefits(parseJsonArrayField(payload.get("benefits"), []));
-    faqs = normalizeFaqs(parseJsonArrayField(payload.get("faqs"), []));
-    orderIndex = Number(payload.get("orderIndex") || payload.get("order_index")) || 1;
-    isFeatured = payload.get("isFeatured") === "true" || payload.get("is_featured") === "true";
-    isActive = payload.get("isActive") !== "false" && payload.get("is_active") !== "false";
+    const rawCat = payload.get("category");
+    if (typeof rawCat === "string") {
+      const resolvedId = await resolveCategoryIdForPayload(rawCat, categories);
+      payload.set("category", resolvedId);
+    }
+    const rawTitle = payload.get("title");
+    if (typeof rawTitle === "string" && !payload.get("slug")) {
+      payload.set("slug", slugifyService(rawTitle));
+    }
+    body = payload;
   } else {
-    title = payload.title || "";
-    rawCat = payload.category;
-    tagline = payload.tagline?.trim() || undefined;
-    slug = payload.slug?.trim() || undefined;
-    summary = payload.summary?.trim() || undefined;
-    heroImage = payload.hero_image?.trim() || undefined;
-    relatedImages = payload.related_images || [];
-    whatIsIt = payload.what_is_it?.trim() || payload.summary?.trim() || undefined;
-    whoIsFor = payload.who_is_for?.trim() || undefined;
-    problemSolved = payload.problem_solved?.trim() || undefined;
-    whyItMatters = payload.why_it_matters?.trim() || undefined;
-    features = normalizeStringList(payload.features);
-    techStack = normalizeStringList(payload.tech_stack);
-    processSteps = normalizeProcessSteps(payload.process_steps || []);
-    benefits = normalizeBenefits(payload.benefits || []);
-    faqs = normalizeFaqs(payload.faqs || []);
-    orderIndex = Number(payload.order_index) || 1;
-    isFeatured = Boolean(payload.is_featured);
-    isActive = payload.is_active !== false;
+    const title = payload.title || "";
+    const rawCat = payload.category;
+    const tagline = payload.tagline?.trim() || undefined;
+    const slug = payload.slug?.trim() || undefined;
+    const summary = payload.summary?.trim() || undefined;
+    const heroImage = payload.hero_image?.trim() || undefined;
+    const relatedImages = payload.related_images || [];
+    const whatIsIt = payload.what_is_it?.trim() || payload.summary?.trim() || undefined;
+    const whoIsFor = payload.who_is_for?.trim() || undefined;
+    const problemSolved = payload.problem_solved?.trim() || undefined;
+    const whyItMatters = payload.why_it_matters?.trim() || undefined;
+    const features = normalizeStringList(payload.features);
+    const techStack = normalizeStringList(payload.tech_stack);
+    const processSteps = normalizeProcessSteps(payload.process_steps || []);
+    const benefits = normalizeBenefits(payload.benefits || []);
+    const faqs = normalizeFaqs(payload.faqs || []);
+    const orderIndex = Number(payload.order_index) || 1;
+    const isFeatured = Boolean(payload.is_featured);
+    const isActive = payload.is_active !== false;
+
+    const categoryId = await resolveCategoryIdForPayload(rawCat, categories);
+
+    const cleanSlug =
+      slug ||
+      title
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "") ||
+      "service";
+
+    const cleanPayload = {
+      title: title.trim(),
+      category: categoryId,
+      tagline: tagline ? tagline.trim().slice(0, 100) : undefined,
+      slug: cleanSlug,
+      summary: summary ? summary.trim().slice(0, 200) : undefined,
+      heroImage: heroImage && !heroImage.startsWith("blob:") ? heroImage.trim() : DEFAULT_SERVICE_FALLBACK_IMAGE,
+      relatedImages,
+      whatIsIt: whatIsIt ? whatIsIt.trim().slice(0, 500) : undefined,
+      whoIsFor: whoIsFor ? whoIsFor.trim().slice(0, 500) : undefined,
+      problemSolved: problemSolved ? problemSolved.trim().slice(0, 500) : undefined,
+      whyItMatters: whyItMatters ? whyItMatters.trim().slice(0, 500) : undefined,
+      features,
+      processSteps,
+      benefits,
+      faqs,
+      techStack,
+      orderIndex: Math.max(1, orderIndex),
+      isFeatured,
+      isActive,
+    };
+
+    body = JSON.stringify(cleanPayload);
   }
 
-  const categoryId = await resolveCategoryIdForPayload(rawCat, categories);
-
-  const cleanSlug =
-    slug ||
-    title
-      .toLowerCase()
-      .trim()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "") ||
-    "service";
-
-  const cleanPayload = {
-    title: title.trim(),
-    category: categoryId,
-    tagline: tagline ? tagline.trim().slice(0, 100) : undefined,
-    slug: cleanSlug,
-    summary: summary ? summary.trim().slice(0, 200) : undefined,
-    heroImage: heroImage && !heroImage.startsWith("blob:") ? heroImage.trim() : DEFAULT_SERVICE_FALLBACK_IMAGE,
-    relatedImages,
-    whatIsIt: whatIsIt ? whatIsIt.trim().slice(0, 500) : undefined,
-    whoIsFor: whoIsFor ? whoIsFor.trim().slice(0, 500) : undefined,
-    problemSolved: problemSolved ? problemSolved.trim().slice(0, 500) : undefined,
-    whyItMatters: whyItMatters ? whyItMatters.trim().slice(0, 500) : undefined,
-    features,
-    processSteps,
-    benefits,
-    faqs,
-    techStack,
-    orderIndex: Math.max(1, orderIndex),
-    isFeatured,
-    isActive,
-  };
-
-  const body = JSON.stringify(cleanPayload);
-
   try {
+    const isForm = typeof FormData !== "undefined" && body instanceof FormData;
     const res = await apiRequest<BackendServiceSingleResponse>(
       "/api/v1/admin-panel/services/create",
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        ...(isForm ? {} : { headers: { "Content-Type": "application/json" } }),
         body,
       },
     );
@@ -581,65 +554,14 @@ export async function updateServiceApi(
   const updateObj: Record<string, any> = {};
 
   if (payload instanceof FormData) {
-    const title = payload.get("title");
-    if (title && typeof title === "string") updateObj.title = title.trim();
-
     const rawCat = payload.get("category");
-    if (rawCat && typeof rawCat === "string") {
-      updateObj.category = await resolveCategoryIdForPayload(rawCat, categories);
+    if (typeof rawCat === "string") {
+      const resolvedCatId = await resolveCategoryIdForPayload(rawCat, categories);
+      payload.set("category", resolvedCatId);
     }
-
-    const tagline = payload.get("tagline");
-    if (tagline && typeof tagline === "string") updateObj.tagline = tagline.trim().slice(0, 100);
-
-    const slug = payload.get("slug");
-    if (slug && typeof slug === "string") updateObj.slug = slug.trim();
-
-    const summary = payload.get("summary");
-    if (summary && typeof summary === "string") updateObj.summary = summary.trim().slice(0, 200);
-
-    const heroImage = payload.get("hero_image") || payload.get("heroImage");
-    if (heroImage && typeof heroImage === "string" && !heroImage.startsWith("blob:")) {
-      updateObj.heroImage = heroImage.trim();
-    }
-
-    const whatIsIt = payload.get("whatIsIt") || payload.get("what_is_it");
-    if (whatIsIt && typeof whatIsIt === "string") updateObj.whatIsIt = whatIsIt.trim().slice(0, 500);
-
-    const whoIsFor = payload.get("whoIsFor") || payload.get("who_is_for");
-    if (whoIsFor && typeof whoIsFor === "string") updateObj.whoIsFor = whoIsFor.trim().slice(0, 500);
-
-    const problemSolved = payload.get("problemSolved") || payload.get("problem_solved");
-    if (problemSolved && typeof problemSolved === "string") updateObj.problemSolved = problemSolved.trim().slice(0, 500);
-
-    const whyItMatters = payload.get("whyItMatters") || payload.get("why_it_matters");
-    if (whyItMatters && typeof whyItMatters === "string") updateObj.whyItMatters = whyItMatters.trim().slice(0, 500);
-
-    if (payload.has("features")) {
-      updateObj.features = normalizeStringList(payload.get("features"));
-    }
-    if (payload.has("techStack") || payload.has("tech_stack")) {
-      updateObj.techStack = normalizeStringList(payload.get("techStack") || payload.get("tech_stack"));
-    }
-    if (payload.has("processSteps") || payload.has("process_steps")) {
-      updateObj.processSteps = normalizeProcessSteps(
-        parseJsonArrayField(payload.get("processSteps") || payload.get("process_steps"), []),
-      );
-    }
-    if (payload.has("benefits")) {
-      updateObj.benefits = normalizeBenefits(parseJsonArrayField(payload.get("benefits"), []));
-    }
-    if (payload.has("faqs")) {
-      updateObj.faqs = normalizeFaqs(parseJsonArrayField(payload.get("faqs"), []));
-    }
-    if (payload.has("orderIndex") || payload.has("order_index")) {
-      updateObj.orderIndex = Math.max(1, Number(payload.get("orderIndex") || payload.get("order_index")) || 1);
-    }
-    if (payload.has("isFeatured") || payload.has("is_featured")) {
-      updateObj.isFeatured = payload.get("isFeatured") === "true" || payload.get("is_featured") === "true";
-    }
-    if (payload.has("isActive") || payload.has("is_active")) {
-      updateObj.isActive = payload.get("isActive") !== "false" && payload.get("is_active") !== "false";
+    const rawTitle = payload.get("title");
+    if (typeof rawTitle === "string" && !payload.get("slug")) {
+      payload.set("slug", slugifyService(rawTitle));
     }
   } else {
     if (payload.title !== undefined) updateObj.title = payload.title.trim();
@@ -673,16 +595,15 @@ export async function updateServiceApi(
     if (payload.is_active !== undefined) updateObj.isActive = Boolean(payload.is_active);
   }
 
-  const body = JSON.stringify(updateObj);
+  const isForm = typeof FormData !== "undefined" && payload instanceof FormData;
+  const body = isForm ? payload : JSON.stringify(updateObj);
 
   try {
     const res = await apiRequest<BackendServiceSingleResponse>(
       `/api/v1/admin-panel/services/${encodeURIComponent(id)}/update`,
       {
         method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        ...(isForm ? {} : { headers: { "Content-Type": "application/json" } }),
         body,
       },
     );
