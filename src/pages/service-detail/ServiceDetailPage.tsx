@@ -122,11 +122,43 @@ export function ServiceDetailPage({ service }: ServiceDetailPageProps) {
           {/* Main Hero Banner Image */}
           <Reveal variant="up" delay={200} className={styles.heroBannerHolder}>
             <div className={styles.bannerFrame}>
-              <img
-                src={service.hero_image}
-                alt={service.title}
-                className={styles.bannerImg}
-              />
+              {Boolean(service.hero_image && service.hero_image.trim()) ? (
+                <img
+                  src={service.hero_image.trim()}
+                  alt={service.title}
+                  className={styles.bannerImg}
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                  }}
+                />
+              ) : (
+                <div
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    gap: "1rem",
+                    background:
+                      "radial-gradient(ellipse at center, rgba(255, 179, 0, 0.08) 0%, rgba(18, 20, 29, 0.95) 70%)",
+                  }}
+                >
+                  <Layers size={54} style={{ color: "rgba(255, 179, 0, 0.7)" }} />
+                  <span
+                    style={{
+                      fontFamily: "var(--font-mono, monospace)",
+                      fontSize: "0.85rem",
+                      color: "rgba(255, 255, 255, 0.5)",
+                      letterSpacing: "0.08em",
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Enterprise Architecture Plate · {service.title}
+                  </span>
+                </div>
+              )}
               <div className={styles.bannerOverlay} />
               <div className={styles.bannerFloatingTag}>
                 <Sparkles className={styles.sparkleIcon} />
@@ -273,7 +305,7 @@ export function ServiceDetailPage({ service }: ServiceDetailPageProps) {
 
           <div className={styles.featuresGrid}>
             {service.features.map((feat, idx) => (
-              <Reveal key={feat} delay={idx * 40} className={styles.featCol}>
+              <Reveal key={`feat-${idx}-${feat}`} delay={idx * 40} className={styles.featCol}>
                 <TiltCard className={styles.featureCard}>
                   <CheckCircle2 className={styles.featCheck} />
                   <span className={styles.featText}>{feat}</span>
@@ -288,8 +320,8 @@ export function ServiceDetailPage({ service }: ServiceDetailPageProps) {
               <div className={styles.techStackBox}>
                 <span className={styles.techLabel}>Standard Technology Stack:</span>
                 <div className={styles.techPills}>
-                  {service.tech_stack.map((tech) => (
-                    <span key={tech} className={styles.techPill}>
+                  {service.tech_stack.map((tech, idx) => (
+                    <span key={`tech-${idx}-${tech}`} className={styles.techPill}>
                       {tech}
                     </span>
                   ))}
@@ -324,7 +356,7 @@ export function ServiceDetailPage({ service }: ServiceDetailPageProps) {
 
           <div className={styles.processGrid}>
             {service.process_steps.map((proc, idx) => (
-              <Reveal key={proc.step} delay={idx * 60} className={styles.processCol}>
+              <Reveal key={`proc-${idx}-${proc.step}`} delay={idx * 60} className={styles.processCol}>
                 <div className={styles.processCard}>
                   <div className={styles.procHeader}>
                     <span className={styles.procNum}>{proc.step}</span>
@@ -363,7 +395,7 @@ export function ServiceDetailPage({ service }: ServiceDetailPageProps) {
 
           <div className={styles.benefitsGrid}>
             {service.benefits.map((ben, idx) => (
-              <Reveal key={ben.title} delay={idx * 50} className={styles.benefitCol}>
+              <Reveal key={`ben-${idx}-${ben.title}`} delay={idx * 50} className={styles.benefitCol}>
                 <div className={styles.benefitCard}>
                   {ben.metric && <span className={styles.benefitMetric}>{ben.metric}</span>}
                   <h3 className={styles.benefitTitle}>{ben.title}</h3>

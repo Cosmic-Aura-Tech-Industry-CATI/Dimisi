@@ -117,15 +117,9 @@ export async function getServiceBySlug({
   if (!data.slug) return null;
   const trimmedSlug = data.slug.trim().toLowerCase();
 
-  // 1. Check local cache
-  let service = servicesStore.getServiceBySlug(trimmedSlug);
-  if (service) return service;
+  let service: CompanyService | null = null;
 
-  // 2. Fetch fresh live visitor services from backend
-  // WHY THIS IS USED:
-  // Public visitors browsing `/services/$slug` need live data from backend MongoDB.
-  // We use `getVisitorServicesApi()` because it is an unauthenticated public route.
-  // We do NOT call `getAllServicesApi()` here to avoid triggering 401 Unauthorized errors in browser console.
+  // 1. Fetch fresh live visitor services from backend first for up-to-date DB state
   try {
     const catItems = servicesStore.categoryItems;
     const liveServices = await getVisitorServicesApi(undefined, catItems).catch(() => []);
@@ -138,6 +132,10 @@ export async function getServiceBySlug({
   } catch (err) {
     console.warn("Live lookup for service by slug failed, checking local store cache:", err);
   }
+
+  // 2. Check local cache fallback
+  service = servicesStore.getServiceBySlug(trimmedSlug);
+  if (service) return service;
 
   // 3. If slug is a MongoDB ObjectId, attempt direct ID lookup
   if (isMongoId(data.slug)) {
@@ -395,15 +393,17 @@ export async function saveServiceFn({
     }
   }
 
-  const check = validateServiceInput(data);
+  const targetId = serviceId || data.id;
+  const isUpdate = Boolean(targetId && isMongoId(targetId));
+  const check = validateServiceInput(data, isUpdate);
   if (!check.valid) {
     return { success: false, error: check.error || "Invalid service input." };
   }
 
   try {
     let remoteSaved: CompanyService;
-    if (data.id && isMongoId(data.id)) {
-      remoteSaved = await updateServiceApi(data.id, data, catItems);
+    if (isUpdate && targetId) {
+      remoteSaved = await updateServiceApi(targetId, data, catItems);
     } else {
       remoteSaved = await createServiceApi(data, catItems);
     }

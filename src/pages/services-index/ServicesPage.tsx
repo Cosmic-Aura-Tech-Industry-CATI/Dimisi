@@ -25,7 +25,6 @@ import { Reveal } from "@/components/common/Reveal/Reveal";
 import { TiltCard } from "@/components/common/TiltCard/TiltCard";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
 import { getPublicServicesData } from "@/lib/services.functions";
-import { DEFAULT_SERVICE_FALLBACK_IMAGE } from "@/services/service.service";
 import type { CompanyService, ServiceCategoryItem } from "@/lib/services.shared";
 import pageStyles from "@/styles/page.module.css";
 import styles from "./ServicesPage.module.css";
@@ -264,19 +263,30 @@ export function ServicesPage() {
 
                     {/* Media Header */}
                     <div className={styles.spotlightMediaHolder}>
-                      <img
-                        src={service.hero_image || DEFAULT_SERVICE_FALLBACK_IMAGE}
-                        alt={service.title}
-                        className={styles.spotlightImg}
-                        loading="lazy"
-                        decoding="async"
-                        onError={(e) => {
-                          const target = e.currentTarget as HTMLImageElement;
-                          if (target.src !== DEFAULT_SERVICE_FALLBACK_IMAGE) {
-                            target.src = DEFAULT_SERVICE_FALLBACK_IMAGE;
-                          }
-                        }}
-                      />
+                      {Boolean(service.hero_image && service.hero_image.trim()) ? (
+                        <img
+                          src={service.hero_image.trim()}
+                          alt={service.title}
+                          className={styles.spotlightImg}
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div
+                          className={styles.spotlightImg}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: "linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01))",
+                          }}
+                        >
+                          <Layers size={36} style={{ color: "rgba(255,255,255,0.25)" }} />
+                        </div>
+                      )}
                       <div className={styles.spotlightImgOverlay} />
                       <div className={styles.cardBadgeCluster}>
                         <span className={styles.cardCatBadge}>{service.category}</span>
@@ -301,8 +311,8 @@ export function ServicesPage() {
                       {/* Key Features */}
                       {service.features && service.features.length > 0 && (
                         <ul className={styles.spotlightFeatures}>
-                          {service.features.slice(0, 3).map((feat) => (
-                            <li key={feat} className={styles.spotlightFeatureItem}>
+                          {service.features.slice(0, 3).map((feat, fIdx) => (
+                            <li key={`feat-${fIdx}-${feat}`} className={styles.spotlightFeatureItem}>
                               <CheckCircle2 className={styles.spotlightCheckIcon} size={14} />
                               <span>{feat}</span>
                             </li>
@@ -509,19 +519,30 @@ export function ServicesPage() {
                   >
                     {/* Card Visual Header with Image */}
                     <div className={styles.cardImageHolder}>
-                      <img
-                        src={service.hero_image || DEFAULT_SERVICE_FALLBACK_IMAGE}
-                        alt={service.title}
-                        className={styles.cardImg}
-                        loading="lazy"
-                        decoding="async"
-                        onError={(e) => {
-                          const target = e.currentTarget as HTMLImageElement;
-                          if (target.src !== DEFAULT_SERVICE_FALLBACK_IMAGE) {
-                            target.src = DEFAULT_SERVICE_FALLBACK_IMAGE;
-                          }
-                        }}
-                      />
+                      {Boolean(service.hero_image && service.hero_image.trim()) ? (
+                        <img
+                          src={service.hero_image.trim()}
+                          alt={service.title}
+                          className={styles.cardImg}
+                          loading="lazy"
+                          decoding="async"
+                          onError={(e) => {
+                            e.currentTarget.style.display = "none";
+                          }}
+                        />
+                      ) : (
+                        <div
+                          className={styles.cardImg}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: "linear-gradient(135deg, rgba(255,255,255,0.06), rgba(255,255,255,0.01))",
+                          }}
+                        >
+                          <Layers size={32} style={{ color: "rgba(255,255,255,0.2)" }} />
+                        </div>
+                      )}
                       <div className={styles.cardImgOverlay} />
                       <div className={styles.cardBadgeCluster}>
                         <span className={styles.cardCatBadge}>{service.category}</span>
@@ -548,8 +569,8 @@ export function ServicesPage() {
                       {/* Feature / Deliverable Pills */}
                       {service.features && service.features.length > 0 && (
                         <ul className={styles.featuresList}>
-                          {service.features.slice(0, 4).map((feat) => (
-                            <li key={feat} className={styles.featureItem}>
+                          {service.features.slice(0, 4).map((feat, fIdx) => (
+                            <li key={`card-feat-${fIdx}-${feat}`} className={styles.featureItem}>
                               <CheckCircle2 className={styles.checkIcon} />
                               <span>{feat}</span>
                             </li>
