@@ -38,7 +38,6 @@ import {
   type ServiceCategoryInput,
   slugifyService,
   slugifyServiceCategory,
-  validateServiceInput,
   validateServiceCategoryInput,
 } from "@/lib/services.shared";
 import {
@@ -50,7 +49,8 @@ import {
   saveServiceCategoryFn,
   deleteServiceCategoryFn,
 } from "@/lib/services.functions";
-import { resolveCategoryName, isMongoId, DEFAULT_SERVICE_FALLBACK_IMAGE } from "@/services/service.service";
+import { resolveCategoryName, isMongoId } from "@/services/service.service";
+import { uploadImageDirectToCloudinary } from "@/services/cloudinary.service";
 import shared from "../styles/admin.module.css";
 import styles from "./AdminServices.module.css";
 
@@ -238,7 +238,7 @@ export function AdminServices({
     setFormOrderIndex(nextOrder);
     setFormIsActive(true);
     setFormIsFeatured(false);
-    setFormHeroImage(DEFAULT_SERVICE_FALLBACK_IMAGE);
+    setFormHeroImage("");
     setHeroImageFile(null);
     setFormWhatIsIt("");
     setFormWhoIsFor("");
@@ -274,7 +274,7 @@ export function AdminServices({
     setFormOrderIndex(srv.order_index ?? 1);
     setFormIsActive(srv.is_active !== false);
     setFormIsFeatured(Boolean(srv.is_featured));
-    setFormHeroImage(srv.hero_image || DEFAULT_SERVICE_FALLBACK_IMAGE);
+    setFormHeroImage(srv.hero_image || "");
     setHeroImageFile(null);
     setFormWhatIsIt(srv.what_is_it || srv.summary || "");
     setFormWhoIsFor(srv.who_is_for || "");
@@ -296,7 +296,29 @@ export function AdminServices({
     setIsServiceModalOpen(true);
   };
 
-  // Save Service handler
+  // Cleaner function to revoke temporary object URLs to prevent browser memory leaks
+  const revokePreviewUrl = useCallback((url: string | null | undefined) => {
+    if (url && typeof url === "string" && url.startsWith("blob:")) {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {}
+    }
+  }, []);
+
+  const closeServiceModal = useCallback(() => {
+    revokePreviewUrl(formHeroImage);
+    setHeroImageFile(null);
+    setIsServiceModalOpen(false);
+  }, [formHeroImage, revokePreviewUrl]);
+
+  // Teardown: revoke preview URL on unmount or file change
+  useEffect(() => {
+    return () => {
+      revokePreviewUrl(formHeroImage);
+    };
+  }, [formHeroImage, revokePreviewUrl]);
+
+  // Save Service handler with Direct Cloudinary Upload
   const handleSaveService = async () => {
     const cleanTitle = formTitle.trim();
     if (!cleanTitle || cleanTitle.length < 5) {
@@ -308,106 +330,68 @@ export function AdminServices({
     setError(null);
     setNotice(null);
 
-    const cleanHeroImage =
-      formHeroImage.trim().startsWith("blob:") || !formHeroImage.trim()
-        ? DEFAULT_SERVICE_FALLBACK_IMAGE
-        : formHeroImage.trim();
-
-    const servicePayload: ServiceInput = {
-      id: editingService ? editingService.id : undefined,
-      title: cleanTitle,
-      slug: formSlug.trim() || slugifyService(cleanTitle),
-      category: formCategory,
-      tagline: formTagline.trim(),
-      summary: formSummary.trim(),
-      order_index: Number(formOrderIndex) || 1,
-      is_active: formIsActive,
-      is_featured: formIsFeatured,
-      hero_image: cleanHeroImage,
-      related_images: editingService?.related_images || [],
-      what_is_it: formWhatIsIt.trim() || formSummary.trim(),
-      who_is_for: formWhoIsFor.trim(),
-      problem_solved: formProblemSolved.trim(),
-      why_it_matters: formWhyItMatters.trim(),
-      features: formFeatures.map((f) => f.trim()).filter(Boolean),
-      tech_stack: formTechStack.map((t) => t.trim()).filter(Boolean),
-      process_steps: formProcessSteps.map((s, idx) => ({
-        step: String(s.step || (s as any).stepNumber || idx + 1).padStart(2, "0"),
-        title: s.title.trim(),
-        description: s.description.trim(),
-      })),
-      benefits: formBenefits.map((b) => ({
-        title: b.title.trim(),
-        description: b.description.trim(),
-        metric: b.metric?.trim() || undefined,
-      })),
-      faqs: formFaqs.map((f) => ({
-        question: f.question.trim(),
-        answer: f.answer.trim(),
-      })),
-    };
+    const hasNewLocalFile = heroImageFile instanceof File;
+    const cleanSlug = formSlug.trim() || slugifyService(cleanTitle);
 
     try {
-      let res;
-      if (heroImageFile instanceof File) {
-        const fd = new FormData();
-        if (editingService?.id) fd.append("id", editingService.id);
-        fd.append("title", cleanTitle);
-        fd.append("slug", formSlug.trim() || slugifyService(cleanTitle));
-        fd.append("category", formCategory);
-        if (formTagline.trim()) fd.append("tagline", formTagline.trim());
-        if (formSummary.trim()) fd.append("summary", formSummary.trim());
-        fd.append("orderIndex", String(Number(formOrderIndex) || 1));
-        fd.append("isActive", String(formIsActive));
-        fd.append("isFeatured", String(formIsFeatured));
-        fd.append("heroImage", heroImageFile);
-        if (formWhatIsIt.trim() || formSummary.trim()) fd.append("whatIsIt", formWhatIsIt.trim() || formSummary.trim());
-        if (formWhoIsFor.trim()) fd.append("whoIsFor", formWhoIsFor.trim());
-        if (formProblemSolved.trim()) fd.append("problemSolved", formProblemSolved.trim());
-        if (formWhyItMatters.trim()) fd.append("whyItMatters", formWhyItMatters.trim());
-        fd.append("features", JSON.stringify(formFeatures.map((f) => f.trim()).filter(Boolean)));
-        fd.append("techStack", JSON.stringify(formTechStack.map((t) => t.trim()).filter(Boolean)));
-        fd.append(
-          "processSteps",
-          JSON.stringify(
-            formProcessSteps.map((s, idx) => ({
-              step: String(s.step || (s as any).stepNumber || idx + 1).padStart(2, "0"),
-              title: s.title.trim(),
-              description: s.description.trim(),
-            })),
-          ),
-        );
-        fd.append(
-          "benefits",
-          JSON.stringify(
-            formBenefits.map((b) => ({
-              title: b.title.trim(),
-              description: b.description.trim(),
-              metric: b.metric?.trim() || undefined,
-            })),
-          ),
-        );
-        fd.append(
-          "faqs",
-          JSON.stringify(
-            formFaqs.map((f) => ({
-              question: f.question.trim(),
-              answer: f.answer.trim(),
-            })),
-          ),
-        );
+      // 1. Direct Cloudinary Client-Side Upload (Bypasses BullMQ background worker issues)
+      let finalHeroImageUrl = formHeroImage.trim().startsWith("blob:")
+        ? editingService?.hero_image || ""
+        : formHeroImage.trim();
 
-        res = await saveServiceFn({ data: fd, serviceId: editingService?.id });
-      } else {
-        res = await saveServiceFn({ data: servicePayload, serviceId: editingService?.id });
+      if (hasNewLocalFile && heroImageFile) {
+        setNotice("Uploading image directly to Cloudinary CDN...");
+        finalHeroImageUrl = await uploadImageDirectToCloudinary(heroImageFile);
       }
+
+      // 2. Structured JSON Payload with permanent Cloudinary URL
+      const servicePayload: ServiceInput = {
+        id: editingService ? editingService.id : undefined,
+        title: cleanTitle,
+        slug: cleanSlug,
+        category: formCategory,
+        tagline: formTagline.trim(),
+        summary: formSummary.trim(),
+        order_index: Number(formOrderIndex) || 1,
+        is_active: formIsActive,
+        is_featured: formIsFeatured,
+        hero_image: finalHeroImageUrl,
+        existing_hero_image: finalHeroImageUrl,
+        related_images: editingService?.related_images || [],
+        what_is_it: formWhatIsIt.trim() || formSummary.trim(),
+        who_is_for: formWhoIsFor.trim(),
+        problem_solved: formProblemSolved.trim(),
+        why_it_matters: formWhyItMatters.trim(),
+        features: formFeatures.map((f) => f.trim()).filter(Boolean),
+        tech_stack: formTechStack.map((t) => t.trim()).filter(Boolean),
+        process_steps: formProcessSteps.map((s, idx) => ({
+          step: String(s.step || (s as any).stepNumber || idx + 1).padStart(2, "0"),
+          title: s.title.trim(),
+          description: s.description.trim(),
+        })),
+        benefits: formBenefits.map((b) => ({
+          title: b.title.trim(),
+          description: b.description.trim(),
+          metric: b.metric?.trim() || undefined,
+        })),
+        faqs: formFaqs.map((f) => ({
+          question: f.question.trim(),
+          answer: f.answer.trim(),
+        })),
+      };
+
+      // 3. Single clean JSON save to MongoDB via Express Backend
+      const res = await saveServiceFn({
+        data: servicePayload,
+        serviceId: editingService?.id,
+      });
 
       if (!res.success) {
         throw new Error(res.error || "Failed to save service.");
       }
 
       setNotice(`Service "${cleanTitle}" saved successfully.`);
-      setIsServiceModalOpen(false);
+      closeServiceModal();
       onRefresh();
       void refreshCategories();
     } catch (err: unknown) {
@@ -812,23 +796,37 @@ export function AdminServices({
               ) : (
                 filteredServices.map((srv) => {
                   const categoryDisplayName = resolveCategoryName(srv.category, categoryList);
+                  const effectiveHeroImage = (srv.hero_image && srv.hero_image.trim()) || "";
                   return (
                     <tr key={srv.id}>
                       {/* Service Info */}
                       <td>
                         <div className={styles.serviceCell}>
-                          <img
-                            src={srv.hero_image || DEFAULT_SERVICE_FALLBACK_IMAGE}
-                            alt={srv.title}
-                            className={styles.serviceThumb}
-                            loading="lazy"
-                            onError={(e) => {
-                              const target = e.currentTarget as HTMLImageElement;
-                              if (target.src !== DEFAULT_SERVICE_FALLBACK_IMAGE) {
-                                target.src = DEFAULT_SERVICE_FALLBACK_IMAGE;
-                              }
-                            }}
-                          />
+                          {effectiveHeroImage ? (
+                            <img
+                              src={effectiveHeroImage}
+                              alt={srv.title}
+                              className={styles.serviceThumb}
+                              loading="lazy"
+                              onError={(e) => {
+                                e.currentTarget.style.display = "none";
+                              }}
+                            />
+                          ) : (
+                            <div
+                              className={styles.serviceThumb}
+                              style={{
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                background: "rgba(255, 255, 255, 0.04)",
+                                borderRadius: "6px",
+                              }}
+                              title="No image uploaded"
+                            >
+                              <Layers size={18} style={{ color: "var(--dimisi-muted-text, #94a3b8)" }} />
+                            </div>
+                          )}
                           <div className={styles.serviceInfoCol}>
                             <span className={styles.serviceTitleText}>{srv.title}</span>
                             {srv.tagline && (
@@ -1131,7 +1129,7 @@ export function AdminServices({
               <button
                 type="button"
                 className={styles.modalCloseBtn}
-                onClick={() => setIsServiceModalOpen(false)}
+                onClick={closeServiceModal}
               >
                 <X size={18} />
               </button>
@@ -1311,6 +1309,7 @@ export function AdminServices({
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
+                            revokePreviewUrl(formHeroImage);
                             setHeroImageFile(file);
                             setFormHeroImage(URL.createObjectURL(file));
                           }
@@ -1335,19 +1334,20 @@ export function AdminServices({
                         placeholder="https://images.unsplash.com/..."
                         value={formHeroImage.startsWith("blob:") ? "" : formHeroImage}
                         onChange={(e) => {
+                          revokePreviewUrl(formHeroImage);
                           setHeroImageFile(null);
                           setFormHeroImage(e.target.value);
                         }}
                       />
                     </div>
 
-                    {formHeroImage && (
+                    {Boolean(formHeroImage && formHeroImage.trim()) && (
                       <div style={{ marginTop: "0.85rem" }}>
                         <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.6)", display: "block", marginBottom: "4px" }}>
                           Current Image Preview:
                         </span>
                         <div className={styles.previewImgWrap}>
-                          <img src={formHeroImage} alt="Hero Preview" className={styles.previewImg} />
+                          <img src={formHeroImage.trim()} alt="Hero Preview" className={styles.previewImg} />
                         </div>
                       </div>
                     )}

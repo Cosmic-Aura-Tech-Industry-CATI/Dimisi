@@ -82,6 +82,7 @@ export interface ServiceInput {
   is_featured?: boolean | null | undefined;
   is_active?: boolean | null | undefined;
   accent_color?: string | null | undefined;
+  existing_hero_image?: string | undefined;
   upload_status?: "pending" | "success" | "failed" | undefined;
 }
 
@@ -196,7 +197,10 @@ export function validateServiceCategoryInput(input: Partial<ServiceCategoryInput
   return { valid: true };
 }
 
-export function validateServiceInput(input: ServiceInput): { valid: boolean; error?: string; field?: string } {
+export function validateServiceInput(
+  input: Partial<ServiceInput>,
+  isUpdate: boolean = false,
+): { valid: boolean; error?: string; field?: string } {
   const title = input.title?.trim() || "";
   const summary = input.summary?.trim() || "";
   const tagline = input.tagline?.trim() || "";
@@ -218,7 +222,7 @@ export function validateServiceInput(input: ServiceInput): { valid: boolean; err
   if (summary.length > 200) {
     return { valid: false, error: "Service summary cannot exceed 200 characters.", field: "summary" };
   }
-  if (heroImage.length === 0) {
+  if (!isUpdate && heroImage.length === 0) {
     return { valid: false, error: "Primary service image is required.", field: "hero_image" };
   }
   if (whatIsIt.length < 10) {

@@ -4,7 +4,7 @@
  * against the Express backend API (/api/v1/admin-panel/services/*).
  */
 import { apiRequest, ApiError } from "./apiClient";
-import type { CompanyService, ServiceCategoryItem, ServiceInput } from "@/lib/services.shared";
+import { type CompanyService, type ServiceCategoryItem, type ServiceInput, slugifyService } from "@/lib/services.shared";
 import {
   getAllServiceCategoriesApi,
   createServiceCategoryApi,
@@ -122,8 +122,7 @@ export function resolveCategoryName(
   return catStr || "Custom Software";
 }
 
-export const DEFAULT_SERVICE_FALLBACK_IMAGE =
-  "https://images.unsplash.com/photo-1555066931-4365d14bab8c?auto=format&fit=crop&w=1600&q=80";
+export const DEFAULT_SERVICE_FALLBACK_IMAGE = "";
 
 /**
  * Normalizes backend IService document into the clean frontend CompanyService model.
@@ -140,7 +139,7 @@ export function normalizeBackendService(
       category: "Custom Software",
       summary: "",
       tagline: "",
-      hero_image: DEFAULT_SERVICE_FALLBACK_IMAGE,
+      hero_image: "",
       related_images: [],
       what_is_it: "",
       who_is_for: "",
@@ -169,7 +168,7 @@ export function normalizeBackendService(
 
   const resolvedCategory = resolveCategoryName(doc.category, categories);
   const rawHero = doc.heroImage?.trim() || "";
-  const heroImage = rawHero.length > 0 ? rawHero : DEFAULT_SERVICE_FALLBACK_IMAGE;
+  const heroImage = rawHero;
 
   return {
     id: String(doc._id),
@@ -182,7 +181,7 @@ export function normalizeBackendService(
     hero_image: heroImage,
     related_images: Array.isArray(doc.relatedImages)
       ? doc.relatedImages.map((img) => ({
-          url: img.url || DEFAULT_SERVICE_FALLBACK_IMAGE,
+          url: img.url || "",
           caption: img.caption || "",
           alt: img.alt || "",
         }))
@@ -492,7 +491,7 @@ export async function createServiceApi(
       tagline: tagline ? tagline.trim().slice(0, 100) : undefined,
       slug: cleanSlug,
       summary: summary ? summary.trim().slice(0, 200) : undefined,
-      heroImage: heroImage && !heroImage.startsWith("blob:") ? heroImage.trim() : DEFAULT_SERVICE_FALLBACK_IMAGE,
+      heroImage: heroImage && !heroImage.startsWith("blob:") ? heroImage.trim() : undefined,
       relatedImages,
       whatIsIt: whatIsIt ? whatIsIt.trim().slice(0, 500) : undefined,
       whoIsFor: whoIsFor ? whoIsFor.trim().slice(0, 500) : undefined,
@@ -531,8 +530,6 @@ export async function createServiceApi(
   } catch (err: unknown) {
     if (err instanceof ApiError && err.status === 400) {
       console.error("[Service Create 400 Error Context]", {
-        selectedCategoryValue: rawCat,
-        resolvedCategoryId: categoryId,
         errorMessage: err.message,
       });
     }
@@ -576,7 +573,17 @@ export async function updateServiceApi(
       updateObj.summary = payload.summary.trim().slice(0, 200);
     }
     if (payload.hero_image !== undefined && !payload.hero_image.startsWith("blob:")) {
-      updateObj.heroImage = payload.hero_image.trim();
+      const cleanHero = payload.hero_image.trim();
+      if (cleanHero) {
+        updateObj.heroImage = cleanHero;
+        updateObj.existingHeroImage = cleanHero;
+      }
+    }
+    if (payload.existing_hero_image !== undefined && !payload.existing_hero_image.startsWith("blob:")) {
+      const cleanExisting = payload.existing_hero_image.trim();
+      if (cleanExisting) {
+        updateObj.existingHeroImage = cleanExisting;
+      }
     }
     if (payload.related_images !== undefined) updateObj.relatedImages = payload.related_images;
     if (payload.what_is_it !== undefined) updateObj.whatIsIt = payload.what_is_it.trim().slice(0, 500);
