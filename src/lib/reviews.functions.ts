@@ -326,19 +326,36 @@ export async function submitReview({
     } catch {}
   }
 
-  // 2. Fallback: resolve from active database campaigns
+  // 2. Fallback: resolve from active database campaigns or public reviews metadata
   if (!resolvedCampaignId || !isMongoId(resolvedCampaignId)) {
     try {
       const defaultCampId = await resolveDefaultCampaignId();
-      if (defaultCampId) {
+      if (defaultCampId && isMongoId(defaultCampId)) {
         resolvedCampaignId = defaultCampId;
+      }
+    } catch {}
+  }
+
+  // 3. Fallback for public visitors: fetch recent public reviews to extract an active MongoDB campaignId
+  if (!resolvedCampaignId || !isMongoId(resolvedCampaignId)) {
+    try {
+      const publicReviewsRes = await getPublicReviewsApi({ limit: 10 });
+      if (Array.isArray(publicReviewsRes?.reviews) && publicReviewsRes.reviews.length > 0) {
+        // Any approved active review in database carries its associated MongoDB campaign ID
+        for (const r of publicReviewsRes.reviews) {
+          const cid = (r as any).campaign_id || (r as any).campaignId;
+          if (cid && isMongoId(String(cid))) {
+            resolvedCampaignId = String(cid);
+            break;
+          }
+        }
       }
     } catch {}
   }
 
   if (!resolvedCampaignId || !isMongoId(resolvedCampaignId)) {
     throw new Error(
-      "No active review campaign found in system. Please select a valid campaign or create one in the Admin Panel.",
+      "No active review campaign found in system. Please submit via a specific review campaign link.",
     );
   }
 
