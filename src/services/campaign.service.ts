@@ -7,6 +7,7 @@ import { apiRequest, ApiError, clearApiCache, API_BASE_URL } from "./apiClient";
 import type { ReviewCampaign } from "@/lib/reviews.shared";
 import { extractMongoId, isMongoId } from "@/lib/reviews.shared";
 import { getVisitorServicesApi } from "./service.service";
+import { getStoredAdminSession } from "./adminAuth.service";
 
 export interface BackendCampaignDoc {
   _id: string;
@@ -234,18 +235,22 @@ export function getCampaignQrDownloadUrl(
  * Prevents 400 error when submitting reviews from generic /review URL without a campaign param.
  */
 export async function resolveDefaultCampaignId(): Promise<string | null> {
-  // 1. Try to fetch from backend campaigns if accessible
-  try {
-    const campaigns = await getAllAdminCampaignsApi();
-    if (Array.isArray(campaigns)) {
-      const active = campaigns.find((c) => c.is_active && isMongoId(c.id));
-      if (active) return active.id;
-      const anyMongo = campaigns.find((c) => isMongoId(c.id));
-      if (anyMongo) return anyMongo.id;
-    }
-  } catch {}
+  // 1. Only query protected admin API if user has an active admin session in this browser!
+  // Prevents public site visitors from triggering 401 Unauthorized / 400 Refresh Token errors.
+  const adminSession = getStoredAdminSession();
+  if (adminSession?.token) {
+    try {
+      const campaigns = await getAllAdminCampaignsApi();
+      if (Array.isArray(campaigns)) {
+        const active = campaigns.find((c) => c.is_active && isMongoId(c.id));
+        if (active) return active.id;
+        const anyMongo = campaigns.find((c) => isMongoId(c.id));
+        if (anyMongo) return anyMongo.id;
+      }
+    } catch {}
+  }
 
-  // 2. Check localStorage cached campaigns
+  // 2. Check localStorage cached campaigns for public visitors
   if (typeof window !== "undefined") {
     try {
       const raw = localStorage.getItem("dimisi_campaigns_v1");
@@ -260,6 +265,7 @@ export async function resolveDefaultCampaignId(): Promise<string | null> {
       }
     } catch {}
   }
+
   return null;
 }
 

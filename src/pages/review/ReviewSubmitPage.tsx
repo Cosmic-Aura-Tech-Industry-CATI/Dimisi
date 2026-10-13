@@ -33,6 +33,7 @@ import { optimizeImageFile, validateImageFile } from "@/lib/image-optimizer";
 import { resolveDefaultCampaignId } from "@/services/campaign.service";
 import { ApiError } from "@/services/apiClient";
 import { addAdminNotification, getNotificationSettings } from "@/services";
+import { getStoredAdminSession } from "@/services/adminAuth.service";
 import styles from "./ReviewSubmitPage.module.css";
 
 const RATING_DESCRIPTIONS: Record<number, string> = {
@@ -229,16 +230,19 @@ export function ReviewSubmitPage({
           },
         });
 
-        // Dispatch real-time in-app notification to admin topbar bell if enabled
+        // Dispatch real-time in-app notification to admin topbar bell only if an admin session is active
         try {
-          const settings = getNotificationSettings();
-          if (settings.notify_on_submit) {
-            addAdminNotification({
-              category: "review",
-              title: `New Review: ${formData.customerName.trim()} (${formData.rating}★)`,
-              message: `${formData.rating}-star review submitted by ${formData.customerName.trim()} for ${formData.serviceName || "DIMISI Technologies"}.`,
-              targetTab: "reviews",
-            });
+          const adminSession = getStoredAdminSession();
+          if (adminSession?.token) {
+            const settings = getNotificationSettings();
+            if (settings.notify_on_submit) {
+              addAdminNotification({
+                category: "review",
+                title: `New Review: ${formData.customerName.trim()} (${formData.rating}★)`,
+                message: `${formData.rating}-star review submitted by ${formData.customerName.trim()} for ${formData.serviceName || "DIMISI Technologies"}.`,
+                targetTab: "reviews",
+              });
+            }
           }
         } catch (e) {
           console.warn("[review] Notification dispatch error:", e);
