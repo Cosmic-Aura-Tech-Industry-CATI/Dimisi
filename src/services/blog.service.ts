@@ -12,6 +12,7 @@ import {
   resolveBlogCategoryIdForPayload,
   isMongoId,
 } from "./blogCategory.service";
+import { uploadFileViaSignature } from "./upload.service";
 
 export interface BackendBlogDoc {
   _id: string;
@@ -138,6 +139,7 @@ export function normalizeBackendBlog(
     excerpt: doc.excerpt || "",
     content: doc.content || "",
     cover_image: coverImage,
+    cover_image_public_id: doc.coverImagePublicId || undefined,
     cover_caption: doc.coverCaption || undefined,
     cover_alt: doc.coverAlt || undefined,
     cover_credit: doc.coverCredit || undefined,
@@ -264,52 +266,45 @@ export async function getBlogByIdApi(
 }
 
 /**
- * Helper to build FormData or JSON payload for Create / Update operations.
+ * Helper to build clean JSON payload for Blog v2 Create / Update operations.
+ * If a local coverImageFile is provided, it is securely uploaded to Cloudinary
+ * via backend-signed signature, capturing both URL and publicId.
  */
 async function buildBlogPayload(
   payload: Partial<BlogPostInput>,
   coverImageFile?: File | null,
   categories?: BlogCategoryItem[],
-): Promise<FormData | Record<string, any>> {
+): Promise<Record<string, any>> {
   const catId = await resolveBlogCategoryIdForPayload(payload.category, categories);
 
-  const isFilePresent = coverImageFile instanceof File;
-
-  if (isFilePresent) {
-    const fd = new FormData();
-    if (payload.title) fd.append("title", payload.title.trim());
-    fd.append("category", catId);
-    if (payload.excerpt !== undefined) fd.append("excerpt", payload.excerpt.trim());
-    if (payload.content !== undefined) fd.append("content", payload.content.trim());
-    if (coverImageFile) fd.append("coverImage", coverImageFile);
-    if (payload.cover_caption !== undefined) fd.append("coverCaption", payload.cover_caption.trim());
-    if (payload.cover_alt !== undefined) fd.append("coverAlt", payload.cover_alt.trim());
-    if (payload.cover_credit !== undefined) fd.append("coverCredit", payload.cover_credit.trim());
-    if (payload.reading_time !== undefined) fd.append("readingTime", payload.reading_time.trim());
-    if (payload.order_index !== undefined) fd.append("orderIndex", String(payload.order_index));
-    if (payload.is_featured !== undefined) fd.append("isFeatured", String(payload.is_featured));
-    if (payload.status !== undefined) {
-      fd.append("isActive", String(payload.status === "published"));
-    }
-    if (payload.meta_title !== undefined) fd.append("metaTitle", payload.meta_title.trim());
-    if (payload.meta_description !== undefined) fd.append("metaDescription", payload.meta_description.trim());
-    if (payload.og_image !== undefined) fd.append("ogImage", payload.og_image.trim());
-
-    if (Array.isArray(payload.tags)) {
-      payload.tags.forEach((tag) => fd.append("tags", tag.trim()));
-    }
-    return fd;
-  }
-
-  // JSON payload
   const body: Record<string, any> = {};
   if (payload.title) body.title = payload.title.trim();
   body.category = catId;
   if (payload.excerpt !== undefined) body.excerpt = payload.excerpt.trim();
   if (payload.content !== undefined) body.content = payload.content.trim();
-  if (payload.cover_image !== undefined && payload.cover_image.trim()) {
-    body.coverImage = payload.cover_image.trim();
+
+  // 1. Local file upload via Upload v2
+  if (coverImageFile instanceof File) {
+    const uploadRes = await uploadFileViaSignature(coverImageFile, {
+      model: "blog",
+      field: "coverImage",
+    });
+    body.coverImage = uploadRes.url;
+    body.coverImagePublicId = uploadRes.publicId;
+  } else if (payload.cover_image !== undefined) {
+    const cleanCover = payload.cover_image.trim();
+    if (cleanCover === "") {
+      // Signals backend v2 to clear cover and queue old Cloudinary image for deletion
+      body.coverImage = "";
+      body.coverImagePublicId = "";
+    } else {
+      body.coverImage = cleanCover;
+      if (payload.cover_image_public_id) {
+        body.coverImagePublicId = payload.cover_image_public_id.trim();
+      }
+    }
   }
+
   if (payload.cover_caption !== undefined) body.coverCaption = payload.cover_caption.trim();
   if (payload.cover_alt !== undefined) body.coverAlt = payload.cover_alt.trim();
   if (payload.cover_credit !== undefined) body.coverCredit = payload.cover_credit.trim();
@@ -330,8 +325,8 @@ async function buildBlogPayload(
 }
 
 /**
- * 4. CREATE BLOG
- * Endpoint: POST /api/v1/admin-panel/blog/create
+ * 4. CREATE BLOG (v2)
+ * Endpoint: POST /api/v2/admin-panel/blog/create
  */
 export async function createBlogApi(
   payload: BlogPostInput,
@@ -340,17 +335,16 @@ export async function createBlogApi(
 ): Promise<BlogPostItem> {
   const requestBody = await buildBlogPayload(payload, coverImageFile, categories);
 
-  const isForm = typeof FormData !== "undefined" && requestBody instanceof FormData;
-
   const res = await apiRequest<BackendBlogSingleResponse>(
-    "/api/v1/admin-panel/blog/create",
+    "/api/v2/admin-panel/blog/create",
     {
       method: "POST",
-      body: isForm ? requestBody : JSON.stringify(requestBody),
+      body: JSON.stringify(requestBody),
     },
   );
 
   clearApiCache("/api/v1/admin-panel/blog");
+  clearApiCache("/api/v2/admin-panel/blog");
 
   const doc = res?.data?.blog || res?.blog;
   if (!doc) {
@@ -361,8 +355,8 @@ export async function createBlogApi(
 }
 
 /**
- * 5. UPDATE BLOG
- * Endpoint: PATCH /api/v1/admin-panel/blog/:id/update
+ * 5. UPDATE BLOG (v2)
+ * Endpoint: PATCH /api/v2/admin-panel/blog/:id/update
  */
 export async function updateBlogApi(
   id: string,
@@ -373,17 +367,17 @@ export async function updateBlogApi(
   if (!id) throw new Error("Blog ID is required for update.");
 
   const requestBody = await buildBlogPayload(payload, coverImageFile, categories);
-  const isForm = typeof FormData !== "undefined" && requestBody instanceof FormData;
 
   const res = await apiRequest<BackendBlogSingleResponse>(
-    `/api/v1/admin-panel/blog/${encodeURIComponent(id)}/update`,
+    `/api/v2/admin-panel/blog/${encodeURIComponent(id)}/update`,
     {
       method: "PATCH",
-      body: isForm ? requestBody : JSON.stringify(requestBody),
+      body: JSON.stringify(requestBody),
     },
   );
 
   clearApiCache("/api/v1/admin-panel/blog");
+  clearApiCache("/api/v2/admin-panel/blog");
 
   const doc = res?.data?.blog || res?.blog;
   if (!doc) {

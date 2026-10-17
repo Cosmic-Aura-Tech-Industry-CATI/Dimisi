@@ -1904,13 +1904,27 @@
 
 .galleryThumbCard {
   position: relative;
-  aspect-ratio: 16/10;
+  display: flex;
+  flex-direction: column;
   border-radius: 8px;
   overflow: hidden;
   border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(18, 18, 20, 0.7);
+  transition: border-color 0.18s ease;
 }
 
-.galleryThumbCard img {
+.galleryThumbCard:hover {
+  border-color: rgba(255, 179, 0, 0.35);
+}
+
+.galleryThumbMediaWrapper {
+  position: relative;
+  aspect-ratio: 16/10;
+  width: 100%;
+  overflow: hidden;
+}
+
+.galleryThumbMediaWrapper img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -1926,6 +1940,7 @@
   align-items: flex-start;
   padding: 0.35rem;
   transition: opacity 0.2s ease;
+  z-index: 2;
 }
 
 .galleryThumbCard:hover .galleryThumbOverlay {
@@ -1942,13 +1957,75 @@
   width: 20px;
   height: 20px;
   border-radius: 4px;
-  background: rgba(239, 68, 68, 0.8);
+  background: rgba(239, 68, 68, 0.85);
   border: none;
   color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.removeGalThumbBtn:hover {
+  background: #ef4444;
+}
+
+.galleryThumbCaptionWrapper {
+  padding: 0.3rem 0.45rem;
+  background: rgba(0, 0, 0, 0.5);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.galleryThumbCaptionInput {
+  width: 100%;
+  background: transparent;
+  border: none;
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.85);
+  outline: none;
+  font-family: inherit;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.galleryThumbCaptionInput::placeholder {
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.galleryThumbCaptionInput:focus {
+  color: var(--dm-amber, #ffb300);
+}
+
+.reviewGalleryThumbsRow {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.reviewMoreThumbsBadge {
+  font-size: 0.7rem;
+  font-family: var(--font-mono, monospace);
+  color: var(--dm-amber, #ffb300);
+  background: rgba(255, 179, 0, 0.15);
+  border: 1px solid rgba(255, 179, 0, 0.3);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+}
+
+.submitSpinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* =========================================================================
@@ -2368,6 +2445,131 @@
 .saveSubmitBtn:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+/* =========================================================================
+   DEDICATED CASE STUDY DELETE CONFIRMATION MODAL
+   ========================================================================= */
+
+.deleteConfirmModal {
+  width: 100%;
+  max-width: 480px;
+  background: linear-gradient(180deg, #161b26 0%, #0e1219 100%);
+  border: 1px solid rgba(255, 68, 68, 0.25);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.8), 0 0 35px rgba(255, 50, 50, 0.12);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  animation: scaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.deleteModalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem 0.5rem;
+}
+
+.deleteIconWrapper {
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: rgba(255, 68, 68, 0.12);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 15px rgba(255, 68, 68, 0.2);
+}
+
+.deleteModalTrashIcon {
+  color: #ff5252;
+}
+
+.deleteModalBody {
+  padding: 1rem 1.5rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+
+.deleteModalTitle {
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.deleteModalDescription {
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.7);
+  line-height: 1.5;
+  margin: 0;
+}
+
+.deleteHighlight {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.deleteWarningBox {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+  background: rgba(255, 68, 68, 0.08);
+  border: 1px solid rgba(255, 68, 68, 0.2);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  color: #ff8888;
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+
+.deleteWarningBoxIcon {
+  flex-shrink: 0;
+  color: #ff5252;
+  margin-top: 1px;
+}
+
+.deleteModalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.deleteConfirmBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.6rem 1.35rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #e53935 0%, #b71c1c 100%);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.86rem;
+  border: none;
+  cursor: pointer;
+  box-shadow: 0 4px 15px rgba(229, 57, 53, 0.4);
+  transition: all 0.2s ease;
+}
+
+.deleteConfirmBtn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(229, 57, 53, 0.55);
+  background: linear-gradient(135deg, #f44336 0%, #c62828 100%);
+}
+
+.deleteConfirmBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
 }
 
 /* =========================================================================

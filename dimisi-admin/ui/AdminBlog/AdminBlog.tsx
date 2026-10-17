@@ -78,6 +78,10 @@ import {
 } from "@/lib/blog.functions";
 import { getBlogByIdApi } from "@/services/blog.service";
 import {
+  cancelAllActiveUploads,
+  revokeBlobUrl,
+} from "@/services/upload.service";
+import {
   parseMarkdownToBlocks,
   serializeBlocksToMarkdown,
   createEmptyBlock,
@@ -126,7 +130,7 @@ const CODE_LANGUAGES = [
   { value: "yaml", label: "YAML" },
 ];
 
-const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB as per backend uploadRules (blog.coverImage)
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
 const FALLBACK_COVER =
   "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80";
@@ -305,6 +309,20 @@ export function AdminBlog({
   const [heroSubline, setHeroSubline] = useState(config.hero_subline);
   const [configSuccess, setConfigSuccess] = useState(false);
 
+  const closeBlogModal = useCallback(() => {
+    cancelAllActiveUploads();
+    if (coverPreviewUrl && coverPreviewUrl.startsWith("blob:")) {
+      revokeBlobUrl(coverPreviewUrl);
+    }
+    setShowModal(false);
+  }, [coverPreviewUrl]);
+
+  useEffect(() => {
+    return () => {
+      cancelAllActiveUploads();
+    };
+  }, []);
+
   // Body Lock & ESC Key Listener
   useEffect(() => {
     if (!showModal && !showCatModal && !postDeleteConfirm) return;
@@ -318,7 +336,7 @@ export function AdminBlog({
         } else if (showCatModal) {
           setShowCatModal(false);
         } else if (showModal) {
-          setShowModal(false);
+          closeBlogModal();
         }
       }
     };
@@ -328,7 +346,7 @@ export function AdminBlog({
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [showModal, showCatModal, postDeleteConfirm]);
+  }, [showModal, showCatModal, postDeleteConfirm, closeBlogModal]);
 
   // Synchronize Blocks ➔ Content
   const updateBlocksAndSyncContent = useCallback((newBlocks: ContentBlock[]) => {
@@ -669,7 +687,7 @@ export function AdminBlog({
     }
 
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      setImageError("Image is too large. Maximum allowed size is 10 MB.");
+      setImageError("Cover image is too large. Maximum allowed size is 5 MB.");
       return;
     }
 
@@ -677,20 +695,20 @@ export function AdminBlog({
     setIsUploadingImage(true);
     setUploadProgress(25);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      setCoverPreviewUrl(dataUrl);
-      setCoverImage(dataUrl);
+    try {
+      if (coverPreviewUrl && coverPreviewUrl.startsWith("blob:")) {
+        revokeBlobUrl(coverPreviewUrl);
+      }
+      const blobUrl = URL.createObjectURL(file);
+      setCoverPreviewUrl(blobUrl);
+      setCoverImage(blobUrl);
       setUploadProgress(100);
       setTimeout(() => setIsUploadingImage(false), 250);
-    };
-    reader.onerror = () => {
-      setImageError("Failed to read image file. Please try again.");
+    } catch {
+      setImageError("Failed to prepare image preview. Please try again.");
       setIsUploadingImage(false);
-    };
-    reader.readAsDataURL(file);
-  }, []);
+    }
+  }, [coverPreviewUrl]);
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -859,7 +877,7 @@ export function AdminBlog({
       try {
         const res = await saveBlogPostFn({ data: input, coverImageFile: coverFile });
         if (res.success) {
-          setShowModal(false);
+          closeBlogModal();
           onRefresh();
         } else {
           setFormError(res.error || "Failed to save blog post.");
@@ -1856,7 +1874,7 @@ export function AdminBlog({
           role="dialog"
           aria-modal="true"
           data-lenis-prevent
-          onClick={() => setShowModal(false)}
+          onClick={closeBlogModal}
         >
           <div
             className={styles.modalContent}
@@ -1877,7 +1895,7 @@ export function AdminBlog({
               <button
                 type="button"
                 className={styles.modalClose}
-                onClick={() => setShowModal(false)}
+                onClick={closeBlogModal}
                 title="Close Modal (Esc)"
               >
                 <X size={18} />
@@ -2973,7 +2991,7 @@ export function AdminBlog({
                   <button
                     type="button"
                     className={styles.cancelBtn}
-                    onClick={() => setShowModal(false)}
+                    onClick={closeBlogModal}
                   >
                     Cancel
                   </button>
