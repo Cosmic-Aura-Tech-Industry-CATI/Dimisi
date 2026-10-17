@@ -50,7 +50,11 @@ import {
   deleteServiceCategoryFn,
 } from "@/lib/services.functions";
 import { resolveCategoryName, isMongoId } from "@/services/service.service";
-import { uploadImageDirectToCloudinary } from "@/services/cloudinary.service";
+import {
+  uploadImageDirectToCloudinary,
+  revokeBlobUrl,
+  cancelAllActiveUploads,
+} from "@/services/cloudinary.service";
 import shared from "../styles/admin.module.css";
 import styles from "./AdminServices.module.css";
 
@@ -296,27 +300,20 @@ export function AdminServices({
     setIsServiceModalOpen(true);
   };
 
-  // Cleaner function to revoke temporary object URLs to prevent browser memory leaks
-  const revokePreviewUrl = useCallback((url: string | null | undefined) => {
-    if (url && typeof url === "string" && url.startsWith("blob:")) {
-      try {
-        URL.revokeObjectURL(url);
-      } catch {}
-    }
-  }, []);
-
   const closeServiceModal = useCallback(() => {
-    revokePreviewUrl(formHeroImage);
+    cancelAllActiveUploads();
+    revokeBlobUrl(formHeroImage);
     setHeroImageFile(null);
     setIsServiceModalOpen(false);
-  }, [formHeroImage, revokePreviewUrl]);
+  }, [formHeroImage]);
 
-  // Teardown: revoke preview URL on unmount or file change
+  // Teardown cleaner: cancel active uploads and revoke preview URL on unmount or file change
   useEffect(() => {
     return () => {
-      revokePreviewUrl(formHeroImage);
+      cancelAllActiveUploads();
+      revokeBlobUrl(formHeroImage);
     };
-  }, [formHeroImage, revokePreviewUrl]);
+  }, [formHeroImage]);
 
   // Save Service handler with Direct Cloudinary Upload
   const handleSaveService = async () => {
@@ -1309,7 +1306,7 @@ export function AdminServices({
                         onChange={(e) => {
                           const file = e.target.files?.[0];
                           if (file) {
-                            revokePreviewUrl(formHeroImage);
+                            revokeBlobUrl(formHeroImage);
                             setHeroImageFile(file);
                             setFormHeroImage(URL.createObjectURL(file));
                           }
@@ -1334,7 +1331,7 @@ export function AdminServices({
                         placeholder="https://images.unsplash.com/..."
                         value={formHeroImage.startsWith("blob:") ? "" : formHeroImage}
                         onChange={(e) => {
-                          revokePreviewUrl(formHeroImage);
+                          revokeBlobUrl(formHeroImage);
                           setHeroImageFile(null);
                           setFormHeroImage(e.target.value);
                         }}

@@ -7,6 +7,7 @@ export type ProjectType = "work" | "product";
 
 export interface ProjectGalleryImage {
   url: string;
+  publicId?: string | undefined;
   caption?: string | undefined;
 }
 
@@ -28,6 +29,7 @@ export interface ProjectItem {
   solution: string;
   outcome: string;
   cover_image: string;
+  cover_image_public_id?: string | undefined;
   gallery_images: ProjectGalleryImage[];
   upload_status?: "pending" | "success" | "failed";
   website_url?: string | undefined;
@@ -55,6 +57,7 @@ export interface ProjectInput {
   solution: string;
   outcome: string;
   cover_image: string;
+  cover_image_public_id?: string | undefined;
   gallery_images?: ProjectGalleryImage[] | undefined;
   upload_status?: "pending" | "success" | "failed";
   website_url?: string | undefined;

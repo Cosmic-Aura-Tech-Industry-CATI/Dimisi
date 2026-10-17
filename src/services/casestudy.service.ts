@@ -3,7 +3,7 @@
  * Handles Case Studies listing, creation, updates, toggling, and deletion
  * against the Express backend API (/api/v1/admin-panel/casestudy/*).
  */
-import { apiRequest, ApiError } from "./apiClient";
+import { apiRequest, ApiError, clearApiCache } from "./apiClient";
 import type { ProjectItem, ProjectInput, WorkCategoryItem, ProjectType } from "@/lib/work.shared";
 import {
   getAllCasestudyCategoriesApi,
@@ -234,9 +234,11 @@ export function normalizeBackendCasestudy(
     solution: doc.solution || "",
     outcome: doc.outcome || "",
     cover_image: coverImage,
+    cover_image_public_id: doc.coverImagePublicId || undefined,
     gallery_images: Array.isArray(doc.galleryImages)
       ? doc.galleryImages.map((img, idx) => ({
           url: img.url || DEFAULT_CASESTUDY_FALLBACK_IMAGE,
+          publicId: img.publicId || undefined,
           caption: img.caption || `Visual ${idx + 1}`,
         }))
       : [],
@@ -438,9 +440,14 @@ export async function createCasestudyApi(
 
     const formattedGallery = (payload.gallery_images || []).map((img, idx) => ({
       url: img.url || DEFAULT_CASESTUDY_FALLBACK_IMAGE,
-      publicId: (img as any).publicId?.trim() || `img_gal_${Date.now().toString(36)}_${idx}`,
+      publicId: img.publicId?.trim() || "",
       caption: img.caption?.trim() || `Showcase visual ${idx + 1}`,
     }));
+
+    const cleanCoverPublicId =
+      payload.cover_image_public_id?.trim() ||
+      (payload as any).coverImagePublicId?.trim() ||
+      undefined;
 
     body = JSON.stringify({
       title: payload.title.trim(),
@@ -453,7 +460,7 @@ export async function createCasestudyApi(
       solution: payload.solution.trim(),
       outcome: payload.outcome.trim(),
       coverImage: payload.cover_image?.trim() || "",
-      coverImagePublicId: payload.cover_image?.trim() ? `cov_${Date.now().toString(36)}` : "",
+      coverImagePublicId: cleanCoverPublicId,
       galleryImages: formattedGallery,
       galleryImageDetails: formattedGallery,
       websiteUrl: validWebsiteUrl,
@@ -469,12 +476,15 @@ export async function createCasestudyApi(
 
   try {
     const res = await apiRequest<BackendCasestudySingleResponse>(
-      "/api/v1/admin-panel/casestudy/create",
+      "/api/v2/admin-panel/casestudy/create",
       {
         method: "POST",
         body,
       },
     );
+
+    clearApiCache("/api/v1/admin-panel/casestudy");
+    clearApiCache("/api/v2/admin-panel/casestudy");
 
     const doc = res?.casestudy || res?.data?.casestudy;
     if (!doc) {
@@ -494,8 +504,8 @@ export async function createCasestudyApi(
 }
 
 /**
- * 5. UPDATE CASE STUDY
- * Endpoint: PATCH /api/v1/admin-panel/casestudy/:id/update
+ * 5. UPDATE CASE STUDY (v2)
+ * Endpoint: PATCH /api/v2/admin-panel/casestudy/:id/update
  */
 export async function updateCasestudyApi(
   id: string,
@@ -530,12 +540,14 @@ export async function updateCasestudyApi(
     if (payload.cover_image !== undefined) {
       updateObj.coverImage = payload.cover_image.trim();
       updateObj.existingCoverImage = payload.cover_image.trim();
-      updateObj.coverImagePublicId = payload.cover_image.trim() ? `cov_${Date.now().toString(36)}` : "";
+      if (payload.cover_image_public_id !== undefined) {
+        updateObj.coverImagePublicId = payload.cover_image_public_id.trim();
+      }
     }
     if (payload.gallery_images !== undefined) {
       const formattedGallery = payload.gallery_images.map((img, idx) => ({
         url: img.url || DEFAULT_CASESTUDY_FALLBACK_IMAGE,
-        publicId: (img as any).publicId?.trim() || `img_gal_${Date.now().toString(36)}_${idx}`,
+        publicId: img.publicId?.trim() || "",
         caption: img.caption?.trim() || `Showcase visual ${idx + 1}`,
       }));
       updateObj.galleryImages = formattedGallery;
@@ -561,12 +573,15 @@ export async function updateCasestudyApi(
 
   try {
     const res = await apiRequest<BackendCasestudySingleResponse>(
-      `/api/v1/admin-panel/casestudy/${encodeURIComponent(id)}/update`,
+      `/api/v2/admin-panel/casestudy/${encodeURIComponent(id)}/update`,
       {
         method: "PATCH",
         body,
       },
     );
+
+    clearApiCache("/api/v1/admin-panel/casestudy");
+    clearApiCache("/api/v2/admin-panel/casestudy");
 
     const doc = res?.data?.casestudy || res?.casestudy;
     if (!doc) {

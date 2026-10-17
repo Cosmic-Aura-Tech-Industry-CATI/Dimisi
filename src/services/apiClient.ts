@@ -260,6 +260,7 @@ export async function apiRequest<T = any>(
 
         const isPanelRoute =
           normalizedEndpoint.startsWith("/api/v1/admin-panel/") ||
+          normalizedEndpoint.startsWith("/api/v2/admin-panel/") ||
           normalizedEndpoint.startsWith("/api/v1/activity/");
         const isVisitorRoute =
           normalizedEndpoint.includes("/visitors/") ||

@@ -69,6 +69,11 @@ import {
   deleteWorkCategoryFn,
   getAdminWorkData,
 } from "@/lib/work.functions";
+import {
+  uploadFileViaSignature,
+  cancelAllActiveUploads,
+  revokeBlobUrl,
+} from "@/services/upload.service";
 import styles from "./AdminWork.module.css";
 
 interface AdminWorkProps {
@@ -88,8 +93,14 @@ const MODAL_STEPS: { id: WorkModalTab; label: string; num: string }[] = [
   { id: "review", label: "5. Review & Publish", num: "05" },
 ];
 
-const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
+const MAX_COVER_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB as per backend uploadRules (casestudy.coverImage)
+const MAX_GALLERY_IMAGE_SIZE_BYTES = 3 * 1024 * 1024; // 3MB as per backend uploadRules (casestudy.galleryImages)
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
+
+export interface WorkGalleryItem extends ProjectGalleryImage {
+  file?: File;
+  previewBlob?: string;
+}
 
 export function AdminWork({
   projects,
@@ -234,6 +245,13 @@ export function AdminWork({
     count: number;
   } | null>(null);
 
+  // Dedicated Case Study Delete Confirmation Modal State
+  const [projectDeleteConfirm, setProjectDeleteConfirm] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   // Edit / Create Project Modal State
   const [showModal, setShowModal] = useState(false);
   const [editingProject, setEditingProject] = useState<ProjectItem | null>(null);
@@ -274,7 +292,7 @@ export function AdminWork({
   }, [modalTab, showModal]);
 
   // Gallery Images State
-  const [galleryImages, setGalleryImages] = useState<ProjectGalleryImage[]>([]);
+  const [galleryImages, setGalleryImages] = useState<WorkGalleryItem[]>([]);
   const [galleryUrlInput, setGalleryUrlInput] = useState("");
 
   // Metadata & Metrics State
@@ -294,18 +312,44 @@ export function AdminWork({
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
 
+  const hasPendingUploads = useMemo(() => {
+    return Boolean(coverFile || galleryImages.some((img) => img.file));
+  }, [coverFile, galleryImages]);
+
+  const closeWorkModal = useCallback(() => {
+    cancelAllActiveUploads();
+    if (coverPreviewUrl && coverPreviewUrl.startsWith("blob:")) {
+      revokeBlobUrl(coverPreviewUrl);
+    }
+    galleryImages.forEach((img) => {
+      if (img.previewBlob) {
+        revokeBlobUrl(img.previewBlob);
+      }
+    });
+    setShowModal(false);
+  }, [coverPreviewUrl, galleryImages]);
+
+  useEffect(() => {
+    return () => {
+      cancelAllActiveUploads();
+    };
+  }, []);
+
   // Body Lock & ESC Key Listener
   useEffect(() => {
-    if (!showModal && !showCatModal) return;
+    if (!showModal && !showCatModal && !projectDeleteConfirm) return;
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        if (showCatModal) {
+        if (projectDeleteConfirm) {
+          setProjectDeleteConfirm(null);
+          setDeleteError(null);
+        } else if (showCatModal) {
           setShowCatModal(false);
         } else {
-          setShowModal(false);
+          closeWorkModal();
         }
       }
     };
@@ -315,7 +359,7 @@ export function AdminWork({
       document.body.style.overflow = prevOverflow;
       window.removeEventListener("keydown", handleKeyDown);
     };
-  }, [showModal, showCatModal]);
+  }, [showModal, showCatModal, projectDeleteConfirm, closeWorkModal]);
 
   // Click outside and Escape key handler for Category Popover Dropdown
   useEffect(() => {
@@ -665,8 +709,8 @@ export function AdminWork({
       return;
     }
 
-    if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      setImageError("Image size exceeds the maximum allowed limit (10 MB).");
+    if (file.size > MAX_COVER_IMAGE_SIZE_BYTES) {
+      setImageError("Cover image size exceeds the maximum allowed limit (5 MB).");
       return;
     }
 
@@ -674,21 +718,21 @@ export function AdminWork({
     setIsUploadingImage(true);
     setUploadProgress(25);
 
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const dataUrl = e.target?.result as string;
-      setCoverPreviewUrl(dataUrl);
-      setCoverImage(dataUrl);
-      checkAspectRatio(dataUrl, setCoverAspectWarning);
+    try {
+      if (coverPreviewUrl && coverPreviewUrl.startsWith("blob:")) {
+        revokeBlobUrl(coverPreviewUrl);
+      }
+      const blobUrl = URL.createObjectURL(file);
+      setCoverPreviewUrl(blobUrl);
+      setCoverImage(blobUrl);
+      checkAspectRatio(blobUrl, setCoverAspectWarning);
       setUploadProgress(100);
       setTimeout(() => setIsUploadingImage(false), 250);
-    };
-    reader.onerror = () => {
-      setImageError("Failed to read image file. Please try again.");
+    } catch {
+      setImageError("Failed to prepare image preview. Please try again.");
       setIsUploadingImage(false);
-    };
-    reader.readAsDataURL(file);
-  }, [checkAspectRatio]);
+    }
+  }, [checkAspectRatio, coverPreviewUrl]);
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
@@ -722,20 +766,22 @@ export function AdminWork({
           setImageError("Unsupported format in gallery photos. Please upload JPG, JPEG, PNG, or WEBP.");
           return;
         }
-        if (file.size > MAX_IMAGE_SIZE_BYTES) {
-          setImageError("Gallery image exceeds maximum allowed size (10 MB).");
+        if (file.size > MAX_GALLERY_IMAGE_SIZE_BYTES) {
+          setImageError("Gallery image exceeds maximum allowed size (3 MB).");
           return;
         }
-        const reader = new FileReader();
-        reader.onload = (evt) => {
-          const dataUrl = evt.target?.result as string;
-          checkAspectRatio(dataUrl, setGalleryAspectWarning);
-          setGalleryImages((prev) => [
-            ...prev,
-            { url: dataUrl, caption: file.name.replace(/\.[^/.]+$/, "") },
-          ]);
-        };
-        reader.readAsDataURL(file);
+        const previewBlob = URL.createObjectURL(file);
+        checkAspectRatio(previewBlob, setGalleryAspectWarning);
+        setGalleryImages((prev) => [
+          ...prev,
+          {
+            url: previewBlob,
+            previewBlob,
+            publicId: "",
+            caption: file.name.replace(/\.[^/.]+$/, ""),
+            file,
+          },
+        ]);
       });
       if (galleryFileInputRef.current) {
         galleryFileInputRef.current.value = "";
@@ -746,7 +792,7 @@ export function AdminWork({
   const handleAddGalleryUrl = () => {
     const url = galleryUrlInput.trim();
     if (!url) return;
-    if (!url.startsWith("http://") && !url.startsWith("https://") && !url.startsWith("data:image/")) {
+    if (!url.startsWith("http://") && !url.startsWith("https://")) {
       setImageError("Please enter a valid image URL starting with https:// or http://");
       return;
     }
@@ -936,41 +982,41 @@ export function AdminWork({
 
     startTransition(async () => {
       try {
-        let payloadToSubmit: ProjectInput | FormData = input;
         if (coverFile) {
-          const fd = new FormData();
-          if (editingProject?.id) fd.append("id", editingProject.id);
-          fd.append("title", input.title);
-          fd.append("slug", input.slug || finalSlug);
-          fd.append("type", input.type);
-          fd.append("category", input.category);
-          fd.append("tagline", input.tagline || "");
-          fd.append("overview", input.overview);
-          fd.append("challenge", input.challenge);
-          fd.append("solution", input.solution);
-          fd.append("outcome", input.outcome);
-          fd.append("coverImage", coverFile);
-          if (editingProject?.cover_image) {
-            fd.append("existingCoverImage", editingProject.cover_image);
-          }
-          const existingGallery = (galleryImages || []).filter((g) => g.url.startsWith("http"));
-          if (existingGallery.length > 0) {
-            fd.append("existingGalleryImages", JSON.stringify(existingGallery));
-          }
-          if (input.website_url) fd.append("websiteUrl", input.website_url);
-          if (input.client_name) fd.append("clientName", input.client_name);
-          if (input.timeline) fd.append("timeline", input.timeline);
-          fd.append("techStack", JSON.stringify(input.tech_stack || []));
-          fd.append("metrics", JSON.stringify(input.metrics || []));
-          fd.append("orderIndex", String(input.order_index || 1));
-          fd.append("isFeatured", String(Boolean(input.is_featured)));
-          fd.append("isActive", String(input.is_active !== false));
-          payloadToSubmit = fd;
+          const uploadRes = await uploadFileViaSignature(coverFile, {
+            model: "casestudy",
+            field: "coverImage",
+          });
+          input.cover_image = uploadRes.url;
+          input.cover_image_public_id = uploadRes.publicId;
         }
 
-        const res = await saveProject({ data: payloadToSubmit, id: editingProject?.id });
+        // Upload any pending gallery files via Upload v2 signed upload
+        const resolvedGallery: ProjectGalleryImage[] = await Promise.all(
+          galleryImages.map(async (item, idx) => {
+            if (item.file) {
+              const uploadRes = await uploadFileViaSignature(item.file, {
+                model: "casestudy",
+                field: "galleryImages",
+              });
+              return {
+                url: uploadRes.url,
+                publicId: uploadRes.publicId,
+                caption: item.caption?.trim() || `Showcase visual ${idx + 1}`,
+              };
+            }
+            return {
+              url: item.url,
+              publicId: item.publicId || undefined,
+              caption: item.caption?.trim() || `Showcase visual ${idx + 1}`,
+            };
+          }),
+        );
+        input.gallery_images = resolvedGallery;
+
+        const res = await saveProject({ data: input, id: editingProject?.id });
         if (res.success) {
-          setShowModal(false);
+          closeWorkModal();
           await refreshProjects();
           onRefresh();
         } else {
@@ -982,22 +1028,29 @@ export function AdminWork({
     });
   };
 
-  const handleDelete = (id: string, projTitle: string) => {
-    if (window.confirm(`Are you sure you want to delete case study "${projTitle}"?`)) {
-      startTransition(async () => {
-        try {
-          const res = await deleteProject({ data: { id } });
-          if (res.success) {
-            await refreshProjects();
-            onRefresh();
-          } else {
-            alert(res.error || "Failed to delete case study.");
-          }
-        } catch (err) {
-          alert(err instanceof Error ? err.message : "Error deleting case study.");
+  const handleDeleteClick = (id: string, projTitle: string) => {
+    setDeleteError(null);
+    setProjectDeleteConfirm({ id, title: projTitle });
+  };
+
+  const handleConfirmDeleteProject = () => {
+    if (!projectDeleteConfirm) return;
+    const { id } = projectDeleteConfirm;
+    setDeleteError(null);
+    startTransition(async () => {
+      try {
+        const res = await deleteProject({ data: { id } });
+        if (res.success) {
+          setProjectDeleteConfirm(null);
+          await refreshProjects();
+          onRefresh();
+        } else {
+          setDeleteError(res.error || "Failed to delete case study.");
         }
-      });
-    }
+      } catch (err) {
+        setDeleteError(err instanceof Error ? err.message : "Error deleting case study.");
+      }
+    });
   };
 
   const handleToggleActive = (p: ProjectItem) => {
@@ -1490,7 +1543,7 @@ export function AdminWork({
                       <button
                         type="button"
                         className={styles.delBtn}
-                        onClick={() => handleDelete(p.id, p.title)}
+                        onClick={() => handleDeleteClick(p.id, p.title)}
                         title="Delete Project"
                         aria-label={`Delete ${p.title}`}
                       >
@@ -1847,7 +1900,7 @@ export function AdminWork({
           role="dialog"
           aria-modal="true"
           data-lenis-prevent
-          onClick={() => setShowModal(false)}
+          onClick={closeWorkModal}
         >
           <div
             className={styles.modalContent}
@@ -1868,7 +1921,7 @@ export function AdminWork({
               <button
                 type="button"
                 className={styles.modalClose}
-                onClick={() => setShowModal(false)}
+                onClick={closeWorkModal}
               >
                 <X size={18} />
               </button>
@@ -2237,7 +2290,7 @@ export function AdminWork({
                           </div>
                           <div className={styles.specItem}>
                             <span className={styles.specLabel}>Max File Size</span>
-                            <span className={styles.specVal}>10 MB</span>
+                            <span className={styles.specVal}>5 MB</span>
                           </div>
                         </div>
                       </div>
@@ -2311,7 +2364,7 @@ export function AdminWork({
                               <span className={styles.browseLink}>browse</span>
                             </p>
                             <p className={styles.dropzoneSub}>
-                              Supports clipboard paste (Ctrl + V), JPG, PNG, WEBP up to 10MB
+                              Supports clipboard paste (Ctrl + V), JPG, PNG, WEBP up to 5MB
                             </p>
                           </div>
                         )}
@@ -2379,7 +2432,7 @@ export function AdminWork({
                           <span className={styles.gallerySpecChip}><strong>Recommended:</strong> 1600 × 900 px</span>
                           <span className={styles.gallerySpecChip}><strong>High-Res:</strong> 1920 × 1080 px</span>
                           <span className={styles.gallerySpecChip}><strong>Formats:</strong> JPG, JPEG, PNG, WEBP</span>
-                          <span className={styles.gallerySpecChip}><strong>Max:</strong> 10 MB / image</span>
+                          <span className={styles.gallerySpecChip}><strong>Max:</strong> 3 MB / image</span>
                         </div>
                       </div>
 
@@ -2440,24 +2493,47 @@ export function AdminWork({
                         <div className={styles.galleryThumbGrid}>
                           {galleryImages.map((img, idx) => (
                             <div key={idx} className={styles.galleryThumbCard}>
-                              <img
-                                src={img.url}
-                                alt={img.caption || `Gallery image ${idx + 1}`}
-                                loading="lazy"
-                                decoding="async"
-                              />
-                              <div className={styles.galleryThumbOverlay}>
-                                <span className={styles.galleryThumbBadge}>#{idx + 1}</span>
-                                <button
-                                  type="button"
-                                  className={styles.removeGalThumbBtn}
-                                  onClick={() =>
-                                    setGalleryImages((prev) => prev.filter((_, i) => i !== idx))
-                                  }
-                                  title="Remove image"
-                                >
-                                  <X size={12} />
-                                </button>
+                              <div className={styles.galleryThumbMediaWrapper}>
+                                <img
+                                  src={img.url}
+                                  alt={img.caption || `Gallery image ${idx + 1}`}
+                                  loading="lazy"
+                                  decoding="async"
+                                />
+                                <div className={styles.galleryThumbOverlay}>
+                                  <span className={styles.galleryThumbBadge}>#{idx + 1}</span>
+                                  <button
+                                    type="button"
+                                    className={styles.removeGalThumbBtn}
+                                    onClick={() => {
+                                      const item = galleryImages[idx];
+                                      if (item?.previewBlob) {
+                                        revokeBlobUrl(item.previewBlob);
+                                      }
+                                      setGalleryImages((prev) => prev.filter((_, i) => i !== idx));
+                                    }}
+                                    title="Remove image"
+                                  >
+                                    <X size={12} />
+                                  </button>
+                                </div>
+                              </div>
+                              <div className={styles.galleryThumbCaptionWrapper}>
+                                <input
+                                  type="text"
+                                  value={img.caption || ""}
+                                  onChange={(e) => {
+                                    const val = e.target.value;
+                                    setGalleryImages((prev) =>
+                                      prev.map((item, i) =>
+                                        i === idx ? { ...item, caption: val } : item
+                                      )
+                                    );
+                                  }}
+                                  placeholder={`Caption #${idx + 1}`}
+                                  className={styles.galleryThumbCaptionInput}
+                                  title="Edit caption for this screenshot"
+                                />
                               </div>
                             </div>
                           ))}
@@ -2667,11 +2743,33 @@ export function AdminWork({
                         </div>
                         <div className={styles.summaryItem}>
                           <span className={styles.summaryLabel}>Screenshot Gallery:</span>
-                          <span className={styles.summaryValue}>
-                            {galleryImages.length > 0
-                              ? `${galleryImages.length} Image(s) Attached`
-                              : "No Gallery Images"}
-                          </span>
+                          <div className={styles.reviewSummaryMediaRow}>
+                            {galleryImages.length > 0 ? (
+                              <div className={styles.reviewGalleryThumbsRow}>
+                                {galleryImages.slice(0, 4).map((img, i) => (
+                                  <img
+                                    key={i}
+                                    src={img.url}
+                                    alt={img.caption || `Visual ${i + 1}`}
+                                    className={styles.reviewCoverThumb}
+                                    loading="lazy"
+                                    decoding="async"
+                                    title={img.caption || `Screenshot #${i + 1}`}
+                                  />
+                                ))}
+                                {galleryImages.length > 4 && (
+                                  <span className={styles.reviewMoreThumbsBadge}>
+                                    +{galleryImages.length - 4}
+                                  </span>
+                                )}
+                              </div>
+                            ) : null}
+                            <span className={styles.summaryValue}>
+                              {galleryImages.length > 0
+                                ? `${galleryImages.length} Image(s) Attached`
+                                : "No Gallery Images"}
+                            </span>
+                          </div>
                         </div>
                         <div className={styles.summaryItem} style={{ gridColumn: "1 / -1" }}>
                           <span className={styles.summaryLabel}>Technologies Stack:</span>
@@ -2743,7 +2841,7 @@ export function AdminWork({
                     <button
                       type="button"
                       className={styles.cancelBtn}
-                      onClick={() => setShowModal(false)}
+                      onClick={closeWorkModal}
                     >
                       Cancel
                     </button>
@@ -2766,10 +2864,16 @@ export function AdminWork({
                       disabled={isPending}
                       className={styles.saveSubmitBtn}
                     >
-                      <CheckCircle2 size={16} />
+                      {isPending ? (
+                        <RefreshCw size={16} className={styles.submitSpinner} />
+                      ) : (
+                        <CheckCircle2 size={16} />
+                      )}
                       <span>
                         {isPending
-                          ? "Saving..."
+                          ? hasPendingUploads
+                            ? "Uploading assets & saving..."
+                            : "Saving changes..."
                           : editingProject
                           ? "Update Case Study"
                           : "Publish Case Study"}
@@ -2779,6 +2883,100 @@ export function AdminWork({
                 </div>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* =========================================================================
+         DEDICATED CASE STUDY DELETE CONFIRMATION MODAL
+         ========================================================================= */}
+      {projectDeleteConfirm && (
+        <div
+          className={styles.modalBackdrop}
+          role="dialog"
+          aria-modal="true"
+          onClick={() => {
+            if (!isPending) {
+              setProjectDeleteConfirm(null);
+              setDeleteError(null);
+            }
+          }}
+        >
+          <div
+            className={styles.deleteConfirmModal}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.deleteModalHeader}>
+              <div className={styles.deleteIconWrapper}>
+                <Trash2 size={22} className={styles.deleteModalTrashIcon} />
+              </div>
+              <button
+                type="button"
+                className={styles.modalClose}
+                onClick={() => {
+                  if (!isPending) {
+                    setProjectDeleteConfirm(null);
+                    setDeleteError(null);
+                  }
+                }}
+                disabled={isPending}
+                title="Close (Esc)"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className={styles.deleteModalBody}>
+              <h3 className={styles.deleteModalTitle}>Delete Case Study</h3>
+              <p className={styles.deleteModalDescription}>
+                Are you sure you want to permanently delete{" "}
+                <span className={styles.deleteHighlight}>
+                  "{projectDeleteConfirm.title}"
+                </span>
+                ?
+              </p>
+
+              {deleteError && (
+                <div className={styles.errorAlert} style={{ margin: 0 }}>
+                  <AlertCircle size={16} />
+                  <span>{deleteError}</span>
+                </div>
+              )}
+
+              <div className={styles.deleteWarningBox}>
+                <AlertTriangle size={18} className={styles.deleteWarningBoxIcon} />
+                <span>
+                  This action is irreversible. The case study narrative, media references, and SEO entries will be immediately removed from the live database and public portal.
+                </span>
+              </div>
+            </div>
+
+            <div className={styles.deleteModalFooter}>
+              <button
+                type="button"
+                className={styles.cancelBtn}
+                onClick={() => {
+                  setProjectDeleteConfirm(null);
+                  setDeleteError(null);
+                }}
+                disabled={isPending}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className={styles.deleteConfirmBtn}
+                onClick={handleConfirmDeleteProject}
+                disabled={isPending}
+              >
+                {isPending ? (
+                  <RefreshCw size={15} className={styles.submitSpinner} />
+                ) : (
+                  <Trash2 size={15} />
+                )}
+                <span>{isPending ? "Deleting..." : "Delete Case Study"}</span>
+              </button>
+            </div>
           </div>
         </div>
       )}

@@ -14,6 +14,7 @@ export interface BlogPostItem {
   excerpt: string;
   content: string; // Rich article markdown or structured text
   cover_image: string;
+  cover_image_public_id?: string | undefined;
   cover_caption?: string | undefined;
   cover_alt?: string | undefined;
   cover_credit?: string | undefined;
@@ -41,6 +42,7 @@ export interface BlogPostInput {
   excerpt: string;
   content: string;
   cover_image: string;
+  cover_image_public_id?: string | undefined;
   cover_caption?: string | undefined;
   cover_alt?: string | undefined;
   cover_credit?: string | undefined;
