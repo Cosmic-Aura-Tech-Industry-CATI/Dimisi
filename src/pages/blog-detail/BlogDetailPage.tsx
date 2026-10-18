@@ -10,6 +10,7 @@ import {
   User,
   ArrowUpRight,
   CheckCircle2,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import { TiltCard } from "@/components/common/TiltCard/TiltCard";
@@ -94,11 +95,17 @@ export function BlogDetailPage({ post, relatedPosts = [] }: BlogDetailPageProps)
           <Reveal variant="up" delay={160}>
             <div className={styles.authorShareRow}>
               <div className={styles.authorBox}>
-                <img
-                  src={post.author_avatar}
-                  alt={post.author_name}
-                  className={styles.authorAvatar}
-                />
+                {post.author_avatar ? (
+                  <img
+                    src={post.author_avatar}
+                    alt={post.author_name}
+                    className={styles.authorAvatar}
+                  />
+                ) : (
+                  <div className={styles.authorAvatar} style={{ display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(255,255,255,0.06)" }}>
+                    <User size={16} />
+                  </div>
+                )}
                 <div>
                   <span className={styles.authorName}>{post.author_name}</span>
                   <span className={styles.authorRole}>
@@ -129,18 +136,20 @@ export function BlogDetailPage({ post, relatedPosts = [] }: BlogDetailPageProps)
       </section>
 
       {/* Full-Width Featured Cover Showcase */}
-      <section className={styles.coverSection} aria-label="Cover Image">
-        <div className={styles.container}>
-          <Reveal variant="fade" delay={100}>
-            <div className={styles.coverWrapper}>
-              <img src={post.cover_image} alt={post.title} className={styles.coverImage} />
-              {post.cover_caption && (
-                <span className={styles.coverCaption}>{post.cover_caption}</span>
-              )}
-            </div>
-          </Reveal>
-        </div>
-      </section>
+      {post.cover_image ? (
+        <section className={styles.coverSection} aria-label="Cover Image">
+          <div className={styles.container}>
+            <Reveal variant="fade" delay={100}>
+              <div className={styles.coverWrapper}>
+                <img src={post.cover_image} alt={post.title} className={styles.coverImage} />
+                {post.cover_caption && (
+                  <span className={styles.coverCaption}>{post.cover_caption}</span>
+                )}
+              </div>
+            </Reveal>
+          </div>
+        </section>
+      ) : null}
 
       {/* Rich Formatted Article Content */}
       <section className={styles.contentSection} aria-label="Article Content">
@@ -182,12 +191,18 @@ export function BlogDetailPage({ post, relatedPosts = [] }: BlogDetailPageProps)
               {relatedPosts.slice(0, 3).map((r, idx) => (
                 <Reveal key={r.id} delay={idx * 50}>
                   <TiltCard className={styles.relatedCard}>
-                    <img
-                      src={r.cover_image}
-                      alt={r.title}
-                      className={styles.relatedCover}
-                      loading="lazy"
-                    />
+                    {r.cover_image ? (
+                      <img
+                        src={r.cover_image}
+                        alt={r.title}
+                        className={styles.relatedCover}
+                        loading="lazy"
+                      />
+                    ) : (
+                      <div className={styles.relatedCoverPlaceholder} title="No cover image">
+                        <ImageIcon size={22} />
+                      </div>
+                    )}
                     <div className={styles.relatedBody}>
                       <span className={styles.relatedCat}>{r.category}</span>
                       <h3 className={styles.relatedPostTitle}>

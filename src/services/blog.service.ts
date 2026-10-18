@@ -78,8 +78,7 @@ export interface BackendBlogConfigResponse {
   };
 }
 
-export const DEFAULT_BLOG_FALLBACK_IMAGE =
-  "https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&w=1200&q=80";
+export const DEFAULT_BLOG_FALLBACK_IMAGE = "";
 
 /**
  * Normalizes backend IBlog document into the clean frontend BlogPostItem model.
@@ -97,7 +96,8 @@ export function normalizeBackendBlog(
       tags: [],
       excerpt: "",
       content: "",
-      cover_image: DEFAULT_BLOG_FALLBACK_IMAGE,
+      cover_image: "",
+      cover_image_public_id: undefined,
       author_name: "DIMISI Editorial Team",
       author_role: "Engineering & Research",
       reading_time: "5 min read",
@@ -112,17 +112,62 @@ export function normalizeBackendBlog(
 
   const resolvedCategory = resolveBlogCategoryName(doc.category, categories);
   const rawCover = doc.coverImage?.trim() || "";
-  const coverImage = rawCover.length > 0 ? rawCover : DEFAULT_BLOG_FALLBACK_IMAGE;
+  const coverImage = rawCover;
 
-  // Extract author info safely
-  let authorName = "DIMISI Editorial Team";
-  let authorRole = "Engineering & Research";
+  // Extract author info safely via multi-tier resolution
+  let authorName = "";
+  let authorRole = "";
   let authorAvatar: string | undefined = undefined;
+  let authorId: string | undefined = undefined;
 
   if (doc.author && typeof doc.author === "object") {
+    authorId = String(doc.author._id || doc.author.id || "");
+    // Tier 1: Direct name properties on populated author
     if (doc.author.name?.trim()) authorName = doc.author.name.trim();
+    else if (doc.author.fullName?.trim()) authorName = doc.author.fullName.trim();
+    else if (doc.author.full_name?.trim()) authorName = doc.author.full_name.trim();
+
+    // Tier 2: Nested user object (if populated from PanelUser -> User)
+    if (!authorName && doc.author.user && typeof doc.author.user === "object") {
+      if (doc.author.user.name?.trim()) authorName = doc.author.user.name.trim();
+      else if (doc.author.user.fullName?.trim()) authorName = doc.author.user.fullName.trim();
+      else if (doc.author.user.full_name?.trim()) authorName = doc.author.user.full_name.trim();
+    }
+
     if (doc.author.role?.trim()) authorRole = doc.author.role.trim();
+    else if (doc.author.designation?.trim()) authorRole = doc.author.designation.trim();
+
     if (doc.author.avatar?.trim()) authorAvatar = doc.author.avatar.trim();
+  } else if (typeof doc.author === "string" && doc.author.trim()) {
+    authorId = doc.author.trim();
+  }
+
+  // Tier 3: Match against active admin session in localStorage if matching admin
+  if (!authorName && typeof window !== "undefined") {
+    try {
+      const raw = localStorage.getItem("dimisi_admin_session");
+      if (raw) {
+        const session = JSON.parse(raw);
+        const sessionUser = session?.user;
+        if (sessionUser) {
+          const sId = String(sessionUser.id || sessionUser._id || "");
+          if (authorId && (sId === authorId || !authorId)) {
+            authorName = sessionUser.name || sessionUser.fullName || sessionUser.email?.split("@")[0] || "";
+            if (!authorRole) authorRole = sessionUser.role || "Admin";
+          } else if (!authorId) {
+            authorName = sessionUser.name || sessionUser.fullName || "";
+            if (!authorRole) authorRole = sessionUser.role || "Admin";
+          }
+        }
+      }
+    } catch {}
+  }
+
+  if (!authorName) {
+    authorName = "DIMISI Editorial Team";
+  }
+  if (!authorRole) {
+    authorRole = "Engineering & Research";
   }
 
   const cleanSlug =
@@ -144,6 +189,7 @@ export function normalizeBackendBlog(
     cover_alt: doc.coverAlt || undefined,
     cover_credit: doc.coverCredit || undefined,
     author_name: authorName,
+    author_id: authorId,
     author_role: authorRole,
     author_avatar: authorAvatar,
     reading_time: doc.readingTime || "5 min read",
@@ -274,6 +320,7 @@ async function buildBlogPayload(
   payload: Partial<BlogPostInput>,
   coverImageFile?: File | null,
   categories?: BlogCategoryItem[],
+  isUpdate = false,
 ): Promise<Record<string, any>> {
   const catId = await resolveBlogCategoryIdForPayload(payload.category, categories);
 
@@ -283,7 +330,7 @@ async function buildBlogPayload(
   if (payload.excerpt !== undefined) body.excerpt = payload.excerpt.trim();
   if (payload.content !== undefined) body.content = payload.content.trim();
 
-  // 1. Local file upload via Upload v2
+  // 1. Direct Cloudinary signed upload or cover-pair alignment
   if (coverImageFile instanceof File) {
     const uploadRes = await uploadFileViaSignature(coverImageFile, {
       model: "blog",
@@ -297,12 +344,16 @@ async function buildBlogPayload(
       // Signals backend v2 to clear cover and queue old Cloudinary image for deletion
       body.coverImage = "";
       body.coverImagePublicId = "";
-    } else {
+    } else if (cleanCover.startsWith("http://") || cleanCover.startsWith("https://")) {
       body.coverImage = cleanCover;
-      if (payload.cover_image_public_id) {
-        body.coverImagePublicId = payload.cover_image_public_id.trim();
-      }
+      body.coverImagePublicId =
+        payload.cover_image_public_id?.trim() || `external/blog_cover_${Date.now()}`;
     }
+  } else if (!isUpdate) {
+    // When creating a new blog without any cover image:
+    // Supply empty string pair so backend v2 receives matched pair and saves clean empty cover
+    body.coverImage = "";
+    body.coverImagePublicId = "";
   }
 
   if (payload.cover_caption !== undefined) body.coverCaption = payload.cover_caption.trim();
@@ -316,7 +367,18 @@ async function buildBlogPayload(
   }
   if (payload.meta_title !== undefined) body.metaTitle = payload.meta_title.trim();
   if (payload.meta_description !== undefined) body.metaDescription = payload.meta_description.trim();
-  if (payload.og_image !== undefined) body.ogImage = payload.og_image.trim();
+
+  // Automatic OG Image Resolution & Bulletproof Sanitization:
+  // 1. If explicit valid http(s) URL was provided, use it.
+  // 2. Otherwise, if coverImage is a valid Cloudinary/HTTP URL, use it as social share image.
+  // 3. Otherwise, omit ogImage completely so backend validator is not triggered.
+  const rawOg = payload.og_image?.trim() || "";
+  if (rawOg.startsWith("http://") || rawOg.startsWith("https://")) {
+    body.ogImage = rawOg;
+  } else if (body.coverImage && (body.coverImage.startsWith("http://") || body.coverImage.startsWith("https://"))) {
+    body.ogImage = body.coverImage;
+  }
+
   if (Array.isArray(payload.tags)) {
     body.tags = payload.tags.map((t) => t.trim()).filter(Boolean);
   }
@@ -333,7 +395,7 @@ export async function createBlogApi(
   coverImageFile?: File | null,
   categories?: BlogCategoryItem[],
 ): Promise<BlogPostItem> {
-  const requestBody = await buildBlogPayload(payload, coverImageFile, categories);
+  const requestBody = await buildBlogPayload(payload, coverImageFile, categories, false);
 
   const res = await apiRequest<BackendBlogSingleResponse>(
     "/api/v2/admin-panel/blog/create",
@@ -366,7 +428,7 @@ export async function updateBlogApi(
 ): Promise<BlogPostItem> {
   if (!id) throw new Error("Blog ID is required for update.");
 
-  const requestBody = await buildBlogPayload(payload, coverImageFile, categories);
+  const requestBody = await buildBlogPayload(payload, coverImageFile, categories, true);
 
   const res = await apiRequest<BackendBlogSingleResponse>(
     `/api/v2/admin-panel/blog/${encodeURIComponent(id)}/update`,
@@ -456,6 +518,7 @@ export async function setBlogFeaturedApi(
   );
 
   clearApiCache("/api/v1/admin-panel/blog");
+  clearApiCache("/api/v2/admin-panel/blog");
 
   const doc = res?.data?.blog || res?.blog;
   if (!doc) {

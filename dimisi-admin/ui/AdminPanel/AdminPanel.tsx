@@ -767,6 +767,8 @@ export function AdminPanel() {
                   config={blogData.config}
                   categories={blogData.categories || []}
                   categoryItems={blogData.categoryItems || []}
+                  currentUser={self || (user ? { user_id: user.id, full_name: user.name, role: userRole } : null)}
+                  admins={currentData.admins || []}
                   onRefresh={refreshBlog}
                 />
               )}

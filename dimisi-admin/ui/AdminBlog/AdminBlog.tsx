@@ -70,6 +70,7 @@ import {
   saveBlogPostFn,
   deleteBlogPostFn,
   toggleBlogActiveFn,
+  toggleBlogFeaturedFn,
   setBlogFeaturedFn,
   saveBlogConfigFn,
   getBlogCategoriesFn,
@@ -103,6 +104,23 @@ interface AdminBlogProps {
   config: BlogConfig;
   categories: string[];
   categoryItems?: BlogCategoryItem[] | undefined;
+  currentUser?: {
+    id?: string;
+    user_id?: string;
+    full_name?: string | null;
+    name?: string | null;
+    email?: string | null;
+    role?: string | null;
+    designation?: string | null;
+  } | null | undefined;
+  admins?: Array<{
+    user_id?: string;
+    full_name?: string | null;
+    name?: string | null;
+    email?: string | null;
+    role?: string | null;
+    designation?: string | null;
+  }> | undefined;
   onRefresh: () => void;
 }
 
@@ -132,17 +150,20 @@ const CODE_LANGUAGES = [
 
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB as per backend uploadRules (blog.coverImage)
 const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
-const FALLBACK_COVER =
-  "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=400&q=80";
 
 export function AdminBlog({
   posts,
   config,
   categories: initialCategoryNames,
   categoryItems: initialCategoryItems,
+  currentUser,
+  admins,
   onRefresh,
 }: AdminBlogProps) {
   const [isPending, startTransition] = useTransition();
+
+  const defaultAuthorName = currentUser?.full_name || currentUser?.name || "Administrator";
+  const defaultAuthorRole = currentUser?.designation || currentUser?.role || "Editorial";
 
   // Sub-section tab
   const [activeSection, setActiveSection] = useState<"posts" | "settings">("posts");
@@ -258,12 +279,14 @@ export function AdminBlog({
   // Primary Cover Image State
   const [coverSourceType, setCoverSourceType] = useState<"upload" | "url">("upload");
   const [coverImage, setCoverImage] = useState("");
+  const [coverImagePublicId, setCoverImagePublicId] = useState<string | null>(null);
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [isUploadingImage, setIsUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [imageError, setImageError] = useState<string | null>(null);
   const [isDragOver, setIsDragOver] = useState(false);
+  const [savingStep, setSavingStep] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const tabRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
@@ -282,16 +305,62 @@ export function AdminBlog({
   const [coverAlt, setCoverAlt] = useState("");
   const [coverCredit, setCoverCredit] = useState("");
 
-  // Preserved Author State (Default or existing values preserved)
-  const [authorName, setAuthorName] = useState("DIMISI Editorial");
-  const [authorRole, setAuthorRole] = useState("Engineering & Systems");
-  const [authorAvatar, setAuthorAvatar] = useState(
-    "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
-  );
+  // Dynamic Author State
+  const [authorName, setAuthorName] = useState(defaultAuthorName);
+  const [authorRole, setAuthorRole] = useState(defaultAuthorRole);
+  const [authorAvatar, setAuthorAvatar] = useState("");
   const [readingTime, setReadingTime] = useState("6 min read");
   const [publishedAt, setPublishedAt] = useState("");
   const [isFeatured, setIsFeatured] = useState(false);
   const [status, setStatus] = useState<BlogStatus>("published");
+
+  // Lookup map for fast admin author resolution
+  const adminNameMap = useMemo(() => {
+    const map = new Map<string, { name: string; role?: string }>();
+    if (Array.isArray(admins)) {
+      for (const a of admins) {
+        const id = a.user_id || "";
+        const name = a.full_name || a.name || a.email?.split("@")[0] || "";
+        if (id && name) {
+          map.set(id, { name, role: a.designation || a.role || undefined });
+        }
+      }
+    }
+    return map;
+  }, [admins]);
+
+  const resolvePostAuthor = useCallback(
+    (p: BlogPostItem) => {
+      if (p.author_id && adminNameMap.has(p.author_id)) {
+        const match = adminNameMap.get(p.author_id)!;
+        return {
+          name: match.name,
+          role: match.role || p.author_role || "Editorial",
+        };
+      }
+      if (
+        p.author_name &&
+        p.author_name !== "DIMISI Editorial" &&
+        p.author_name !== "DIMISI Editorial Team"
+      ) {
+        return {
+          name: p.author_name,
+          role: p.author_role || "Editorial",
+        };
+      }
+      if (currentUser?.full_name || currentUser?.name) {
+        return {
+          name: currentUser.full_name || currentUser.name || "Administrator",
+          role: currentUser.designation || currentUser.role || "Editorial",
+        };
+      }
+      return {
+        name: p.author_name || "DIMISI Editorial",
+        role: p.author_role || "Engineering & Systems",
+      };
+    },
+    [adminNameMap, currentUser],
+  );
 
   // SEO & Social State
   const [metaTitle, setMetaTitle] = useState("");
@@ -592,24 +661,19 @@ export function AdminBlog({
     setBlocks(parseMarkdownToBlocks(initialMd));
     setBlockViewMode("builder");
     setCoverSourceType("upload");
-    setCoverImage(
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
-    );
+    setCoverImage("");
+    setCoverImagePublicId(null);
     setCoverFile(null);
-    setCoverPreviewUrl(
-      "https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?auto=format&fit=crop&w=1200&q=80",
-    );
+    setCoverPreviewUrl(null);
     setImageError(null);
     setUploadProgress(0);
     setIsUploadingImage(false);
     setCoverCaption("");
     setCoverAlt("");
-    setCoverCredit("Photography: DIMISI Technologies");
-    setAuthorName("DIMISI Editorial");
-    setAuthorRole("Engineering & Systems");
-    setAuthorAvatar(
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
-    );
+    setCoverCredit("");
+    setAuthorName(defaultAuthorName);
+    setAuthorRole(defaultAuthorRole);
+    setAuthorAvatar("");
     setReadingTime("6 min read");
     setPublishedAt(new Date().toISOString().slice(0, 10));
     setIsFeatured(false);
@@ -623,6 +687,7 @@ export function AdminBlog({
         : 1;
     setOrderIndex(nextOrder);
     setModalTab("basic");
+    setSavingStep(null);
     setFormError(null);
     setFieldErrors({});
     setShowModal(true);
@@ -646,21 +711,20 @@ export function AdminBlog({
     setBlocks(parseMarkdownToBlocks(postData.content));
     setBlockViewMode("builder");
     setCoverSourceType("upload");
-    setCoverImage(postData.cover_image);
+    setCoverImage(postData.cover_image || "");
+    setCoverImagePublicId(postData.cover_image_public_id || null);
     setCoverFile(null);
-    setCoverPreviewUrl(postData.cover_image);
+    setCoverPreviewUrl(postData.cover_image || null);
     setImageError(null);
     setUploadProgress(0);
     setIsUploadingImage(false);
     setCoverCaption(postData.cover_caption || "");
     setCoverAlt(postData.cover_alt || "");
     setCoverCredit(postData.cover_credit || "");
-    setAuthorName(postData.author_name || "DIMISI Editorial");
-    setAuthorRole(postData.author_role || "Engineering & Systems");
-    setAuthorAvatar(
-      postData.author_avatar ||
-        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=200&q=80",
-    );
+    const resolvedAuth = resolvePostAuthor(postData);
+    setAuthorName(resolvedAuth.name);
+    setAuthorRole(resolvedAuth.role);
+    setAuthorAvatar(postData.author_avatar || "");
     setReadingTime(postData.reading_time || "6 min read");
     setPublishedAt(
       postData.published_at ? postData.published_at.slice(0, 10) : new Date().toISOString().slice(0, 10),
@@ -672,6 +736,7 @@ export function AdminBlog({
     setOgImage(postData.og_image || "");
     setOrderIndex(postData.order_index);
     setModalTab("basic");
+    setSavingStep(null);
     setFormError(null);
     setFieldErrors({});
     setShowModal(true);
@@ -702,6 +767,7 @@ export function AdminBlog({
       const blobUrl = URL.createObjectURL(file);
       setCoverPreviewUrl(blobUrl);
       setCoverImage(blobUrl);
+      setCoverImagePublicId(null);
       setUploadProgress(100);
       setTimeout(() => setIsUploadingImage(false), 250);
     } catch {
@@ -758,6 +824,7 @@ export function AdminBlog({
     setCoverFile(null);
     setCoverPreviewUrl(null);
     setCoverImage("");
+    setCoverImagePublicId(null);
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
@@ -787,11 +854,6 @@ export function AdminBlog({
     }
 
     if (modalTab === "cover") {
-      if (!coverImage.trim() && !coverFile) {
-        setImageError("Primary cover image is required.");
-        setFormError("Please select or upload a cover image.");
-        return;
-      }
       setModalTab("content");
       return;
     }
@@ -837,11 +899,13 @@ export function AdminBlog({
       excerpt: excerpt.trim(),
       content: finalContent,
       cover_image: coverImage.trim(),
+      cover_image_public_id: coverImagePublicId || editingPost?.cover_image_public_id || undefined,
       cover_caption: coverCaption.trim() || undefined,
       cover_alt: coverAlt.trim() || undefined,
       cover_credit: coverCredit.trim() || undefined,
-      author_name: authorName.trim() || "DIMISI Editorial",
-      author_role: authorRole.trim() || undefined,
+      author_name: authorName.trim() || defaultAuthorName,
+      author_id: currentUser?.user_id || currentUser?.id || editingPost?.author_id || undefined,
+      author_role: authorRole.trim() || defaultAuthorRole,
       author_avatar: authorAvatar.trim() || undefined,
       reading_time: readingTime.trim() || "6 min read",
       published_at: publishedAt ? new Date(publishedAt).toISOString() : new Date().toISOString(),
@@ -849,7 +913,11 @@ export function AdminBlog({
       status: finalStatus,
       meta_title: metaTitle.trim() || undefined,
       meta_description: metaDescription.trim() || undefined,
-      og_image: ogImage.trim() || coverImage.trim() || undefined,
+      og_image:
+        ogImage.trim() &&
+        (ogImage.trim().startsWith("http://") || ogImage.trim().startsWith("https://"))
+          ? ogImage.trim()
+          : undefined,
       order_index: Number(orderIndex),
     };
 
@@ -868,6 +936,8 @@ export function AdminBlog({
           setModalTab("cover");
         } else if (validation.field === "content") {
           setModalTab("content");
+        } else if (validation.field === "og_image") {
+          setModalTab("seo");
         }
       }
       return;
@@ -875,14 +945,22 @@ export function AdminBlog({
 
     startTransition(async () => {
       try {
+        if (coverFile) {
+          setSavingStep("Uploading cover to Cloudinary...");
+        } else {
+          setSavingStep("Saving article...");
+        }
         const res = await saveBlogPostFn({ data: input, coverImageFile: coverFile });
         if (res.success) {
+          setSavingStep(null);
           closeBlogModal();
           onRefresh();
         } else {
+          setSavingStep(null);
           setFormError(res.error || "Failed to save blog post.");
         }
       } catch (err) {
+        setSavingStep(null);
         setFormError(err instanceof Error ? err.message : "Error saving blog post.");
       }
     });
@@ -926,7 +1004,8 @@ export function AdminBlog({
   const handleToggleFeatured = (p: BlogPostItem) => {
     startTransition(async () => {
       try {
-        const res = await setBlogFeaturedFn({ data: { id: p.id } });
+        const target = !p.is_featured;
+        const res = await toggleBlogFeaturedFn({ data: { id: p.id, targetFeatured: target } });
         if (res.success) {
           onRefresh();
         } else {
@@ -1282,14 +1361,14 @@ export function AdminBlog({
           <div className={styles.tableCard}>
             <table className={styles.table}>
               <colgroup>
-                <col style={{ width: "70px" }} />
-                <col style={{ width: "90px" }} />
-                <col style={{ width: "340px" }} />
-                <col style={{ width: "140px" }} />
-                <col style={{ width: "190px" }} />
+                <col style={{ width: "50px" }} />
+                <col style={{ width: "80px" }} />
+                <col style={{ width: "auto" }} />
                 <col style={{ width: "130px" }} />
-                <col style={{ width: "130px" }} />
-                <col style={{ width: "170px" }} />
+                <col style={{ width: "150px" }} />
+                <col style={{ width: "95px" }} />
+                <col style={{ width: "95px" }} />
+                <col style={{ width: "115px" }} />
               </colgroup>
               <thead>
                 <tr>
@@ -1312,17 +1391,19 @@ export function AdminBlog({
 
                       {/* Cover Thumbnail */}
                       <td className={styles.coverCell}>
-                        <img
-                          src={p.cover_image || FALLBACK_COVER}
-                          alt={p.title}
-                          className={styles.thumbImg}
-                          loading="lazy"
-                          decoding="async"
-                          onError={(e) => {
-                            e.currentTarget.onerror = null;
-                            e.currentTarget.src = FALLBACK_COVER;
-                          }}
-                        />
+                        {p.cover_image ? (
+                          <img
+                            src={p.cover_image}
+                            alt={p.title}
+                            className={styles.thumbImg}
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <div className={styles.thumbPlaceholder} title="No cover image">
+                            <ImageIcon size={18} />
+                          </div>
+                        )}
                       </td>
 
                       {/* Title only (No slug exposed) */}
@@ -1351,34 +1432,11 @@ export function AdminBlog({
 
                       {/* Author Info */}
                       <td>
-                        <div className={styles.authorCell}>
-                          {p.author_avatar ? (
-                            <img
-                              src={p.author_avatar}
-                              alt={p.author_name}
-                              className={styles.avatarImg}
-                              loading="lazy"
-                              decoding="async"
-                              onError={(e) => {
-                                e.currentTarget.style.display = "none";
-                                const next = e.currentTarget.nextElementSibling;
-                                if (next && "style" in next)
-                                  (next as HTMLElement).style.display = "flex";
-                              }}
-                            />
-                          ) : null}
-                          <div
-                            className={styles.avatarFallback}
-                            style={{ display: p.author_avatar ? "none" : "flex" }}
-                          >
-                            {p.author_name ? p.author_name.slice(0, 2).toUpperCase() : "ED"}
-                          </div>
-                          <div className={styles.authorMeta}>
-                            <span className={styles.authorName}>{p.author_name}</span>
-                            {p.author_role && (
-                              <span className={styles.authorRole}>{p.author_role}</span>
-                            )}
-                          </div>
+                        <div className={styles.authorMeta}>
+                          <span className={styles.authorName}>{resolvePostAuthor(p).name}</span>
+                          {resolvePostAuthor(p).role && (
+                            <span className={styles.authorRole}>{resolvePostAuthor(p).role}</span>
+                          )}
                         </div>
                       </td>
 
@@ -1396,7 +1454,7 @@ export function AdminBlog({
                           <button
                             type="button"
                             className={[
-                              styles.toggleStatusBtn,
+                              styles.iconStatusBtn,
                               p.status === "published"
                                 ? styles.statusPublished
                                 : styles.statusDraft,
@@ -1404,16 +1462,15 @@ export function AdminBlog({
                             onClick={() => handleToggleStatus(p)}
                             title={
                               p.status === "published"
-                                ? "Article is LIVE — Click to set to Draft"
-                                : "Article is DRAFT — Click to Publish"
+                                ? "Article is LIVE — Click to switch to Draft"
+                                : "Article is in DRAFT — Click to Publish Live"
                             }
                           >
                             {p.status === "published" ? (
-                              <Eye size={14} className={styles.statusIcon} />
+                              <Eye size={15} />
                             ) : (
-                              <EyeOff size={14} className={styles.statusIcon} />
+                              <EyeOff size={15} />
                             )}
-                            <span>{p.status === "published" ? "Live" : "Draft"}</span>
                           </button>
 
                           <button
@@ -1425,11 +1482,15 @@ export function AdminBlog({
                             onClick={() => handleToggleFeatured(p)}
                             title={
                               p.is_featured
-                                ? "Featured spotlight active (click to unfeature)"
-                                : "Click to feature this article on the blog hero spotlight"
+                                ? "Featured in Hero Spotlight (Click to remove from Spotlight)"
+                                : "Set as Hero Spotlight Article"
                             }
                           >
-                            <Star size={14} />
+                            <Star
+                              size={15}
+                              fill={p.is_featured ? "#ffaa00" : "none"}
+                              color={p.is_featured ? "#ffaa00" : "currentColor"}
+                            />
                           </button>
                         </div>
                       </td>
@@ -1439,12 +1500,11 @@ export function AdminBlog({
                         <div className={styles.rowActions}>
                           <button
                             type="button"
-                            className={styles.editBtn}
+                            className={styles.actionIconBtn}
                             onClick={() => handleOpenEdit(p)}
-                            title="Edit Article"
+                            title="Edit Article details, content & SEO"
                           >
                             <Edit2 size={13} />
-                            <span>Edit</span>
                           </button>
 
                           <a
@@ -1948,7 +2008,16 @@ export function AdminBlog({
                   <div className={styles.tabPane}>
                     {/* Title full width */}
                     <div className={styles.formGroup}>
-                      <label>Blog Post Title *</label>
+                      <div className={styles.labelCounterRow}>
+                        <label>Blog Post Title *</label>
+                        <span
+                          className={
+                            title.length > 150 ? styles.charCounterWarning : styles.charCounter
+                          }
+                        >
+                          {title.length} / 150 characters
+                        </span>
+                      </div>
                       <input
                         type="text"
                         required
@@ -2093,7 +2162,16 @@ export function AdminBlog({
                     </div>
 
                     <div className={styles.formGroup}>
-                      <label>Short Description / Article Excerpt *</label>
+                      <div className={styles.labelCounterRow}>
+                        <label>Short Description / Article Excerpt *</label>
+                        <span
+                          className={
+                            excerpt.length > 300 ? styles.charCounterWarning : styles.charCounter
+                          }
+                        >
+                          {excerpt.length} / 300 characters
+                        </span>
+                      </div>
                       <textarea
                         rows={3}
                         required
@@ -2197,7 +2275,9 @@ export function AdminBlog({
                                         " (" +
                                         (coverFile.size / (1024 * 1024)).toFixed(2) +
                                         " MB)"
-                                      : "Active Cover Image"}
+                                      : coverImagePublicId
+                                        ? `Cloudinary Asset: ${coverImagePublicId}`
+                                        : "Active Cover Image"}
                                   </span>
                                 </div>
 
@@ -2235,7 +2315,7 @@ export function AdminBlog({
                                 with <kbd className={styles.kbdShortcut}>Ctrl + V</kbd>
                               </h5>
                               <span className={styles.dropzoneSub}>
-                                Supports JPG, PNG, WEBP up to 10MB
+                                Supports JPG, PNG, WEBP up to 5MB • Recommended: 1200×630px (16:9)
                               </span>
                             </div>
                           )}
@@ -2255,16 +2335,17 @@ export function AdminBlog({
                       {coverSourceType === "url" && (
                         <div className={styles.urlInputBox}>
                           <div className={styles.formGroup}>
-                            <label>Direct Image URL (CDN / Unsplash)</label>
+                            <label>Direct Image URL (CDN / Cloudinary / External)</label>
                             <input
                               type="url"
                               value={coverImage}
                               onChange={(e) => {
                                 setCoverImage(e.target.value);
                                 setCoverPreviewUrl(e.target.value);
+                                setCoverImagePublicId(null);
                                 setImageError(null);
                               }}
-                              placeholder="https://images.unsplash.com/photo-..."
+                              placeholder="https://example.com/images/cover.jpg"
                             />
                           </div>
 
@@ -2972,8 +3053,37 @@ export function AdminBlog({
                         type="url"
                         value={ogImage}
                         onChange={(e) => setOgImage(e.target.value)}
-                        placeholder={coverImage || "https://images.unsplash.com/photo-..."}
+                        placeholder="https://example.com/images/og-custom.jpg"
                       />
+                    </div>
+
+                    {/* Social Media Card Mockup Preview */}
+                    <div className={styles.socialPreviewBox}>
+                      <span className={styles.socialPreviewBadge}>
+                        <Share2 size={12} /> Social Media Card Preview (Twitter / LinkedIn)
+                      </span>
+                      <div className={styles.socialCardMockup}>
+                        {ogImage.trim() || coverPreviewUrl ? (
+                          <img
+                            src={ogImage.trim() || coverPreviewUrl || ""}
+                            alt="Social Preview"
+                            className={styles.socialCardMockupImg}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className={styles.socialCardMockupEmpty}>
+                            <ImageIcon size={28} />
+                            <span>No visual attached (Will use website default card)</span>
+                          </div>
+                        )}
+                        <div className={styles.socialCardMockupContent}>
+                          <span className={styles.socialCardDomain}>dimisi.tech • {readingTime || "5 min read"}</span>
+                          <h5 className={styles.socialCardTitle}>{metaTitle || title || "Article Title"}</h5>
+                          <p className={styles.socialCardDesc}>
+                            {metaDescription || excerpt || "Article description summary preview on social feeds."}
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -3020,8 +3130,17 @@ export function AdminBlog({
                         className={styles.saveSubmitBtn}
                         onClick={() => handleSavePost("published")}
                       >
-                        <CheckCircle2 size={15} />
-                        <span>{editingPost ? "Update & Publish" : "Publish Article"}</span>
+                        {isPending ? (
+                          <>
+                            <RefreshCw size={15} className={styles.spinIcon} />
+                            <span>{savingStep || "Saving..."}</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 size={15} />
+                            <span>{editingPost ? "Update & Publish" : "Publish Article"}</span>
+                          </>
+                        )}
                       </button>
                     </>
                   )}

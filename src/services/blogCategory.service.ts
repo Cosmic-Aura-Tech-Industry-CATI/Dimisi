@@ -100,7 +100,7 @@ export function resolveBlogCategoryName(
   rawCat: string | { _id: string; name: string; slug?: string } | undefined | null,
   categories?: BlogCategoryItem[],
 ): string {
-  if (!rawCat) return "General";
+  if (!rawCat) return "";
 
   // If already an object with name
   if (typeof rawCat === "object" && rawCat !== null) {
@@ -129,7 +129,7 @@ export function resolveBlogCategoryName(
     if (foundByName) return foundByName.name;
   }
 
-  return catStr || "General";
+  return catStr;
 }
 
 /**
@@ -140,10 +140,7 @@ export async function resolveBlogCategoryIdForPayload(
   categoryInput: string | undefined | null,
   categories?: BlogCategoryItem[],
 ): Promise<string> {
-  if (!categoryInput) {
-    categoryInput = "General";
-  }
-  const trimmed = categoryInput.trim();
+  const trimmed = (categoryInput || "").trim();
   if (isMongoId(trimmed)) return trimmed;
 
   const normalizeStr = (s: string) => s.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -151,25 +148,8 @@ export async function resolveBlogCategoryIdForPayload(
 
   // 1. Try in supplied categories
   if (categories && categories.length > 0) {
-    const match = categories.find(
-      (c) =>
-        c.id === trimmed ||
-        c.name.toLowerCase() === trimmed.toLowerCase() ||
-        c.slug.toLowerCase() === trimmed.toLowerCase() ||
-        normalizeStr(c.name) === targetKey ||
-        normalizeStr(c.slug) === targetKey,
-    );
-    if (match && isMongoId(match.id)) {
-      return match.id;
-    }
-  }
-
-  // 2. Query live categories from backend API
-  let liveCats: BlogCategoryItem[] = [];
-  try {
-    liveCats = await getAllBlogCategoriesApi();
-    if (Array.isArray(liveCats) && liveCats.length > 0) {
-      const match = liveCats.find(
+    if (targetKey) {
+      const match = categories.find(
         (c) =>
           c.id === trimmed ||
           c.name.toLowerCase() === trimmed.toLowerCase() ||
@@ -180,27 +160,59 @@ export async function resolveBlogCategoryIdForPayload(
       if (match && isMongoId(match.id)) {
         return match.id;
       }
+    } else if (isMongoId(categories[0].id)) {
+      return categories[0].id;
+    }
+  }
+
+  // 2. Query live categories from backend API
+  let liveCats: BlogCategoryItem[] = [];
+  try {
+    liveCats = await getAllBlogCategoriesApi();
+    if (Array.isArray(liveCats) && liveCats.length > 0) {
+      if (targetKey) {
+        const match = liveCats.find(
+          (c) =>
+            c.id === trimmed ||
+            c.name.toLowerCase() === trimmed.toLowerCase() ||
+            c.slug.toLowerCase() === trimmed.toLowerCase() ||
+            normalizeStr(c.name) === targetKey ||
+            normalizeStr(c.slug) === targetKey,
+        );
+        if (match && isMongoId(match.id)) {
+          return match.id;
+        }
+      } else if (isMongoId(liveCats[0].id)) {
+        return liveCats[0].id;
+      }
     }
   } catch {
     // API not reachable
   }
 
-  // 3. Category does not exist in backend MongoDB — auto-create it on backend!
-  try {
-    const createdCat = await createBlogCategoryApi({
-      name: trimmed.length >= 2 ? trimmed : "General",
-      description: `${trimmed} related editorial publications.`,
-      displayOrder: (liveCats?.length || 0) + 1,
-      isActive: true,
-    });
-    if (createdCat && isMongoId(createdCat.id)) {
-      return createdCat.id;
-    }
-  } catch {
-    // Cannot reach backend - proceed with local key
+  // 3. Fallback to first available category from live categories if no custom text provided
+  if (!targetKey && liveCats.length > 0 && isMongoId(liveCats[0].id)) {
+    return liveCats[0].id;
   }
 
-  // 4. Fallback to first available category from live categories
+  // 4. Category does not exist in backend MongoDB — auto-create it on backend!
+  if (trimmed.length >= 2) {
+    try {
+      const createdCat = await createBlogCategoryApi({
+        name: trimmed,
+        description: `${trimmed} related editorial publications.`,
+        displayOrder: (liveCats?.length || 0) + 1,
+        isActive: true,
+      });
+      if (createdCat && isMongoId(createdCat.id)) {
+        return createdCat.id;
+      }
+    } catch {
+      // Cannot reach backend - proceed with local key
+    }
+  }
+
+  // 5. Final fallback to first available category from live categories
   if (liveCats.length > 0 && isMongoId(liveCats[0].id)) {
     return liveCats[0].id;
   }
