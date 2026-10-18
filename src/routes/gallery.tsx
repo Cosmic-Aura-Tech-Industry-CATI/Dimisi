@@ -1,21 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { EventsPage } from "@/pages/events/EventsPage";
+import { GalleryPage } from "@/pages/gallery/GalleryPage";
 
 export const Route = createFileRoute("/gallery")({
   head: () => ({
     meta: [
-      { title: "Events & Gallery — DIMISI Technologies" },
+      { title: "Visual Studio Archive & Gallery — DIMISI Technologies" },
       {
         name: "description",
         content:
-          "Explore product keynotes, tech summits, hackathons, and visual studio archive from DIMISI Technologies.",
+          "Explore the visual archive, moments, shader tests, and tech showcase frames from DIMISI Technologies.",
       },
-      { property: "og:title", content: "Events & Gallery — DIMISI Technologies" },
+      { property: "og:title", content: "Visual Studio Archive & Gallery — DIMISI Technologies" },
       {
         property: "og:description",
-        content: "Flagship keynotes, summits, hackathons, and creative visual plates from DIMISI.",
+        content: "High-resolution frames, moments, and visual studio archive from DIMISI Technologies.",
       },
     ],
   }),
-  component: EventsPage,
+  component: GalleryPage,
 });
+
