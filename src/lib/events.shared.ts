@@ -36,7 +36,9 @@ export interface CompanyEvent {
   description: string;
   full_description: string;
   cover_image: string;
+  cover_image_public_id?: string | null | undefined;
   images: string[];
+  image_objects?: Array<{ url: string; publicId: string }> | undefined;
   is_featured: boolean;
   attendees_count?: number | null | undefined;
   registration_url?: string | null | undefined;
@@ -52,6 +54,7 @@ export interface EventGalleryItem {
   title: string;
   caption: string;
   image_url: string;
+  public_id?: string | null | undefined;
   category: string;
   aspect_ratio?: "normal" | "tall" | "wide" | undefined;
   hue?: number | undefined;
@@ -73,7 +76,9 @@ export interface EventInput {
   description: string;
   full_description: string;
   cover_image: string;
+  cover_image_public_id?: string | null | undefined;
   images: string[];
+  image_objects?: Array<{ url: string; publicId: string }> | undefined;
   is_featured: boolean;
   attendees_count?: number | null | undefined;
   registration_url?: string | null | undefined;
@@ -86,6 +91,7 @@ export interface GalleryItemInput {
   title: string;
   caption: string;
   image_url: string;
+  public_id?: string | null | undefined;
   category: string;
   aspect_ratio?: "normal" | "tall" | "wide" | undefined;
   hue?: number | undefined;
@@ -170,13 +176,37 @@ export function validateEvent(input: EventInput): { valid: boolean; error?: stri
   if (date.length === 0) {
     return { valid: false, error: "Event date is required.", field: "date" };
   }
+
+  // Backend Mongoose validator rejects past event dates on creation
+  if (!input.id) {
+    const selectedDate = new Date(date);
+    const now = new Date();
+    const startOfToday = Math.min(
+      new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime(),
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+    );
+    if (!isNaN(selectedDate.getTime()) && selectedDate.getTime() < startOfToday) {
+      return {
+        valid: false,
+        error: "Event date cannot be in the past. Please select today or a future date.",
+        field: "date",
+      };
+    }
+  }
+
   if (location.length === 0) {
     return { valid: false, error: "Event location/venue is required.", field: "location" };
   }
   if (description.length < 10) {
     return { valid: false, error: "Event description must be at least 10 characters.", field: "description" };
   }
-  if (!coverImage || (!coverImage.startsWith("http://") && !coverImage.startsWith("https://") && !coverImage.startsWith("data:image/"))) {
+  if (
+    !coverImage ||
+    (!coverImage.startsWith("http://") &&
+      !coverImage.startsWith("https://") &&
+      !coverImage.startsWith("/") &&
+      !coverImage.startsWith("data:image/"))
+  ) {
     return { valid: false, error: "A valid cover image is required (URL or uploaded file).", field: "cover_image" };
   }
   return { valid: true };

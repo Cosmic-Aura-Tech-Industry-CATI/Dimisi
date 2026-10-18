@@ -71,6 +71,8 @@ import {
   saveEventCategoryFn,
   deleteEventCategoryFn,
 } from "@/lib/events.functions";
+import { uploadFileViaSignature } from "@/services/upload.service";
+import { toggleEventFeaturedApi } from "@/services/event.service";
 import styles from "./AdminEvents.module.css";
 
 interface AdminEventsProps {
@@ -90,54 +92,9 @@ const EVENT_MODAL_STEPS: { id: EventModalTab; label: string; num: string }[] = [
   { id: "publish", label: "4. Registration & Publishing", num: "04" },
 ];
 
-const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024; // 10MB
-const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/webp"];
-
-/**
- * Optimizes and downscales uploaded image files using an off-screen HTML5 Canvas
- * to keep payload sizes small (< 150KB), avoiding Express body-size limit rejections and timeouts.
- */
-function compressImageToDataUrl(file: File, maxDim = 1280, quality = 0.82): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onerror = () => reject(new Error("Failed to read image file."));
-    reader.onload = (e) => {
-      const src = e.target?.result as string;
-      if (!src) {
-        reject(new Error("Empty image file data."));
-        return;
-      }
-      const img = new Image();
-      img.onerror = () => resolve(src);
-      img.onload = () => {
-        let { width, height } = img;
-        if (width > maxDim || height > maxDim) {
-          if (width > height) {
-            height = Math.round((height * maxDim) / width);
-            width = maxDim;
-          } else {
-            width = Math.round((width * maxDim) / height);
-            height = maxDim;
-          }
-        }
-        const canvas = document.createElement("canvas");
-        canvas.width = width;
-        canvas.height = height;
-        const ctx = canvas.getContext("2d");
-        if (!ctx) {
-          resolve(src);
-          return;
-        }
-        ctx.drawImage(img, 0, 0, width, height);
-        const mime = file.type === "image/png" ? "image/png" : "image/jpeg";
-        const compressed = canvas.toDataURL(mime, quality);
-        resolve(compressed);
-      };
-      img.src = src;
-    };
-    reader.readAsDataURL(file);
-  });
-}
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024; // 5MB for cover
+const MAX_GALLERY_IMAGE_SIZE_BYTES = 3 * 1024 * 1024; // 3MB for gallery
+const ALLOWED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg", "image/webp", "image/avif"];
 
 export function AdminEvents({
   events,
@@ -337,6 +294,7 @@ export function AdminEvents({
   // Cover Image State
   const [coverSourceType, setCoverSourceType] = useState<"upload" | "url">("upload");
   const [coverImage, setCoverImage] = useState("");
+  const [coverImagePublicId, setCoverImagePublicId] = useState("");
   const [coverFile, setCoverFile] = useState<File | null>(null);
   const [coverPreviewUrl, setCoverPreviewUrl] = useState<string | null>(null);
   const [isUploadingCover, setIsUploadingCover] = useState(false);
@@ -347,7 +305,10 @@ export function AdminEvents({
 
   // Gallery Multiple Images State
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
+  const [galleryImageObjects, setGalleryImageObjects] = useState<Array<{ url: string; publicId: string }>>([]);
   const [newGalleryUrl, setNewGalleryUrl] = useState("");
+  const [isUploadingGallery, setIsUploadingGallery] = useState(false);
+  const [galleryUploadProgress, setGalleryUploadProgress] = useState(0);
   const [isGalleryDragOver, setIsGalleryDragOver] = useState(false);
   const galleryFileInputRef = useRef<HTMLInputElement>(null);
 
@@ -364,11 +325,14 @@ export function AdminEvents({
   const [galTitle, setGalTitle] = useState("");
   const [galCaption, setGalCaption] = useState("");
   const [galImage, setGalImage] = useState("");
+  const [galPublicId, setGalPublicId] = useState("");
   const [galCategory, setGalCategory] = useState("Interfaces");
   const [galEventId, setGalEventId] = useState("");
   const [galAspect, setGalAspect] = useState<"normal" | "tall" | "wide">("normal");
   const [galFile, setGalFile] = useState<File | null>(null);
   const [galPreviewUrl, setGalPreviewUrl] = useState<string | null>(null);
+  const [isUploadingGal, setIsUploadingGal] = useState(false);
+  const [galUploadProgress, setGalUploadProgress] = useState(0);
   const [galSourceType, setGalSourceType] = useState<"upload" | "url">("upload");
   const [galFormError, setGalFormError] = useState<string | null>(null);
   const standaloneGalInputRef = useRef<HTMLInputElement>(null);
@@ -568,14 +532,13 @@ export function AdminEvents({
     setDescription("");
     setFullDescription("");
     setCoverSourceType("upload");
-    setCoverImage("https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80");
+    setCoverImage("");
+    setCoverImagePublicId("");
     setCoverFile(null);
-    setCoverPreviewUrl("https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80");
+    setCoverPreviewUrl(null);
     setCoverError(null);
-    setGalleryImages([
-      "https://images.unsplash.com/photo-1508700115892-45ecd05ae2ad?auto=format&fit=crop&w=1200&q=80",
-      "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=1200&q=80",
-    ]);
+    setGalleryImages([]);
+    setGalleryImageObjects([]);
     setIsFeatured(false);
     setAttendeesCount(500);
     setRegistrationUrl("https://dimisi.tech/contact");
@@ -606,10 +569,15 @@ export function AdminEvents({
     setFullDescription(ev.full_description);
     setCoverSourceType("upload");
     setCoverImage(ev.cover_image);
+    setCoverImagePublicId(ev.cover_image_public_id || "");
     setCoverFile(null);
     setCoverPreviewUrl(ev.cover_image);
     setCoverError(null);
     setGalleryImages(ev.images || []);
+    setGalleryImageObjects(
+      ev.image_objects ||
+        (ev.images || []).map((url, i) => ({ url, publicId: `dimisi-ops/events/event-img-${i}` }))
+    );
     setIsFeatured(ev.is_featured);
     setAttendeesCount(ev.attendees_count || "");
     setRegistrationUrl(ev.registration_url || "");
@@ -620,33 +588,41 @@ export function AdminEvents({
     setShowEventModal(true);
   };
 
-  // Cover Image File Processing
+  // Cover Image File Processing (Cloudinary v2 Signed Upload)
   const processCoverFile = useCallback((file: File) => {
     setCoverError(null);
 
     if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
-      setCoverError("Unsupported image format. Use JPG, JPEG, PNG, or WEBP.");
+      setCoverError("Unsupported image format. Use JPG, JPEG, PNG, WEBP, or AVIF.");
       return;
     }
 
     if (file.size > MAX_IMAGE_SIZE_BYTES) {
-      setCoverError("Image is too large. Maximum allowed size is 10 MB.");
+      setCoverError("Poster image is too large. Maximum allowed size is 5 MB.");
       return;
     }
 
     setCoverFile(file);
+    const localBlob = URL.createObjectURL(file);
+    setCoverPreviewUrl(localBlob);
     setIsUploadingCover(true);
-    setCoverUploadProgress(30);
+    setCoverUploadProgress(15);
 
-    compressImageToDataUrl(file, 1400, 0.82)
-      .then((dataUrl) => {
-        setCoverPreviewUrl(dataUrl);
-        setCoverImage(dataUrl);
+    uploadFileViaSignature(
+      file,
+      { model: "event", field: "coverImage" },
+      { onProgress: (pct) => setCoverUploadProgress(pct) },
+    )
+      .then((res) => {
+        setCoverImage(res.url);
+        setCoverImagePublicId(res.publicId);
+        setCoverPreviewUrl(res.url);
         setCoverUploadProgress(100);
         setTimeout(() => setIsUploadingCover(false), 200);
       })
-      .catch(() => {
-        setCoverError("Failed to read image file. Please try again.");
+      .catch((err) => {
+        console.error("Cover upload failed:", err);
+        setCoverError(err?.message || "Failed to upload poster to Cloudinary.");
         setIsUploadingCover(false);
       });
   }, []);
@@ -658,7 +634,7 @@ export function AdminEvents({
 
   const handleCoverDragLeave = (e: DragEvent<HTMLDivElement>) => {
     e.preventDefault();
-    setIsCoverDragOver(false);
+    setIsCoverDragLeave(false);
   };
 
   const handleCoverDrop = (e: DragEvent<HTMLDivElement>) => {
@@ -669,21 +645,42 @@ export function AdminEvents({
     }
   };
 
-  // Batch Multi-Image Gallery File Processing
-  const processGalleryFiles = useCallback((files: FileList | File[]) => {
-    const fileArray = Array.from(files);
+  // Batch Multi-Image Gallery File Processing (Cloudinary v2 Signed Upload)
+  const processGalleryFiles = useCallback(async (files: FileList | File[]) => {
+    const fileArray = Array.from(files).filter(
+      (f) => ALLOWED_IMAGE_TYPES.includes(f.type) && f.size <= MAX_GALLERY_IMAGE_SIZE_BYTES,
+    );
 
-    fileArray.forEach((file) => {
-      if (ALLOWED_IMAGE_TYPES.includes(file.type) && file.size <= MAX_IMAGE_SIZE_BYTES) {
-        compressImageToDataUrl(file, 1280, 0.82)
-          .then((dataUrl) => {
-            if (dataUrl) {
-              setGalleryImages((prev) => [...prev, dataUrl]);
-            }
-          })
-          .catch(() => {});
+    if (fileArray.length === 0) return;
+
+    setIsUploadingGallery(true);
+    setGalleryUploadProgress(10);
+
+    try {
+      let completed = 0;
+      for (const file of fileArray) {
+        try {
+          const res = await uploadFileViaSignature(
+            file,
+            { model: "event", field: "images" },
+            {
+              onProgress: (pct) => {
+                const totalPct = Math.round(((completed + pct / 100) / fileArray.length) * 100);
+                setGalleryUploadProgress(totalPct);
+              },
+            },
+          );
+          setGalleryImages((prev) => [...prev, res.url]);
+          setGalleryImageObjects((prev) => [...prev, { url: res.url, publicId: res.publicId }]);
+        } catch (uploadErr) {
+          console.error("Single gallery file upload failed:", uploadErr);
+        }
+        completed++;
       }
-    });
+      setGalleryUploadProgress(100);
+    } finally {
+      setTimeout(() => setIsUploadingGallery(false), 300);
+    }
   }, []);
 
   const handleGalleryDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -725,14 +722,20 @@ export function AdminEvents({
 
   // Gallery URL Addition
   const handleAddGalleryUrl = () => {
-    if (newGalleryUrl.trim()) {
-      setGalleryImages((prev) => [...prev, newGalleryUrl.trim()]);
+    const url = newGalleryUrl.trim();
+    if (url) {
+      setGalleryImages((prev) => [...prev, url]);
+      setGalleryImageObjects((prev) => [
+        ...prev,
+        { url, publicId: `dimisi-ops/events/event-img-${Date.now().toString(36)}` },
+      ]);
       setNewGalleryUrl("");
     }
   };
 
   const handleRemoveGalleryImage = (index: number) => {
     setGalleryImages((prev) => prev.filter((_, i) => i !== index));
+    setGalleryImageObjects((prev) => prev.filter((_, i) => i !== index));
   };
 
   const handleMoveGalleryImage = (index: number, direction: "up" | "down") => {
@@ -815,6 +818,30 @@ export function AdminEvents({
   };
 
   // Save Event
+  // Inline Spotlight Toggle Handler
+  const handleToggleFeatured = async (ev: CompanyEvent, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const nextVal = !ev.is_featured;
+    setLocalEvents((prev) =>
+      prev.map((item) => (item.id === ev.id ? { ...item, is_featured: nextVal } : item))
+    );
+    try {
+      await toggleEventFeaturedApi(ev.id, nextVal);
+      setSuccessNotification(
+        nextVal
+          ? `Event "${ev.title}" marked as Featured Spotlight!`
+          : `Event "${ev.title}" removed from Featured Spotlight.`
+      );
+      onRefresh();
+    } catch (err) {
+      setLocalEvents((prev) =>
+        prev.map((item) => (item.id === ev.id ? { ...item, is_featured: !nextVal } : item))
+      );
+      setFormError(err instanceof Error ? err.message : "Failed to toggle featured status.");
+    }
+  };
+
+  // Save Event
   const handleSaveEvent = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     setFormError(null);
@@ -835,7 +862,14 @@ export function AdminEvents({
       description: description.trim(),
       full_description: fullDescription.trim() || description.trim(),
       cover_image: coverImage.trim(),
-      images: galleryImages.length > 0 ? galleryImages : [coverImage.trim()],
+      cover_image_public_id: coverImagePublicId.trim() || undefined,
+      images: galleryImages.length > 0 ? galleryImages : (coverImage.trim() ? [coverImage.trim()] : []),
+      image_objects:
+        galleryImageObjects.length > 0
+          ? galleryImageObjects
+          : coverImage.trim() && coverImagePublicId.trim()
+          ? [{ url: coverImage.trim(), publicId: coverImagePublicId.trim() }]
+          : [],
       is_featured: isFeatured,
       attendees_count: attendeesCount ? Number(attendeesCount) : undefined,
       registration_url: registrationUrl.trim() || undefined,
@@ -940,8 +974,9 @@ export function AdminEvents({
     setGalEventId("");
     setGalAspect("normal");
     setGalFile(null);
-    setGalPreviewUrl("https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80");
-    setGalImage("https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=1200&q=80");
+    setGalPreviewUrl(null);
+    setGalImage("");
+    setGalPublicId("");
     setGalSourceType("upload");
     setGalFormError(null);
     setShowGalleryModal(true);
@@ -965,6 +1000,7 @@ export function AdminEvents({
       title: effectiveTitle,
       caption: effectiveCaption,
       image_url: effectiveImage,
+      public_id: galPublicId.trim() || undefined,
       category: galCategory || activeCategories[0]?.name || categoryList[0]?.name || "General",
       event_id: galEventId || undefined,
       aspect_ratio: galAspect,
@@ -1478,7 +1514,20 @@ export function AdminEvents({
                         {/* 2. Event Title */}
                         <td>
                           <div className={styles.titleCol}>
-                            <span className={styles.postTitle}>{ev.title}</span>
+                            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                              <span className={styles.postTitle}>{ev.title}</span>
+                              <button
+                                type="button"
+                                className={[
+                                  styles.starToggleBtn,
+                                  ev.is_featured ? styles.starToggleBtnActive : "",
+                                ].join(" ")}
+                                onClick={(e) => handleToggleFeatured(ev, e)}
+                                title={ev.is_featured ? "Remove from Spotlight" : "Set as Featured Spotlight"}
+                              >
+                                <Star size={13} style={{ fill: ev.is_featured ? "currentColor" : "none" }} />
+                              </button>
+                            </div>
                             {ev.is_featured && (
                               <div className={styles.spotlightRow}>
                                 <span className={styles.featuredSpotlightBadge}>
@@ -2132,6 +2181,7 @@ export function AdminEvents({
                           type="date"
                           required
                           value={date}
+                          min={editingEvent ? undefined : new Date().toISOString().slice(0, 10)}
                           className={fieldErrors.date ? styles.inputError : ""}
                           onChange={(e) => {
                             setDate(e.target.value);
@@ -2547,6 +2597,15 @@ export function AdminEvents({
                         </div>
                       </div>
 
+                      {isUploadingGallery && (
+                        <div className={styles.uploadProgressBar} style={{ marginTop: "0.5rem" }}>
+                          <div
+                            className={styles.uploadProgressFill}
+                            style={{ width: `${galleryUploadProgress}%` }}
+                          />
+                        </div>
+                      )}
+
                       {/* URL Add Input */}
                       <div className={styles.addInputRow} style={{ marginTop: "0.5rem" }}>
                         <input
@@ -2912,51 +2971,69 @@ export function AdminEvents({
                   </div>
 
                   {galSourceType === "upload" ? (
-                    <div
-                      className={styles.dropzone}
-                      onClick={() => standaloneGalInputRef.current?.click()}
-                    >
-                      <input
-                        type="file"
-                        ref={standaloneGalInputRef}
-                        style={{ display: "none" }}
-                        accept="image/png,image/jpeg,image/jpg,image/webp"
-                        onChange={(e) => {
-                          if (e.target.files && e.target.files[0]) {
-                            const file = e.target.files[0];
-                            setGalFile(file);
-                            compressImageToDataUrl(file, 1400, 0.82)
-                              .then((dataUrl) => {
-                                setGalPreviewUrl(dataUrl);
-                                setGalImage(dataUrl);
-                              })
-                              .catch(() => {
-                                const reader = new FileReader();
-                                reader.onload = (ev) => {
-                                  const dataUrl = ev.target?.result as string;
-                                  setGalPreviewUrl(dataUrl);
-                                  setGalImage(dataUrl);
-                                };
-                                reader.readAsDataURL(file);
-                              });
-                          }
-                        }}
-                      />
-                      {galPreviewUrl ? (
-                        <img
-                          src={galPreviewUrl}
-                          alt="Gallery Preview"
-                          className={styles.dropzonePreviewImg}
-                          loading="lazy"
-                          decoding="async"
+                    <>
+                      <div
+                        className={styles.dropzone}
+                        onClick={() => standaloneGalInputRef.current?.click()}
+                      >
+                        <input
+                          type="file"
+                          ref={standaloneGalInputRef}
+                          style={{ display: "none" }}
+                          accept="image/png,image/jpeg,image/jpg,image/webp,image/avif"
+                          onChange={(e) => {
+                            if (e.target.files && e.target.files[0]) {
+                              const file = e.target.files[0];
+                              setGalFile(file);
+                              const localBlob = URL.createObjectURL(file);
+                              setGalPreviewUrl(localBlob);
+                              setIsUploadingGal(true);
+                              setGalUploadProgress(20);
+
+                              uploadFileViaSignature(
+                                file,
+                                { model: "event", field: "images" },
+                                { onProgress: (pct) => setGalUploadProgress(pct) },
+                              )
+                                .then((res) => {
+                                  setGalImage(res.url);
+                                  setGalPublicId(res.publicId);
+                                  setGalPreviewUrl(res.url);
+                                  setGalUploadProgress(100);
+                                  setTimeout(() => setIsUploadingGal(false), 200);
+                                })
+                                .catch((err) => {
+                                  console.error("Gallery photo upload failed:", err);
+                                  setGalFormError(err?.message || "Failed to upload photo to Cloudinary.");
+                                  setIsUploadingGal(false);
+                                });
+                            }
+                          }}
                         />
-                      ) : (
-                        <div className={styles.dropzoneEmpty}>
-                          <UploadCloud size={22} className={styles.uploadIcon} />
-                          <span className={styles.dropzonePrompt}>Click to Choose Photo</span>
+                        {galPreviewUrl ? (
+                          <img
+                            src={galPreviewUrl}
+                            alt="Gallery Preview"
+                            className={styles.dropzonePreviewImg}
+                            loading="lazy"
+                            decoding="async"
+                          />
+                        ) : (
+                          <div className={styles.dropzoneEmpty}>
+                            <UploadCloud size={22} className={styles.uploadIcon} />
+                            <span className={styles.dropzonePrompt}>Click to Choose Photo</span>
+                          </div>
+                        )}
+                      </div>
+                      {isUploadingGal && (
+                        <div className={styles.uploadProgressBar} style={{ marginTop: "0.5rem" }}>
+                          <div
+                            className={styles.uploadProgressFill}
+                            style={{ width: `${galUploadProgress}%` }}
+                          />
                         </div>
                       )}
-                    </div>
+                    </>
                   ) : (
                     <input
                       type="url"

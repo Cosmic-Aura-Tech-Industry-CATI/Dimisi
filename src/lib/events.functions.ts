@@ -27,8 +27,10 @@ import {
   createGalleryItemApi,
   updateEventApi,
   deleteEventApi,
+  cleanEventsAndGalleryCache,
   DEFAULT_EVENT_FALLBACK_IMAGE,
 } from "@/services/event.service";
+
 import {
   getAllEventCategoriesApi,
   createEventCategoryApi,
@@ -81,26 +83,6 @@ function buildDateRange(dateStr: string, startTime?: string | null, endTime?: st
     startDate: start.toISOString(),
     endDate: end.toISOString(),
   };
-}
-
-/**
- * Helper to convert Data URL (base64) to a Blob/File object.
- */
-function dataUrlToFile(dataUrl: string, filename: string): File | null {
-  try {
-    const arr = dataUrl.split(",");
-    const mimeMatch = arr[0].match(/:(.*?);/);
-    const mime = mimeMatch ? mimeMatch[1] : "image/jpeg";
-    const bstr = atob(arr[1]);
-    let n = bstr.length;
-    const u8arr = new Uint8Array(n);
-    while (n--) {
-      u8arr[n] = bstr.charCodeAt(n);
-    }
-    return new File([u8arr], filename, { type: mime });
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -170,7 +152,7 @@ export async function getPublicEvents(): Promise<PublicEventsPayload> {
   const activeCategoryNames = Array.from(dynamicCategories);
   const upcomingCount = safeEvents.filter((e) => e.status === "upcoming").length;
   const completedCount = safeEvents.filter((e) => e.status === "completed").length;
-  const featuredEvent = safeEvents.find((e) => e.is_featured) || safeEvents[0] || null;
+  const featuredEvent = safeEvents.find((e) => e.is_featured) || null;
   const attendeesServed = safeEvents.reduce((acc, ev) => acc + (Number(ev.attendees_count) || 0), 0);
 
   return {
@@ -178,9 +160,10 @@ export async function getPublicEvents(): Promise<PublicEventsPayload> {
     gallery: safeGallery,
     galleryItems: safeGallery,
     categories: ["All", ...activeCategoryNames],
-    categoryItems: safeCategories,
+    categoryItems: categoriesRes,
     featuredEvent,
     stats: {
+
       totalEvents: safeEvents.length,
       upcomingCount,
       upcomingEvents: upcomingCount,
@@ -303,6 +286,7 @@ export async function saveEventCategoryFn({
         displayOrder: data.order_index,
         isActive: data.status === "active",
       });
+      cleanEventsAndGalleryCache();
       return { success: true, category: updated };
     } else {
       const created = await createEventCategoryApi({
@@ -312,6 +296,7 @@ export async function saveEventCategoryFn({
         displayOrder: data.order_index,
         isActive: data.status === "active",
       });
+      cleanEventsAndGalleryCache();
       return { success: true, category: created };
     }
   } catch (err) {
@@ -338,6 +323,7 @@ export async function deleteEventCategoryFn({
   try {
     if (isMongoId(data.id)) {
       await deleteEventCategoryApi(data.id);
+      cleanEventsAndGalleryCache();
       return { success: true };
     } else {
       return { success: false, error: "Invalid Category ObjectId." };
@@ -398,13 +384,21 @@ export async function saveEventFn({
     const coverImage =
       rawCover.startsWith("http://") || rawCover.startsWith("https://") || rawCover.startsWith("/")
         ? (rawCover.length <= 500 ? rawCover : DEFAULT_EVENT_FALLBACK_IMAGE)
-        : DEFAULT_EVENT_FALLBACK_IMAGE;
+        : "";
+    const coverImagePublicId =
+      data.cover_image_public_id?.trim() || (coverImage ? `dimisi-ops/events/event-cover-${Date.now().toString(36)}` : "");
 
-    const safeImages = Array.isArray(data.images)
-      ? data.images
-          .filter((img) => img && typeof img === "string" && (img.startsWith("http://") || img.startsWith("https://") || img.startsWith("/")) && img.length <= 500)
-          .map((url, idx) => ({ url, publicId: `img_${Date.now().toString(36)}_${idx}` }))
-      : [];
+    // Prioritize Cloudinary image objects { url, publicId }
+    const safeImages: Array<{ url: string; publicId: string }> =
+      Array.isArray(data.image_objects) && data.image_objects.length > 0
+        ? data.image_objects
+            .filter((img) => img && typeof img.url === "string" && img.url.trim() && typeof img.publicId === "string" && img.publicId.trim())
+            .map((img) => ({ url: img.url.trim(), publicId: img.publicId.trim() }))
+        : Array.isArray(data.images)
+          ? data.images
+              .filter((img) => img && typeof img === "string" && (img.startsWith("http://") || img.startsWith("https://") || img.startsWith("/")) && img.length <= 500)
+              .map((url, idx) => ({ url: url.trim(), publicId: `dimisi-ops/events/event-img-${Date.now().toString(36)}-${idx}` }))
+          : [];
 
     const payload = {
       title: safeTitle,
@@ -419,7 +413,8 @@ export async function saveEventFn({
       mode: (data.mode || "offline") as "offline" | "online" | "hybrid",
       status: (data.status === "ongoing" ? "live" : data.status || "upcoming") as "upcoming" | "live" | "completed",
       description: safeDescription,
-      coverImage,
+      coverImage: coverImage || "",
+      coverImagePublicId: coverImage ? coverImagePublicId : "",
       images: safeImages,
       highlights: Array.isArray(data.highlights) ? data.highlights : [],
       attendeesCount: Number(data.attendees_count) || 0,
@@ -577,6 +572,7 @@ export async function saveGalleryItemFn({
       rawImage.startsWith("http://") || rawImage.startsWith("https://") || rawImage.startsWith("/")
         ? (rawImage.length <= 500 ? rawImage : DEFAULT_EVENT_FALLBACK_IMAGE)
         : DEFAULT_EVENT_FALLBACK_IMAGE;
+    const coverImagePublicId = data.public_id?.trim() || `dimisi-ops/events/event-img-${Date.now().toString(36)}`;
 
     const payload = {
       title: safeTitle,
@@ -592,6 +588,7 @@ export async function saveGalleryItemFn({
       status: "completed" as const,
       description: safeDescription,
       coverImage,
+      coverImagePublicId,
       images: [],
       highlights: [],
       attendeesCount: 0,

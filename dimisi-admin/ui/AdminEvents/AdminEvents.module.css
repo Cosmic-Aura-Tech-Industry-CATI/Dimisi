@@ -586,6 +586,35 @@
   color: #f59e0b;
 }
 
+.starToggleBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.35);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+
+.starToggleBtn:hover {
+  background: rgba(255, 179, 0, 0.15);
+  border-color: rgba(255, 179, 0, 0.4);
+  color: var(--dm-amber, #ffb300);
+  transform: scale(1.08);
+}
+
+.starToggleBtnActive {
+  background: rgba(255, 179, 0, 0.2) !important;
+  border-color: rgba(255, 179, 0, 0.6) !important;
+  color: var(--dm-amber, #ffb300) !important;
+  box-shadow: 0 0 10px rgba(255, 179, 0, 0.35);
+}
+
 .categoryBadge {
   display: inline-flex;
   align-items: center;

@@ -3,7 +3,7 @@
  * Handles Event and Gallery listing, creation, updates, and deletion
  * against the Express backend API (/api/v1/admin-panel/events/*).
  */
-import { apiRequest, ApiError, clearApiCache } from "./apiClient";
+import { apiRequest, ApiError, clearApiCache, clearRefreshQueue } from "./apiClient";
 import type { CompanyEvent, EventGalleryItem, EventCategoryItem, EventStatus } from "@/lib/events.shared";
 import {
   getAllEventCategoriesApi,
@@ -141,7 +141,9 @@ export function normalizeBackendEvent(
     description: doc.description || "",
     full_description: doc.description || "",
     cover_image: coverImage,
+    cover_image_public_id: doc.coverImagePublicId || undefined,
     images: Array.isArray(doc.images) ? doc.images.map((img) => img.url).filter(Boolean) : [],
+    image_objects: Array.isArray(doc.images) ? doc.images : [],
     highlights: Array.isArray(doc.highlights) ? doc.highlights : [],
     attendees_count: typeof doc.attendeesCount === "number" ? doc.attendeesCount : 0,
     registration_url: doc.registrationUrl || "",
@@ -174,11 +176,13 @@ export function normalizeBackendGalleryItem(
   const resolvedCategory = resolveEventCategoryName(doc.category, categories);
   const rawCover = doc.coverImage?.trim() || (doc.images?.[0]?.url) || "";
   const imageUrl = rawCover.length > 0 ? rawCover : DEFAULT_EVENT_FALLBACK_IMAGE;
+  const publicId = doc.coverImagePublicId || doc.images?.[0]?.publicId || undefined;
 
   return {
     id: String(doc._id),
     title: doc.title || "Gallery Photo",
     image_url: imageUrl,
+    public_id: publicId,
     caption: doc.description || "",
     category: resolvedCategory,
     aspect_ratio: "normal",
@@ -246,84 +250,65 @@ async function fetchAdminEventsForCategories(
   return Array.from(docMap.values());
 }
 
-async function fetchPublicEventsForCategories(
-  categoryIds: string[],
-  type: "event" | "gallery",
-): Promise<BackendEventDoc[]> {
-  const docMap = new Map<string, BackendEventDoc>();
-  const validIds = Array.from(new Set(categoryIds.filter(isMongoId)));
+/**
+ * Cleaner function: Flushes low-level in-memory API cache, cancels dangling
+ * in-flight requests, and broadcasts an update event so active TanStack
+ * queries immediately invalidate and fetch fresh event/gallery data.
+ */
+export function cleanEventsAndGalleryCache(): void {
+  clearApiCache("/api/v1/admin-panel/events");
+  clearApiCache("/api/v1/admin-panel/event-category");
+  clearApiCache("/api/v2/admin-panel/events");
+  clearRefreshQueue();
 
-  // 1. Direct query by type
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(new CustomEvent("dimisi:events-updated"));
+    } catch {}
+  }
+}
+
+/**
+ * Direct visitor query for active events or gallery items.
+ * Clean, lightweight single request that maps directly to MongoDB active documents.
+ */
+async function fetchPublicEventsDirect(
+  type: "event" | "gallery",
+  categoryId?: string,
+): Promise<BackendEventDoc[]> {
   try {
-    const res = await apiRequest<BackendEventListResponse>(
-      `/api/v1/admin-panel/events/active?type=${type}`,
-      { method: "GET", cacheTtlMs: 15000, timeoutMs: 30000 },
-    );
-    const list = extractEventsList(res);
-    for (const doc of list) {
-      if (doc && doc._id && doc.type === type) {
-        docMap.set(String(doc._id), doc);
-      }
+    let url = `/api/v1/admin-panel/events/active?type=${type}`;
+    if (categoryId && categoryId.toLowerCase() !== "all" && isMongoId(categoryId)) {
+      url += `&category=${encodeURIComponent(categoryId)}`;
     }
+    const res = await apiRequest<BackendEventListResponse>(url, {
+      method: "GET",
+      cacheTtlMs: 2000,
+      timeoutMs: 20000,
+    });
+    const list = extractEventsList(res);
+    return list.filter((doc) => doc && doc._id && doc.type === type);
   } catch (err) {
     console.warn(`Direct fetchPublicEvents for type=${type} failed:`, err);
+    return [];
   }
-
-  // 2. Query per specific category if provided
-  if (validIds.length > 0) {
-    const promises = validIds.map((catId) =>
-      apiRequest<BackendEventListResponse>(
-        `/api/v1/admin-panel/events/active?category=${encodeURIComponent(catId)}&type=${type}`,
-        { method: "GET", cacheTtlMs: 15000, timeoutMs: 30000 },
-      )
-        .then((res) => extractEventsList(res))
-        .catch(() => [] as BackendEventDoc[]),
-    );
-    const results = await Promise.all(promises);
-    for (const list of results) {
-      for (const doc of list) {
-        if (doc && doc._id && doc.type === type) {
-          docMap.set(String(doc._id), doc);
-        }
-      }
-    }
-  }
-
-  return Array.from(docMap.values());
 }
 
 /**
  * 1. GET PUBLIC ACTIVE EVENTS (FOR PUBLIC WEBSITE)
- * Endpoint: GET /api/v1/admin-panel/events/active?category=:id&type=event
+ * Endpoint: GET /api/v1/admin-panel/events/active?type=event
  */
 export async function getPublicActiveEventsApi(
   categoryId?: string,
   categories?: EventCategoryItem[],
 ): Promise<CompanyEvent[]> {
   try {
-    let allCats = categories;
-    if (!allCats || allCats.length === 0) {
-      try {
-        allCats = await getAllEventCategoriesApi();
-      } catch {
-        allCats = [];
-      }
+    let targetCatId = categoryId;
+    if (targetCatId && targetCatId.toLowerCase() !== "all" && !isMongoId(targetCatId)) {
+      targetCatId = await resolveEventCategoryIdForPayload(targetCatId, categories);
     }
-
-    if (categoryId && categoryId.toLowerCase() !== "all") {
-      const resolvedId = await resolveEventCategoryIdForPayload(categoryId, allCats);
-      if (isMongoId(resolvedId)) {
-        const rawDocs = await fetchPublicEventsForCategories([resolvedId], "event");
-        return rawDocs.map((doc) => normalizeBackendEvent(doc, allCats));
-      }
-    }
-
-    const catIds = [
-      ...(allCats || []).map((c) => c.id),
-      ...getStoredCategoryIds(),
-    ];
-    const rawDocs = await fetchPublicEventsForCategories(catIds, "event");
-    return rawDocs.map((doc) => normalizeBackendEvent(doc, allCats));
+    const rawDocs = await fetchPublicEventsDirect("event", targetCatId);
+    return rawDocs.map((doc) => normalizeBackendEvent(doc, categories));
   } catch {
     return [];
   }
@@ -331,36 +316,19 @@ export async function getPublicActiveEventsApi(
 
 /**
  * 2. GET PUBLIC ACTIVE GALLERY (FOR PUBLIC WEBSITE)
- * Endpoint: GET /api/v1/admin-panel/events/active?category=:id&type=gallery
+ * Endpoint: GET /api/v1/admin-panel/events/active?type=gallery
  */
 export async function getPublicActiveGalleryApi(
   categoryId?: string,
   categories?: EventCategoryItem[],
 ): Promise<EventGalleryItem[]> {
   try {
-    let allCats = categories;
-    if (!allCats || allCats.length === 0) {
-      try {
-        allCats = await getAllEventCategoriesApi();
-      } catch {
-        allCats = [];
-      }
+    let targetCatId = categoryId;
+    if (targetCatId && targetCatId.toLowerCase() !== "all" && !isMongoId(targetCatId)) {
+      targetCatId = await resolveEventCategoryIdForPayload(targetCatId, categories);
     }
-
-    if (categoryId && categoryId.toLowerCase() !== "all") {
-      const resolvedId = await resolveEventCategoryIdForPayload(categoryId, allCats);
-      if (isMongoId(resolvedId)) {
-        const rawDocs = await fetchPublicEventsForCategories([resolvedId], "gallery");
-        return rawDocs.map((doc) => normalizeBackendGalleryItem(doc, allCats));
-      }
-    }
-
-    const catIds = [
-      ...(allCats || []).map((c) => c.id),
-      ...getStoredCategoryIds(),
-    ];
-    const rawDocs = await fetchPublicEventsForCategories(catIds, "gallery");
-    return rawDocs.map((doc) => normalizeBackendGalleryItem(doc, allCats));
+    const rawDocs = await fetchPublicEventsDirect("gallery", targetCatId);
+    return rawDocs.map((doc) => normalizeBackendGalleryItem(doc, categories));
   } catch {
     return [];
   }
@@ -476,82 +444,29 @@ export async function getEventByIdApi(
  * 6. CREATE EVENT (JSON OR MULTIPART)
  * Endpoint: POST /api/v1/admin-panel/events/create
  */
+/**
+ * 6. CREATE EVENT (v2 Clean JSON Payload)
+ * Endpoint: POST /api/v2/admin-panel/events/create
+ */
 export async function createEventApi(
-  payload: FormData | Record<string, any>,
+  payload: Record<string, any>,
   categories?: EventCategoryItem[],
 ): Promise<CompanyEvent> {
-  const isFormData = typeof FormData !== "undefined" && payload instanceof FormData;
-
   try {
     const res = await apiRequest<BackendEventSingleResponse>(
-      "/api/v1/admin-panel/events/create",
+      "/api/v2/admin-panel/events/create",
       {
         method: "POST",
-        headers: isFormData ? undefined : { "Content-Type": "application/json" },
-        body: isFormData ? payload : JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
         timeoutMs: 30000,
       },
     );
 
-    clearApiCache("/api/v1/admin-panel/events");
-    clearApiCache("/api/v1/admin-panel/event-category");
+    cleanEventsAndGalleryCache();
 
     if (res?.data?.event) {
-      let createdDoc = res.data.event;
-      if (!isFormData && typeof payload === "object" && payload !== null) {
-        const obj = payload as Record<string, any>;
-        const rawCover = obj.coverImage || obj.cover_image;
-        const validCover =
-          rawCover && typeof rawCover === "string" && (rawCover.startsWith("http://") || rawCover.startsWith("https://") || rawCover.startsWith("/")) && rawCover.length <= 500
-            ? rawCover
-            : DEFAULT_EVENT_FALLBACK_IMAGE;
-        const imagesList = Array.isArray(obj.images)
-          ? obj.images
-              .map((img: any, idx: number) => {
-                if (typeof img === "string" && img.trim()) {
-                  const url = img.trim();
-                  if ((url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) && url.length <= 500) {
-                    return { url, publicId: `img_${Date.now().toString(36)}_${idx}` };
-                  }
-                } else if (img && typeof img === "object" && typeof img.url === "string" && img.url.trim()) {
-                  const url = img.url.trim();
-                  if ((url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) && url.length <= 500) {
-                    return {
-                      url,
-                      publicId: img.publicId?.trim() || `img_${Date.now().toString(36)}_${idx}`,
-                    };
-                  }
-                }
-                return null;
-              })
-              .filter(Boolean)
-          : [];
-        if (!createdDoc.coverImage || createdDoc.coverImage.trim() === "") {
-          try {
-            const patchRes = await apiRequest<BackendEventSingleResponse>(
-              `/api/v1/admin-panel/events/${encodeURIComponent(createdDoc._id)}/update`,
-              {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  existingCoverImage: validCover,
-                  existingImages: imagesList,
-                }),
-                timeoutMs: 30000,
-              },
-            );
-            if (patchRes?.data?.event) {
-              createdDoc = patchRes.data.event;
-            } else {
-              createdDoc.coverImage = validCover;
-            }
-          } catch (patchErr) {
-            console.warn("Could not patch cover image on newly created event:", patchErr);
-            createdDoc.coverImage = validCover;
-          }
-        }
-      }
-      return normalizeBackendEvent(createdDoc, categories);
+      return normalizeBackendEvent(res.data.event, categories);
     }
     throw new Error(res?.message || "Failed to create event.");
   } catch (err) {
@@ -561,85 +476,28 @@ export async function createEventApi(
 }
 
 /**
- * 7. CREATE GALLERY ITEM (JSON OR MULTIPART)
- * Endpoint: POST /api/v1/admin-panel/events/create with type="gallery"
+ * 7. CREATE GALLERY ITEM (v2 Clean JSON Payload)
+ * Endpoint: POST /api/v2/admin-panel/events/create with type="gallery"
  */
 export async function createGalleryItemApi(
-  payload: FormData | Record<string, any>,
+  payload: Record<string, any>,
   categories?: EventCategoryItem[],
 ): Promise<EventGalleryItem> {
-  const isFormData = typeof FormData !== "undefined" && payload instanceof FormData;
-
   try {
     const res = await apiRequest<BackendEventSingleResponse>(
-      "/api/v1/admin-panel/events/create",
+      "/api/v2/admin-panel/events/create",
       {
         method: "POST",
-        headers: isFormData ? undefined : { "Content-Type": "application/json" },
-        body: isFormData ? payload : JSON.stringify(payload),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...payload, type: "gallery" }),
         timeoutMs: 30000,
       },
     );
 
-    clearApiCache("/api/v1/admin-panel/events");
-    clearApiCache("/api/v1/admin-panel/event-category");
+    cleanEventsAndGalleryCache();
 
     if (res?.data?.event) {
-      let createdDoc = res.data.event;
-      if (!isFormData && typeof payload === "object" && payload !== null) {
-        const obj = payload as Record<string, any>;
-        const rawCover = obj.coverImage || obj.cover_image || obj.image_url;
-        const validCover =
-          rawCover && typeof rawCover === "string" && (rawCover.startsWith("http://") || rawCover.startsWith("https://") || rawCover.startsWith("/")) && rawCover.length <= 500
-            ? rawCover
-            : DEFAULT_EVENT_FALLBACK_IMAGE;
-        const imagesList = Array.isArray(obj.images)
-          ? obj.images
-              .map((img: any, idx: number) => {
-                if (typeof img === "string" && img.trim()) {
-                  const url = img.trim();
-                  if ((url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) && url.length <= 500) {
-                    return { url, publicId: `img_${Date.now().toString(36)}_${idx}` };
-                  }
-                } else if (img && typeof img === "object" && typeof img.url === "string" && img.url.trim()) {
-                  const url = img.url.trim();
-                  if ((url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) && url.length <= 500) {
-                    return {
-                      url,
-                      publicId: img.publicId?.trim() || `img_${Date.now().toString(36)}_${idx}`,
-                    };
-                  }
-                }
-                return null;
-              })
-              .filter(Boolean)
-          : [];
-        if (!createdDoc.coverImage || createdDoc.coverImage.trim() === "") {
-          try {
-            const patchRes = await apiRequest<BackendEventSingleResponse>(
-              `/api/v1/admin-panel/events/${encodeURIComponent(createdDoc._id)}/update`,
-              {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  existingCoverImage: validCover,
-                  existingImages: imagesList,
-                }),
-                timeoutMs: 30000,
-              },
-            );
-            if (patchRes?.data?.event) {
-              createdDoc = patchRes.data.event;
-            } else {
-              createdDoc.coverImage = validCover;
-            }
-          } catch (patchErr) {
-            console.warn("Could not patch cover image on newly created gallery item:", patchErr);
-            createdDoc.coverImage = validCover;
-          }
-        }
-      }
-      return normalizeBackendGalleryItem(createdDoc, categories);
+      return normalizeBackendGalleryItem(res.data.event, categories);
     }
     throw new Error(res?.message || "Failed to create gallery item.");
   } catch (err) {
@@ -649,70 +507,28 @@ export async function createGalleryItemApi(
 }
 
 /**
- * 8. UPDATE EVENT (JSON OR MULTIPART)
- * Endpoint: PATCH /api/v1/admin-panel/events/:id/update
+ * 8. UPDATE EVENT (v2 Clean JSON Payload)
+ * Endpoint: PATCH /api/v2/admin-panel/events/:id/update
  */
 export async function updateEventApi(
   id: string,
-  payload: FormData | Record<string, any>,
+  payload: Record<string, any>,
   categories?: EventCategoryItem[],
 ): Promise<CompanyEvent> {
   if (!id) throw new Error("Event ID is required for update.");
-  const isFormData = typeof FormData !== "undefined" && payload instanceof FormData;
-
-  let updatePayload: FormData | string = isFormData ? payload : "";
-  if (!isFormData && typeof payload === "object" && payload !== null) {
-    const obj = payload as Record<string, any>;
-    const rawExistingImages = obj.existingImages ?? obj.images;
-    const sanitizedImages = Array.isArray(rawExistingImages)
-      ? rawExistingImages
-          .map((img: any, idx: number) => {
-            if (typeof img === "string" && img.trim()) {
-              const url = img.trim();
-              if ((url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) && url.length <= 500) {
-                return { url, publicId: `img_${Date.now().toString(36)}_${idx}` };
-              }
-            } else if (img && typeof img === "object" && typeof img.url === "string" && img.url.trim()) {
-              const url = img.url.trim();
-              if ((url.startsWith("http://") || url.startsWith("https://") || url.startsWith("/")) && url.length <= 500) {
-                return {
-                  url,
-                  publicId: img.publicId?.trim() || `img_${Date.now().toString(36)}_${idx}`,
-                };
-              }
-            }
-            return null;
-          })
-          .filter(Boolean)
-      : undefined;
-
-    const rawCover = obj.existingCoverImage ?? obj.coverImage ?? obj.cover_image;
-    const sanitizedCover =
-      rawCover && typeof rawCover === "string" && (rawCover.startsWith("http://") || rawCover.startsWith("https://") || rawCover.startsWith("/")) && rawCover.length <= 500
-        ? rawCover
-        : undefined;
-
-    const mergedObj = {
-      ...obj,
-      ...(sanitizedCover ? { existingCoverImage: sanitizedCover, coverImage: sanitizedCover } : {}),
-      ...(sanitizedImages !== undefined ? { existingImages: sanitizedImages, images: sanitizedImages } : {}),
-    };
-    updatePayload = JSON.stringify(mergedObj);
-  }
 
   try {
     const res = await apiRequest<BackendEventSingleResponse>(
-      `/api/v1/admin-panel/events/${encodeURIComponent(id)}/update`,
+      `/api/v2/admin-panel/events/${encodeURIComponent(id)}/update`,
       {
         method: "PATCH",
-        headers: isFormData ? undefined : { "Content-Type": "application/json" },
-        body: updatePayload,
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
         timeoutMs: 30000,
       },
     );
 
-    clearApiCache("/api/v1/admin-panel/events");
-    clearApiCache("/api/v1/admin-panel/event-category");
+    cleanEventsAndGalleryCache();
 
     if (res?.data?.event) {
       return normalizeBackendEvent(res.data.event, categories);
@@ -720,6 +536,40 @@ export async function updateEventApi(
     throw new Error(res?.message || "Failed to update event.");
   } catch (err) {
     console.error(`Failed to update event ${id}:`, err);
+    throw err;
+  }
+}
+
+/**
+ * 8b. TOGGLE EVENT FEATURED SPOTLIGHT STATUS
+ * Endpoint: PATCH /api/v2/admin-panel/events/:id/update
+ */
+export async function toggleEventFeaturedApi(
+  id: string,
+  isFeatured: boolean,
+  categories?: EventCategoryItem[],
+): Promise<CompanyEvent> {
+  if (!id) throw new Error("Event ID is required to toggle featured status.");
+
+  try {
+    const res = await apiRequest<BackendEventSingleResponse>(
+      `/api/v2/admin-panel/events/${encodeURIComponent(id)}/update`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ isFeatured }),
+        timeoutMs: 15000,
+      },
+    );
+
+    cleanEventsAndGalleryCache();
+
+    if (res?.data?.event) {
+      return normalizeBackendEvent(res.data.event, categories);
+    }
+    throw new Error(res?.message || "Failed to toggle featured status.");
+  } catch (err) {
+    console.error(`Failed to toggle featured status for event ${id}:`, err);
     throw err;
   }
 }
@@ -739,8 +589,7 @@ export async function deleteEventApi(id: string): Promise<boolean> {
       },
     );
 
-    clearApiCache("/api/v1/admin-panel/events");
-    clearApiCache("/api/v1/admin-panel/event-category");
+    cleanEventsAndGalleryCache();
 
     return res?.status === "success";
   } catch (err) {

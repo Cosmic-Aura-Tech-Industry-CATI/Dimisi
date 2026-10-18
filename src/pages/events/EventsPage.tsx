@@ -1,7 +1,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+
   Calendar,
   MapPin,
   Clock,
@@ -33,15 +34,28 @@ import pageStyles from "@/styles/page.module.css";
 import styles from "./EventsPage.module.css";
 
 export function EventsPage() {
+  const queryClient = useQueryClient();
+
   // Real-time dynamic query for events and gallery
   const { data: payload, isLoading } = useQuery({
     queryKey: ["publicEvents"],
     queryFn: () => getPublicEvents(),
+    staleTime: 5000,
   });
 
+  // Listen to cleaner function event for immediate re-fetch
+  useEffect(() => {
+    const handleEventsUpdated = () => {
+      void queryClient.invalidateQueries({ queryKey: ["publicEvents"] });
+    };
+    window.addEventListener("dimisi:events-updated", handleEventsUpdated);
+    return () => window.removeEventListener("dimisi:events-updated", handleEventsUpdated);
+  }, [queryClient]);
+
   const events = payload?.events || [];
-  const featured = payload?.featuredEvent || events[0] || null;
+  const featured = payload?.featuredEvent || null;
   const galleryItems = payload?.galleryItems || (payload as any)?.gallery || [];
+
 
   const stats = useMemo(() => {
     const totalEvents = payload?.stats?.totalEvents ?? events.length;
@@ -194,11 +208,13 @@ export function EventsPage() {
           {/* Quick Nav Anchors */}
           <Reveal variant="up" delay={200}>
             <div className={styles.heroActions}>
-              <a href="#featured-event" className={styles.anchorPrimary}>
-                <span>Featured Showcase</span>
-                <ChevronRight className={styles.btnIcon} />
-              </a>
-              <a href="#events-grid" className={styles.anchorSecondary}>
+              {featured && (
+                <a href="#featured-event" className={styles.anchorPrimary}>
+                  <span>Featured Showcase</span>
+                  <ChevronRight className={styles.btnIcon} />
+                </a>
+              )}
+              <a href="#events-grid" className={featured ? styles.anchorSecondary : styles.anchorPrimary}>
                 <Calendar className={styles.btnIcon} />
                 <span>Browse All Events</span>
               </a>

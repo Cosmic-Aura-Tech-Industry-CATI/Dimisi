@@ -14,14 +14,16 @@
 
 import { apiRequest } from "./apiClient";
 
-export type UploadModel = "blog" | "casestudy" | "profile" | "task";
+export type UploadModel = "blog" | "casestudy" | "profile" | "task" | "event";
 
 export type UploadTarget =
   | { model: "blog"; field: "coverImage" }
   | { model: "casestudy"; field: "coverImage" }
   | { model: "casestudy"; field: "galleryImages" }
   | { model: "profile"; field: "avatar" }
-  | { model: "task"; field: "proof" };
+  | { model: "task"; field: "proof" }
+  | { model: "event"; field: "coverImage" }
+  | { model: "event"; field: "images" };
 
 export interface UploadRuleConstraint {
   maxSize: number;
@@ -48,6 +50,14 @@ export const UPLOAD_CONSTRAINTS: Record<string, UploadRuleConstraint> = {
   "task.proof": {
     maxSize: 10 * 1024 * 1024,
     allowedFormats: ["jpg", "jpeg", "png", "webp", "pdf", "zip", "doc", "docx"],
+  },
+  "event.coverImage": {
+    maxSize: 5 * 1024 * 1024,
+    allowedFormats: ["jpg", "jpeg", "png", "webp", "avif"],
+  },
+  "event.images": {
+    maxSize: 3 * 1024 * 1024,
+    allowedFormats: ["jpg", "jpeg", "png", "webp"],
   },
 };
 
