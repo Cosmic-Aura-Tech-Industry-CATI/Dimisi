@@ -415,11 +415,31 @@
   -webkit-overflow-scrolling: touch;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   max-width: 100%;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 122, 0, 0.35) rgba(12, 14, 22, 0.6);
+}
+
+.tableCard::-webkit-scrollbar {
+  height: 6px;
+}
+
+.tableCard::-webkit-scrollbar-track {
+  background: rgba(12, 14, 22, 0.6);
+  border-radius: 4px;
+}
+
+.tableCard::-webkit-scrollbar-thumb {
+  background: rgba(255, 122, 0, 0.35);
+  border-radius: 4px;
+}
+
+.tableCard::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 122, 0, 0.65);
 }
 
 .table {
   width: 100%;
-  min-width: 1180px;
+  min-width: 980px;
   border-collapse: collapse;
   text-align: left;
   font-size: 0.86rem;
@@ -488,6 +508,18 @@
   border-radius: 6px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(0, 0, 0, 0.4);
+}
+
+.thumbPlaceholder {
+  width: 60px;
+  height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .titleCol {
@@ -613,21 +645,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.4rem;
+  gap: 0.45rem;
 }
 
-.toggleStatusBtn {
+.iconStatusBtn {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.3rem 0.65rem;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
-  font-family: var(--font-mono, monospace);
-  font-size: 0.72rem;
-  font-weight: 700;
   cursor: pointer;
   transition: all 0.2s ease;
-  border: none;
+  border: 1px solid transparent;
+  padding: 0;
+  flex-shrink: 0;
 }
 
 .statusPublished {
@@ -637,17 +669,18 @@
 }
 
 .statusPublished:hover {
-  background: rgba(39, 201, 63, 0.25);
+  background: rgba(39, 201, 63, 0.28);
+  box-shadow: 0 0 10px rgba(39, 201, 63, 0.3);
 }
 
 .statusDraft {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.12) !important;
-  color: rgba(255, 255, 255, 0.6);
+  color: rgba(255, 255, 255, 0.45);
 }
 
 .statusDraft:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
   color: #ffffff;
 }
 
@@ -655,23 +688,26 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
   transition: all 0.2s ease;
+  padding: 0;
+  flex-shrink: 0;
 }
 
 .starActive {
-  background: rgba(255, 170, 0, 0.15);
-  border-color: rgba(255, 170, 0, 0.4);
+  background: rgba(255, 170, 0, 0.18);
+  border-color: rgba(255, 170, 0, 0.45);
   color: #ffaa00;
+  box-shadow: 0 0 10px rgba(255, 170, 0, 0.25);
 }
 
 .starActive:hover {
-  background: rgba(255, 170, 0, 0.25);
+  background: rgba(255, 170, 0, 0.3);
 }
 
 .starInactive {
@@ -679,8 +715,9 @@
 }
 
 .starInactive:hover {
-  color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.08);
+  color: #ffaa00;
+  background: rgba(255, 170, 0, 0.08);
+  border-color: rgba(255, 170, 0, 0.25);
 }
 
 .rowActions {
@@ -690,31 +727,36 @@
   gap: 0.4rem;
 }
 
+.actionIconBtn,
 .editBtn,
 .viewLiveBtn,
 .delBtn {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.35rem 0.65rem;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
   border-radius: 6px;
-  font-size: 0.76rem;
-  font-weight: 600;
   cursor: pointer;
   text-decoration: none;
   transition: all 0.2s ease;
   border: 1px solid transparent;
+  padding: 0;
+  flex-shrink: 0;
 }
 
+.actionIconBtn,
 .editBtn {
   background: rgba(255, 122, 0, 0.12);
   border-color: rgba(255, 122, 0, 0.25);
   color: var(--dm-amber, #ffb300);
 }
 
+.actionIconBtn:hover,
 .editBtn:hover {
-  background: rgba(255, 122, 0, 0.22);
-  border-color: rgba(255, 122, 0, 0.45);
+  background: rgba(255, 122, 0, 0.24);
+  border-color: rgba(255, 122, 0, 0.5);
+  box-shadow: 0 0 8px rgba(255, 122, 0, 0.25);
 }
 
 .viewLiveBtn {
@@ -2614,5 +2656,99 @@
   opacity: 0.6;
   cursor: not-allowed;
   transform: none;
+}
+
+.spinIcon {
+  animation: spinSlow 1s linear infinite;
+}
+
+@keyframes spinSlow {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.socialPreviewBox {
+  margin-top: 1.25rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.socialPreviewBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--font-mono, monospace);
+  font-size: 0.72rem;
+  color: var(--dm-amber, #ffb300);
+  margin-bottom: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.socialCardMockup {
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #0d0f17;
+  max-width: 520px;
+}
+
+.socialCardMockupImg {
+  width: 100%;
+  height: 220px;
+  object-fit: cover;
+  display: block;
+}
+
+.socialCardMockupEmpty {
+  width: 100%;
+  height: 140px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  color: rgba(255, 255, 255, 0.35);
+  font-size: 0.78rem;
+}
+
+.socialCardMockupContent {
+  padding: 0.9rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.socialCardDomain {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.68rem;
+  color: rgba(255, 255, 255, 0.4);
+  text-transform: uppercase;
+}
+
+.socialCardTitle {
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: #ffffff;
+  margin: 0;
+  line-height: 1.35;
+}
+
+.socialCardDesc {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 

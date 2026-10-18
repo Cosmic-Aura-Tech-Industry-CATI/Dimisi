@@ -19,6 +19,7 @@ export interface BlogPostItem {
   cover_alt?: string | undefined;
   cover_credit?: string | undefined;
   author_name: string;
+  author_id?: string | undefined;
   author_role?: string | undefined;
   author_avatar?: string | undefined;
   reading_time: string; // e.g. "7 min read"
@@ -47,6 +48,7 @@ export interface BlogPostInput {
   cover_alt?: string | undefined;
   cover_credit?: string | undefined;
   author_name?: string | undefined;
+  author_id?: string | undefined;
   author_role?: string | undefined;
   author_avatar?: string | undefined;
   reading_time?: string | undefined;
@@ -159,10 +161,19 @@ export function validateBlogPostInput(input: Partial<BlogPostInput>): {
   const content = input.content?.trim() || "";
   const coverImage = input.cover_image?.trim() || "";
 
-  if (title.length < 3) {
+  const ogImage = input.og_image?.trim() || "";
+
+  if (title.length < 5) {
     return {
       valid: false,
-      error: "Blog post title must be at least 3 characters long.",
+      error: "Blog post title must be at least 5 characters long.",
+      field: "title",
+    };
+  }
+  if (title.length > 150) {
+    return {
+      valid: false,
+      error: "Blog post title cannot exceed 150 characters.",
       field: "title",
     };
   }
@@ -176,6 +187,13 @@ export function validateBlogPostInput(input: Partial<BlogPostInput>): {
       field: "excerpt",
     };
   }
+  if (excerpt.length > 300) {
+    return {
+      valid: false,
+      error: "Excerpt cannot exceed 300 characters.",
+      field: "excerpt",
+    };
+  }
   if (content.length < 20) {
     return {
       valid: false,
@@ -184,15 +202,27 @@ export function validateBlogPostInput(input: Partial<BlogPostInput>): {
     };
   }
   if (
-    !coverImage ||
-    (!coverImage.startsWith("http://") &&
-      !coverImage.startsWith("https://") &&
-      !coverImage.startsWith("data:image/"))
+    coverImage.length > 0 &&
+    !coverImage.startsWith("http://") &&
+    !coverImage.startsWith("https://") &&
+    !coverImage.startsWith("data:image/") &&
+    !coverImage.startsWith("blob:")
   ) {
     return {
       valid: false,
-      error: "A valid cover image is required (URL or uploaded file).",
+      error: "Cover image must be a valid URL, local preview, or uploaded file.",
       field: "cover_image",
+    };
+  }
+  if (
+    ogImage.length > 0 &&
+    !ogImage.startsWith("http://") &&
+    !ogImage.startsWith("https://")
+  ) {
+    return {
+      valid: false,
+      error: "OG social sharing image must be a valid URL starting with http:// or https://",
+      field: "og_image",
     };
   }
 

@@ -68,8 +68,7 @@ export async function getPublicBlogData(): Promise<PublicBlogPayload> {
     }
 
     const activePosts = posts.filter((p) => p.status === "published");
-    const featuredPost =
-      activePosts.find((p) => p.is_featured) || activePosts[0] || null;
+    const featuredPost = activePosts.find((p) => p.is_featured) || null;
 
     const categoryNames = Array.from(
       new Set(categories.filter((c) => c.status === "active").map((c) => c.name)),
@@ -454,41 +453,55 @@ export async function toggleBlogActiveFn({
 }
 
 /**
- * 10. SET BLOG AS FEATURED SPOTLIGHT
+ * 10. TOGGLE BLOG AS FEATURED SPOTLIGHT
+ * - When targetFeatured is true (or undefined):
+ *   Calls setBlogFeaturedApi (PATCH /api/v1/admin-panel/blog/:id/featured) to feature this post
+ *   and unfeature all other posts.
+ * - When targetFeatured is false:
+ *   Calls updateBlogApi (PATCH /api/v2/admin-panel/blog/:id/update) with { is_featured: false }
+ *   to cleanly remove spotlight in MongoDB without any backend modification.
  */
-export async function setBlogFeaturedFn({
+export async function toggleBlogFeaturedFn({
   data,
 }: {
-  data: { id: string };
+  data: { id: string; targetFeatured?: boolean };
 }): Promise<{ success: boolean; post?: BlogPostItem; error?: string }> {
   try {
     if (!data?.id) return { success: false, error: "Post ID is required." };
 
     if (isMongoId(data.id)) {
-      try {
-        const updated = await setBlogFeaturedApi(data.id);
-        blogStore.savePost({
-          ...updated,
-        });
-        return { success: true, post: updated };
-      } catch (apiErr) {
-        console.warn("Set featured API failed, updating locally:", apiErr);
+      let updated: BlogPostItem;
+      if (data.targetFeatured === false) {
+        // Unfeature post via v2 update endpoint
+        updated = await updateBlogApi(data.id, { is_featured: false });
+      } else {
+        // Feature post via v1 featured endpoint (unfeatures others and marks this one)
+        updated = await setBlogFeaturedApi(data.id);
       }
+
+      blogStore.savePost({
+        ...updated,
+      });
+      return { success: true, post: updated };
     }
 
-    // Local fallback
+    // Local fallback for mock/offline posts
     const post = blogStore.getPostById(data.id);
     if (!post) return { success: false, error: "Post not found." };
-    const updated = blogStore.savePost({ ...post, is_featured: !post.is_featured });
+    const nextFeatured = data.targetFeatured !== undefined ? data.targetFeatured : !post.is_featured;
+    const updated = blogStore.savePost({ ...post, is_featured: nextFeatured });
     return { success: true, post: updated };
   } catch (err) {
-    console.error("setBlogFeaturedFn failed:", err);
+    console.error("toggleBlogFeaturedFn failed:", err);
     return {
       success: false,
-      error: err instanceof Error ? err.message : "Failed to set featured.",
+      error: err instanceof Error ? err.message : "Failed to toggle spotlight featured status.",
     };
   }
 }
+
+// Backward-compatible alias
+export const setBlogFeaturedFn = toggleBlogFeaturedFn;
 
 /**
  * 11. SAVE BLOG CONFIG (HERO & NOTICE BANNER)

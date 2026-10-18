@@ -20,6 +20,7 @@ import {
   Share2,
   Terminal,
   Zap,
+  Image as ImageIcon,
 } from "lucide-react";
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import { TiltCard } from "@/components/common/TiltCard/TiltCard";
@@ -50,12 +51,20 @@ export function BlogPage() {
 
   const allPosts = payload?.posts || [];
   const featuredPost = payload?.featured_post || null;
-  const categories = payload?.categories
-    ? ["All Posts", ...payload.categories.filter((c) => c.toLowerCase() !== "all posts")]
-    : ["All Posts"];
+  const categories = useMemo(() => {
+    const postCats = Array.from(
+      new Set(
+        allPosts
+          .map((p) => p.category?.trim())
+          .filter((c): c is string => Boolean(c) && c.toLowerCase() !== "all posts"),
+      ),
+    );
+    return ["All Posts", ...postCats];
+  }, [allPosts]);
+
   const stats = payload?.stats || {
     totalPosts: allPosts.length,
-    totalCategories: categories.length - 1,
+    totalCategories: Math.max(categories.length - 1, 0),
     avgReadingTime: "8 min",
     latestPublishedDate: new Date().toISOString(),
   };
@@ -195,12 +204,18 @@ export function BlogPage() {
             <Reveal variant="up">
               <div className={styles.featuredCard}>
                 <div className={styles.featuredImageCol}>
-                  <img
-                    src={featuredPost.cover_image}
-                    alt={featuredPost.title}
-                    className={styles.featuredCoverImg}
-                    loading="lazy"
-                  />
+                  {featuredPost.cover_image ? (
+                    <img
+                      src={featuredPost.cover_image}
+                      alt={featuredPost.title}
+                      className={styles.featuredCoverImg}
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className={styles.featuredCoverPlaceholder} title="No cover image">
+                      <ImageIcon size={48} />
+                    </div>
+                  )}
                   <div className={styles.featuredImageOverlay} />
                   <span className={styles.featuredBadge}>FEATURED INSIGHT</span>
                 </div>
@@ -224,11 +239,17 @@ export function BlogPage() {
 
                   <div className={styles.featuredAuthorFooter}>
                     <div className={styles.authorGroup}>
-                      <img
-                        src={featuredPost.author_avatar}
-                        alt={featuredPost.author_name}
-                        className={styles.authorAvatar}
-                      />
+                      {featuredPost.author_avatar ? (
+                        <img
+                          src={featuredPost.author_avatar}
+                          alt={featuredPost.author_name}
+                          className={styles.authorAvatar}
+                        />
+                      ) : (
+                        <div className={styles.authorAvatarFallback}>
+                          <User size={18} />
+                        </div>
+                      )}
                       <div>
                         <span className={styles.authorName}>{featuredPost.author_name}</span>
                         <span className={styles.authorRole}>{featuredPost.author_role}</span>
@@ -322,12 +343,18 @@ export function BlogPage() {
                   <TiltCard className={styles.postCard}>
                     {/* Post Cover Visual */}
                     <div className={styles.cardCoverWrapper}>
-                      <img
-                        src={post.cover_image}
-                        alt={post.title}
-                        className={styles.cardCoverImg}
-                        loading="lazy"
-                      />
+                      {post.cover_image ? (
+                        <img
+                          src={post.cover_image}
+                          alt={post.title}
+                          className={styles.cardCoverImg}
+                          loading="lazy"
+                        />
+                      ) : (
+                        <div className={styles.cardCoverPlaceholder} title="No cover image">
+                          <ImageIcon size={32} />
+                        </div>
+                      )}
                       <div className={styles.cardCoverGlow} />
                       <span className={styles.cardCategoryBadge}>{post.category}</span>
                     </div>
@@ -373,11 +400,17 @@ export function BlogPage() {
                       {/* Card Footer */}
                       <div className={styles.cardFooter}>
                         <div className={styles.cardAuthor}>
-                          <img
-                            src={post.author_avatar}
-                            alt={post.author_name}
-                            className={styles.cardAuthorAvatar}
-                          />
+                          {post.author_avatar ? (
+                            <img
+                              src={post.author_avatar}
+                              alt={post.author_name}
+                              className={styles.cardAuthorAvatar}
+                            />
+                          ) : (
+                            <div className={styles.cardAuthorAvatarFallback}>
+                              <User size={13} />
+                            </div>
+                          )}
                           <span className={styles.cardAuthorName}>{post.author_name}</span>
                         </div>
 

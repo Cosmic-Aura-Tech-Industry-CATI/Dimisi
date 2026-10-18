@@ -216,7 +216,7 @@ class MemoryBlogStore {
       .filter((p) => p.status === "published")
       .sort((a, b) => a.order_index - b.order_index);
 
-    const featured = list.find((p) => p.is_featured) || (list.length > 0 ? list[0] : null);
+    const featured = list.find((p) => p.is_featured) || null;
     const catNames = this.getCategoryNames();
     const catItems = this.getCategoryItems();
 
