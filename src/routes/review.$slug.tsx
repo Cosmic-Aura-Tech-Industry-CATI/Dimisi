@@ -17,8 +17,15 @@ export const Route = createFileRoute("/review/$slug")({
 
 function CampaignReviewRoute() {
   const { slug } = Route.useParams();
-  // Check if opened with ?scan=1 or hash
-  const isScan = typeof window !== "undefined" && new URLSearchParams(window.location.search).get("scan") === "1";
+  const search = typeof window !== "undefined" ? new URLSearchParams(window.location.search) : null;
+  const isScan = search?.get("scan") === "1" || search?.get("src") === "qr";
+  const initialCampaignId = search?.get("cid") || search?.get("campaignId") || undefined;
 
-  return <ReviewSubmitPage campaignSlug={slug} isScan={isScan} />;
+  return (
+    <ReviewSubmitPage
+      campaignSlug={slug}
+      initialCampaignId={initialCampaignId}
+      isScan={isScan}
+    />
+  );
 }

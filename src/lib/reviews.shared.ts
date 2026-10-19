@@ -113,18 +113,109 @@ export function isMongoId(id?: string | null): boolean {
   return /^[0-9a-fA-F]{24}$/.test(id.trim());
 }
 
-/** Extracts clean 24-char MongoDB ObjectId by stripping internal UI prefixes (e.g. rep-, rev-, camp-). */
-export function extractMongoId(id?: string | null): string {
-  if (!id || typeof id !== "string") return "";
-  const trimmed = id.trim();
+/**
+ * Generates a valid 24-character hexadecimal MongoDB ObjectId on the client.
+ * Conforms to standard 4-byte timestamp + 8-byte random pattern.
+ */
+export function generateMongoObjectId(): string {
+  const timestamp = Math.floor(Date.now() / 1000).toString(16).padStart(8, "0");
+  const randomBytes = Array.from({ length: 16 }, () =>
+    Math.floor(Math.random() * 16).toString(16)
+  ).join("");
+  return (timestamp + randomBytes).toLowerCase();
+}
+
+/**
+ * Cleanly extracts a 24-character hexadecimal MongoDB ObjectId from any target:
+ * 1. Query parameters (?cid=... or ?campaignId=...)
+ * 2. Exact 24-hex string
+ * 3. Composite slug format (e.g. "seo-growth-670f2b34a1b2c3d4e5f60718")
+ * 4. Prefixed strings (e.g. "camp-670f2b34...")
+ * Returns valid lowercase 24-hex ObjectId or null.
+ */
+export function extractMongoIdFromTarget(
+  target?: string | null,
+  searchParams?: URLSearchParams | null,
+): string | null {
+  if (searchParams) {
+    const qCid = searchParams.get("cid") || searchParams.get("campaignId");
+    if (qCid && isMongoId(qCid)) return qCid.trim().toLowerCase();
+  }
+
+  if (!target || typeof target !== "string") return null;
+  const trimmed = target.trim();
+
+  if (/^[0-9a-fA-F]{24}$/.test(trimmed)) {
+    return trimmed.toLowerCase();
+  }
+
+  const hexMatch = trimmed.match(/(?:^|[-_/])([0-9a-fA-F]{24})(?:$|[?#&])/);
+  if (hexMatch && hexMatch[1] && isMongoId(hexMatch[1])) {
+    return hexMatch[1].toLowerCase();
+  }
+
   const stripped = trimmed.replace(/^(rep|rev|camp|job)-+/i, "");
   if (/^[0-9a-fA-F]{24}$/.test(stripped)) {
-    return stripped;
+    return stripped.toLowerCase();
   }
-  if (/^[0-9a-fA-F]{24}$/.test(trimmed)) {
-    return trimmed;
+
+  return null;
+}
+
+/** Extracts clean 24-char MongoDB ObjectId by parsing composite slugs, query params, or prefixes. */
+export function extractMongoId(id?: string | null): string {
+  if (!id || typeof id !== "string") return "";
+  const resolved = extractMongoIdFromTarget(id);
+  if (resolved) return resolved;
+  return id.trim().replace(/^(rep|rev|camp|job)-+/i, "");
+}
+
+/**
+ * Formats a clean public campaign slug that complies with backend regex /^[a-z0-9]+(?:-[a-z0-9]+)*$/
+ * and embeds the 24-character MongoDB ObjectId at the end for unauthenticated public resolution.
+ */
+export function formatCampaignPublicSlug(name: string, mongoId?: string): string {
+  const base = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  const cleanBase = base || `campaign-${Date.now().toString(36)}`;
+  if (mongoId && isMongoId(mongoId)) {
+    const lowerId = mongoId.toLowerCase();
+    if (cleanBase.endsWith(lowerId)) {
+      return cleanBase;
+    }
+    return `${cleanBase}-${lowerId}`;
   }
-  return stripped;
+  return cleanBase;
+}
+
+/**
+ * Formats canonical review URL with campaign entity reference.
+ * If slug already contains the 24-hex MongoId, generates clean /review/slug.
+ * Otherwise appends ?cid=mongoId query param so visitors never hit 401 or missing campaign errors.
+ */
+export function buildCampaignReviewUrl(
+  slug: string,
+  campaignId?: string,
+  origin?: string,
+): string {
+  const baseOrigin = origin || (typeof window !== "undefined" ? window.location.origin : "https://dimisi.tech");
+  const cleanSlug = slug?.trim() || "";
+  const cleanCid = campaignId ? extractMongoId(campaignId) : "";
+
+  const extractedFromSlug = extractMongoId(cleanSlug);
+  if (isMongoId(extractedFromSlug) && cleanSlug.toLowerCase().includes(extractedFromSlug.toLowerCase())) {
+    return `${baseOrigin}/review/${cleanSlug}`;
+  }
+
+  if (cleanCid && isMongoId(cleanCid)) {
+    return `${baseOrigin}/review/${cleanSlug}?cid=${cleanCid}`;
+  }
+
+  return `${baseOrigin}/review/${cleanSlug}`;
 }
 
 /** Safely normalizes reviewer type, defaulting null/undefined to "client". */

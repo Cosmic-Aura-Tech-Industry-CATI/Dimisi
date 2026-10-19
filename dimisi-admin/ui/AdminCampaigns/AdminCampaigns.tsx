@@ -25,6 +25,7 @@ import {
   DIMISI_SERVICES,
   type ReviewCampaign,
   isMongoId,
+  buildCampaignReviewUrl,
 } from "@/lib/reviews.shared";
 import {
   createCampaign,
@@ -95,22 +96,20 @@ export function AdminCampaigns({
   }, []);
 
 
-  const getCampaignUrl = (cSlug: string) => {
-    if (typeof window !== "undefined") {
-      return `${window.location.origin}/review/${cSlug}`;
-    }
-    return `https://dimisi.in/review/${cSlug}`;
+  const getCampaignUrl = (cSlug: string, cId?: string) => {
+    return buildCampaignReviewUrl(cSlug, cId);
   };
 
-  const getShortUrl = (cSlug: string) => {
-    return `dimisi.in/review/${cSlug}`;
+  const getShortUrl = (cSlug: string, cId?: string) => {
+    const full = getCampaignUrl(cSlug, cId);
+    return full.replace(/^https?:\/\//i, "");
   };
 
   // Generate QR Canvas & SVG when active campaign opens
   useEffect(() => {
     if (!activeCampaign) return;
 
-    const url = getCampaignUrl(activeCampaign.slug);
+    const url = getCampaignUrl(activeCampaign.slug, activeCampaign.id);
 
     // Render Canvas (High contrast, margin, dark modules)
     if (canvasRef.current) {
@@ -139,8 +138,8 @@ export function AdminCampaigns({
       .catch(console.error);
   }, [activeCampaign]);
 
-  const handleCopyLink = (cSlug: string) => {
-    const url = getCampaignUrl(cSlug);
+  const handleCopyLink = (cSlug: string, cId?: string) => {
+    const url = getCampaignUrl(cSlug, cId);
     navigator.clipboard.writeText(url);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
@@ -364,7 +363,7 @@ export function AdminCampaigns({
                 <button
                   type="button"
                   className={styles.btnAction}
-                  onClick={() => handleCopyLink(c.slug)}
+                  onClick={() => handleCopyLink(c.slug, c.id)}
                   title="Copy Review URL"
                 >
                   {copied ? <Check size={14} color="#34d399" /> : <Copy size={14} />}
@@ -456,6 +455,7 @@ export function AdminCampaigns({
                   href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
                     `We would love your feedback on your experience with DIMISI Technologies! Leave a quick review here: ${getCampaignUrl(
                       activeCampaign.slug,
+                      activeCampaign.id,
                     )}`,
                   )}`}
                   target="_blank"
@@ -474,6 +474,7 @@ export function AdminCampaigns({
                   )}&body=${encodeURIComponent(
                     `Hello,\n\nWe value your feedback. Please take a moment to share your review of our recent project:\n\n${getCampaignUrl(
                       activeCampaign.slug,
+                      activeCampaign.id,
                     )}\n\nThank you,\nDIMISI Technologies Team`,
                   )}`}
                   className={styles.shareBtn}
@@ -486,7 +487,7 @@ export function AdminCampaigns({
                 {/* SMS */}
                 <a
                   href={`sms:?body=${encodeURIComponent(
-                    `Share your DIMISI review: ${getCampaignUrl(activeCampaign.slug)}`,
+                    `Share your DIMISI review: ${getCampaignUrl(activeCampaign.slug, activeCampaign.id)}`,
                   )}`}
                   className={styles.shareBtn}
                   style={{ color: "#38bdf8" }}
@@ -497,7 +498,7 @@ export function AdminCampaigns({
 
                 {/* Open Form */}
                 <a
-                  href={getCampaignUrl(activeCampaign.slug)}
+                  href={getCampaignUrl(activeCampaign.slug, activeCampaign.id)}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={styles.shareBtn}
@@ -541,7 +542,7 @@ export function AdminCampaigns({
                 ) : null}
               </div>
               <div className={styles.flyerShortLink}>
-                Or visit: <strong>{getShortUrl(activeCampaign.slug)}</strong>
+                Or visit: <strong>{getShortUrl(activeCampaign.slug, activeCampaign.id)}</strong>
               </div>
             </div>
 
