@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
@@ -63,6 +63,17 @@ export function ServicesPage() {
     queryKey: ["publicServices"],
     queryFn: () => getPublicServicesData(),
   });
+
+  // Real-time synchronization with Admin Panel updates
+  useEffect(() => {
+    const handleUpdate = () => {
+      void refetch();
+    };
+    window.addEventListener("dimisi:services-updated", handleUpdate);
+    return () => {
+      window.removeEventListener("dimisi:services-updated", handleUpdate);
+    };
+  }, [refetch]);
 
   const services: CompanyService[] = useMemo(() => payload?.services || [], [payload?.services]);
   const categoryItems: ServiceCategoryItem[] = useMemo(() => payload?.categoryItems || [], [payload?.categoryItems]);

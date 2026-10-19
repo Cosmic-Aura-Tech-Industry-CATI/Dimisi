@@ -51,10 +51,10 @@ import {
 } from "@/lib/services.functions";
 import { resolveCategoryName, isMongoId } from "@/services/service.service";
 import {
-  uploadImageDirectToCloudinary,
+  uploadFileViaSignature,
   revokeBlobUrl,
   cancelAllActiveUploads,
-} from "@/services/cloudinary.service";
+} from "@/services/upload.service";
 import shared from "../styles/admin.module.css";
 import styles from "./AdminServices.module.css";
 
@@ -192,7 +192,9 @@ export function AdminServices({
 
   // Media
   const [formHeroImage, setFormHeroImage] = useState("");
+  const [formHeroImagePublicId, setFormHeroImagePublicId] = useState("");
   const [heroImageFile, setHeroImageFile] = useState<File | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
 
   // Architecture 4-point
   const [formWhatIsIt, setFormWhatIsIt] = useState("");
@@ -243,7 +245,9 @@ export function AdminServices({
     setFormIsActive(true);
     setFormIsFeatured(false);
     setFormHeroImage("");
+    setFormHeroImagePublicId("");
     setHeroImageFile(null);
+    setUploadProgress(null);
     setFormWhatIsIt("");
     setFormWhoIsFor("");
     setFormProblemSolved("");
@@ -279,7 +283,9 @@ export function AdminServices({
     setFormIsActive(srv.is_active !== false);
     setFormIsFeatured(Boolean(srv.is_featured));
     setFormHeroImage(srv.hero_image || "");
+    setFormHeroImagePublicId(srv.hero_image_public_id || "");
     setHeroImageFile(null);
+    setUploadProgress(null);
     setFormWhatIsIt(srv.what_is_it || srv.summary || "");
     setFormWhoIsFor(srv.who_is_for || "");
     setFormProblemSolved(srv.problem_solved || "");
@@ -304,6 +310,7 @@ export function AdminServices({
     cancelAllActiveUploads();
     revokeBlobUrl(formHeroImage);
     setHeroImageFile(null);
+    setUploadProgress(null);
     setIsServiceModalOpen(false);
   }, [formHeroImage]);
 
@@ -331,17 +338,30 @@ export function AdminServices({
     const cleanSlug = formSlug.trim() || slugifyService(cleanTitle);
 
     try {
-      // 1. Direct Cloudinary Client-Side Upload (Bypasses BullMQ background worker issues)
+      // 1. Direct Cloudinary Client-Side Upload via Backend-Signed Signature V2
       let finalHeroImageUrl = formHeroImage.trim().startsWith("blob:")
         ? editingService?.hero_image || ""
         : formHeroImage.trim();
+      let finalHeroImagePublicId =
+        formHeroImagePublicId ||
+        editingService?.hero_image_public_id ||
+        (editingService as any)?.heroImagePublicId ||
+        "";
 
       if (hasNewLocalFile && heroImageFile) {
-        setNotice("Uploading image directly to Cloudinary CDN...");
-        finalHeroImageUrl = await uploadImageDirectToCloudinary(heroImageFile);
+        setNotice("Uploading hero banner via Cloudinary V2 signed pipeline...");
+        setUploadProgress(0);
+        const uploadRes = await uploadFileViaSignature(
+          heroImageFile,
+          { model: "service", field: "heroImage" },
+          { onProgress: (percent) => setUploadProgress(percent) },
+        );
+        finalHeroImageUrl = uploadRes.url;
+        finalHeroImagePublicId = uploadRes.publicId;
+        setUploadProgress(100);
       }
 
-      // 2. Structured JSON Payload with permanent Cloudinary URL
+      // 2. Structured JSON Payload with permanent Cloudinary URL and publicId
       const servicePayload: ServiceInput = {
         id: editingService ? editingService.id : undefined,
         title: cleanTitle,
@@ -353,6 +373,8 @@ export function AdminServices({
         is_active: formIsActive,
         is_featured: formIsFeatured,
         hero_image: finalHeroImageUrl,
+        hero_image_public_id: finalHeroImagePublicId || undefined,
+        heroImagePublicId: finalHeroImagePublicId || undefined,
         existing_hero_image: finalHeroImageUrl,
         related_images: editingService?.related_images || [],
         what_is_it: formWhatIsIt.trim() || formSummary.trim(),
@@ -377,7 +399,7 @@ export function AdminServices({
         })),
       };
 
-      // 3. Single clean JSON save to MongoDB via Express Backend
+      // 3. Single clean JSON save to MongoDB via Express Backend V2
       const res = await saveServiceFn({
         data: servicePayload,
         serviceId: editingService?.id,
@@ -392,9 +414,17 @@ export function AdminServices({
       onRefresh();
       void refreshCategories();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to save service.");
+      setUploadProgress(null);
+      const rawMsg = err instanceof Error ? err.message : "Failed to save service.";
+      if (rawMsg.toLowerCase().includes("position already exists") || rawMsg.toLowerCase().includes("order index")) {
+        setError(`Service on order position #${formOrderIndex} already exists. We have auto-adjusted it to #${formOrderIndex + 1}. Click Save again.`);
+        setFormOrderIndex((prev) => prev + 1);
+      } else {
+        setError(rawMsg);
+      }
     } finally {
       setBusy(false);
+      setUploadProgress(null);
     }
   };
 
@@ -878,38 +908,35 @@ export function AdminServices({
                         <div className={styles.rowActions}>
                           <button
                             type="button"
-                            className={[shared.btn, shared.ghost, styles.actionBtn].join(" ")}
+                            className={styles.actionBtn}
                             disabled={busy}
                             onClick={() => handleOpenEditService(srv)}
                             title="Edit Service"
                             aria-label={`Edit ${srv.title}`}
                           >
-                            <Edit2 size={13} />
+                            <Edit2 size={15} />
                           </button>
 
                           <a
                             href={`/services/${srv.slug}`}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className={[shared.btn, shared.ghost, styles.actionBtn].join(" ")}
+                            className={styles.actionBtn}
                             title="Preview Public Page"
+                            aria-label={`Preview ${srv.title}`}
                           >
-                            <ExternalLink size={13} />
+                            <ExternalLink size={15} />
                           </a>
 
                           <button
                             type="button"
-                            className={[
-                              shared.btn,
-                              shared.ghost,
-                              shared.danger,
-                              styles.actionBtn,
-                            ].join(" ")}
+                            className={[styles.actionBtn, styles.actionBtnDanger].join(" ")}
                             disabled={busy}
                             onClick={() => setDeleteServiceTarget(srv)}
                             title="Delete Service"
+                            aria-label={`Delete ${srv.title}`}
                           >
-                            <Trash2 size={13} />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </td>
@@ -1301,7 +1328,7 @@ export function AdminServices({
                     <label className={styles.fileDropArea}>
                       <input
                         type="file"
-                        accept="image/*"
+                        accept="image/jpeg,image/png,image/webp,image/avif"
                         style={{ display: "none" }}
                         onChange={(e) => {
                           const file = e.target.files?.[0];
@@ -1309,6 +1336,7 @@ export function AdminServices({
                             revokeBlobUrl(formHeroImage);
                             setHeroImageFile(file);
                             setFormHeroImage(URL.createObjectURL(file));
+                            setFormHeroImagePublicId("");
                           }
                         }}
                       />
@@ -1317,9 +1345,29 @@ export function AdminServices({
                         {heroImageFile ? heroImageFile.name : "Click to select a new Hero Image from your computer"}
                       </div>
                       <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.5)" }}>
-                        Supports JPG, PNG, WEBP up to 10MB (Cloudinary processed)
+                        Supports JPG, PNG, WEBP, AVIF up to 5MB (Cloudinary v2 signed pipeline)
                       </div>
                     </label>
+
+                    {/* Upload progress bar */}
+                    {busy && uploadProgress !== null && (
+                      <div style={{ marginTop: "0.85rem", padding: "0.75rem", borderRadius: "8px", background: "rgba(56, 189, 248, 0.08)", border: "1px solid rgba(56, 189, 248, 0.2)" }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.76rem", color: "#38bdf8", marginBottom: "6px", fontWeight: 600 }}>
+                          <span>Uploading directly to Cloudinary CDN...</span>
+                          <span>{uploadProgress}%</span>
+                        </div>
+                        <div style={{ width: "100%", height: "6px", background: "rgba(255,255,255,0.1)", borderRadius: "999px", overflow: "hidden" }}>
+                          <div
+                            style={{
+                              width: `${uploadProgress}%`,
+                              height: "100%",
+                              background: "linear-gradient(90deg, #38bdf8, #818cf8)",
+                              transition: "width 0.2s ease",
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
 
                     <div style={{ marginTop: "0.85rem" }}>
                       <label className={styles.label} style={{ fontSize: "0.75rem" }}>
@@ -1334,15 +1382,35 @@ export function AdminServices({
                           revokeBlobUrl(formHeroImage);
                           setHeroImageFile(null);
                           setFormHeroImage(e.target.value);
+                          setFormHeroImagePublicId("");
                         }}
                       />
                     </div>
 
                     {Boolean(formHeroImage && formHeroImage.trim()) && (
                       <div style={{ marginTop: "0.85rem" }}>
-                        <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.6)", display: "block", marginBottom: "4px" }}>
-                          Current Image Preview:
-                        </span>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "6px" }}>
+                          <span style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.6)" }}>
+                            Current Image Preview:
+                          </span>
+                          <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                            <span style={{ fontSize: "0.68rem", padding: "2px 8px", borderRadius: "4px", background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", border: "1px solid rgba(56, 189, 248, 0.3)", fontWeight: 600 }}>
+                              Cloudinary v2 Ready
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                revokeBlobUrl(formHeroImage);
+                                setHeroImageFile(null);
+                                setFormHeroImage("");
+                                setFormHeroImagePublicId("");
+                              }}
+                              style={{ background: "none", border: "none", color: "#f87171", cursor: "pointer", fontSize: "0.72rem", padding: "2px 6px" }}
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        </div>
                         <div className={styles.previewImgWrap}>
                           <img src={formHeroImage.trim()} alt="Hero Preview" className={styles.previewImg} />
                         </div>
