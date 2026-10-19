@@ -22,6 +22,7 @@ export interface ServiceFaq {
 
 export interface ServiceGalleryImage {
   url: string;
+  publicId?: string | null | undefined;
   caption?: string | null | undefined;
   alt?: string | null | undefined;
 }
@@ -35,6 +36,7 @@ export interface CompanyService {
   summary: string;
   tagline: string;
   hero_image: string;
+  hero_image_public_id?: string | null | undefined;
   related_images: ServiceGalleryImage[];
   
   // 4-point architecture overview
@@ -68,6 +70,8 @@ export interface ServiceInput {
   summary: string;
   tagline: string;
   hero_image: string;
+  hero_image_public_id?: string | null | undefined;
+  heroImagePublicId?: string | null | undefined;
   related_images: ServiceGalleryImage[];
   what_is_it: string;
   who_is_for: string;

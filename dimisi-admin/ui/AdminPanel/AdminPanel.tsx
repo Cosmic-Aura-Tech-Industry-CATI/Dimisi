@@ -524,6 +524,17 @@ export function AdminPanel() {
     };
   }, [user, tab]);
 
+  // Real-time synchronization for Services updates across components
+  useEffect(() => {
+    const handleServicesUpdated = () => {
+      refreshServices();
+    };
+    window.addEventListener("dimisi:services-updated", handleServicesUpdated);
+    return () => {
+      window.removeEventListener("dimisi:services-updated", handleServicesUpdated);
+    };
+  }, [refreshServices]);
+
   // Synchronize live operational counts into active topbar notification alerts
   useEffect(() => {
     if (reviewsData?.stats || data?.stats) {
