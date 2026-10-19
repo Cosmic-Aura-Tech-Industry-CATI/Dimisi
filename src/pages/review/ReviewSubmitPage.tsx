@@ -23,6 +23,8 @@ import {
   PHOTO_TYPES,
   type ReviewInput,
   type ReviewType,
+  isMongoId,
+  extractMongoIdFromTarget,
 } from "@/lib/reviews.shared";
 import {
   getReviewCampaign,
@@ -46,14 +48,22 @@ const RATING_DESCRIPTIONS: Record<number, string> = {
 
 export function ReviewSubmitPage({
   campaignSlug,
+  initialCampaignId,
   isScan,
 }: {
   campaignSlug?: string;
+  initialCampaignId?: string;
   isScan?: boolean;
 }) {
   const loadCampaign = getReviewCampaign;
   const loadCaptcha = getReviewCaptcha;
   const sendReview = submitReview;
+
+  const directMongoId =
+    (initialCampaignId && isMongoId(initialCampaignId) ? initialCampaignId.toLowerCase() : null) ||
+    (typeof window !== "undefined"
+      ? extractMongoIdFromTarget(campaignSlug, new URLSearchParams(window.location.search))
+      : null);
 
   const [campaign, setCampaign] = useState<{
     id: string;
@@ -103,7 +113,11 @@ export function ReviewSubmitPage({
       loadCampaign({ data: { slug: campaignSlug, ...(isScan ? { scan: true } : {}) } })
         .then((res) => {
           if (active && res?.campaign) {
-            setCampaign(res.campaign);
+            const cleanId = directMongoId || (isMongoId(res.campaign.id) ? res.campaign.id : "");
+            setCampaign({
+              ...res.campaign,
+              id: cleanId,
+            });
             if (res.campaign.service_name) {
               const svc = res.campaign.service_name;
               setFormData((prev) => ({ ...prev, serviceName: svc }));
@@ -117,8 +131,16 @@ export function ReviewSubmitPage({
         .catch(() => {
           // ignore campaign load error
         });
+    } else if (directMongoId) {
+      // Direct ?cid= query parameter provided without a slug
+      setCampaign({
+        id: directMongoId,
+        campaign_name: "Client Experience Review",
+        service_name: null,
+        location: "DIMISI HQ, New Delhi",
+      });
     } else {
-      // Generic /review visitor: proactively resolve default campaign ID to prevent submission failures
+      // Generic /review visitor: resolve default campaign ID
       resolveDefaultCampaignId().then((campId) => {
         if (active && campId) {
           setCampaign((prev) => prev || {
@@ -142,7 +164,7 @@ export function ReviewSubmitPage({
     return () => {
       active = false;
     };
-  }, [campaignSlug, isScan, loadCampaign, loadCaptcha]);
+  }, [campaignSlug, directMongoId, isScan, loadCampaign, loadCaptcha]);
 
   const refreshCaptcha = () => {
     setCaptchaAnswer("");
@@ -207,10 +229,14 @@ export function ReviewSubmitPage({
 
     startTransition(async () => {
       try {
+        const targetCampaignId =
+          directMongoId ||
+          (campaign?.id && isMongoId(campaign.id) ? campaign.id : "");
+
         await sendReview({
           data: {
             ...(campaignSlug ? { slug: campaignSlug } : {}),
-            ...(campaign?.id ? { campaignId: campaign.id } : {}),
+            ...(targetCampaignId ? { campaignId: targetCampaignId } : {}),
             customerName: formData.customerName,
             ...(formData.customerEmail ? { customerEmail: formData.customerEmail } : {}),
             ...(formData.customerPhone ? { customerPhone: formData.customerPhone } : {}),
