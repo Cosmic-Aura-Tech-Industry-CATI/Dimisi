@@ -5,7 +5,14 @@
  */
 import { apiRequest, ApiError, clearApiCache, API_BASE_URL } from "./apiClient";
 import type { ReviewCampaign } from "@/lib/reviews.shared";
-import { extractMongoId, isMongoId } from "@/lib/reviews.shared";
+import {
+  extractMongoId,
+  isMongoId,
+  generateMongoObjectId,
+  extractMongoIdFromTarget,
+  formatCampaignPublicSlug,
+  buildCampaignReviewUrl,
+} from "@/lib/reviews.shared";
 import { getVisitorServicesApi } from "./service.service";
 import { getStoredAdminSession } from "./adminAuth.service";
 
@@ -68,7 +75,13 @@ export function generateCampaignSlug(name: string): string {
   return base || `campaign-${Date.now().toString(36)}`;
 }
 
-export { isMongoId };
+export {
+  isMongoId,
+  generateMongoObjectId,
+  extractMongoIdFromTarget,
+  formatCampaignPublicSlug,
+  buildCampaignReviewUrl,
+};
 
 /**
  * Normalizes backend ICampaign document into frontend ReviewCampaign model.
@@ -162,15 +175,20 @@ export async function getAllAdminCampaignsApi(): Promise<ReviewCampaign[]> {
 /**
  * 2. CREATE CAMPAIGN
  * Endpoint: POST /api/v1/admin-panel/campaigns/create
+ * Pre-generates standard 24-hex MongoId and embeds it in the slug so public visitors can submit
+ * reviews without needing access to protected admin campaigns lookup endpoints.
  */
 export async function createAdminCampaignApi(
   payload: CreateCampaignPayload,
 ): Promise<ReviewCampaign> {
   const name = payload.name.trim();
-  const slug = payload.slug?.trim() ? generateCampaignSlug(payload.slug) : generateCampaignSlug(name);
+  const preGeneratedId = generateMongoObjectId();
+  const baseSlugInput = payload.slug?.trim() || name;
+  const slug = formatCampaignPublicSlug(baseSlugInput, preGeneratedId);
   const location = payload.location?.trim() || "DIMISI HQ, New Delhi";
 
   const backendBody: Record<string, any> = {
+    _id: preGeneratedId,
     name,
     slug,
     location,
@@ -363,17 +381,24 @@ export async function getPublicCampaignBySlugApi(slug: string): Promise<ReviewCa
         matchedServiceName = match.title;
       }
     }
-  } catch {
-    // Non-fatal: fallback to formatting title directly from slug
-  }
+  } catch {}
 
-  const humanTitle = cleanSlug
+  // Extract clean MongoId if embedded in composite slug (e.g. "seo-boost-670f2b34a1b2c3d4e5f60718")
+  const extractedId = extractMongoIdFromTarget(cleanSlug);
+  const slugWithoutId = extractedId
+    ? cleanSlug.replace(new RegExp(`-?${extractedId}$`, "i"), "")
+    : cleanSlug;
+
+  const humanTitle = slugWithoutId
     .split("-")
+    .filter(Boolean)
     .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
     .join(" ");
 
+  const resolvedId = extractedId || (isMongoId(cleanSlug) ? cleanSlug.toLowerCase() : cleanSlug);
+
   return {
-    id: isMongoId(cleanSlug) ? cleanSlug : "camp-" + cleanSlug,
+    id: resolvedId,
     campaign_name: matchedServiceName || humanTitle || "Client Experience Review",
     slug: cleanSlug,
     service_name: matchedServiceName,

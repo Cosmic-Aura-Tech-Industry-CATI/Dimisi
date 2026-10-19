@@ -9,6 +9,7 @@ import {
   sanitizeText,
   slugify,
   extractMongoId,
+  extractMongoIdFromTarget,
   isMongoId,
   type PublicReview,
   type AdminReview,
@@ -311,22 +312,28 @@ export async function submitReview({
     captchaAnswer?: string;
   };
 }): Promise<{ success: boolean; reviewId: string }> {
-  let resolvedCampaignId = data.campaignId ? extractMongoId(data.campaignId) : "";
+  // Cleanly resolve 24-character hexadecimal MongoDB ObjectId
+  let resolvedCampaignId = extractMongoIdFromTarget(data.campaignId) || "";
 
-  // 1. If not a valid Mongo ObjectId, try resolving via public campaign slug
+  // 1. If not a valid Mongo ObjectId, try resolving via public campaign slug or composite slug
   if ((!resolvedCampaignId || !isMongoId(resolvedCampaignId)) && data.slug) {
-    try {
-      const publicCamp = await getPublicCampaignBySlugApi(data.slug);
-      if (publicCamp?.id) {
-        const extracted = extractMongoId(publicCamp.id);
-        if (isMongoId(extracted)) {
-          resolvedCampaignId = extracted;
+    const fromSlug = extractMongoIdFromTarget(data.slug);
+    if (fromSlug && isMongoId(fromSlug)) {
+      resolvedCampaignId = fromSlug;
+    } else {
+      try {
+        const publicCamp = await getPublicCampaignBySlugApi(data.slug);
+        if (publicCamp?.id) {
+          const extracted = extractMongoIdFromTarget(publicCamp.id);
+          if (extracted && isMongoId(extracted)) {
+            resolvedCampaignId = extracted;
+          }
         }
-      }
-    } catch {}
+      } catch {}
+    }
   }
 
-  // 2. Fallback: resolve from active database campaigns or public reviews metadata
+  // 2. Fallback: resolve from active database campaigns or cached state
   if (!resolvedCampaignId || !isMongoId(resolvedCampaignId)) {
     try {
       const defaultCampId = await resolveDefaultCampaignId();
@@ -336,26 +343,9 @@ export async function submitReview({
     } catch {}
   }
 
-  // 3. Fallback for public visitors: fetch recent public reviews to extract an active MongoDB campaignId
-  if (!resolvedCampaignId || !isMongoId(resolvedCampaignId)) {
-    try {
-      const publicReviewsRes = await getPublicReviewsApi({ limit: 10 });
-      if (Array.isArray(publicReviewsRes?.reviews) && publicReviewsRes.reviews.length > 0) {
-        // Any approved active review in database carries its associated MongoDB campaign ID
-        for (const r of publicReviewsRes.reviews) {
-          const cid = (r as any).campaign_id || (r as any).campaignId;
-          if (cid && isMongoId(String(cid))) {
-            resolvedCampaignId = String(cid);
-            break;
-          }
-        }
-      }
-    } catch {}
-  }
-
   if (!resolvedCampaignId || !isMongoId(resolvedCampaignId)) {
     throw new Error(
-      "No active review campaign found in system. Please submit via a specific review campaign link.",
+      "No active review campaign found in system. Please submit via a specific review campaign link or QR code.",
     );
   }
 
