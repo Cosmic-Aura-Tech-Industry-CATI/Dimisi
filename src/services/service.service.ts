@@ -122,6 +122,35 @@ export function resolveCategoryName(
   return catStr || "Custom Software";
 }
 
+/**
+ * Real-time cache cleaner for Services.
+ * Invalidates React Query caches and notifies UI listeners across the app.
+ */
+export function cleanServicesCache(queryClient?: any): void {
+  try {
+    if (queryClient && typeof queryClient.invalidateQueries === "function") {
+      queryClient.invalidateQueries({ queryKey: ["services"] });
+      queryClient.invalidateQueries({ queryKey: ["services", "all"] });
+      queryClient.invalidateQueries({ queryKey: ["services", "visitors"] });
+      queryClient.invalidateQueries({ queryKey: ["serviceCategory"] });
+    }
+  } catch (e) {
+    console.warn("Failed to invalidate queryClient in cleanServicesCache:", e);
+  }
+
+  if (typeof window !== "undefined") {
+    try {
+      window.dispatchEvent(
+        new CustomEvent("dimisi:services-updated", {
+          detail: { timestamp: Date.now() },
+        })
+      );
+    } catch (e) {
+      console.warn("Failed to dispatch dimisi:services-updated event:", e);
+    }
+  }
+}
+
 export const DEFAULT_SERVICE_FALLBACK_IMAGE = "";
 
 /**
@@ -179,9 +208,11 @@ export function normalizeBackendService(
     summary: doc.summary || "",
     tagline: doc.tagline || (doc.summary ? doc.summary.slice(0, 80) : ""),
     hero_image: heroImage,
+    hero_image_public_id: doc.heroImagePublicId || undefined,
     related_images: Array.isArray(doc.relatedImages)
       ? doc.relatedImages.map((img) => ({
           url: img.url || "",
+          publicId: img.publicId || undefined,
           caption: img.caption || "",
           alt: img.alt || "",
         }))
@@ -218,19 +249,20 @@ export function extractServicesList(res: any): BackendServiceDoc[] {
 /**
  * 1. GET ALL SERVICES FOR VISITORS (PUBLIC ACTIVE SERVICES)
  * Endpoint: GET /api/v1/admin-panel/services/visitors/all
- * Query parameter: ?category=<categoryId> (optional)
+ * Query parameter: ?limit=100&category=<categoryId> (optional)
  */
 export async function getVisitorServicesApi(
   categoryId?: string,
   categories?: ServiceCategoryItem[],
 ): Promise<CompanyService[]> {
   try {
-    const query =
-      categoryId && categoryId.toLowerCase() !== "all"
-        ? `?category=${encodeURIComponent(categoryId)}`
-        : "";
+    const params = new URLSearchParams();
+    params.set("limit", "100");
+    if (categoryId && categoryId.toLowerCase() !== "all") {
+      params.set("category", categoryId);
+    }
     const res = await apiRequest<BackendServiceListResponse>(
-      `/api/v1/admin-panel/services/visitors/all${query}`,
+      `/api/v1/admin-panel/services/visitors/all?${params.toString()}`,
       { method: "GET" },
     );
 
@@ -247,16 +279,20 @@ export async function getVisitorServicesApi(
 /**
  * 2. GET ALL SERVICES (ADMIN)
  * Endpoint: GET /api/v1/admin-panel/services/all
- * Query parameter: ?category=<categoryId> (optional)
+ * Query parameter: ?limit=100&category=<categoryId> (optional)
  */
 export async function getAllServicesApi(
   categoryId?: string,
   categories?: ServiceCategoryItem[],
 ): Promise<CompanyService[]> {
   try {
-    const query = categoryId && categoryId.toLowerCase() !== "all" ? `?category=${encodeURIComponent(categoryId)}` : "";
+    const params = new URLSearchParams();
+    params.set("limit", "100");
+    if (categoryId && categoryId.toLowerCase() !== "all") {
+      params.set("category", categoryId);
+    }
     const res = await apiRequest<BackendServiceListResponse>(
-      `/api/v1/admin-panel/services/all${query}`,
+      `/api/v1/admin-panel/services/all?${params.toString()}`,
       { method: "GET" },
     );
 
@@ -433,8 +469,8 @@ function normalizeStringList(raw: any): string[] {
 }
 
 /**
- * 3. CREATE SERVICE
- * Endpoint: POST /api/v1/admin-panel/services/create
+ * 3. CREATE SERVICE (V2 CLEAN JSON & SIGNED CLOUDINARY UPLOAD)
+ * Endpoint: POST /api/v2/admin-panel/service/create
  */
 export async function createServiceApi(
   payload: ServiceInput | FormData,
@@ -460,7 +496,22 @@ export async function createServiceApi(
     const slug = payload.slug?.trim() || undefined;
     const summary = payload.summary?.trim() || undefined;
     const heroImage = payload.hero_image?.trim() || undefined;
-    const relatedImages = payload.related_images || [];
+    const heroImagePublicId =
+      payload.hero_image_public_id?.trim() ||
+      (payload as any).heroImagePublicId?.trim() ||
+      undefined;
+
+    const relatedImages = Array.isArray(payload.related_images)
+      ? payload.related_images
+          .filter((img) => img && img.url && !img.url.startsWith("blob:"))
+          .map((img) => ({
+            url: img.url.trim(),
+            publicId: img.publicId ? img.publicId.trim() : undefined,
+            caption: img.caption ? img.caption.trim() : undefined,
+            alt: img.alt ? img.alt.trim() : undefined,
+          }))
+      : [];
+
     const whatIsIt = payload.what_is_it?.trim() || payload.summary?.trim() || undefined;
     const whoIsFor = payload.who_is_for?.trim() || undefined;
     const problemSolved = payload.problem_solved?.trim() || undefined;
@@ -485,14 +536,16 @@ export async function createServiceApi(
         .replace(/^-|-$/g, "") ||
       "service";
 
-    const cleanPayload = {
+    // V2 Hero Pair: if heroImage is present, both heroImage and heroImagePublicId must be supplied together
+    const cleanHeroImage = heroImage && !heroImage.startsWith("blob:") ? heroImage : undefined;
+    const cleanHeroPublicId = cleanHeroImage ? heroImagePublicId : undefined;
+
+    const cleanPayload: Record<string, any> = {
       title: title.trim(),
       category: categoryId,
       tagline: tagline ? tagline.trim().slice(0, 100) : undefined,
       slug: cleanSlug,
       summary: summary ? summary.trim().slice(0, 200) : undefined,
-      heroImage: heroImage && !heroImage.startsWith("blob:") ? heroImage.trim() : undefined,
-      relatedImages,
       whatIsIt: whatIsIt ? whatIsIt.trim().slice(0, 500) : undefined,
       whoIsFor: whoIsFor ? whoIsFor.trim().slice(0, 500) : undefined,
       problemSolved: problemSolved ? problemSolved.trim().slice(0, 500) : undefined,
@@ -507,13 +560,22 @@ export async function createServiceApi(
       isActive,
     };
 
+    if (cleanHeroImage && cleanHeroPublicId) {
+      cleanPayload.heroImage = cleanHeroImage;
+      cleanPayload.heroImagePublicId = cleanHeroPublicId;
+    }
+
+    if (relatedImages.length > 0) {
+      cleanPayload.relatedImages = relatedImages;
+    }
+
     body = JSON.stringify(cleanPayload);
   }
 
   try {
     const isForm = typeof FormData !== "undefined" && body instanceof FormData;
     const res = await apiRequest<BackendServiceSingleResponse>(
-      "/api/v1/admin-panel/services/create",
+      "/api/v2/admin-panel/service/create",
       {
         method: "POST",
         ...(isForm ? {} : { headers: { "Content-Type": "application/json" } }),
@@ -526,6 +588,7 @@ export async function createServiceApi(
       throw new Error(res?.message || "Failed to create service.");
     }
 
+    cleanServicesCache();
     return normalizeBackendService(doc, categories);
   } catch (err: unknown) {
     if (err instanceof ApiError && err.status === 400) {
@@ -538,8 +601,8 @@ export async function createServiceApi(
 }
 
 /**
- * 4. UPDATE SERVICE
- * Endpoint: PATCH /api/v1/admin-panel/services/:id/update
+ * 4. UPDATE SERVICE (V2 CLEAN JSON & SIGNED CLOUDINARY UPLOAD)
+ * Endpoint: PATCH /api/v2/admin-panel/service/:id/update
  */
 export async function updateServiceApi(
   id: string,
@@ -572,20 +635,34 @@ export async function updateServiceApi(
     if (payload.summary !== undefined && payload.summary !== null) {
       updateObj.summary = payload.summary.trim().slice(0, 200);
     }
-    if (payload.hero_image !== undefined && !payload.hero_image.startsWith("blob:")) {
-      const cleanHero = payload.hero_image.trim();
-      if (cleanHero) {
-        updateObj.heroImage = cleanHero;
-        updateObj.existingHeroImage = cleanHero;
+
+    const heroImage = payload.hero_image?.trim();
+    const heroImagePublicId =
+      payload.hero_image_public_id?.trim() ||
+      (payload as any).heroImagePublicId?.trim();
+
+    if (heroImage !== undefined) {
+      if (heroImage && !heroImage.startsWith("blob:")) {
+        updateObj.heroImage = heroImage;
+        if (heroImagePublicId) {
+          updateObj.heroImagePublicId = heroImagePublicId;
+        }
       }
     }
-    if (payload.existing_hero_image !== undefined && !payload.existing_hero_image.startsWith("blob:")) {
-      const cleanExisting = payload.existing_hero_image.trim();
-      if (cleanExisting) {
-        updateObj.existingHeroImage = cleanExisting;
-      }
+
+    if (payload.related_images !== undefined) {
+      updateObj.relatedImages = Array.isArray(payload.related_images)
+        ? payload.related_images
+            .filter((img) => img && img.url && !img.url.startsWith("blob:"))
+            .map((img) => ({
+              url: img.url.trim(),
+              publicId: img.publicId ? img.publicId.trim() : undefined,
+              caption: img.caption ? img.caption.trim() : undefined,
+              alt: img.alt ? img.alt.trim() : undefined,
+            }))
+        : [];
     }
-    if (payload.related_images !== undefined) updateObj.relatedImages = payload.related_images;
+
     if (payload.what_is_it !== undefined) updateObj.whatIsIt = payload.what_is_it.trim().slice(0, 500);
     if (payload.who_is_for !== undefined) updateObj.whoIsFor = payload.who_is_for.trim().slice(0, 500);
     if (payload.problem_solved !== undefined) updateObj.problemSolved = payload.problem_solved.trim().slice(0, 500);
@@ -607,7 +684,7 @@ export async function updateServiceApi(
 
   try {
     const res = await apiRequest<BackendServiceSingleResponse>(
-      `/api/v1/admin-panel/services/${encodeURIComponent(id)}/update`,
+      `/api/v2/admin-panel/service/${encodeURIComponent(id)}/update`,
       {
         method: "PATCH",
         ...(isForm ? {} : { headers: { "Content-Type": "application/json" } }),
@@ -620,6 +697,7 @@ export async function updateServiceApi(
       throw new Error(res?.message || "Failed to update service.");
     }
 
+    cleanServicesCache();
     return normalizeBackendService(doc, categories);
   } catch (err: unknown) {
     if (err instanceof ApiError && err.status === 400) {
@@ -647,6 +725,7 @@ export async function deleteServiceApi(id: string): Promise<boolean> {
     },
   );
 
+  cleanServicesCache();
   return true;
 }
 
@@ -670,6 +749,7 @@ export async function toggleServiceActivationApi(
   const doc = res?.data?.service || res?.service;
   if (!doc) throw new Error(res?.message || "Failed to toggle service activation.");
 
+  cleanServicesCache();
   return normalizeBackendService(doc, categories);
 }
 
@@ -693,5 +773,6 @@ export async function toggleServiceFeaturedApi(
   const doc = res?.data?.service || res?.service;
   if (!doc) throw new Error(res?.message || "Failed to toggle service featured status.");
 
+  cleanServicesCache();
   return normalizeBackendService(doc, categories);
 }

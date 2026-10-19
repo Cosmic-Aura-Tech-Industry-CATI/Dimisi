@@ -405,25 +405,8 @@ export async function saveServiceFn({
     if (isUpdate && targetId) {
       remoteSaved = await updateServiceApi(targetId, data, catItems);
     } else {
-      // Step 1: Create base service document in MongoDB
+      // V2 Clean Architecture: Single atomic create with pre-signed Cloudinary heroImage + heroImagePublicId
       remoteSaved = await createServiceApi(data, catItems);
-
-      // Step 2: Auto-hydrate Cloudinary Hero Image if provided!
-      // Backend createService hardcodes heroImage="", but updateService persists it to MongoDB.
-      const initialHeroImage = (data as ServiceInput).hero_image || (data as ServiceInput).existing_hero_image;
-      if (initialHeroImage && !initialHeroImage.startsWith("blob:") && remoteSaved?.id) {
-        try {
-          const patchedService = await updateServiceApi(remoteSaved.id, {
-            hero_image: initialHeroImage,
-            existing_hero_image: initialHeroImage,
-          }, catItems);
-          if (patchedService) {
-            remoteSaved = patchedService;
-          }
-        } catch (patchErr) {
-          console.warn("[Auto-hydrate heroImage for new service failed]", patchErr);
-        }
-      }
     }
     servicesStore.saveService(remoteSaved);
     return {
