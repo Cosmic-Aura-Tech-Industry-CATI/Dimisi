@@ -6,7 +6,6 @@ import {
   Flag,
   Search,
   MessageSquarePlus,
-  Flame,
   X,
   Send,
   Loader2,
@@ -15,6 +14,8 @@ import {
   Users,
   Sparkles,
   ArrowRight,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import {
   REPORT_REASONS,
@@ -24,6 +25,145 @@ import {
 } from "@/lib/reviews.shared";
 import { getPublicReviews, reportReview } from "@/lib/reviews.functions";
 import styles from "./ReviewsPage.module.css";
+
+const REVIEW_TEXT_THRESHOLD = 280;
+
+interface ReviewCardItemProps {
+  item: PublicReview;
+  isFeatured?: boolean;
+  isExpanded: boolean;
+  onToggleExpand: (id: string) => void;
+  onReport: (item: PublicReview) => void;
+}
+
+function ReviewCardItem({
+  item,
+  isFeatured = false,
+  isExpanded,
+  onToggleExpand,
+  onReport,
+}: ReviewCardItemProps) {
+  const isEmp = item.reviewer_type === "employee";
+  const rawText = item.review_text || "";
+  const isLong = rawText.length > REVIEW_TEXT_THRESHOLD;
+  const isShort = rawText.length < 90;
+  const displayText =
+    isLong && !isExpanded
+      ? `${rawText.slice(0, REVIEW_TEXT_THRESHOLD).trim()}...`
+      : rawText;
+
+  return (
+    <div
+      className={[
+        styles.reviewCard,
+        isFeatured ? styles.featuredCard : "",
+        isEmp ? styles.employeeCardBorder : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+    >
+      <div className={styles.cardTop}>
+        <div className={styles.authorBox}>
+          {item.photo_url ? (
+            <img
+              src={item.photo_url}
+              alt={item.customer_name}
+              className={styles.avatar}
+              loading="lazy"
+              decoding="async"
+            />
+          ) : (
+            <div className={[styles.avatarInitials, isEmp ? styles.avatarEmployee : ""].join(" ")}>
+              {item.customer_name.slice(0, 2).toUpperCase()}
+            </div>
+          )}
+          <div className={styles.authorMeta}>
+            <div className={styles.authorNameRow}>
+              <span className={styles.authorName}>{item.customer_name}</span>
+              {isEmp ? (
+                <span className={styles.employeeBadge}>
+                  {item.is_verified ? <CheckCircle size={10} /> : null}
+                  <span>{item.is_verified ? "VERIFIED EMPLOYEE" : "EMPLOYEE"}</span>
+                </span>
+              ) : (
+                <span className={styles.clientBadge}>
+                  {item.is_verified ? <CheckCircle size={10} /> : null}
+                  <span>{item.is_verified ? "VERIFIED CLIENT" : "CLIENT"}</span>
+                </span>
+              )}
+            </div>
+            {item.role_or_title ? (
+              <div className={styles.authorRole}>
+                {item.role_or_title}
+                {isEmp && !item.role_or_title.includes("DIMISI") ? " · DIMISI Technologies" : ""}
+              </div>
+            ) : isEmp ? (
+              <div className={styles.authorRole}>DIMISI Technologies</div>
+            ) : item.customer_location ? (
+              <div className={styles.authorLocation}>{item.customer_location}</div>
+            ) : null}
+          </div>
+        </div>
+
+        <div className={styles.stars} aria-label={`${item.rating} stars`}>
+          {[1, 2, 3, 4, 5].map((s) => (
+            <Star key={s} size={15} fill={s <= item.rating ? "currentColor" : "none"} strokeWidth={1.5} />
+          ))}
+        </div>
+      </div>
+
+      {item.service_name ? (
+        <span className={[styles.serviceTag, isEmp ? styles.serviceTagEmp : ""].join(" ")}>
+          {item.service_name}
+        </span>
+      ) : null}
+
+      <p className={[styles.reviewText, isShort ? styles.shortReviewText : ""].join(" ")}>
+        "{displayText}"
+      </p>
+
+      {isLong && (
+        <button
+          type="button"
+          className={styles.readMoreBtn}
+          onClick={() => onToggleExpand(item.id)}
+          aria-expanded={isExpanded}
+        >
+          {isExpanded ? (
+            <>
+              <span>Show less</span>
+              <ChevronUp size={14} />
+            </>
+          ) : (
+            <>
+              <span>Read full review</span>
+              <ChevronDown size={14} />
+            </>
+          )}
+        </button>
+      )}
+
+      <div className={styles.cardFoot}>
+        <span className={styles.reviewDate}>
+          {new Date(item.published_at || item.submitted_at || Date.now()).toLocaleDateString("en-US", {
+            month: "short",
+            day: "numeric",
+            year: "numeric",
+          })}
+        </span>
+        <button
+          type="button"
+          className={styles.reportBtn}
+          onClick={() => onReport(item)}
+          title="Report inappropriate content"
+        >
+          <Flag size={12} />
+          <span>Report</span>
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export function ReviewsPage() {
   const loadReviews = getPublicReviews;
@@ -61,6 +201,11 @@ export function ReviewsPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [sortOrder, setSortOrder] = useState<"newest" | "highest" | "lowest">("newest");
   const [isLoading, setIsLoading] = useState(true);
+  const [expandedReviews, setExpandedReviews] = useState<Record<string, boolean>>({});
+
+  const toggleReviewExpand = (id: string) => {
+    setExpandedReviews((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   // Report Modal
   const [reportingReview, setReportingReview] = useState<PublicReview | null>(null);
@@ -395,107 +540,15 @@ export function ReviewsPage() {
           )}
         </div>
 
-        {/* Featured Reviews Spotlight (When on All Reviews & no filters) */}
-        {!ratingFilter && !serviceFilter && !searchQuery && typeFilter === "all" && (featured?.length ?? 0) > 0 ? (
-          <div className={styles.featuredSection}>
-            <div className={styles.featuredHeader}>
-              <h3 className={styles.featuredHeading}>
-                <Flame size={18} color="#ffab2e" style={{ display: "inline", verticalAlign: "middle", marginRight: "6px" }} />
-                Featured Experience
-              </h3>
-            </div>
-            <div className={styles.featuredGrid}>
-              {featured.map((item) => {
-                const isEmp = item.reviewer_type === "employee";
-                return (
-                  <div key={`feat-${item.id}`} className={[styles.reviewCard, styles.featuredCard].join(" ")}>
-                    <div className={styles.cardTop}>
-                      <div className={styles.authorBox}>
-                        {item.photo_url ? (
-                          <img
-                            src={item.photo_url}
-                            alt={item.customer_name}
-                            className={styles.avatar}
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        ) : (
-                          <div className={[styles.avatarInitials, isEmp ? styles.avatarEmployee : ""].join(" ")}>
-                            {item.customer_name.slice(0, 2).toUpperCase()}
-                          </div>
-                        )}
-                        <div className={styles.authorMeta}>
-                          <div className={styles.authorNameRow}>
-                            <span className={styles.authorName}>{item.customer_name}</span>
-                            {isEmp ? (
-                              <span className={styles.employeeBadge}>
-                                {item.is_verified ? <CheckCircle size={10} /> : null}
-                                <span>{item.is_verified ? "VERIFIED EMPLOYEE" : "EMPLOYEE"}</span>
-                              </span>
-                            ) : (
-                              <span className={styles.clientBadge}>
-                                {item.is_verified ? <CheckCircle size={10} /> : null}
-                                <span>{item.is_verified ? "VERIFIED CLIENT" : "CLIENT"}</span>
-                              </span>
-                            )}
-                          </div>
-                          {item.role_or_title ? (
-                            <div className={styles.authorRole}>
-                              {item.role_or_title}
-                              {isEmp && !item.role_or_title.includes("DIMISI") ? " · DIMISI Technologies" : ""}
-                            </div>
-                          ) : isEmp ? (
-                            <div className={styles.authorRole}>DIMISI Technologies</div>
-                          ) : item.customer_location ? (
-                            <div className={styles.authorLocation}>{item.customer_location}</div>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      <div className={styles.stars} aria-label={`${item.rating} stars`}>
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <Star key={s} size={15} fill={s <= item.rating ? "currentColor" : "none"} strokeWidth={1.5} />
-                        ))}
-                      </div>
-                    </div>
-
-                    {item.service_name ? (
-                      <span className={[styles.serviceTag, isEmp ? styles.serviceTagEmp : ""].join(" ")}>
-                        {item.service_name}
-                      </span>
-                    ) : null}
-
-                    <p className={styles.reviewText}>"{item.review_text}"</p>
-
-                    <div className={styles.cardFoot}>
-                      <span className={styles.reviewDate}>
-                        {new Date(item.published_at || item.submitted_at || Date.now()).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </span>
-                      <button
-                        type="button"
-                        className={styles.reportBtn}
-                        onClick={() => setReportingReview(item)}
-                      >
-                        <Flag size={12} />
-                        <span>Report</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : null}
-
         {/* 05 — REVIEWS GRID / SKELETON / EMPTY STATES */}
         {isLoading && (reviews?.length ?? 0) === 0 ? (
           <div className={styles.reviewsGrid}>
-            {[1, 2, 3, 4, 5, 6].map((sk) => (
-              <div key={sk} className={[styles.reviewCard, styles.skeletonCard].join(" ")}>
+            {[240, 310, 190, 270, 220, 290].map((h, sk) => (
+              <div
+                key={sk}
+                className={[styles.reviewCard, styles.skeletonCard].join(" ")}
+                style={{ minHeight: `${h}px` }}
+              >
                 <div className={styles.cardTop}>
                   <div className={styles.authorBox}>
                     <div className={styles.skeletonAvatar} />
@@ -538,89 +591,16 @@ export function ReviewsPage() {
         ) : (
           <>
             <div className={styles.reviewsGrid}>
-              {reviews.map((item) => {
-                const isEmp = item.reviewer_type === "employee";
-                return (
-                  <div key={item.id} className={[styles.reviewCard, isEmp ? styles.employeeCardBorder : ""].join(" ")}>
-                    <div className={styles.cardTop}>
-                      <div className={styles.authorBox}>
-                        {item.photo_url ? (
-                          <img
-                            src={item.photo_url}
-                            alt={item.customer_name}
-                            className={styles.avatar}
-                            loading="lazy"
-                            decoding="async"
-                          />
-                        ) : (
-                          <div className={[styles.avatarInitials, isEmp ? styles.avatarEmployee : ""].join(" ")}>
-                            {item.customer_name.slice(0, 2).toUpperCase()}
-                          </div>
-                        )}
-                        <div className={styles.authorMeta}>
-                          <div className={styles.authorNameRow}>
-                            <span className={styles.authorName}>{item.customer_name}</span>
-                            {isEmp ? (
-                              <span className={styles.employeeBadge}>
-                                {item.is_verified ? <CheckCircle size={10} /> : null}
-                                <span>{item.is_verified ? "VERIFIED EMPLOYEE" : "EMPLOYEE"}</span>
-                              </span>
-                            ) : (
-                              <span className={styles.clientBadge}>
-                                {item.is_verified ? <CheckCircle size={10} /> : null}
-                                <span>{item.is_verified ? "VERIFIED CLIENT" : "CLIENT"}</span>
-                              </span>
-                            )}
-                          </div>
-                          {item.role_or_title ? (
-                            <div className={styles.authorRole}>
-                              {item.role_or_title}
-                              {isEmp && !item.role_or_title.includes("DIMISI") ? " · DIMISI Technologies" : ""}
-                            </div>
-                          ) : isEmp ? (
-                            <div className={styles.authorRole}>DIMISI Technologies</div>
-                          ) : item.customer_location ? (
-                            <div className={styles.authorLocation}>{item.customer_location}</div>
-                          ) : null}
-                        </div>
-                      </div>
-
-                      <div className={styles.stars} aria-label={`${item.rating} stars`}>
-                        {[1, 2, 3, 4, 5].map((s) => (
-                          <Star key={s} size={15} fill={s <= item.rating ? "currentColor" : "none"} strokeWidth={1.5} />
-                        ))}
-                      </div>
-                    </div>
-
-                    {item.service_name ? (
-                      <span className={[styles.serviceTag, isEmp ? styles.serviceTagEmp : ""].join(" ")}>
-                        {item.service_name}
-                      </span>
-                    ) : null}
-
-                    <p className={styles.reviewText}>"{item.review_text}"</p>
-
-                    <div className={styles.cardFoot}>
-                      <span className={styles.reviewDate}>
-                        {new Date(item.published_at || item.submitted_at || Date.now()).toLocaleDateString("en-US", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })}
-                      </span>
-                      <button
-                        type="button"
-                        className={styles.reportBtn}
-                        onClick={() => setReportingReview(item)}
-                        title="Report inappropriate content"
-                      >
-                        <Flag size={12} />
-                        <span>Report</span>
-                      </button>
-                    </div>
-                  </div>
-                );
-              })}
+              {reviews.map((item) => (
+                <ReviewCardItem
+                  key={item.id}
+                  item={item}
+                  isFeatured={Boolean(item.is_featured)}
+                  isExpanded={Boolean(expandedReviews[item.id])}
+                  onToggleExpand={() => toggleReviewExpand(item.id)}
+                  onReport={setReportingReview}
+                />
+              ))}
             </div>
 
             {hasMore ? (

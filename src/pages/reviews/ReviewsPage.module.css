@@ -393,42 +393,26 @@
   margin: 0;
 }
 
-/* Featured Section */
-.featuredSection {
-  margin-bottom: 3.5rem;
-}
 
-.featuredHeader {
-  margin-bottom: 1.25rem;
-}
 
-.featuredHeading {
-  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--dm-warm, #fbf3e9);
-  margin: 0;
-}
-
-.featuredGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
-  gap: 1.75rem;
-  contain: layout style;
-}
-
-/* Reviews Grid */
+/* Reviews Masonry Wall */
 .reviewsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 1.75rem;
+  column-count: 3;
+  column-gap: 1.5rem;
   margin-bottom: 4rem;
-  contain: layout style;
 }
 
-@media (max-width: 480px) {
+@media (max-width: 1024px) {
   .reviewsGrid {
-    grid-template-columns: 1fr;
+    column-count: 2;
+    column-gap: 1.25rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .reviewsGrid {
+    column-count: 1;
+    column-gap: 0;
   }
 }
 
@@ -437,15 +421,19 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 1.4rem;
   padding: 1.85rem;
-  display: flex;
-  flex-direction: column;
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 1.5rem;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  box-sizing: border-box;
+  vertical-align: top;
   transition: transform 0.3s var(--dm-ease, ease), border-color 0.3s, box-shadow 0.3s;
   position: relative;
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
-  content-visibility: auto;
-  contain-intrinsic-size: auto 280px;
 }
 
 @media (max-width: 768px) {
@@ -617,9 +605,41 @@
 .reviewText {
   font-size: 0.94rem;
   line-height: 1.68;
-  color: rgba(251, 243, 233, 0.85);
-  margin: 0 0 1.35rem;
-  flex: 1;
+  color: rgba(251, 243, 233, 0.88);
+  margin: 0 0 1rem;
+  white-space: pre-line;
+  word-break: break-word;
+}
+
+.shortReviewText {
+  font-size: 1.05rem;
+  font-weight: 500;
+  line-height: 1.6;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.readMoreBtn {
+  background: none;
+  border: none;
+  color: var(--dm-amber, #ffab2e);
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0;
+  margin: -0.35rem 0 1.15rem;
+  cursor: pointer;
+  transition: color 0.2s, transform 0.2s;
+}
+
+.readMoreBtn:hover {
+  color: #ffd79a;
+  transform: translateX(2px);
 }
 
 .cardFoot {
@@ -628,7 +648,7 @@
   align-items: center;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   padding-top: 0.95rem;
-  margin-top: auto;
+  margin-top: 0.25rem;
 }
 
 .reviewDate {
@@ -658,6 +678,13 @@
 /* Skeletons */
 .skeletonCard {
   min-height: 220px;
+  display: inline-block;
+  width: 100%;
+  margin-bottom: 1.5rem;
+  break-inside: avoid;
+  page-break-inside: avoid;
+  -webkit-column-break-inside: avoid;
+  box-sizing: border-box;
   animation: pulse 1.5s infinite;
 }
 
