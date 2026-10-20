@@ -49,6 +49,9 @@ const AdminSettings = lazy(() =>
 const AdminLeads = lazy(() =>
   import("../AdminLeads/AdminLeads").then((m) => ({ default: m.AdminLeads }))
 );
+const AdminHeroContent = lazy(() =>
+  import("../AdminHeroContent/AdminHeroContent").then((m) => ({ default: m.AdminHeroContent }))
+);
 import { canAccessTab, getRoleMeta, type AdminRole } from "../../lib/rbac.shared";
 import {
   getAdminOverview,
@@ -140,6 +143,8 @@ const DEFAULT_REVIEWS: AdminDashboardData = {
 
 const VALID_ADMIN_TABS: AdminTab[] = [
   "overview",
+  "home-content",
+  "hero",
   "services",
   "work",
   "careers",
@@ -736,6 +741,11 @@ export function AdminPanel() {
                   onTab={handleTabChange}
                   onRefreshReviews={refreshReviews}
                 />
+              )}
+
+              {/* HOME CONTENT CMS TAB */}
+              {(tab === "home-content" || (tab as string) === "hero") && (
+                <AdminHeroContent />
               )}
 
               {/* SERVICES & CATEGORIES MANAGEMENT TAB */}
