@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import {
   BarChart3,
+  Sparkles,
   Users,
   ShieldCheck,
   LogOut,
@@ -22,6 +23,8 @@ import styles from "./AdminSidebar.module.css";
 
 export type AdminTab =
   | "overview"
+  | "home-content"
+  | "hero"
   | "services"
   | "work"
   | "careers"
@@ -42,6 +45,7 @@ export const ADMIN_NAV: {
   badgeKey?: "pendingReviews" | "openReports";
 }[] = [
   { id: "overview", label: "Overview", icon: BarChart3 },
+  { id: "home-content", label: "Home Content", icon: Sparkles },
   { id: "services", label: "Services & Categories", icon: Layers },
   { id: "work", label: "Our Work & Products", icon: FolderGit2 },
   { id: "careers", label: "Careers & Jobs", icon: Briefcase },

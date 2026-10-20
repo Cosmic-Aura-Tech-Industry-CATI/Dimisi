@@ -61,6 +61,9 @@
 .label {
   position: relative;
   z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
 }
 
 .ripple {

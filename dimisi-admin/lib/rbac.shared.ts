@@ -270,7 +270,9 @@ export const ROLE_PERMISSIONS: Record<AdminRole, Set<Permission>> = {
 
 /** Mapping of Admin Control Room Tab IDs to required primary view permission */
 export const TAB_PERMISSION_MAP: Record<string, Permission> = {
-  overview: "analytics.view", // Overview summary
+  overview: "analytics.view",
+  "home-content": "work.view",
+  hero: "work.view", // Overview summary
   services: "services.view",
   work: "work.view",
   careers: "careers.view",

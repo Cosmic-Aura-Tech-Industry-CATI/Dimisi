@@ -15,6 +15,10 @@ export function prefetchAdminTab(tab: AdminTab): void {
     case "overview":
       void import("./AdminOverview/AdminOverview").catch(() => {});
       break;
+    case "home-content":
+    case "hero":
+      void import("./AdminHeroContent/AdminHeroContent").catch(() => {});
+      break;
     case "services":
       void import("./AdminServices/AdminServices").catch(() => {});
       break;

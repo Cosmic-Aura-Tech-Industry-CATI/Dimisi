@@ -1,0 +1,278 @@
+.globeWrapper {
+  position: relative;
+  width: 100%;
+  max-width: 580px;
+  aspect-ratio: 1 / 1;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+}
+
+/* 1. Core Ambient Glow */
+.coreGlowBackdrop {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 140, 26, 0.45) 0%,
+    rgba(255, 95, 46, 0.2) 45%,
+    rgba(0, 0, 0, 0) 70%
+  );
+  filter: blur(48px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.radiantRingGlow {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 440px;
+  height: 440px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255, 171, 46, 0.15) 0%,
+    rgba(255, 122, 24, 0.05) 60%,
+    transparent 80%
+  );
+  filter: blur(60px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* 2. 3D WebGL Canvas Layer */
+.canvasContainer {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 2;
+  overflow: visible;
+}
+
+/* 3. Center Metallic Silver DIMISI Emblem (Directly Merged with Earth) */
+.centerLogoBadge {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 6;
+  pointer-events: none;
+}
+
+.logoEmblemInner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  width: 98px;
+  height: 98px;
+  padding: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  position: relative;
+}
+
+.dimisiSilverLogo {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 16px rgba(255, 171, 46, 0.45));
+  animation: logoBreath 6s ease-in-out infinite;
+}
+
+@keyframes logoBreath {
+  0%, 100% {
+    filter: drop-shadow(0 4px 16px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 12px rgba(255, 171, 46, 0.35));
+    transform: scale(1);
+  }
+  50% {
+    filter: drop-shadow(0 4px 22px rgba(0, 0, 0, 0.95)) drop-shadow(0 0 20px rgba(255, 190, 70, 0.6));
+    transform: scale(1.02);
+  }
+}
+
+/* 4. Floating 100% Transparent Glass Orbit Cards */
+.orbitCard {
+  position: absolute;
+  z-index: 5;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-radius: 0.95rem;
+  background: rgba(255, 255, 255, 0.025);
+  border: 1px solid rgba(255, 171, 46, 0.28);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.45),
+    0 0 14px rgba(255, 140, 26, 0.1),
+    inset 0 1px 1px rgba(255, 255, 255, 0.12),
+    inset 0 0 12px rgba(255, 171, 46, 0.04);
+  transition: transform 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), border-color 0.3s, box-shadow 0.3s, background 0.3s;
+  cursor: default;
+  white-space: nowrap;
+}
+
+.orbitCard:hover {
+  transform: translateY(-4px) scale(1.03);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 214, 160, 0.65);
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.65),
+    0 0 24px rgba(255, 140, 26, 0.25),
+    inset 0 1px 1px rgba(255, 255, 255, 0.2);
+}
+
+.cardIconBox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(255, 159, 28, 0.09);
+  border: 1px solid rgba(255, 171, 46, 0.32);
+  color: var(--dm-amber, #ffab2e);
+  flex-shrink: 0;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 0 10px rgba(255, 140, 26, 0.18);
+}
+
+.cardTextBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.cardTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  letter-spacing: 0.03em;
+}
+
+.cardDesc {
+  font-family: var(--dm-font-body, "Sora", sans-serif);
+  font-size: 0.68rem;
+  color: rgba(251, 243, 233, 0.65);
+  letter-spacing: 0.01em;
+}
+
+/* Coordinates Framing the Calibrated Sphere */
+/* 1. Ideas: Top Left of Sphere */
+.cardIdeas {
+  top: 14%;
+  left: 0%;
+  animation: floatGentle 6s ease-in-out infinite;
+}
+
+/* 2. Technology: Top Right of Sphere */
+.cardTech {
+  top: 8%;
+  right: 4%;
+  animation: floatGentle 6s ease-in-out 1.2s infinite;
+}
+
+/* 3. Growth: Mid Left of Sphere */
+.cardGrowth {
+  top: 52%;
+  left: -6%;
+  animation: floatGentle 6s ease-in-out 2.4s infinite;
+}
+
+/* 4. People: Mid Right of Sphere */
+.cardPeople {
+  top: 48%;
+  right: -4%;
+  animation: floatGentle 6s ease-in-out 3.6s infinite;
+}
+
+/* 5. Impact: Bottom Right of Sphere */
+.cardImpact {
+  bottom: 10%;
+  right: 2%;
+  animation: floatGentle 6s ease-in-out 4.8s infinite;
+}
+
+@keyframes floatGentle {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+  .globeWrapper {
+    max-width: 480px;
+  }
+  .cardGrowth {
+    left: -2%;
+  }
+  .cardPeople {
+    right: -2%;
+  }
+}
+
+@media (max-width: 900px) {
+  .globeWrapper {
+    max-width: 400px;
+    margin-top: 2rem;
+  }
+  .orbitCard {
+    padding: 0.45rem 0.75rem;
+  }
+  .cardTitle {
+    font-size: 0.76rem;
+  }
+  .cardDesc {
+    font-size: 0.62rem;
+  }
+  .cardIconBox {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+@media (max-width: 580px) {
+  .globeWrapper {
+    max-width: 320px;
+  }
+  .cardIdeas {
+    top: 5%;
+    left: -10px;
+  }
+  .cardTech {
+    top: 2%;
+    right: -10px;
+  }
+  .cardGrowth {
+    top: 40%;
+    left: -20px;
+  }
+  .cardPeople {
+    top: 42%;
+    right: -15px;
+  }
+  .cardImpact {
+    bottom: 2%;
+    right: -10px;
+  }
+}
