@@ -138,11 +138,10 @@ export async function getPublicReviews({
 
     try {
       const res = await getPublicReviewsApi({
-        page,
-        limit: 100, // Fetch broader batch to enable accurate client-side search & filtering
+        page: 1,
+        limit: 100, // Fetch broader batch to enable accurate client-side search, complete stats & filtering
         serviceName: data?.service && data.service !== "all" ? data.service : undefined,
         rating: data?.rating,
-        type: reviewerType,
       });
 
       if (Array.isArray(res?.reviews) && res.reviews.length > 0) {
@@ -573,6 +572,17 @@ export async function toggleReviewVerified({
   const cleanId = extractMongoId(data.reviewId);
   if (!cleanId) return { success: false };
   await toggleReviewVerifyApi(cleanId);
+  return { success: true };
+}
+
+export async function toggleReviewActive({
+  data,
+}: {
+  data: { reviewId: string; isActive?: boolean };
+}): Promise<{ success: boolean }> {
+  const cleanId = extractMongoId(data.reviewId);
+  if (!cleanId) return { success: false };
+  await toggleReviewActiveApi(cleanId);
   return { success: true };
 }
 

@@ -24,6 +24,8 @@ import {
   Briefcase,
   BadgeCheck,
   ShieldCheck,
+  EyeOff,
+  Globe,
 } from "lucide-react";
 import {
   DIMISI_SERVICES,
@@ -36,6 +38,7 @@ import {
   updateReviewStatus,
   toggleReviewFeatured,
   toggleReviewVerified,
+  toggleReviewActive,
   deleteReview,
 } from "@/lib/reviews.functions";
 import styles from "./AdminReviews.module.css";
@@ -98,11 +101,13 @@ export function AdminReviews({
   const clientCount = reviews.filter((r) => (r.reviewer_type || "client") === "client").length;
   const employeeCount = reviews.filter((r) => r.reviewer_type === "employee").length;
   const verifiedCount = reviews.filter((r) => r.is_verified).length;
+  const inactiveApprovedCount = reviews.filter((r) => r.status === "approved" && !r.is_active).length;
 
   const handleApprove = (rev: AdminReview) => {
     startTransition(async () => {
       try {
         await changeStatus({ data: { reviewId: rev.id, status: "approved" } });
+        if (!rev.is_active) { try { await toggleReviewActive({ data: { reviewId: rev.id, isActive: true } }); } catch {} }
         onRefresh();
         if (viewingReview?.id === rev.id) setViewingReview(null);
       } catch (err) {
@@ -181,6 +186,38 @@ export function AdminReviews({
     });
   };
 
+
+  const [isActivatingAll, setIsActivatingAll] = useState(false);
+
+  const handleToggleActive = (rev: AdminReview) => {
+    startTransition(async () => {
+      try {
+        await toggleReviewActive({ data: { reviewId: rev.id, isActive: !rev.is_active } });
+        onRefresh();
+        if (viewingReview?.id === rev.id) {
+          setViewingReview({ ...viewingReview, is_active: !rev.is_active });
+        }
+      } catch (err) {
+        alert(err instanceof Error ? err.message : "Error updating review visibility.");
+      }
+    });
+  };
+
+  const handleActivateAllApproved = async () => {
+    const inactiveApproved = reviews.filter((r) => r.status === "approved" && !r.is_active);
+    if (inactiveApproved.length === 0) return;
+    setIsActivatingAll(true);
+    try {
+      for (const r of inactiveApproved) {
+        await toggleReviewActive({ data: { reviewId: r.id, isActive: true } });
+      }
+      onRefresh();
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Failed to activate all approved reviews.");
+    } finally {
+      setIsActivatingAll(false);
+    }
+  };
 
   const handleDeleteConfirm = () => {
     if (!deletingReview) return;
@@ -347,6 +384,26 @@ export function AdminReviews({
         </select>
       </div>
 
+      {inactiveApprovedCount > 0 ? (
+        <div className={styles.activateAllBanner}>
+          <div>
+            <strong>⚠️ {inactiveApprovedCount} Approved Review{inactiveApprovedCount > 1 ? "s are" : " is"} currently Hidden from the public website.</strong>
+            <div style={{ fontSize: "0.75rem", color: "#a09587" }}>
+              Click below to publish them live so visitors can see them on the public reviews page.
+            </div>
+          </div>
+          <button
+            type="button"
+            className={styles.activateAllBtn}
+            onClick={handleActivateAllApproved}
+            disabled={isActivatingAll || isPending}
+          >
+            <Globe size={13} />
+            <span>{isActivatingAll ? "Publishing..." : `Publish ${inactiveApprovedCount} Live`}</span>
+          </button>
+        </div>
+      ) : null}
+
       {/* Reviews Table */}
       <div className={styles.tableCard}>
         <div className={styles.tableWrap}>
@@ -359,6 +416,7 @@ export function AdminReviews({
                 <th>Rating</th>
                 <th>Service / Department &amp; Snippet</th>
                 <th>Status</th>
+                <th>Visibility</th>
                 <th>Submitted</th>
                 <th style={{ textAlign: "right" }}>Actions</th>
               </tr>
@@ -366,7 +424,7 @@ export function AdminReviews({
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className={styles.emptyState}>
+                  <td colSpan={9} className={styles.emptyState}>
                     No reviews found matching your filters.
                   </td>
                 </tr>
@@ -484,6 +542,22 @@ export function AdminReviews({
                             </span>
                           ) : null}
                         </span>
+                      </td>
+
+                      <td>
+                        <button
+                          type="button"
+                          className={[
+                            styles.verifyToggleBtn,
+                            rev.is_active ? styles.activeBadge : styles.inactiveBadge,
+                          ].join(" ")}
+                          onClick={() => handleToggleActive(rev)}
+                          disabled={isPending}
+                          title={rev.is_active ? "Live on public website. Click to hide." : "Hidden from public website. Click to publish live."}
+                        >
+                          {rev.is_active ? <Eye size={12} /> : <EyeOff size={12} />}
+                          <span>{rev.is_active ? "Live" : "Hidden"}</span>
+                        </button>
                       </td>
 
                       <td>
@@ -651,6 +725,24 @@ export function AdminReviews({
                     >
                       <BadgeCheck size={13} />
                       <span>{viewingReview.is_verified ? "Verified Identity" : "Unverified (Click to verify)"}</span>
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <div className={styles.detailLabel}>Public Visibility</div>
+                  <div className={styles.detailVal}>
+                    <button
+                      type="button"
+                      className={[
+                        styles.verifyToggleBtn,
+                        viewingReview.is_active ? styles.activeBadge : styles.inactiveBadge,
+                      ].join(" ")}
+                      onClick={() => handleToggleActive(viewingReview)}
+                      disabled={isPending}
+                      title={viewingReview.is_active ? "Live on public website. Click to hide." : "Hidden from public website. Click to publish live."}
+                    >
+                      {viewingReview.is_active ? <Eye size={13} /> : <EyeOff size={13} />}
+                      <span>{viewingReview.is_active ? "Live on Public Site" : "Hidden from Public Site"}</span>
                     </button>
                   </div>
                 </div>
