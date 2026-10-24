@@ -16,6 +16,7 @@ import {
   computeStats,
   extractMongoId,
   isMongoId,
+  isVisitorReview,
 } from "@/lib/reviews.shared";
 
 export interface BackendReviewDoc {
@@ -126,6 +127,18 @@ export function normalizeBackendReview(doc: BackendReviewDoc): AdminReview {
   const isApproved = doc.status === "approved";
   const isRejected = doc.status === "rejected";
 
+  const isEmployee = doc.reviewerType === "employee";
+  const rawRole = doc.designation?.toLowerCase().trim() || "";
+  const rawCompany = doc.company?.toLowerCase().trim() || "";
+  const rawService = doc.serviceName?.toLowerCase().trim() || "";
+  const isVisitor =
+    (doc as any).reviewerType === "visitor" ||
+    rawRole.includes("visitor") ||
+    rawRole.includes("public reviewer") ||
+    rawCompany.includes("visitor") ||
+    rawCompany.includes("public community") ||
+    rawService.includes("public experience");
+
   return {
     id: String(doc._id),
     campaign_id: campaignId,
@@ -134,8 +147,10 @@ export function normalizeBackendReview(doc: BackendReviewDoc): AdminReview {
     customer_email: doc.email || null,
     customer_phone: null,
     service_name: doc.serviceName || null,
-    reviewer_type: doc.reviewerType === "employee" ? "employee" : "client",
-    role_or_title: doc.designation || null,
+    reviewer_type: isEmployee ? "employee" : isVisitor ? "visitor" : "client",
+    role_or_title: isVisitor
+      ? "Visitor / Public Reviewer"
+      : doc.designation || null,
     employee_department: doc.company || null,
     employment_status: doc.reviewerType === "employee" ? "current" : null,
     is_verified: doc.verificationStatus === "verified",
@@ -174,12 +189,26 @@ export function normalizeBackendReview(doc: BackendReviewDoc): AdminReview {
  * Normalizes backend IReview document into frontend PublicReview model.
  */
 export function normalizeBackendPublicReview(doc: BackendReviewDoc): PublicReview {
+  const isEmployee = doc.reviewerType === "employee";
+  const rawRole = doc.designation?.toLowerCase().trim() || "";
+  const rawCompany = doc.company?.toLowerCase().trim() || "";
+  const rawService = doc.serviceName?.toLowerCase().trim() || "";
+  const isVisitor =
+    (doc as any).reviewerType === "visitor" ||
+    rawRole.includes("visitor") ||
+    rawRole.includes("public reviewer") ||
+    rawCompany.includes("visitor") ||
+    rawCompany.includes("public community") ||
+    rawService.includes("public experience");
+
   return {
     id: String(doc._id),
     customer_name: doc.fullName || "Anonymous Reviewer",
     service_name: doc.serviceName || null,
-    reviewer_type: doc.reviewerType === "employee" ? "employee" : "client",
-    role_or_title: doc.designation || null,
+    reviewer_type: isEmployee ? "employee" : isVisitor ? "visitor" : "client",
+    role_or_title: isVisitor
+      ? "Visitor / Public Reviewer"
+      : doc.designation || null,
     employee_department: doc.company || null,
     employment_status: doc.reviewerType === "employee" ? "current" : null,
     is_verified: doc.verificationStatus === "verified",

@@ -4,6 +4,7 @@
  */
 import {
   computeStats,
+  isVisitorReview,
   calculateConversionRate,
   normalizeReviewerType,
   sanitizeText,
@@ -203,7 +204,13 @@ export async function getPublicReviews({
 
     // Client-side Type filter
     if (reviewerType) {
-      filtered = filtered.filter((r) => r.reviewer_type === reviewerType);
+      if (reviewerType === "employee") {
+        filtered = filtered.filter((r) => r.reviewer_type === "employee");
+      } else if (reviewerType === "visitor") {
+        filtered = filtered.filter((r) => isVisitorReview(r));
+      } else if (reviewerType === "client") {
+        filtered = filtered.filter((r) => !isVisitorReview(r) && r.reviewer_type !== "employee");
+      }
     }
 
     // Sorting
@@ -335,7 +342,7 @@ export async function submitReview({
   // 2. Fallback: resolve from active database campaigns or cached state
   if (!resolvedCampaignId || !isMongoId(resolvedCampaignId)) {
     try {
-      const defaultCampId = await resolveDefaultCampaignId();
+      const defaultCampId = await resolveDefaultCampaignId(data.reviewerType);
       if (defaultCampId && isMongoId(defaultCampId)) {
         resolvedCampaignId = defaultCampId;
       }
@@ -348,12 +355,13 @@ export async function submitReview({
     );
   }
 
+  const isVisitor = data.reviewerType === "visitor";
   const cleanName = sanitizeText(data.customerName, 80);
-  const cleanEmail = sanitizeText(data.customerEmail, 160) || "anonymous@dimisi.tech";
-  const cleanServiceName = sanitizeText(data.serviceName, 100) || "General Services";
-  const cleanDesignation = sanitizeText(data.roleOrTitle, 100);
-  const cleanCompany = sanitizeText(data.employeeDepartment || data.customerLocation, 120);
-  const cleanLocation = sanitizeText(data.customerLocation, 120);
+  const cleanEmail = sanitizeText(data.customerEmail, 160) || (isVisitor ? "visitor@dimisi.tech" : "anonymous@dimisi.tech");
+  const cleanServiceName = sanitizeText(data.serviceName, 100) || (isVisitor ? "Platform & Public Experience" : "General Services");
+  const cleanDesignation = isVisitor ? "Visitor" : sanitizeText(data.roleOrTitle, 100);
+  const cleanCompany = isVisitor ? "Public Community" : sanitizeText(data.employeeDepartment || data.customerLocation, 120);
+  const cleanLocation = sanitizeText(data.customerLocation, 120) || (isVisitor ? "Kanpur, UP" : "");
   const cleanReviewText = sanitizeText(data.reviewText, 2000);
   const ratingNum = Math.min(5, Math.max(1, Number(data.rating) || 5));
   const reviewerType = data.reviewerType === "employee" ? "employee" : "client";
@@ -646,7 +654,7 @@ export async function createCampaign({
   };
 }): Promise<{ success: boolean; campaign: ReviewCampaign }> {
   const name = sanitizeText(data.campaignName, 120);
-  const location = sanitizeText(data.location, 200) || "DIMISI HQ, New Delhi";
+  const location = sanitizeText(data.location, 200) || "DIMISI HQ, Kanpur, UP";
   const slug = data.slug?.trim() ? slugify(data.slug) : slugify(name);
 
   const created = await createAdminCampaignApi({

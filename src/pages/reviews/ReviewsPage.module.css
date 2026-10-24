@@ -111,7 +111,7 @@
 /* 02 — REVIEW SUMMARY (4-Grid Dynamic Stats) */
 .statsSummaryGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 1.25rem;
   margin-bottom: 2.75rem;
 }
@@ -226,6 +226,13 @@
 .segBtn:hover:not(.segBtnActive) {
   color: var(--dm-warm, #fbf3e9);
   background: rgba(255, 255, 255, 0.04);
+}
+
+
+.segBtnActiveVisitor {
+  background: linear-gradient(135deg, #0d9488 0%, #14b8a6 50%, #2dd4bf 100%) !important;
+  color: #042f2e !important;
+  box-shadow: 0 4px 20px rgba(45, 212, 191, 0.45) !important;
 }
 
 .segBtnActive {
@@ -1107,4 +1114,46 @@
   text-transform: uppercase;
   cursor: pointer;
   box-shadow: 0 4px 18px rgba(255, 95, 46, 0.4);
+}
+
+.visitorBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(45, 212, 191, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  color: #2dd4bf;
+  font-size: 0.65rem;
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.shareBtnVisitor {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.85rem 1.85rem;
+  background: rgba(45, 212, 191, 0.08);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  color: #2dd4bf;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  border-radius: 999px;
+  text-decoration: none;
+  transition: all 0.25s;
+}
+
+.shareBtnVisitor:hover {
+  background: rgba(45, 212, 191, 0.18);
+  border-color: #2dd4bf;
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(45, 212, 191, 0.35);
 }
