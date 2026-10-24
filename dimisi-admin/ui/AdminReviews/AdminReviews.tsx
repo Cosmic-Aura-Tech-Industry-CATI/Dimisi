@@ -18,6 +18,7 @@ import {
   MapPin,
   Clock,
   ShieldAlert,
+  AlertTriangle,
   Building2,
   Code2,
   Users,
@@ -26,10 +27,13 @@ import {
   ShieldCheck,
   EyeOff,
   Globe,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   DIMISI_SERVICES,
   EMPLOYEE_ROLES,
+  isVisitorReview,
   type AdminReview,
   type ReviewStatus,
   type ReviewType,
@@ -56,11 +60,15 @@ export function AdminReviews({
   const removeReview = deleteReview;
 
   const [statusTab, setStatusTab] = useState<"all" | ReviewStatus>("all");
-  const [reviewerTypeFilter, setReviewerTypeFilter] = useState<"all" | "client" | "employee">("all");
+  const [reviewerTypeFilter, setReviewerTypeFilter] = useState<"all" | "client" | "employee" | "visitor">("all");
   const [verificationFilter, setVerificationFilter] = useState<"all" | "verified" | "unverified">("all");
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [serviceFilter, setServiceFilter] = useState<string>("");
   const [search, setSearch] = useState<string>("");
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [pageSize, setPageSize] = useState<number>(10);
 
   // Modals
   const [viewingReview, setViewingReview] = useState<AdminReview | null>(null);
@@ -75,7 +83,9 @@ export function AdminReviews({
   // Filtered rows
   const filtered = reviews.filter((r) => {
     if (statusTab !== "all" && r.status !== statusTab) return false;
-    if (reviewerTypeFilter !== "all" && (r.reviewer_type || "client") !== reviewerTypeFilter) return false;
+    if (reviewerTypeFilter === "employee" && r.reviewer_type !== "employee") return false;
+    if (reviewerTypeFilter === "visitor" && !isVisitorReview(r)) return false;
+    if (reviewerTypeFilter === "client" && (r.reviewer_type === "employee" || isVisitorReview(r))) return false;
     if (verificationFilter === "verified" && !r.is_verified) return false;
     if (verificationFilter === "unverified" && r.is_verified) return false;
     if (ratingFilter > 0 && Math.round(r.rating) !== ratingFilter) return false;
@@ -98,10 +108,19 @@ export function AdminReviews({
   const approvedCount = reviews.filter((r) => r.status === "approved").length;
   const rejectedCount = reviews.filter((r) => r.status === "rejected").length;
   const archivedCount = reviews.filter((r) => r.status === "archived").length;
-  const clientCount = reviews.filter((r) => (r.reviewer_type || "client") === "client").length;
+  const visitorCount = reviews.filter((r) => isVisitorReview(r)).length;
+  const clientCount = reviews.filter((r) => !isVisitorReview(r) && r.reviewer_type !== "employee").length;
   const employeeCount = reviews.filter((r) => r.reviewer_type === "employee").length;
   const verifiedCount = reviews.filter((r) => r.is_verified).length;
   const inactiveApprovedCount = reviews.filter((r) => r.status === "approved" && !r.is_active).length;
+
+  // Pagination slicing
+  const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+  const activePage = Math.min(currentPage, totalPages);
+  const startIndex = (activePage - 1) * pageSize;
+  const endIndex = Math.min(startIndex + pageSize, filtered.length);
+  const paginatedRows = filtered.slice(startIndex, endIndex);
+
 
   const handleApprove = (rev: AdminReview) => {
     startTransition(async () => {
@@ -250,6 +269,10 @@ export function AdminReviews({
           <span className={styles.summaryVal}>{employeeCount}</span>
         </div>
         <div className={styles.summaryItem}>
+          <span className={styles.summaryLabel}>VISITORS</span>
+          <span className={styles.summaryVal}>{visitorCount}</span>
+        </div>
+        <div className={styles.summaryItem}>
           <span className={styles.summaryLabel}>VERIFIED</span>
           <span className={styles.summaryVal}>{verifiedCount}</span>
         </div>
@@ -344,6 +367,7 @@ export function AdminReviews({
           <option value="all">All Reviewer Types ({reviews.length})</option>
           <option value="client">Clients &amp; Partners ({clientCount})</option>
           <option value="employee">Employees &amp; Staff ({employeeCount})</option>
+          <option value="visitor">Public Visitors ({visitorCount})</option>
         </select>
 
         {/* Verification Status Filter */}
@@ -429,8 +453,9 @@ export function AdminReviews({
                   </td>
                 </tr>
               ) : (
-                filtered.map((rev) => {
+                paginatedRows.map((rev) => {
                   const isEmployee = rev.reviewer_type === "employee";
+                  const isVisitor = isVisitorReview(rev);
                   return (
                     <tr key={rev.id}>
                       <td>
@@ -470,6 +495,11 @@ export function AdminReviews({
                             <Code2 size={11} />
                             <span>Staff</span>
                           </span>
+                        ) : isVisitor ? (
+                          <span className={styles.typeBadgeVisitor} title="Public Community Visitor">
+                            <Globe size={11} />
+                            <span>Visitor</span>
+                          </span>
                         ) : (
                           <span className={styles.typeBadgeClient} title="Verified Client">
                             <Building2 size={11} />
@@ -503,21 +533,22 @@ export function AdminReviews({
                       </td>
 
                       <td>
-                        <div style={{ maxWidth: "260px" }}>
+                        <div className={styles.snippetCell}>
                           {rev.service_name || rev.employee_department ? (
                             <span
+                              className={styles.snippetService}
                               style={{
-                                fontSize: "0.72rem",
                                 color: isEmployee ? "#a5b4fc" : "#ffab2e",
-                                fontWeight: 600,
-                                display: "block",
                               }}
                             >
                               {rev.service_name || rev.employee_department}
                             </span>
                           ) : null}
-                          <span style={{ fontSize: "0.82rem", color: "#cbd5e1" }}>
-                            {rev.review_text.length > 70 ? `${rev.review_text.slice(0, 70)}…` : rev.review_text}
+                          <span
+                            className={styles.snippetText}
+                            title={rev.review_text}
+                          >
+                            {rev.review_text}
                           </span>
                         </div>
                       </td>
@@ -554,9 +585,9 @@ export function AdminReviews({
                           onClick={() => handleToggleActive(rev)}
                           disabled={isPending}
                           title={rev.is_active ? "Live on public website. Click to hide." : "Hidden from public website. Click to publish live."}
+                          aria-label={rev.is_active ? "Live on public website" : "Hidden from public website"}
                         >
-                          {rev.is_active ? <Eye size={12} /> : <EyeOff size={12} />}
-                          <span>{rev.is_active ? "Live" : "Hidden"}</span>
+                          {rev.is_active ? <Eye size={13} /> : <EyeOff size={13} />}
                         </button>
                       </td>
 
@@ -568,17 +599,6 @@ export function AdminReviews({
 
                       <td style={{ textAlign: "right" }}>
                         <div className={styles.actionsCell} style={{ justifyContent: "flex-end" }}>
-                          {/* Quick View */}
-                          <button
-                            type="button"
-                            className={styles.actionBtn}
-                            onClick={() => setViewingReview(rev)}
-                            title="View Full Details"
-                            aria-label="View Full Details"
-                          >
-                            <Eye size={15} color="#e2e8f0" />
-                          </button>
-
                           {/* Status specific actions */}
                           {rev.status === "pending" ? (
                             <>
@@ -605,30 +625,15 @@ export function AdminReviews({
                               </button>
                             </>
                           ) : rev.status === "approved" ? (
-                            <>
-                              <button
-                                type="button"
-                                className={styles.actionBtn}
-                                onClick={() => handleToggleFeatured(rev)}
-                                title={rev.is_featured ? "Remove Featured" : "Mark as Featured"}
-                                aria-label={rev.is_featured ? "Remove Featured" : "Mark as Featured"}
-                              >
-                                <Flame
-                                  size={15}
-                                  color={rev.is_featured ? "#ff8c1a" : "#cbd5e1"}
-                                  fill={rev.is_featured ? "#ff8c1a" : "none"}
-                                />
-                              </button>
-                              <button
-                                type="button"
-                                className={styles.actionBtn}
-                                onClick={() => handleArchive(rev)}
-                                title="Archive / Hide"
-                                aria-label="Archive / Hide"
-                              >
-                                <Archive size={15} color="#cbd5e1" />
-                              </button>
-                            </>
+                            <button
+                              type="button"
+                              className={styles.actionBtn}
+                              onClick={() => handleArchive(rev)}
+                              title="Archive / Hide"
+                              aria-label="Archive / Hide"
+                            >
+                              <Archive size={15} color="#cbd5e1" />
+                            </button>
                           ) : (
                             <button
                               type="button"
@@ -671,6 +676,68 @@ export function AdminReviews({
             </tbody>
           </table>
         </div>
+
+        {/* Bottom Pagination Bar */}
+        <div className={styles.paginationBar}>
+          <div className={styles.paginationMeta}>
+            <span>
+              Showing <strong>{filtered.length > 0 ? startIndex + 1 : 0}</strong>–<strong>{endIndex}</strong> of{" "}
+              <strong>{filtered.length}</strong> {filtered.length === 1 ? "review" : "reviews"}
+            </span>
+            <label style={{ display: "inline-flex", alignItems: "center", gap: "0.4rem" }}>
+              <span>Show:</span>
+              <select
+                className={styles.paginationSelect}
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+              >
+                <option value={10}>10 per page</option>
+                <option value={20}>20 per page</option>
+                <option value={50}>50 per page</option>
+              </select>
+            </label>
+          </div>
+
+          <div className={styles.paginationControls}>
+            <button
+              type="button"
+              className={styles.pageBtn}
+              onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+              disabled={activePage <= 1}
+              title="Previous Page"
+              aria-label="Previous Page"
+            >
+              <ChevronLeft size={16} />
+              <span>Prev</span>
+            </button>
+
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+              <button
+                key={p}
+                type="button"
+                className={[styles.pageBtn, activePage === p ? styles.pageBtnActive : ""].join(" ")}
+                onClick={() => setCurrentPage(p)}
+              >
+                {p}
+              </button>
+            ))}
+
+            <button
+              type="button"
+              className={styles.pageBtn}
+              onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+              disabled={activePage >= totalPages}
+              title="Next Page"
+              aria-label="Next Page"
+            >
+              <span>Next</span>
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* View Full Review Modal */}
@@ -700,6 +767,10 @@ export function AdminReviews({
                     {viewingReview.reviewer_type === "employee" ? (
                       <span className={styles.typeBadgeEmp}>
                         <Code2 size={12} /> DIMISI Staff Member
+                      </span>
+                    ) : isVisitorReview(viewingReview) ? (
+                      <span className={styles.typeBadgeVisitor}>
+                        <Globe size={12} /> Public Community Visitor
                       </span>
                     ) : (
                       <span className={styles.typeBadgeClient}>
@@ -819,59 +890,59 @@ export function AdminReviews({
                 <>
                   <button
                     type="button"
-                    className={[styles.actionBtn, styles.btnApprove].join(" ")}
+                    className={styles.modalBtnPrimary}
                     onClick={() => handleApprove(viewingReview)}
                     disabled={isPending}
                   >
-                    <CheckCircle size={14} />
+                    <CheckCircle size={15} />
                     <span>Approve &amp; Publish</span>
                   </button>
                   <button
                     type="button"
-                    className={[styles.actionBtn, styles.btnReject].join(" ")}
+                    className={styles.modalBtnDanger}
                     onClick={() => setRejectingReview(viewingReview)}
                     disabled={isPending}
                   >
-                    <XCircle size={14} />
+                    <XCircle size={15} />
                     <span>Reject</span>
                   </button>
                 </>
               ) : viewingReview.status === "approved" ? (
                 <button
                   type="button"
-                  className={styles.actionBtn}
+                  className={styles.modalBtnNeutral}
                   onClick={() => handleArchive(viewingReview)}
                 >
-                  <Archive size={14} />
+                  <Archive size={15} />
                   <span>Archive / Hide</span>
                 </button>
               ) : (
                 <button
                   type="button"
-                  className={styles.actionBtn}
+                  className={styles.modalBtnNeutral}
                   onClick={() => handleRestore(viewingReview)}
                 >
-                  <RotateCcw size={14} />
+                  <RotateCcw size={15} />
                   <span>Restore</span>
                 </button>
               )}
 
               <button
                 type="button"
-                className={styles.actionBtn}
+                className={styles.modalBtnNeutral}
                 onClick={() => handleToggleVerified(viewingReview)}
               >
-                <BadgeCheck size={14} />
+                <BadgeCheck size={15} />
                 <span>{viewingReview.is_verified ? "Revoke Verified" : "Mark Verified"}</span>
               </button>
 
               <button
                 type="button"
-                className={styles.actionBtn}
-                style={{ color: "#f43f5e" }}
+                className={styles.modalBtnCancel}
+                style={{ color: "#f87171", borderColor: "rgba(239, 68, 68, 0.35)" }}
                 onClick={() => setDeletingReview(viewingReview)}
               >
-                <Trash2 size={14} />
+                <Trash2 size={15} />
                 <span>Delete</span>
               </button>
             </div>
@@ -926,18 +997,18 @@ export function AdminReviews({
             <div className={styles.modalActions}>
               <button
                 type="button"
-                className={styles.actionBtn}
+                className={styles.modalBtnCancel}
                 onClick={() => setRejectingReview(null)}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className={[styles.actionBtn, styles.btnReject].join(" ")}
+                className={styles.modalBtnDanger}
                 onClick={handleRejectConfirm}
                 disabled={isPending}
               >
-                {isPending ? <Loader2 size={14} className="animate-spin" /> : "Confirm Rejection"}
+                {isPending ? <Loader2 size={15} className="animate-spin" /> : "Confirm Rejection"}
               </button>
             </div>
           </div>
@@ -947,41 +1018,58 @@ export function AdminReviews({
       {/* Delete Confirmation Modal */}
       {deletingReview ? (
         <div className={styles.modalBackdrop} onClick={() => setDeletingReview(null)}>
-          <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
-            <div className={styles.modalHeader}>
-              <h3 className={styles.modalTitle} style={{ color: "#f43f5e" }}>
-                <ShieldAlert size={20} style={{ display: "inline", verticalAlign: "middle", marginRight: "6px" }} />
+          <div
+            className={[styles.modalContent, styles.modalConfirmBox].join(" ")}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className={styles.modalHeader} style={{ marginBottom: "1rem" }}>
+              <h3 className={styles.modalTitle} style={{ color: "#f43f5e", display: "flex", alignItems: "center", gap: "8px" }}>
+                <ShieldAlert size={22} style={{ color: "#f43f5e" }} />
                 Permanent Deletion
               </h3>
               <button
                 type="button"
                 onClick={() => setDeletingReview(null)}
-                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer" }}
+                style={{ background: "none", border: "none", color: "#94a3b8", cursor: "pointer", padding: "4px" }}
               >
                 <X size={20} />
               </button>
             </div>
-            <p style={{ fontSize: "0.9rem", color: "#e2e8f0", lineHeight: "1.6" }}>
-              Are you sure you want to permanently delete the review by <strong>{deletingReview.customer_name}</strong>?
+
+            <p style={{ fontSize: "0.93rem", color: "#e2e8f0", lineHeight: "1.6", margin: "0.25rem 0" }}>
+              Are you sure you want to permanently delete the review by <strong style={{ color: "#ffffff" }}>{deletingReview.customer_name}</strong>?
             </p>
-            <p style={{ fontSize: "0.82rem", color: "#fca5a5" }}>
-              This action cannot be undone. An audit log record will be preserved.
-            </p>
+
+            <div className={styles.modalWarningCard}>
+              <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: "2px", color: "#f43f5e" }} />
+              <div>
+                <strong style={{ display: "block", color: "#fecdd3", marginBottom: "2px" }}>This action cannot be undone.</strong>
+                The review will be removed immediately. An immutable audit log entry will be preserved.
+              </div>
+            </div>
+
             <div className={styles.modalActions}>
               <button
                 type="button"
-                className={styles.actionBtn}
+                className={styles.modalBtnCancel}
                 onClick={() => setDeletingReview(null)}
               >
                 Cancel
               </button>
               <button
                 type="button"
-                className={[styles.actionBtn, styles.btnReject].join(" ")}
+                className={styles.modalBtnDanger}
                 onClick={handleDeleteConfirm}
                 disabled={isPending}
               >
-                {isPending ? <Loader2 size={14} className="animate-spin" /> : "Permanently Delete"}
+                {isPending ? (
+                  <Loader2 size={15} className="animate-spin" />
+                ) : (
+                  <>
+                    <Trash2 size={15} />
+                    Permanently Delete
+                  </>
+                )}
               </button>
             </div>
           </div>

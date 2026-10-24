@@ -95,7 +95,7 @@ export function normalizeBackendCampaign(
       campaign_name: "Untitled Campaign",
       slug: "untitled-campaign",
       service_name: null,
-      location: "DIMISI HQ, New Delhi",
+      location: "DIMISI HQ, Kanpur, UP",
       is_active: true,
       expires_at: null,
       visits: 0,
@@ -129,7 +129,7 @@ export function normalizeBackendCampaign(
     campaign_name: doc.name || "Untitled Campaign",
     slug: doc.slug,
     service_name: serviceName,
-    location: doc.location || "DIMISI HQ, New Delhi",
+    location: doc.location || "DIMISI HQ, Kanpur, UP",
     is_active: doc.isActive !== false,
     expires_at: doc.expiresAt || null,
     visits,
@@ -185,7 +185,7 @@ export async function createAdminCampaignApi(
   const preGeneratedId = generateMongoObjectId();
   const baseSlugInput = payload.slug?.trim() || name;
   const slug = formatCampaignPublicSlug(baseSlugInput, preGeneratedId);
-  const location = payload.location?.trim() || "DIMISI HQ, New Delhi";
+  const location = payload.location?.trim() || "DIMISI HQ, Kanpur, UP";
 
   const backendBody: Record<string, any> = {
     _id: preGeneratedId,
@@ -252,14 +252,22 @@ export function getCampaignQrDownloadUrl(
  * Resolves a default active campaign ObjectId from database or cached state.
  * Prevents 400 error when submitting reviews from generic /review URL without a campaign param.
  */
-export async function resolveDefaultCampaignId(): Promise<string | null> {
+export async function resolveDefaultCampaignId(
+  reviewerType?: "client" | "employee" | "visitor" | string,
+): Promise<string> {
+  const SYSTEM_STAFF_CAMPAIGN_ID = "6accce8e094de61d3f0a4b29";
+  const SYSTEM_CLIENT_CAMPAIGN_ID = "6acccdac094de61d3f0a4b14";
+
+  if (reviewerType === "employee") {
+    return SYSTEM_STAFF_CAMPAIGN_ID;
+  }
+
   // 1. Only query protected admin API if user has an active admin session in this browser!
-  // Prevents public site visitors from triggering 401 Unauthorized / 400 Refresh Token errors.
   const adminSession = getStoredAdminSession();
   if (adminSession?.token) {
     try {
       const campaigns = await getAllAdminCampaignsApi();
-      if (Array.isArray(campaigns)) {
+      if (Array.isArray(campaigns) && campaigns.length > 0) {
         const active = campaigns.find((c) => c.is_active && isMongoId(c.id));
         if (active) return active.id;
         const anyMongo = campaigns.find((c) => isMongoId(c.id));
@@ -274,7 +282,7 @@ export async function resolveDefaultCampaignId(): Promise<string | null> {
       const raw = localStorage.getItem("dimisi_campaigns_v1");
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) {
+        if (Array.isArray(parsed) && parsed.length > 0) {
           const active = parsed.find((c: any) => c.is_active !== false && isMongoId(c.id));
           if (active) return active.id;
           const anyMongo = parsed.find((c: any) => isMongoId(c.id));
@@ -284,7 +292,7 @@ export async function resolveDefaultCampaignId(): Promise<string | null> {
     } catch {}
   }
 
-  return null;
+  return reviewerType === "employee" ? SYSTEM_STAFF_CAMPAIGN_ID : SYSTEM_CLIENT_CAMPAIGN_ID;
 }
 
 /**
@@ -402,7 +410,7 @@ export async function getPublicCampaignBySlugApi(slug: string): Promise<ReviewCa
     campaign_name: matchedServiceName || humanTitle || "Client Experience Review",
     slug: cleanSlug,
     service_name: matchedServiceName,
-    location: "DIMISI HQ, New Delhi",
+    location: "DIMISI HQ, Kanpur, UP",
     is_active: true,
     expires_at: null,
     visits: 1,

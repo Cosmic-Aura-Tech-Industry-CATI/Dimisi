@@ -11,6 +11,7 @@ import {
   Loader2,
   Building2,
   Code2,
+  Globe,
   Users,
   Sparkles,
   ArrowRight,
@@ -22,6 +23,7 @@ import {
   type PublicReview,
   type ReviewStats,
   type ReviewType,
+  isVisitorReview,
 } from "@/lib/reviews.shared";
 import { getPublicReviews, reportReview } from "@/lib/reviews.functions";
 import styles from "./ReviewsPage.module.css";
@@ -44,6 +46,7 @@ function ReviewCardItem({
   onReport,
 }: ReviewCardItemProps) {
   const isEmp = item.reviewer_type === "employee";
+  const isVisitor = isVisitorReview(item);
   const rawText = item.review_text || "";
   const isLong = rawText.length > REVIEW_TEXT_THRESHOLD;
   const isShort = rawText.length < 90;
@@ -84,6 +87,11 @@ function ReviewCardItem({
                 <span className={styles.employeeBadge}>
                   {item.is_verified ? <CheckCircle size={10} /> : null}
                   <span>{item.is_verified ? "VERIFIED EMPLOYEE" : "EMPLOYEE"}</span>
+                </span>
+              ) : isVisitor ? (
+                <span className={styles.visitorBadge}>
+                  <Globe size={10} />
+                  <span>PUBLIC REVIEW</span>
                 </span>
               ) : (
                 <span className={styles.clientBadge}>
@@ -194,7 +202,7 @@ export function ReviewsPage() {
   const [hasMore, setHasMore] = useState(false);
 
   // Filters & State
-  const [typeFilter, setTypeFilter] = useState<"all" | "client" | "employee">("all");
+  const [typeFilter, setTypeFilter] = useState<"all" | "client" | "employee" | "visitor">("all");
   const [page, setPage] = useState(0);
   const [ratingFilter, setRatingFilter] = useState<number>(0);
   const [serviceFilter, setServiceFilter] = useState<string>("");
@@ -380,6 +388,14 @@ export function ReviewsPage() {
             </span>
           </div>
 
+          <div className={styles.statBox}>
+            <span className={styles.statBoxLabel}>PUBLIC REVIEWS</span>
+            <div className={styles.statBoxValue}>{stats.visitorTotal ?? 0}</div>
+            <span className={styles.statBoxSub}>
+              {stats.visitorTotal ? `${stats.visitorAverage?.toFixed(1)}★ average` : "Community & Visitors"}
+            </span>
+          </div>
+
           <div className={[styles.statBox, styles.statBoxRating].join(" ")}>
             <span className={styles.statBoxLabel}>AVERAGE RATING</span>
             <div className={styles.statBoxValue}>
@@ -444,6 +460,24 @@ export function ReviewsPage() {
               <Code2 size={16} />
               <span>EMPLOYEES</span>
               <span className={styles.segBadge}>{stats.employeeTotal ?? 0}</span>
+            </button>
+
+            <button
+              type="button"
+              role="tab"
+              aria-selected={typeFilter === "visitor"}
+              className={[
+                styles.segBtn,
+                typeFilter === "visitor" ? styles.segBtnActiveVisitor : "",
+              ].join(" ")}
+              onClick={() => {
+                setTypeFilter("visitor");
+                handleFilterChange();
+              }}
+            >
+              <Globe size={16} />
+              <span>PUBLIC REVIEWS</span>
+              <span className={styles.segBadge}>{stats.visitorTotal ?? 0}</span>
             </button>
           </div>
         </div>
@@ -634,13 +668,17 @@ export function ReviewsPage() {
               Whether you are an enterprise partner who partnered with us or a builder creating next-generation software within DIMISI, your reflection matters.
             </p>
             <div className={styles.shareExpButtons}>
-              <Link to="/review" className={styles.shareBtnClient}>
+              <Link to="/review?type=client" className={styles.shareBtnClient}>
                 <Building2 size={18} />
                 <span>Submit Client Review</span>
               </Link>
-              <Link to="/review" className={styles.shareBtnEmployee}>
+              <Link to="/review?type=employee" className={styles.shareBtnEmployee}>
                 <Code2 size={18} />
                 <span>Submit Staff Review</span>
+              </Link>
+              <Link to="/review?type=visitor" className={styles.shareBtnVisitor}>
+                <Globe size={18} />
+                <span>Submit Public Feedback</span>
               </Link>
             </div>
           </div>

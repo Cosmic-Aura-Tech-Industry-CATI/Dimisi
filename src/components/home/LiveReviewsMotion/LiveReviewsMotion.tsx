@@ -11,11 +11,12 @@ import {
   RefreshCw,
   AlertTriangle,
   Briefcase,
+  Globe,
 } from "lucide-react";
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
 import { getPublicReviews } from "@/lib/reviews.functions";
-import type { PublicReview } from "@/lib/reviews.shared";
+import { isVisitorReview, type PublicReview } from "@/lib/reviews.shared";
 import styles from "./LiveReviewsMotion.module.css";
 
 function StarRating({ rating }: { rating: number }) {
@@ -34,6 +35,7 @@ function StarRating({ rating }: { rating: number }) {
 
 function ReviewCard({ review }: { review: PublicReview }) {
   const isEmp = review.reviewer_type === "employee";
+  const isVisitor = isVisitorReview(review);
   const initials =
     review.customer_name
       .split(" ")
@@ -54,6 +56,11 @@ function ReviewCard({ review }: { review: PublicReview }) {
           <span className={styles.verifiedBadgeEmp}>
             <Briefcase className={styles.checkIcon} aria-hidden="true" />
             {review.is_verified ? "Verified Staff" : "DIMISI Team"}
+          </span>
+        ) : isVisitor ? (
+          <span className={styles.verifiedBadgeVisitor}>
+            <Globe className={styles.checkIcon} aria-hidden="true" />
+            Public Review
           </span>
         ) : (
           <span className={styles.verifiedBadgeClient}>

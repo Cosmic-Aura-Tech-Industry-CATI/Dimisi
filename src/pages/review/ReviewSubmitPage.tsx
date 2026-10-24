@@ -9,6 +9,7 @@ import {
   X,
   Building2,
   Code2,
+  Globe,
   HeartHandshake,
   Sparkles,
   Lock,
@@ -72,12 +73,16 @@ export function ReviewSubmitPage({
     location: string | null;
   } | null>(null);
 
+  const initialTypeFromUrl = (typeof window !== "undefined"
+    ? new URLSearchParams(window.location.search).get("type")
+    : null) as ReviewType | null;
+
   const [formData, setFormData] = useState<ReviewInput>({
     slug: campaignSlug ?? "",
     customerName: "",
     customerEmail: "",
     customerPhone: "",
-    reviewerType: "client",
+    reviewerType: (initialTypeFromUrl === "visitor" || initialTypeFromUrl === "employee" || initialTypeFromUrl === "client") ? initialTypeFromUrl : "client",
     serviceName: "",
     roleOrTitle: "",
     employeeDepartment: "Engineering & Core Systems",
@@ -87,6 +92,20 @@ export function ReviewSubmitPage({
     customerLocation: "",
     consent: false,
   });
+
+  const handleTypeChange = (newType: "client" | "employee" | "visitor") => {
+    setFormData((prev) => ({ ...prev, reviewerType: newType }));
+    resolveDefaultCampaignId(newType).then((campId) => {
+      if (campId) {
+        setCampaign({
+          id: campId,
+          campaign_name: newType === "employee" ? "Staff Feedback Campaign" : newType === "visitor" ? "Public Community Feedback" : "Client Experience Review",
+          service_name: null,
+          location: "DIMISI HQ, Kanpur, UP",
+        });
+      }
+    });
+  };
 
   const [hoverRating, setHoverRating] = useState<number>(0);
   const [photoData, setPhotoData] = useState<{
@@ -137,7 +156,7 @@ export function ReviewSubmitPage({
         id: directMongoId,
         campaign_name: "Client Experience Review",
         service_name: null,
-        location: "DIMISI HQ, New Delhi",
+        location: "DIMISI HQ, Kanpur, UP",
       });
     } else {
       // Generic /review visitor: resolve default campaign ID
@@ -147,7 +166,7 @@ export function ReviewSubmitPage({
             id: campId,
             campaign_name: "Client Experience Review",
             service_name: null,
-            location: "DIMISI HQ, New Delhi",
+            location: "DIMISI HQ, Kanpur, UP",
           });
         }
       });
@@ -304,6 +323,7 @@ export function ReviewSubmitPage({
   };
 
   const isEmployee = formData.reviewerType === "employee";
+  const isVisitor = formData.reviewerType === "visitor";
 
   return (
     <div className={styles.page}>
@@ -363,7 +383,7 @@ export function ReviewSubmitPage({
                         styles.typeToggleBtn,
                         formData.reviewerType === "client" ? styles.typeToggleActive : "",
                       ].join(" ")}
-                      onClick={() => setFormData((prev) => ({ ...prev, reviewerType: "client" }))}
+                      onClick={() => handleTypeChange("client")}
                     >
                       <Building2 size={20} className={styles.typeToggleIcon} />
                       <div className={styles.typeToggleText}>
@@ -376,14 +396,29 @@ export function ReviewSubmitPage({
                       type="button"
                       className={[
                         styles.typeToggleBtn,
-                        formData.reviewerType === "employee" ? styles.typeToggleActive : "",
+                        formData.reviewerType === "employee" ? styles.typeToggleActiveEmp : "",
                       ].join(" ")}
-                      onClick={() => setFormData((prev) => ({ ...prev, reviewerType: "employee" }))}
+                      onClick={() => handleTypeChange("employee")}
                     >
-                      <Code2 size={20} className={styles.typeToggleIcon} />
+                      <Code2 size={20} className={[styles.typeToggleIcon, styles.iconEmp].join(" ")} />
                       <div className={styles.typeToggleText}>
-                        <strong>EMPLOYEE</strong>
-                        <span>I am part of the engineering, design, AI research, or operations team</span>
+                        <strong>EMPLOYEE / STAFF</strong>
+                        <span>I am part of the engineering, design, AI, or operations team</span>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      className={[
+                        styles.typeToggleBtn,
+                        formData.reviewerType === "visitor" ? styles.typeToggleActiveVisitor : "",
+                      ].join(" ")}
+                      onClick={() => handleTypeChange("visitor")}
+                    >
+                      <Globe size={20} className={[styles.typeToggleIcon, styles.iconVisitor].join(" ")} />
+                      <div className={styles.typeToggleText}>
+                        <strong>PUBLIC / VISITOR</strong>
+                        <span>I am a website visitor, tech enthusiast, or general community member</span>
                       </div>
                     </button>
                   </div>
@@ -431,7 +466,7 @@ export function ReviewSubmitPage({
                     id="field-customerName"
                     type="text"
                     className={[styles.input, errors["customerName"] ? styles.inputErr : ""].join(" ")}
-                    placeholder={isEmployee ? "e.g. Harsh Mishra" : "e.g. Alexander Wright"}
+                    placeholder={isEmployee ? "e.g. Harsh Mishra" : isVisitor ? "e.g. Alex Sharma" : "e.g. Alexander Wright"}
                     value={formData.customerName}
                     onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
                     maxLength={80}
@@ -453,7 +488,7 @@ export function ReviewSubmitPage({
                       id="field-customerEmail"
                       type="email"
                       className={[styles.input, errors["customerEmail"] ? styles.inputErr : ""].join(" ")}
-                      placeholder={isEmployee ? "yourname@dimisi.in" : "alex@company.com"}
+                      placeholder={isEmployee ? "yourname@dimisi.in" : isVisitor ? "alex@gmail.com" : "alex@company.com"}
                       value={formData.customerEmail}
                       onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
                       required={isEmployee}
@@ -465,14 +500,14 @@ export function ReviewSubmitPage({
 
                   <div className={styles.field}>
                     <label htmlFor="field-roleOrTitle" className={styles.label}>
-                      <span>{isEmployee ? "Designation / Role" : "Company / Designation"}</span>
+                      <span>{isEmployee ? "Designation / Role" : isVisitor ? "Profession / Interest" : "Company / Designation"}</span>
                       <span className={styles.opt}>Optional</span>
                     </label>
                     <input
                       id="field-roleOrTitle"
                       type="text"
                       className={styles.input}
-                      placeholder={isEmployee ? "e.g. Full-Stack Engineer" : "e.g. Apex Group · CTO"}
+                      placeholder={isEmployee ? "e.g. Full-Stack Engineer" : isVisitor ? "e.g. Tech Enthusiast / Designer" : "e.g. Apex Group · CTO"}
                       value={formData.roleOrTitle || ""}
                       onChange={(e) => setFormData({ ...formData, roleOrTitle: e.target.value })}
                     />
@@ -540,7 +575,7 @@ export function ReviewSubmitPage({
                         id="field-customerLocation"
                         type="text"
                         className={styles.input}
-                        placeholder="e.g. San Francisco, CA or London, UK"
+                        placeholder="e.g. Kanpur, UP or San Francisco, CA"
                         value={formData.customerLocation}
                         onChange={(e) => setFormData({ ...formData, customerLocation: e.target.value })}
                         maxLength={120}
@@ -563,6 +598,8 @@ export function ReviewSubmitPage({
                     placeholder={
                       isEmployee
                         ? "Describe your experience working at DIMISI Technologies — our technical standards, freedom to innovate, code quality, and culture..."
+                        : isVisitor
+                        ? "Share your feedback about DIMISI Technologies — website experience, cutting-edge technologies, projects, or thoughts..."
                         : "Describe your project outcomes, architecture quality, timeline, and collaboration experience with DIMISI..."
                     }
                     value={formData.reviewText}
