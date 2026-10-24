@@ -127,11 +127,11 @@
 
 .typeToggleGrid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, 1fr);
   gap: 0.85rem;
 }
 
-@media (max-width: 580px) {
+@media (max-width: 860px) {
   .typeToggleGrid {
     grid-template-columns: 1fr;
   }
@@ -654,4 +654,24 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
   cursor: pointer;
+}
+
+.typeToggleActiveEmp {
+  background: rgba(99, 102, 241, 0.12) !important;
+  border-color: #818cf8 !important;
+  box-shadow: 0 0 24px rgba(99, 102, 241, 0.22);
+}
+
+.typeToggleActiveVisitor {
+  background: rgba(45, 212, 191, 0.12) !important;
+  border-color: #2dd4bf !important;
+  box-shadow: 0 0 24px rgba(45, 212, 191, 0.22);
+}
+
+.iconEmp {
+  color: #a5b4fc !important;
+}
+
+.iconVisitor {
+  color: #2dd4bf !important;
 }

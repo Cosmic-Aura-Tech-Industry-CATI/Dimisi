@@ -666,11 +666,141 @@
   margin: 1.15rem 0;
 }
 
+.modalConfirmBox {
+  max-width: 490px;
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.85), 0 0 35px rgba(225, 29, 72, 0.15);
+}
+
+.modalWarningCard {
+  background: rgba(244, 63, 94, 0.08);
+  border: 1px solid rgba(244, 63, 94, 0.22);
+  border-radius: 12px;
+  padding: 0.9rem 1.05rem;
+  margin: 1.15rem 0 0.5rem;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  color: #fca5a5;
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
 .modalActions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.85rem;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
   margin-top: 1.6rem;
+}
+
+.modalBtnCancel {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #cbd5e1;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 0.65rem 1.35rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.modalBtnCancel:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #f8fafc;
+}
+
+.modalBtnDanger {
+  background: linear-gradient(135deg, #e11d48 0%, #be123c 100%);
+  border: 1px solid rgba(244, 63, 94, 0.5);
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 0.65rem 1.4rem;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(225, 29, 72, 0.38);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.modalBtnDanger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+  box-shadow: 0 6px 22px rgba(225, 29, 72, 0.55);
+  transform: translateY(-1px);
+  color: #ffffff;
+}
+
+.modalBtnDanger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.modalBtnPrimary {
+  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  color: #ffffff;
+  font-size: 0.86rem;
+  font-weight: 600;
+  padding: 0.65rem 1.35rem;
+  border-radius: 10px;
+  cursor: pointer;
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.modalBtnPrimary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4ade80 0%, #22c55e 100%);
+  box-shadow: 0 6px 20px rgba(34, 197, 94, 0.48);
+  transform: translateY(-1px);
+}
+
+.modalBtnPrimary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.modalBtnNeutral {
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #f1f5f9;
+  font-size: 0.86rem;
+  font-weight: 500;
+  padding: 0.65rem 1.25rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  white-space: nowrap;
+}
+
+.modalBtnNeutral:hover:not(:disabled) {
+  background: rgba(255, 171, 46, 0.15);
+  border-color: rgba(255, 171, 46, 0.45);
+  color: #ffab2e;
+  transform: translateY(-1px);
 }
 
 .emptyState {
@@ -739,4 +869,123 @@
   background: #ffbe5c;
   transform: translateY(-1px);
   box-shadow: 0 4px 14px rgba(255, 171, 46, 0.35);
+}
+
+.typeBadgeVisitor {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 6px;
+  background: rgba(45, 212, 191, 0.12);
+  border: 1px solid rgba(45, 212, 191, 0.35);
+  color: #2dd4bf;
+  font-family: var(--dm-font-display, "Chakra Petch", monospace);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* Pagination Bar */
+.paginationBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.4rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(10, 8, 14, 0.6);
+  flex-wrap: wrap;
+  gap: 0.85rem;
+}
+
+.paginationMeta {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.paginationSelect {
+  background: rgba(20, 17, 24, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  font-size: 0.8rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.paginationControls {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pageBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  min-width: 34px;
+  height: 34px;
+  padding: 0 0.6rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pageBtn:hover:not(:disabled) {
+  background: rgba(255, 171, 46, 0.15);
+  border-color: rgba(255, 171, 46, 0.4);
+  color: #ffab2e;
+}
+
+.pageBtnActive {
+  background: var(--dm-grad-flare, linear-gradient(120deg, #ff5f2e, #ff8c1a 40%, #ffd79a)) !important;
+  color: #08070b !important;
+  border-color: transparent !important;
+  font-weight: 700;
+}
+
+.pageBtn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.snippetCell {
+  max-width: 280px;
+  width: 280px;
+  overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
+.snippetService {
+  font-size: 0.72rem;
+  font-weight: 600;
+  display: block;
+  margin-bottom: 0.2rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.snippetText {
+  font-size: 0.82rem;
+  color: #cbd5e1;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.45;
 }

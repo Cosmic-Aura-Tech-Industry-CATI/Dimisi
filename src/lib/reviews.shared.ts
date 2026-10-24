@@ -2,7 +2,31 @@
 
 export type ReviewStatus = "pending" | "approved" | "rejected" | "archived";
 export type ReportStatus = "open" | "resolved" | "dismissed";
-export type ReviewType = "client" | "employee";
+export type ReviewType = "client" | "employee" | "visitor";
+export function isVisitorReview(r?: {
+  reviewer_type?: unknown;
+  role_or_title?: string | null;
+  service_name?: string | null;
+  customer_location?: string | null;
+  employee_department?: string | null;
+}): boolean {
+  if (!r) return false;
+  if (r.reviewer_type === "visitor") return true;
+  const role = (r.role_or_title || "").toLowerCase().trim();
+  const dept = (r.employee_department || "").toLowerCase().trim();
+  const svc = (r.service_name || "").toLowerCase().trim();
+  return (
+    role === "visitor" ||
+    role.includes("visitor") ||
+    role.includes("public reviewer") ||
+    role === "public review" ||
+    role === "community member" ||
+    role === "general public" ||
+    dept === "public community" ||
+    svc.includes("public experience")
+  );
+}
+
 
 export const REVIEW_TEXT_MAX = 2000;
 export const REVIEW_TEXT_MIN = 5;
@@ -281,6 +305,8 @@ export type ReviewStats = {
   clientAverage: number;
   employeeTotal: number;
   employeeAverage: number;
+  visitorTotal: number;
+  visitorAverage: number;
   pendingCount: number;
   approvedCount: number;
   rejectedCount: number;
@@ -371,6 +397,8 @@ export function computeStats(
   let clientCount = 0;
   let employeeSum = 0;
   let employeeCount = 0;
+  let visitorSum = 0;
+  let visitorCount = 0;
   let pendingCount = 0;
   let approvedCount = 0;
   let rejectedCount = 0;
@@ -393,6 +421,9 @@ export function computeStats(
     if (r.reviewer_type === "employee") {
       employeeSum += r.rating;
       employeeCount += 1;
+    } else if (isVisitorReview(r)) {
+      visitorSum += r.rating;
+      visitorCount += 1;
     } else {
       clientSum += r.rating;
       clientCount += 1;
@@ -431,6 +462,8 @@ export function computeStats(
     clientAverage: clientCount ? Math.round((clientSum / clientCount) * 10) / 10 : 5.0,
     employeeTotal: employeeCount,
     employeeAverage: employeeCount ? Math.round((employeeSum / employeeCount) * 10) / 10 : 5.0,
+    visitorTotal: visitorCount,
+    visitorAverage: visitorCount ? Math.round((visitorSum / visitorCount) * 10) / 10 : 5.0,
     pendingCount,
     approvedCount: approvedCount || total,
     rejectedCount,
