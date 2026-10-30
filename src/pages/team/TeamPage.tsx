@@ -107,7 +107,8 @@ export function TeamPage() {
                   onClick={() => setActiveTier("Founders & Executive Directors")}
                 >
                   <Sparkles size={14} className={styles.btnIcon} />
-                  <span>Founders & Directors ({founders.length})</span>
+                  <span className={styles.labelFull}>Founders & Directors ({founders.length})</span>
+                  <span className={styles.labelShort}>Founders ({founders.length})</span>
                 </button>
                 <button
                   type="button"
@@ -118,7 +119,8 @@ export function TeamPage() {
                   onClick={() => setActiveTier("Core Engineering & Leads")}
                 >
                   <Cpu size={14} className={styles.btnIcon} />
-                  <span>Core Engineering ({coreLeads.length})</span>
+                  <span className={styles.labelFull}>Core Engineering ({coreLeads.length})</span>
+                  <span className={styles.labelShort}>Core Leads ({coreLeads.length})</span>
                 </button>
                 <button
                   type="button"
@@ -129,7 +131,8 @@ export function TeamPage() {
                   onClick={() => setActiveTier("Innovation Cohort & Interns")}
                 >
                   <Rocket size={14} className={styles.btnIcon} />
-                  <span>Intern Cohort ({interns.length})</span>
+                  <span className={styles.labelFull}>Intern Cohort ({interns.length})</span>
+                  <span className={styles.labelShort}>Interns ({interns.length})</span>
                 </button>
                 {alumni.length > 0 && (
                   <button
@@ -141,7 +144,8 @@ export function TeamPage() {
                     onClick={() => setActiveTier("Alumni & Former Members")}
                   >
                     <Award size={14} className={styles.btnIcon} />
-                    <span>Alumni / Ex-Team ({alumni.length})</span>
+                    <span className={styles.labelFull}>Alumni / Ex-Team ({alumni.length})</span>
+                    <span className={styles.labelShort}>Alumni ({alumni.length})</span>
                   </button>
                 )}
               </div>
