@@ -1,10 +1,12 @@
 import { Link } from "@tanstack/react-router";
+import { ArrowUpRight, Award, ShieldCheck } from "lucide-react";
 import {
   COMPANY,
   LEGAL_LINKS,
   NAV_LINKS,
   OFFICIAL_EMAILS,
   SOCIALS,
+  STARTUP_RECOGNITIONS,
 } from "@/constants/site";
 import { SILVER_LOGO_URL } from "@/assets/logos";
 import styles from "./Footer.module.css";
@@ -72,7 +74,7 @@ export function Footer() {
           <p className={styles.mission}>{COMPANY.mission}</p>
 
           <div className={styles.leadMailCard}>
-            <span className={styles.leadMailBadge}>Primary Contact</span>
+            <span className={styles.leadMailBadge}>Primary Helpdesk</span>
             <a
               className={styles.mail}
               href={`mailto:${COMPANY.supportEmail}`}
@@ -185,16 +187,82 @@ export function Footer() {
         </div>
       </div>
 
+      {/* Startup Recognitions & Accreditations Showcase */}
+      <section className={styles.recognitionsSection} aria-label="Startup Recognitions">
+        <div className={styles.recognitionsHeader}>
+          <div className={styles.recognitionsTag}>
+            <Award size={13} className={styles.recTagIcon} aria-hidden="true" />
+            <span>STARTUP RECOGNITION & ACCREDITATIONS</span>
+          </div>
+          <span className={styles.recDivider} aria-hidden="true" />
+        </div>
+
+        <div className={styles.recognitionsGrid}>
+          {STARTUP_RECOGNITIONS.map((rec) => (
+            <div key={rec.id} className={styles.recCard}>
+              <div className={styles.recLogoWrap}>
+                <img
+                  src={rec.logo}
+                  alt={rec.alt}
+                  className={styles.recLogoImg}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <div className={styles.recContent}>
+                <div className={styles.recTopRow}>
+                  <h4 className={styles.recTitle}>{rec.title}</h4>
+                  <span className={styles.recBadge}>{rec.badge}</span>
+                </div>
+                <p className={styles.recDesc}>{rec.description}</p>
+                <div className={styles.recActionRow}>
+                  <a
+                    href={rec.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.recActionLink}
+                    aria-label={`${rec.actionText} for ${rec.title}`}
+                  >
+                    <span>{rec.actionText}</span>
+                    <ArrowUpRight size={13} aria-hidden="true" />
+                  </a>
+                  {"certNumber" in rec && rec.certNumber ? (
+                    <span className={styles.certPill}>
+                      <ShieldCheck size={12} className={styles.certCheck} aria-hidden="true" />
+                      <span>Cert: {rec.certNumber}</span>
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
       {/* Decorative Large Watermark */}
       <p className={styles.mega} aria-hidden="true">
         DIMISI Technologies
       </p>
 
-      {/* Footer Bottom Bar */}
+      {/* Footer Bottom Bar with CIN & MCA Registration */}
       <div className={styles.bottom}>
-        <span className={styles.copyright}>
-          © 2026 {COMPANY.name}. {COMPANY.tagline}.
-        </span>
+        <div className={styles.legalMeta}>
+          <span className={styles.copyright}>
+            © 2026 {COMPANY.name}. {COMPANY.tagline}.
+          </span>
+          <div className={styles.corporateBadgeGroup}>
+            <span className={styles.corporateBadge}>
+              <strong>CIN:</strong> {COMPANY.cin}
+            </span>
+            <span className={styles.metaDot} aria-hidden="true">·</span>
+            <span className={styles.corporateBadge}>{COMPANY.mcaRegistered}</span>
+            <span className={styles.metaDot} aria-hidden="true">·</span>
+            <span className={styles.corporateBadge}>
+              <strong>DPIIT:</strong> {COMPANY.dpiitNumber}
+            </span>
+          </div>
+        </div>
+
         <span className={styles.status}>
           <i className={styles.pulse} aria-hidden="true" /> All systems operational
         </span>

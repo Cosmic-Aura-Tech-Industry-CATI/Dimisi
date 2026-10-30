@@ -4,6 +4,10 @@ export const COMPANY = {
   name: "DIMISI TECHNOLOGIES PVT LTD",
   shortName: "DIMISI",
   tagline: "Technology Beyond Limits",
+  cin: "U62013UP2026PTC246506",
+  mcaRegistered: "MCA Registered (India)",
+  dpiitNumber: "DIPP283489",
+  dpiitValidUpto: "08-04-2036",
   mission:
     "We help businesses build rock-solid software architectures, scale with data-driven digital marketing, and navigate growth through strategic corporate advisory—while creating next-generation consumer social platforms.",
   email: "support@dimisi.tech",
@@ -23,6 +27,32 @@ export const COMPANY = {
   ],
   mapsUrl: "https://maps.google.com/?q=MIG+3/131,+Swarn+Jayanti+Vihar,+Koyala+Nagar,+Kanpur,+Uttar+Pradesh+208011",
 } as const;
+
+export const STARTUP_RECOGNITIONS = [
+  {
+    id: "nvidia-inception",
+    title: "NVIDIA Inception Program Member",
+    badge: "AI & Startup Ecosystem",
+    description:
+      "DIMISI Technologies Private Limited is a proud member of the NVIDIA Inception Program, a global initiative supporting innovative startups with access to technology resources, developer tools, training, and business growth opportunities.",
+    logo: "/images/nvidia-inception-clean.png",
+    alt: "NVIDIA Inception Program Member",
+    link: "https://www.nvidia.com/en-us/deep-learning-ai/startups/",
+    actionText: "Explore NVIDIA Inception",
+  },
+  {
+    id: "startup-india",
+    title: "Startup India Recognized",
+    badge: "Govt. of India · DPIIT",
+    description:
+      "Recognized by the Department for Promotion of Industry and Internal Trade (DPIIT), Ministry of Commerce & Industry, Government of India. Valid through April 2036.",
+    logo: "/images/startup-india-clean.png",
+    alt: "Startup India DPIIT Recognition",
+    certNumber: "DIPP283489",
+    link: "/documents/dimisi-dpiit-certificate.pdf",
+    actionText: "View Recognition Certificate",
+  },
+] as const;
 
 export const OFFICIAL_EMAILS = [
   {

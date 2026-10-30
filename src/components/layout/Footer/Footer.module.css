@@ -300,6 +300,185 @@
   transform: scale(1.1);
 }
 
+/* =========================================================================
+   STARTUP RECOGNITIONS & ACCREDITATIONS SHOWCASE
+   ========================================================================= */
+.recognitionsSection {
+  position: relative;
+  margin: 3.5rem auto 0;
+  max-width: 84rem;
+  padding-top: 2.4rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.recognitionsHeader {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  margin-bottom: 1.4rem;
+}
+
+.recognitionsTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--dm-font-display);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--dm-amber, #ff8c1a);
+  text-transform: uppercase;
+}
+
+.recTagIcon {
+  color: var(--dm-amber, #ff8c1a);
+  filter: drop-shadow(0 0 6px rgba(255, 140, 26, 0.5));
+}
+
+.recDivider {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, rgba(255, 140, 26, 0.3) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
+}
+
+.recognitionsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.6rem;
+}
+
+.recCard {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+  padding: 1.3rem 1.5rem;
+  border-radius: 14px;
+  background: rgba(14, 14, 17, 0.75);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s, box-shadow 0.3s;
+}
+
+.recCard:hover {
+  transform: translateY(-3px);
+  border-color: rgba(255, 140, 26, 0.4);
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 0 24px rgba(255, 140, 26, 0.12);
+}
+
+.recLogoWrap {
+  width: 145px;
+  min-width: 145px;
+  height: 88px;
+  background: #ffffff;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.6rem 0.8rem;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.45);
+  transition: transform 0.3s ease;
+}
+
+.recCard:hover .recLogoWrap {
+  transform: scale(1.02);
+}
+
+.recLogoImg {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.recContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.recTopRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.recTitle {
+  margin: 0;
+  font-family: var(--dm-font-display);
+  font-size: 0.98rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  letter-spacing: 0.02em;
+}
+
+.recBadge {
+  font-family: var(--dm-font-display);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: rgba(255, 140, 26, 0.12);
+  border: 1px solid rgba(255, 140, 26, 0.3);
+  color: var(--dm-amber, #ff8c1a);
+}
+
+.recDesc {
+  margin: 0.15rem 0 0.45rem;
+  color: rgba(255, 244, 230, 0.65);
+  font-size: 0.8rem;
+  line-height: 1.55;
+  font-family: var(--dm-font-body);
+}
+
+.recActionRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.recActionLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-family: var(--dm-font-display);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--dm-amber, #ff8c1a);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.recActionLink:hover {
+  text-decoration: underline;
+  transform: translateX(2px);
+  color: #ffa742;
+}
+
+.certPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 6px;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #34d399;
+  font-family: var(--dm-font-mono, monospace);
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.certCheck {
+  color: #34d399;
+}
+
 /* Large DIMISI Technologies Watermark */
 .mega {
   position: relative;
@@ -322,12 +501,14 @@
   text-transform: uppercase;
 }
 
-/* Bottom Bar */
+/* =========================================================================
+   BOTTOM LEGAL BAR WITH CIN & MCA REGISTRATION
+   ========================================================================= */
 .bottom {
   position: relative;
   display: flex;
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: 1.4rem;
   justify-content: space-between;
   align-items: center;
   max-width: 84rem;
@@ -335,11 +516,47 @@
   padding-top: 1.6rem;
   border-top: 1px solid rgba(255, 255, 255, 0.07);
   font-size: 0.8rem;
-  color: rgba(255, 244, 230, 0.45);
+  color: rgba(255, 244, 230, 0.5);
+}
+
+.legalMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
 }
 
 .copyright {
   line-height: 1.5;
+  color: rgba(255, 244, 230, 0.65);
+}
+
+.corporateBadgeGroup {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.74rem;
+  font-family: var(--dm-font-mono, monospace);
+  color: rgba(255, 244, 230, 0.62);
+}
+
+.corporateBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.12rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.corporateBadge strong {
+  color: var(--dm-amber, #ff8c1a);
+  font-weight: 700;
+}
+
+.metaDot {
+  color: rgba(255, 255, 255, 0.25);
 }
 
 .status {
@@ -369,11 +586,17 @@
   }
 }
 
-/* Responsive Breakpoints */
+/* =========================================================================
+   RESPONSIVE BREAKPOINTS
+   ========================================================================= */
 @media (max-width: 1200px) {
   .inner {
     grid-template-columns: 1.4fr 0.9fr 0.9fr 1.15fr 1.15fr;
     gap: 1.8rem;
+  }
+  .recognitionsGrid {
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
   }
 }
 
@@ -388,6 +611,18 @@
   .footer {
     margin-top: 5rem;
     padding-top: 3.5rem;
+  }
+}
+
+@media (max-width: 680px) {
+  .recCard {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+  .recLogoWrap {
+    width: 100%;
+    height: 75px;
   }
 }
 
@@ -406,6 +641,6 @@
   .bottom {
     flex-direction: column;
     align-items: flex-start;
-    gap: 0.8rem;
+    gap: 1rem;
   }
 }
