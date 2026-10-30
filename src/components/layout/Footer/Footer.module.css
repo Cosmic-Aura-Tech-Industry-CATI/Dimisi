@@ -53,55 +53,63 @@
   filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.7)) drop-shadow(0 0 16px rgba(255, 140, 26, 0.12));
 }
 
+.corpLocation {
+  margin: 0.65rem 0 0.45rem;
+  font-family: var(--dm-font-display);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dm-amber, #ff8c1a);
+}
+
+.corpLeadStack {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 0.85rem;
+  font-family: var(--dm-font-mono, monospace);
+  font-size: 0.72rem;
+  color: rgba(255, 244, 230, 0.7);
+}
+
+.corpLeadItem {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.corpLeadKey {
+  color: var(--dm-amber, #ff8c1a);
+  font-weight: 700;
+}
+
+.corpLeadVal {
+  color: rgba(255, 244, 230, 0.88);
+}
+
+.corpLeadBadge {
+  color: #34d399;
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+}
+
+.corpLeadDot {
+  color: rgba(255, 255, 255, 0.25);
+}
+
 .mission {
-  margin: 1.3rem 0 1.2rem;
+  margin: 0.35rem 0 0.8rem;
   max-width: 25rem;
   color: rgba(255, 244, 230, 0.62);
   line-height: 1.75;
   font-size: 0.88rem;
   font-family: var(--dm-font-body);
-}
-
-.leadMailCard {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  padding: 0.65rem 0.9rem;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.025);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  transition: all 0.25s ease;
-  width: fit-content;
-}
-
-.leadMailCard:hover {
-  background: rgba(255, 140, 26, 0.07);
-  border-color: rgba(255, 140, 26, 0.35);
-}
-
-.leadMailBadge {
-  font-family: var(--dm-font-display);
-  font-size: 0.62rem;
-  font-weight: 700;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: rgba(255, 244, 230, 0.45);
-}
-
-.mail {
-  display: inline-block;
-  font-family: var(--dm-font-mono, monospace);
-  color: var(--dm-amber, #ff8c1a);
-  text-decoration: none;
-  font-size: 0.9rem;
-  font-weight: 500;
-  letter-spacing: 0.03em;
-  transition: all 0.25s ease;
-}
-
-.mail:hover {
-  text-decoration: underline;
-  text-shadow: 0 0 12px rgba(255, 140, 26, 0.4);
 }
 
 .col {
@@ -502,7 +510,7 @@
 }
 
 /* =========================================================================
-   BOTTOM LEGAL BAR WITH CIN & MCA REGISTRATION
+   BOTTOM BAR WITH COPYRIGHT
    ========================================================================= */
 .bottom {
   position: relative;
@@ -519,44 +527,9 @@
   color: rgba(255, 244, 230, 0.5);
 }
 
-.legalMeta {
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
 .copyright {
   line-height: 1.5;
   color: rgba(255, 244, 230, 0.65);
-}
-
-.corporateBadgeGroup {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-  font-size: 0.74rem;
-  font-family: var(--dm-font-mono, monospace);
-  color: rgba(255, 244, 230, 0.62);
-}
-
-.corporateBadge {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.12rem 0.5rem;
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.035);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.corporateBadge strong {
-  color: var(--dm-amber, #ff8c1a);
-  font-weight: 700;
-}
-
-.metaDot {
-  color: rgba(255, 255, 255, 0.25);
 }
 
 .status {

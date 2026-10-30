@@ -71,18 +71,29 @@ export function Footer() {
             />
           </Link>
 
-          <p className={styles.mission}>{COMPANY.mission}</p>
+          {/* Corporate Location Tagline */}
+          <p className={styles.corpLocation}>
+            Technologies Private Limited — Kanpur
+          </p>
 
-          <div className={styles.leadMailCard}>
-            <span className={styles.leadMailBadge}>Primary Helpdesk</span>
-            <a
-              className={styles.mail}
-              href={`mailto:${COMPANY.supportEmail}`}
-              aria-label={`Send email to ${COMPANY.supportEmail}`}
-            >
-              {COMPANY.supportEmail}
-            </a>
+          {/* CIN, MCA, DPIIT Corporate Identification Group */}
+          <div className={styles.corpLeadStack}>
+            <div className={styles.corpLeadItem}>
+              <span className={styles.corpLeadKey}>CIN:</span>
+              <span className={styles.corpLeadVal}>{COMPANY.cin}</span>
+            </div>
+            <span className={styles.corpLeadDot} aria-hidden="true">·</span>
+            <div className={styles.corpLeadItem}>
+              <span className={styles.corpLeadBadge}>{COMPANY.mcaRegistered}</span>
+            </div>
+            <span className={styles.corpLeadDot} aria-hidden="true">·</span>
+            <div className={styles.corpLeadItem}>
+              <span className={styles.corpLeadKey}>DPIIT:</span>
+              <span className={styles.corpLeadVal}>{COMPANY.dpiitNumber}</span>
+            </div>
           </div>
+
+          <p className={styles.mission}>{COMPANY.mission}</p>
         </div>
 
         {/* Navigation Column */}
@@ -244,24 +255,11 @@ export function Footer() {
         DIMISI Technologies
       </p>
 
-      {/* Footer Bottom Bar with CIN & MCA Registration */}
+      {/* Footer Bottom Bar with Copyright */}
       <div className={styles.bottom}>
-        <div className={styles.legalMeta}>
-          <span className={styles.copyright}>
-            © 2026 {COMPANY.name}. {COMPANY.tagline}.
-          </span>
-          <div className={styles.corporateBadgeGroup}>
-            <span className={styles.corporateBadge}>
-              <strong>CIN:</strong> {COMPANY.cin}
-            </span>
-            <span className={styles.metaDot} aria-hidden="true">·</span>
-            <span className={styles.corporateBadge}>{COMPANY.mcaRegistered}</span>
-            <span className={styles.metaDot} aria-hidden="true">·</span>
-            <span className={styles.corporateBadge}>
-              <strong>DPIIT:</strong> {COMPANY.dpiitNumber}
-            </span>
-          </div>
-        </div>
+        <span className={styles.copyright}>
+          © 2026 {COMPANY.name}. All rights reserved.
+        </span>
 
         <span className={styles.status}>
           <i className={styles.pulse} aria-hidden="true" /> All systems operational
