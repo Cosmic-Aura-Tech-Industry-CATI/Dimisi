@@ -693,6 +693,47 @@
   border-radius: 999px;
 }
 
+.tierTagAlumni {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: #c4b5fd;
+  margin-bottom: 0.4rem;
+}
+
+.alumniBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.alumniTag {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(196, 181, 253, 0.12);
+  border: 1px solid rgba(196, 181, 253, 0.35);
+  color: #ddd6fe;
+}
+
+.alumniCohortBadge {
+  font-size: 0.66rem;
+  color: #ddd6fe;
+  background: rgba(196, 181, 253, 0.1);
+  border: 1px solid rgba(196, 181, 253, 0.25);
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+}
+
 /* Filtered Grid View */
 .filteredGrid {
   display: grid;

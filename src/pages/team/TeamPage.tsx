@@ -3,6 +3,7 @@ import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
   ArrowUpRight,
+  Award,
   BookOpen,
   Briefcase,
   CheckCircle2,
@@ -32,6 +33,7 @@ export function TeamPage() {
   const founders = TEAM_MEMBERS.filter((m) => m.tier === "Founders & Executive Directors");
   const coreLeads = TEAM_MEMBERS.filter((m) => m.tier === "Core Engineering & Leads");
   const interns = TEAM_MEMBERS.filter((m) => m.tier === "Innovation Cohort & Interns");
+  const alumni = TEAM_MEMBERS.filter((m) => m.tier === "Alumni & Former Members");
 
   return (
     <div className={styles.page}>
@@ -65,7 +67,7 @@ export function TeamPage() {
               <div className={styles.heroStatsRow}>
                 <div className={styles.statChip}>
                   <Users size={15} className={styles.statIcon} />
-                  <span>13 Documented Team Members</span>
+                  <span>{TEAM_MEMBERS.length} Documented Profiles</span>
                 </div>
                 <div className={styles.statChip}>
                   <ShieldCheck size={15} className={styles.statIconGov} />
@@ -125,6 +127,18 @@ export function TeamPage() {
                 >
                   Innovation Cohort & Interns ({interns.length})
                 </button>
+                {alumni.length > 0 && (
+                  <button
+                    type="button"
+                    className={[
+                      styles.filterBtn,
+                      activeTier === "Alumni & Former Members" ? styles.filterActive : "",
+                    ].join(" ")}
+                    onClick={() => setActiveTier("Alumni & Former Members")}
+                  >
+                    Alumni / Ex-Team ({alumni.length})
+                  </button>
+                )}
               </div>
             </Reveal>
           </div>
@@ -169,7 +183,7 @@ export function TeamPage() {
                     Core Engineering & <span className={styles.accentText}>Technical Leads</span>
                   </h2>
                   <p className={styles.tierDesc}>
-                    Foundational engineers (The Sinister Six cohort) commanding mobile systems, low-latency backends, WebSockets, and creative media.
+                    Commanding full-stack web platforms, mobile architectures, low-latency backends, commercial client delivery, and creative media.
                   </p>
                 </div>
 
@@ -191,7 +205,7 @@ export function TeamPage() {
                     Engineering & <span className={styles.accentText}>Innovation Intern Cohort</span>
                   </h2>
                   <p className={styles.tierDesc}>
-                    Rising developers and growth specialists shipping production features, mobile modules, and campus engagement campaigns.
+                    Rising developers, market research analysts, and growth specialists shipping production features and user intelligence.
                   </p>
                 </div>
 
@@ -201,13 +215,41 @@ export function TeamPage() {
                   ))}
                 </div>
               </div>
+
+              {/* SECTION D: ALUMNI & FORMER MEMBERS (EX-EMPLOYEES) */}
+              {alumni.length > 0 && (
+                <div className={styles.tierBlock}>
+                  <div className={styles.tierHeader}>
+                    <div className={styles.tierTagAlumni}>
+                      <Award size={13} />
+                      <span>HONOR ROLL · ALUMNI & FORMER MEMBERS</span>
+                    </div>
+                    <h2 className={styles.tierTitle}>
+                      DIMISI <span className={styles.accentText}>Alumni & Former Contributors</span>
+                    </h2>
+                    <p className={styles.tierDesc}>
+                      Recognizing the valued contributions of former team members who contributed to our early platforms, user research, and engineering milestones.
+                    </p>
+                  </div>
+
+                  <div className={styles.internsGrid}>
+                    {alumni.map((member, idx) => (
+                      <AlumniCard key={member.slug} member={member} delay={idx * 60} />
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           ) : (
             // FILTERED VIEW
             <div className={styles.filteredGrid}>
-              {filteredMembers.map((member, idx) => (
-                <LeadCard key={member.slug} member={member} delay={idx * 60} />
-              ))}
+              {filteredMembers.map((member, idx) =>
+                member.isExEmployee ? (
+                  <AlumniCard key={member.slug} member={member} delay={idx * 60} />
+                ) : (
+                  <LeadCard key={member.slug} member={member} delay={idx * 60} />
+                )
+              )}
             </div>
           )}
         </div>
@@ -392,6 +434,49 @@ function InternCard({ member, delay }: { member: TeamMemberData; delay: number }
             <ArrowRight size={13} />
           </Link>
           <span className={styles.internCohortBadge}>2026 Cohort</span>
+        </div>
+      </article>
+    </Reveal>
+  );
+}
+
+function AlumniCard({ member, delay }: { member: TeamMemberData; delay: number }) {
+  return (
+    <Reveal variant="up" delay={delay}>
+      <article className={styles.internCard}>
+        <div className={styles.internTop}>
+          <div className={styles.internAvatarWrap}>
+            {member.photo ? (
+              <img
+                src={member.photo}
+                alt={member.name}
+                className={styles.internPhoto}
+                style={{ objectPosition: member.photoPosition || "center 20%" }}
+                loading="lazy"
+              />
+            ) : (
+              <div className={styles.internAvatarFallback}>
+                <span>{member.initials}</span>
+              </div>
+            )}
+          </div>
+          <div className={styles.internHeaderInfo}>
+            <div className={styles.alumniBadgeRow}>
+              <h4 className={styles.internName}>{member.name}</h4>
+              <span className={styles.alumniTag}>Alumni • Ex-Employee</span>
+            </div>
+            <span className={styles.internRole}>{member.role}</span>
+          </div>
+        </div>
+
+        <p className={styles.internSummary}>{member.summary}</p>
+
+        <div className={styles.internFooter}>
+          <Link to={`/team/${member.slug}`} className={styles.internLink}>
+            <span>Past Contributions</span>
+            <ArrowRight size={13} />
+          </Link>
+          <span className={styles.alumniCohortBadge}>Alumni (2026)</span>
         </div>
       </article>
     </Reveal>

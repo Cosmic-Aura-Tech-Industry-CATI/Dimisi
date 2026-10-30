@@ -181,6 +181,12 @@
   width: fit-content;
 }
 
+.alumniTierPill {
+  background: rgba(196, 181, 253, 0.12);
+  border-color: rgba(196, 181, 253, 0.35);
+  color: #ddd6fe;
+}
+
 .name {
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
   font-size: clamp(2rem, 3.8vw, 3.2rem);
@@ -197,6 +203,21 @@
   font-weight: 600;
   color: var(--dm-amber, #ffab2e);
   margin: 0;
+}
+
+.alumniBanner {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 1rem;
+  border-radius: 0.75rem;
+  background: rgba(196, 181, 253, 0.08);
+  border: 1px solid rgba(196, 181, 253, 0.25);
+  color: #ddd6fe;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 0.5rem;
+  width: fit-content;
 }
 
 .summary {

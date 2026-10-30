@@ -86,15 +86,21 @@ export function TeamMemberDetailPage({ member }: Props) {
             {/* Right Header Metadata */}
             <div className={styles.metaCol}>
               <Reveal variant="fade">
-                <div className={styles.tierPill}>
-                  <Sparkles size={12} />
-                  <span>{member.tier}</span>
+                <div className={[styles.tierPill, member.isExEmployee ? styles.alumniTierPill : ""].join(" ")}>
+                  {member.isExEmployee ? <Award size={12} /> : <Sparkles size={12} />}
+                  <span>{member.isExEmployee ? "DIMISI Alumni • Ex-Employee" : member.tier}</span>
                 </div>
               </Reveal>
 
               <Reveal variant="up" delay={60}>
                 <h1 className={styles.name}>{member.name}</h1>
                 <p className={styles.officialTitle}>{member.role}</p>
+                {member.isExEmployee && (
+                  <div className={styles.alumniBanner}>
+                    <Award size={15} />
+                    <span>Former Team Member / Alumni of DIMISI Technologies</span>
+                  </div>
+                )}
               </Reveal>
 
               <Reveal variant="up" delay={120}>

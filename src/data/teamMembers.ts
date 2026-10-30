@@ -9,7 +9,8 @@ import harshPhoto from "@/assets/harsh-mishra.jpg.asset.json";
 export type TeamTier =
   | "Founders & Executive Directors"
   | "Core Engineering & Leads"
-  | "Innovation Cohort & Interns";
+  | "Innovation Cohort & Interns"
+  | "Alumni & Former Members";
 
 export interface ProjectContribution {
   title: string;
@@ -42,6 +43,7 @@ export interface TeamMemberData {
   linkedin?: string;
   github?: string;
   status: string;
+  isExEmployee?: boolean;
 }
 
 export const TEAM_MEMBERS: TeamMemberData[] = [
@@ -442,6 +444,61 @@ export const TEAM_MEMBERS: TeamMemberData[] = [
     dimisipediaUrl: "https://www.dimisipedia.me",
     status: "Verified Record on Dimisipedia",
   },
+  {
+    id: "somya-tiwari",
+    slug: "somya-tiwari",
+    name: "Somya Tiwari",
+    role: "Full Stack Developer & Client Project Manager",
+    officialDesignation: "Full Stack Developer & Commercial Project Manager",
+    tier: "Core Engineering & Leads",
+    department: "Client Solutions & Web Engineering",
+    summary:
+      "Full stack developer and client project manager. Leads end-to-end commercial software delivery (notably Rudra Tours & Travels) and secured 3rd position in DIMISI's nationwide 30-Day LinkedIn Challenge.",
+    bio:
+      "Somya Tiwari is documented on Dimisipedia as a Full Stack Developer and Client Project Manager at DIMISI Technologies Private Limited. She directs end-to-end commercial web software delivery, technical client relationships, and full-stack development. She notably spearheaded the digital transformation and web booking platform for Rudra Tours & Travels, and secured 3rd position in DIMISI's nationwide 30-Day LinkedIn Content Creator Challenge.",
+    fullStory: [
+      "Somya bridges high-quality software engineering with commercial project execution, leading technical discovery, architecture design, and deployment for corporate clients.",
+      "Her flagship commercial delivery was the comprehensive digital transformation and responsive booking portal for Rudra Tours & Travels, which modernized their customer acquisition and booking flows.",
+      "She was awarded 3rd position in the 30-Day LinkedIn Content Creator Challenge for her articulate technical writing, product advocacy, and collegiate developer community building.",
+      "She collaborates closely with the core engineering team on feature testing and web module rollouts for internal products including The Kalesh.",
+    ],
+    education: "Computer Science & Engineering Studies",
+    location: "DIMISI Headquarters, Kanpur, Uttar Pradesh, India",
+    initials: "ST",
+    responsibilities: [
+      "Client Project Architecture & Commercial Milestone Management",
+      "Full-Stack Web Development & API Integration",
+      "Leading Commercial Client Deliverables (e.g. Rudra Tours & Travels)",
+      "Cross-Browser Optimization & UI/UX Refinement",
+      "Developer Advocacy & Tech Content Creation",
+    ],
+    keyProjects: [
+      {
+        title: "Rudra Tours & Travels Platform",
+        role: "Lead Project Manager & Developer",
+        description:
+          "Led the complete digital transformation, corporate identity, responsive web portal, and travel booking flows for Rudra Tours & Travels.",
+        tags: ["Full Stack", "React", "Node.js", "Client Delivery"],
+      },
+      {
+        title: "The Kalesh Internal Initiatives",
+        role: "Developer Contributor",
+        description:
+          "Participated in internal development sprints, platform feature testing, and user feedback integration for DIMISI's anonymous polling ecosystem.",
+        tags: ["The Kalesh", "Platform Engineering", "Testing"],
+      },
+      {
+        title: "30-Day LinkedIn Creator Challenge",
+        role: "3rd Position Winner",
+        description:
+          "Ranked 3rd in the nationwide 30-Day LinkedIn creator challenge organized by DIMISI Technologies, advocating startup culture and software engineering.",
+        tags: ["Creator Campaign", "Technical Writing", "Growth"],
+      },
+    ],
+    techStack: ["React", "Node.js", "JavaScript", "TypeScript", "Tailwind CSS", "REST APIs", "Project Management", "Git"],
+    dimisipediaUrl: "https://www.dimisipedia.me/people/somya-tiwari",
+    status: "Verified Record on Dimisipedia",
+  },
 
   // -------------------------------------------------------------------------
   // 3. INNOVATION COHORT & INTERNS
@@ -488,77 +545,95 @@ export const TEAM_MEMBERS: TeamMemberData[] = [
     status: "Verified Record on Dimisipedia",
   },
   {
-    id: "saumya-shukla",
-    slug: "saumya-shukla",
-    name: "Saumya Shukla",
-    role: "Social Media Marketing Intern",
-    officialDesignation: "Digital Growth & Content Intern",
+    id: "anushka-tripathi",
+    slug: "anushka-tripathi",
+    name: "Anushka Tripathi",
+    role: "Full Stack Web Developer Intern",
+    officialDesignation: "Full Stack Web Development Intern",
     tier: "Innovation Cohort & Interns",
-    department: "Digital Marketing & Growth",
+    department: "Web Engineering & Platform Development",
     summary:
-      "Joined the February 2026 intern cohort. Contributes to organic social campaigns, student outreach, and community engagement for Kalesh.",
+      "Full stack web developer intern contributing to responsive frontend interfaces, React architectures, and 4th position winner in DIMISI's nationwide 30-Day LinkedIn Challenge.",
     bio:
-      "Saumya Shukla is documented on Dimisipedia as a Social Media Marketing Intern who joined DIMISI Technologies during the February 22, 2026 cohort. She collaborates on content writing, trend research, and youth community building across social channels.",
+      "Anushka Tripathi is documented on Dimisipedia as a Full Stack Web Developer Intern at DIMISI Technologies Private Limited, operating from the company's Kanpur headquarters. She specializes in modern web engineering, responsive user interfaces, and software initiatives across DIMISI's ecosystem. During DIMISI's nationwide 30-Day LinkedIn Challenge for the flagship anonymous social polling platform 'The Kalesh', Anushka secured the 4th position among student creators and developers.",
     fullStory: [
-      "Saumya plays an active role in campus outreach and digital engagement for Kalesh.",
-      "She assists in copywriting for social media posts, audience sentiment tracking, and community feedback collection.",
+      "Anushka contributes to core web platforms and software initiatives at DIMISI Technologies, specializing in component-driven UI engineering and client-side responsiveness.",
+      "She actively participated in the 30-Day LinkedIn Challenge, driving tech-oriented narratives and product outreach for the launch of 'The Kalesh', securing the 4th position nationwide.",
+      "Her technical work spans modern JavaScript frameworks, full-stack application prototyping, and cross-browser performance optimization.",
     ],
-    education: "Computer Science / Media Studies",
-    location: "DIMISI Innovation Lab, Kanpur, Uttar Pradesh, India",
-    initials: "SS",
+    education: "Computer Science & Engineering Studies",
+    location: "DIMISI Headquarters, Kanpur, Uttar Pradesh, India",
+    initials: "AT",
     responsibilities: [
-      "Social Media Content Drafting & Copywriting",
-      "Audience Interaction & Community Moderation",
-      "Campus Promotional Campaigns for Kalesh",
+      "Frontend Web Engineering with React & Modern Web Standards",
+      "Responsive UI Prototyping and CSS/Layout Optimization",
+      "Participating in Product Sprint Testing and Component QA",
+      "Contributing to Developer Advocacy and Digital Product Awareness",
     ],
     keyProjects: [
       {
-        title: "Campus Engagement Loops",
-        role: "Marketing Contributor",
+        title: "The Kalesh Platform Support",
+        role: "Web Developer Intern",
         description:
-          "Coordinated localized student feedback loops, gathering user suggestions to refine the Kalesh onboarding experience.",
-        tags: ["Community Growth", "User Research", "Copywriting"],
+          "Contributed to web platform development, responsive frontend interfaces, and cross-device testing for DIMISI's anonymous polling platform.",
+        tags: ["React", "TypeScript", "Responsive UI", "Web Engineering"],
+      },
+      {
+        title: "30-Day LinkedIn Creator Challenge",
+        role: "4th Position Winner",
+        description:
+          "Awarded 4th place nationwide in the 30-Day LinkedIn creator campaign promoting startup narratives and tech builder culture.",
+        tags: ["Content Strategy", "Developer Advocacy", "Social Media"],
       },
     ],
-    techStack: ["Social Marketing", "Copywriting", "Audience Engagement", "Trend Research"],
-    dimisipediaUrl: "https://www.dimisipedia.me",
+    techStack: ["React", "JavaScript", "HTML5", "CSS3", "Node.js", "Tailwind CSS", "Git"],
+    dimisipediaUrl: "https://www.dimisipedia.me/people/anushka-tripathi",
     status: "Verified Record on Dimisipedia",
   },
   {
-    id: "niyati-gupta",
-    slug: "niyati-gupta",
-    name: "Niyati Gupta",
-    role: "Backend Engineering Intern",
-    officialDesignation: "Software Engineering Intern (Backend Services)",
+    id: "nisha-chaudhary",
+    slug: "nisha-chaudhary",
+    name: "Nisha Chaudhary",
+    role: "Market Research & Analysis Intern",
+    officialDesignation: "Market Research & Business Intelligence Intern",
     tier: "Innovation Cohort & Interns",
-    department: "Platform Engineering",
+    department: "Market Intelligence & Growth Research",
     summary:
-      "Backend intern from the February 2026 cohort. Assists core platform leads with API endpoint validations, database queries, and test routines.",
+      "Market research and data analysis intern specializing in competitive intelligence, user behavior surveys, demographic trend tracking, and product feedback loops.",
     bio:
-      "Niyati Gupta is a software engineering intern specializing in backend technologies. Onboarded in February 2026, she collaborates with Mridul Mishra and Swatantra Singh on data schemas, endpoint testing, and microservice validation.",
+      "Nisha Chaudhary is documented on Dimisipedia as a Market Research & Analysis Intern at DIMISI Technologies Private Limited. She specializes in quantitative and qualitative market intelligence, user behavior analysis, and demographic studies that inform product strategies for platforms like The Kalesh and commercial client engagements.",
     fullStory: [
-      "Niyati contributes to server-side business logic, writing clean CRUD operations and verifying edge-case data scenarios.",
-      "She conducts regression testing on REST endpoints to ensure stability prior to production deployments.",
+      "Nisha gathers and structures actionable market insights, studying consumer behavior and student engagement patterns across higher education institutions in North India.",
+      "She designs survey instruments and synthesizes feedback to help DIMISI's product engineering team identify high-leverage features and friction points.",
+      "Her analytical reports provide direct input into go-to-market strategies, campus user acquisition loops, and client digital transformation advisory.",
     ],
-    education: "Computer Science & Engineering",
-    location: "DIMISI Innovation Lab, Kanpur, Uttar Pradesh, India",
-    initials: "NG",
+    education: "Business Analytics / Market Research Studies",
+    location: "DIMISI Headquarters, Kanpur, Uttar Pradesh, India",
+    initials: "NC",
     responsibilities: [
-      "REST API Endpoint Development & Testing",
-      "Database Schema Validation & Queries",
-      "Bug Verification & Documentation",
+      "Conducting User Demographics & Consumer Sentiment Studies",
+      "Competitive Intelligence & Market Positioning Benchmarks",
+      "Formulating Structured Feedback Surveys for Campus Product Launches",
+      "Synthesizing Quantitative Analytics for Product Roadmap Reviews",
     ],
     keyProjects: [
       {
-        title: "Internal Microservice Validation",
-        role: "Backend Contributor",
+        title: "Market Intelligence & Demographic Survey",
+        role: "Lead Research Intern",
         description:
-          "Assisted in testing high-frequency API endpoints to ensure correct payload handling and authentication checks.",
-        tags: ["Node.js", "Express", "REST", "Postman"],
+          "Evaluated collegiate user response, privacy perceptions, and anonymous engagement trends to optimize Kalesh feature adoption.",
+        tags: ["Market Research", "User Demographics", "Data Analytics"],
+      },
+      {
+        title: "Competitor Landscape Analysis",
+        role: "Market Analyst",
+        description:
+          "Produced structured intelligence reports comparing modern campus networking apps and commercial software service models.",
+        tags: ["Competitive Intelligence", "Benchmarking", "Growth Strategy"],
       },
     ],
-    techStack: ["Node.js", "Express", "MongoDB", "REST APIs", "Postman", "Git"],
-    dimisipediaUrl: "https://www.dimisipedia.me",
+    techStack: ["Market Research", "Data Analysis", "User Surveys", "Competitive Intelligence", "Product Analytics"],
+    dimisipediaUrl: "https://www.dimisipedia.me/people/nisha-chaudhary",
     status: "Verified Record on Dimisipedia",
   },
   {
@@ -675,6 +750,88 @@ export const TEAM_MEMBERS: TeamMemberData[] = [
     dimisipediaUrl: "https://www.dimisipedia.me",
     status: "Verified Record on Dimisipedia",
   },
+
+  // -------------------------------------------------------------------------
+  // 4. ALUMNI & FORMER TEAM MEMBERS (EX-EMPLOYEES)
+  // -------------------------------------------------------------------------
+  {
+    id: "saumya-shukla",
+    slug: "saumya-shukla",
+    name: "Saumya Shukla",
+    role: "Former Social Media Marketing Intern • Alumni",
+    officialDesignation: "Ex-Employee • Former Digital Growth & Content Intern",
+    tier: "Alumni & Former Members",
+    department: "Digital Marketing & Growth (Alumni)",
+    isExEmployee: true,
+    summary:
+      "Former intern who contributed to social media campaigns, campus outreach, and community engagement for Kalesh during the early 2026 development phase.",
+    bio:
+      "Saumya Shukla is an alumnus of DIMISI Technologies (February 2026 cohort). She contributed to content writing, trend research, and early youth community building across social channels before moving on to subsequent endeavors.",
+    fullStory: [
+      "During her tenure at DIMISI, Saumya contributed to campus outreach and digital engagement campaigns for the Kalesh platform.",
+      "She assisted in drafting social media content, tracking audience sentiment, and collecting student feedback loops.",
+      "DIMISI Technologies acknowledges her valuable contributions to our early growth story.",
+    ],
+    education: "Computer Science / Media Studies",
+    location: "DIMISI Innovation Lab, Kanpur, Uttar Pradesh, India",
+    initials: "SS",
+    responsibilities: [
+      "Social Media Content Drafting & Copywriting (Past)",
+      "Audience Interaction & Community Moderation (Past)",
+      "Campus Promotional Campaigns for Kalesh (Past)",
+    ],
+    keyProjects: [
+      {
+        title: "Campus Engagement Loops",
+        role: "Marketing Contributor",
+        description:
+          "Coordinated localized student feedback loops, gathering user suggestions to refine the Kalesh onboarding experience.",
+        tags: ["Community Growth", "User Research", "Copywriting"],
+      },
+    ],
+    techStack: ["Social Marketing", "Copywriting", "Audience Engagement", "Trend Research"],
+    dimisipediaUrl: "https://www.dimisipedia.me",
+    status: "Alumni Record on Dimisipedia",
+  },
+  {
+    id: "niyati-gupta",
+    slug: "niyati-gupta",
+    name: "Niyati Gupta",
+    role: "Former Backend Engineering Intern • Alumni",
+    officialDesignation: "Ex-Employee • Former Software Engineering Intern (Backend Services)",
+    tier: "Alumni & Former Members",
+    department: "Platform Engineering (Alumni)",
+    isExEmployee: true,
+    summary:
+      "Former backend intern who contributed to API endpoint validations, database queries, and test routines during the early 2026 cohort.",
+    bio:
+      "Niyati Gupta is an alumnus of DIMISI Technologies (February 2026 cohort). She contributed to backend service testing, data schema validations, and REST endpoint routines under the mentorship of the engineering leads.",
+    fullStory: [
+      "During her tenure at DIMISI, Niyati assisted in testing server-side logic and validating API responses against contract definitions.",
+      "She contributed to regression test suites for internal microservices.",
+      "DIMISI Technologies honors and appreciates her contributions to our foundational platform engineering.",
+    ],
+    education: "Computer Science & Engineering",
+    location: "DIMISI Innovation Lab, Kanpur, Uttar Pradesh, India",
+    initials: "NG",
+    responsibilities: [
+      "REST API Endpoint Development & Testing (Past)",
+      "Database Schema Validation & Queries (Past)",
+      "Bug Verification & Documentation (Past)",
+    ],
+    keyProjects: [
+      {
+        title: "Internal Microservice Validation",
+        role: "Backend Contributor",
+        description:
+          "Assisted in testing high-frequency API endpoints to ensure correct payload handling and authentication checks.",
+        tags: ["Node.js", "Express", "REST", "Postman"],
+      },
+    ],
+    techStack: ["Node.js", "Express", "MongoDB", "REST APIs", "Postman", "Git"],
+    dimisipediaUrl: "https://www.dimisipedia.me",
+    status: "Alumni Record on Dimisipedia",
+  },
 ];
 
 export function getTeamMemberBySlug(slug: string): TeamMemberData | undefined {
@@ -685,4 +842,5 @@ export const TEAM_TIERS: TeamTier[] = [
   "Founders & Executive Directors",
   "Core Engineering & Leads",
   "Innovation Cohort & Interns",
+  "Alumni & Former Members",
 ];
