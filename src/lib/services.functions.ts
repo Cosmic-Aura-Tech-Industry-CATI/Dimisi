@@ -41,30 +41,45 @@ export { isMongoId };
 export async function getPublicServicesData(): Promise<PublicServicesPayload> {
   let catItems = servicesStore.categoryItems;
 
-  // Fetch active categories and public visitor services in parallel.
+  // Fetch public visitor services from backend (unauthenticated, public visitor route).
   // CRITICAL ARCHITECTURE NOTE:
-  // We strictly call `getVisitorServicesApi()` for public visitors.
-  // Previously, `.catch(() => getAllServicesApi())` was used as a fallback, which caused a 401 Unauthorized
-  // network error for non-admin visitors because `/api/v1/admin-panel/services/all` requires Admin JWT authentication.
-  // Now, if live visitor endpoint fails, we gracefully fall back to local cached services without leaking 401 errors.
-  const [catRes, srvRes] = await Promise.allSettled([
-    getAllServiceCategoriesApi(),
-    getVisitorServicesApi(),
-  ]);
-
-  if (catRes.status === "fulfilled" && Array.isArray(catRes.value)) {
-    catItems = catRes.value;
-    servicesStore.setCategories(catItems);
-  } else if (catRes.status === "rejected") {
-    console.warn("Could not load live categories for public services:", catRes.reason);
+  // We do NOT call `getAllServiceCategoriesApi()` here because `/api/v1/admin-panel/service-category/all`
+  // is protected behind admin JWT auth and causes a 401 Unauthorized error in the console for visitors.
+  // Instead, the backend `/visitors/all` endpoint already populates `category: { _id, name }`
+  // on every service document. We derive the category items directly from the live services.
+  let liveServices: CompanyService[] = [];
+  try {
+    const srvRes = await getVisitorServicesApi();
+    if (Array.isArray(srvRes)) {
+      liveServices = srvRes;
+    }
+  } catch (err) {
+    console.warn("Could not load live services for public services, falling back to cached services:", err);
+    liveServices = servicesStore.services;
   }
 
-  let liveServices: CompanyService[] = [];
-  if (srvRes.status === "fulfilled" && Array.isArray(srvRes.value)) {
-    liveServices = srvRes.value;
-  } else if (srvRes.status === "rejected") {
-    console.warn("Could not load live services for public services, falling back to cached services:", srvRes.reason);
-    liveServices = servicesStore.services;
+  // Derive categories dynamically from live services to avoid 401 admin errors
+  const derivedCats: ServiceCategoryItem[] = [];
+  const seenCatNames = new Set<string>();
+  (liveServices.length > 0 ? liveServices : servicesStore.services).forEach((srv) => {
+    const catName = typeof srv.category === "string" ? srv.category : (srv.category as any)?.name;
+    if (catName && !seenCatNames.has(catName.toLowerCase())) {
+      seenCatNames.add(catName.toLowerCase());
+      derivedCats.push({
+        id: srv.category_id || `cat-${catName.toLowerCase().replace(/\s+/g, "-")}`,
+        name: catName,
+        slug: catName.toLowerCase().replace(/\s+/g, "-"),
+        status: "active",
+        display_order: derivedCats.length + 1,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      });
+    }
+  });
+
+  if (derivedCats.length > 0) {
+    catItems = derivedCats;
+    servicesStore.setCategories(catItems);
   }
 
   // Defensively resolve and map category names for every service

@@ -203,9 +203,20 @@ export function HomeEventsGallery() {
         {!isLoading && !isError && featuredEvent && (
           <>
             {/* Top Showcase: Featured Event + 2 Supporting Cards */}
-            <div className={styles.eventsLayout}>
-              {/* Featured Large Card */}
-              <Reveal variant="up" delay={100}>
+            <div
+              className={[
+                styles.eventsLayout,
+                sideEvents.length === 0 ? styles.eventsLayoutSingle : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
+            >
+              {/* Featured Card (Normalized, Balanced Proportions) */}
+              <Reveal
+                variant="up"
+                delay={100}
+                className={sideEvents.length === 0 ? styles.singleRevealWrap : undefined}
+              >
                 <article
                   className={styles.featuredCard}
                   onClick={() => setActiveModalEvent(featuredEvent)}
@@ -279,7 +290,7 @@ export function HomeEventsGallery() {
                       <ul className={styles.highlightsList}>
                         {featuredEvent.highlights.slice(0, 2).map((hl, i) => (
                           <li key={i} className={styles.highlightItem}>
-                            <CheckCircle2 size={15} className={styles.hlIcon} />
+                            <CheckCircle2 size={14} className={styles.hlIcon} />
                             <span>{hl}</span>
                           </li>
                         ))}
@@ -289,7 +300,7 @@ export function HomeEventsGallery() {
                     <div className={styles.cardFooter}>
                       <span className={styles.detailsAction}>
                         <span>View Details</span>
-                        <ArrowUpRight size={16} />
+                        <ArrowUpRight size={15} />
                       </span>
                       {featuredEvent.attendees_count ? (
                         <span className={styles.attendeeTag}>
@@ -302,76 +313,78 @@ export function HomeEventsGallery() {
                 </article>
               </Reveal>
 
-              {/* 2 Supporting Side Cards */}
-              <div className={styles.sideCardsCol}>
-                {sideEvents.map((event, idx) => (
-                  <Reveal key={event.id || event.slug} delay={180 + idx * 80}>
-                    <article
-                      className={styles.sideCard}
-                      onClick={() => setActiveModalEvent(event)}
-                      role="button"
-                      tabIndex={0}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          setActiveModalEvent(event);
-                        }
-                      }}
-                      aria-label={`View details for ${event.title}`}
-                    >
-                      <div className={styles.sideCardTop}>
-                        <img
-                          src={event.cover_image || DEFAULT_EVENT_IMG}
-                          alt={event.title}
-                          className={styles.sideCardImg}
-                          loading="lazy"
-                          onError={(e) => {
-                            (e.currentTarget as HTMLImageElement).src = DEFAULT_EVENT_IMG;
-                          }}
-                        />
-                        <div className={styles.mediaGradientOverlay} aria-hidden="true" />
-                        <div className={styles.featuredTopPills}>
-                          <span
-                            className={[
-                              styles.statusBadge,
-                              event.status === "upcoming"
-                                ? styles.statusUpcoming
+              {/* 2 Supporting Side Cards (Render only if present) */}
+              {sideEvents.length > 0 && (
+                <div className={styles.sideCardsCol}>
+                  {sideEvents.map((event, idx) => (
+                    <Reveal key={event.id || event.slug} delay={180 + idx * 80}>
+                      <article
+                        className={styles.sideCard}
+                        onClick={() => setActiveModalEvent(event)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            setActiveModalEvent(event);
+                          }
+                        }}
+                        aria-label={`View details for ${event.title}`}
+                      >
+                        <div className={styles.sideCardTop}>
+                          <img
+                            src={event.cover_image || DEFAULT_EVENT_IMG}
+                            alt={event.title}
+                            className={styles.sideCardImg}
+                            loading="lazy"
+                            onError={(e) => {
+                              (e.currentTarget as HTMLImageElement).src = DEFAULT_EVENT_IMG;
+                            }}
+                          />
+                          <div className={styles.mediaGradientOverlay} aria-hidden="true" />
+                          <div className={styles.featuredTopPills}>
+                            <span
+                              className={[
+                                styles.statusBadge,
+                                event.status === "upcoming"
+                                  ? styles.statusUpcoming
+                                  : event.status === "ongoing"
+                                    ? styles.statusOngoing
+                                    : styles.statusCompleted,
+                              ].join(" ")}
+                            >
+                              <span className={styles.liveDot} />
+                              {event.status === "upcoming"
+                                ? "Upcoming"
                                 : event.status === "ongoing"
-                                  ? styles.statusOngoing
-                                  : styles.statusCompleted,
-                            ].join(" ")}
-                          >
-                            <span className={styles.liveDot} />
-                            {event.status === "upcoming"
-                              ? "Upcoming"
-                              : event.status === "ongoing"
-                                ? "Live Now"
-                                : "Concluded"}
-                          </span>
-                          <span className={styles.categoryTag}>{event.category}</span>
+                                  ? "Live Now"
+                                  : "Concluded"}
+                            </span>
+                            <span className={styles.categoryTag}>{event.category}</span>
+                          </div>
                         </div>
-                      </div>
 
-                      <div className={styles.sideCardBody}>
-                        <div className={styles.metaRow}>
-                          <span className={styles.metaItem}>
-                            <Calendar size={13} />
-                            <span>{event.date}</span>
-                          </span>
+                        <div className={styles.sideCardBody}>
+                          <div className={styles.metaRow}>
+                            <span className={styles.metaItem}>
+                              <Calendar size={13} />
+                              <span>{event.date}</span>
+                            </span>
+                          </div>
+                          <h4 className={styles.sideCardTitle}>{event.title}</h4>
+                          <p className={styles.sideCardDesc}>{event.description}</p>
+                          <div className={styles.cardFooter}>
+                            <span className={styles.detailsAction}>
+                              <span>View Details</span>
+                              <ArrowUpRight size={15} />
+                            </span>
+                          </div>
                         </div>
-                        <h4 className={styles.sideCardTitle}>{event.title}</h4>
-                        <p className={styles.sideCardDesc}>{event.description}</p>
-                        <div className={styles.cardFooter}>
-                          <span className={styles.detailsAction}>
-                            <span>View Details</span>
-                            <ArrowUpRight size={15} />
-                          </span>
-                        </div>
-                      </div>
-                    </article>
-                  </Reveal>
-                ))}
-              </div>
+                      </article>
+                    </Reveal>
+                  ))}
+                </div>
+              )}
             </div>
 
             {/* Visual Moments Gallery Strip */}

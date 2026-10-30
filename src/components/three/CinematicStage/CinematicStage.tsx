@@ -115,12 +115,8 @@ export function CinematicStage() {
       const max = document.body.scrollHeight - window.innerHeight;
       const s = max > 0 ? Math.min(1, window.scrollY / max) : 0;
       scrollRef.current = s;
-      // 3D parallax on the backdrop layers themselves
       if (raysRef.current) {
-        raysRef.current.style.transform = `perspective(1200px) rotateX(${s * 18}deg) rotateZ(${s * 26}deg) scale(${1 + s * 0.25})`;
-      }
-      if (stageRef.current) {
-        stageRef.current.style.setProperty("--dm-scroll", String(s));
+        raysRef.current.style.transform = `rotate(${s * 20}deg) scale(${1 + s * 0.15})`;
       }
       rafId = 0;
     };

@@ -19,9 +19,21 @@ export function useHomeHeroConfig() {
     try {
       const liveData = await getSectionConfigApi<Partial<HomeHeroConfig>>("home-hero");
       if (liveData && typeof liveData === "object" && Object.keys(liveData).length > 0) {
+        const missionStatement =
+          liveData.missionStatement && !liveData.missionStatement.includes("product and services technology company")
+            ? liveData.missionStatement
+            : DEFAULT_HOME_HERO_CONFIG.missionStatement;
+
+        const badgeText =
+          liveData.badgeText && !liveData.badgeText.includes("Owl wisdom")
+            ? liveData.badgeText
+            : DEFAULT_HOME_HERO_CONFIG.badgeText;
+
         setConfig((prev) => ({
           ...prev,
           ...liveData,
+          missionStatement,
+          badgeText,
           orbitCards: {
             ...prev.orbitCards,
             ...(liveData.orbitCards || {}),
