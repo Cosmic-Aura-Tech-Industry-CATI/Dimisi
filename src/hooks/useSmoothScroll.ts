@@ -19,11 +19,11 @@ export function useSmoothScroll(disabled = false): void {
 
     const perf = getPerfProfile();
     const lenis = new Lenis({
-      // Slightly snappier on weaker devices so scroll never feels laggy.
-      duration: perf.tier === "low" ? 0.9 : perf.tier === "medium" ? 1.15 : 1.4,
+      // Snappy, silky-smooth response with zero sluggish inertia
+      duration: perf.tier === "low" ? 0.65 : perf.tier === "medium" ? 0.78 : 0.85,
       easing: (t: number) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       smoothWheel: true,
-      touchMultiplier: 1.6,
+      touchMultiplier: 1.0,
       // Native scrolling on touch devices — smoother and far cheaper on mobile GPUs.
       syncTouch: false,
       prevent: (node) => {

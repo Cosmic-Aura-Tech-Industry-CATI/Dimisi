@@ -78,6 +78,14 @@ function GlobeMesh({ perf, isPaused }: { perf: PerfProfile; isPaused: boolean })
     return { earthTexture: earth, cloudsTexture: clouds };
   }, []);
 
+  // Clean up WebGL textures when unmounting to free GPU VRAM
+  useEffect(() => {
+    return () => {
+      earthTexture?.dispose();
+      cloudsTexture?.dispose();
+    };
+  }, [earthTexture, cloudsTexture]);
+
   // Subtle orbital particle field around Earth
   const particles = useMemo(() => {
     const count = geoConfig.particleCount;

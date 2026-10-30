@@ -1,0 +1,1257 @@
+.page {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  min-height: 100vh;
+  background: transparent;
+  color: #f1f5f9;
+  overflow-x: clip;
+}
+
+.container {
+  max-width: var(--dm-shell, 1340px);
+  margin: 0 auto;
+  padding: 0 clamp(1.25rem, 3.5vw, 2.5rem);
+  position: relative;
+  z-index: 2;
+}
+
+/* Badge Component */
+.eyebrowBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.32rem 0.95rem;
+  border-radius: 999px;
+  background: rgba(255, 122, 0, 0.08);
+  border: 1px solid rgba(255, 122, 0, 0.28);
+  box-shadow: 0 0 16px rgba(255, 122, 0, 0.12);
+  margin-bottom: 1.15rem;
+}
+
+.badgeDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffab2e;
+  box-shadow: 0 0 8px #ffab2e;
+  animation: pulseDot 2.2s infinite ease-in-out;
+}
+
+@keyframes pulseDot {
+  0%, 100% { transform: scale(0.9); opacity: 0.7; }
+  50% { transform: scale(1.3); opacity: 1; }
+}
+
+.badgeText {
+  font-family: var(--font-display, "Chakra Petch", monospace);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #ffab2e;
+}
+
+/* Section Title & Subtitle */
+.sectionTitle {
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: clamp(2rem, 3.8vw, 3.1rem);
+  font-weight: 800;
+  line-height: 1.16;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin: 0 0 1rem;
+}
+
+.accentGradient {
+  background: linear-gradient(135deg, #ffffff 10%, #ffc043 45%, #ff7a00 80%, #ff4500 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  filter: drop-shadow(0 0 25px rgba(255, 122, 0, 0.35));
+}
+
+.sectionLead {
+  font-size: clamp(0.95rem, 1.3vw, 1.1rem);
+  line-height: 1.68;
+  color: #94a3b8;
+  margin: 0 0 1.85rem;
+  max-width: 660px;
+}
+
+/* =========================================================================
+   1. HERO SECTION
+   ========================================================================= */
+.heroSection {
+  position: relative;
+  padding: clamp(7.5rem, 15vh, 9.5rem) 0 clamp(3.5rem, 6vw, 5.5rem);
+  overflow: hidden;
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: 1.15fr 0.95fr;
+  align-items: center;
+  gap: clamp(2.5rem, 5vw, 5rem);
+}
+
+.heroContent {
+  display: flex;
+  flex-direction: column;
+}
+
+.heroActions {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.5rem;
+}
+
+.primaryBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.85rem 1.75rem;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #ff9500 0%, #ff6200 100%);
+  color: #ffffff;
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: 0.92rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 6px 24px rgba(255, 98, 0, 0.45);
+  transition: all 0.25s ease;
+}
+
+.primaryBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(255, 98, 0, 0.6);
+  color: #ffffff;
+}
+
+.ghostBtn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.85rem 1.6rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  color: #e2e8f0;
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  transition: all 0.25s ease;
+}
+
+.ghostBtn:hover {
+  background: rgba(255, 171, 46, 0.14);
+  border-color: rgba(255, 171, 46, 0.5);
+  color: #ffab2e;
+}
+
+.heroValueProps {
+  display: flex;
+  align-items: center;
+  gap: clamp(1rem, 2.5vw, 2.25rem);
+  padding-top: 1.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+
+.propItem {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #cbd5e1;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.propIconBox {
+  color: #ffab2e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Hero Visual Container with Seamless Ambient Blending */
+.heroVisualContainer {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.heroBackdropAura {
+  position: absolute;
+  inset: -12%;
+  border-radius: 50%;
+  background: radial-gradient(circle at 55% 45%, rgba(255, 140, 20, 0.42) 0%, rgba(255, 90, 0, 0.18) 45%, transparent 72%);
+  filter: blur(55px);
+  pointer-events: none;
+  z-index: 1;
+  animation: auraGlow 6s ease-in-out infinite;
+}
+
+@keyframes auraGlow {
+  0%, 100% {
+    transform: scale(0.96);
+    opacity: 0.8;
+  }
+  50% {
+    transform: scale(1.06);
+    opacity: 1;
+  }
+}
+
+.heroVisualBox {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 580px;
+  overflow: hidden;
+  border-radius: 28px;
+  border: none;
+  background: transparent;
+  mask-image: radial-gradient(ellipse 92% 88% at 50% 50%, black 50%, rgba(0, 0, 0, 0.85) 68%, rgba(0, 0, 0, 0.3) 88%, transparent 100%);
+  -webkit-mask-image: radial-gradient(ellipse 92% 88% at 50% 50%, black 50%, rgba(0, 0, 0, 0.85) 68%, rgba(0, 0, 0, 0.3) 88%, transparent 100%);
+  animation: floatBuilding 6.5s ease-in-out infinite;
+  transition: transform 0.4s ease;
+}
+
+@keyframes floatBuilding {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(0.4deg);
+  }
+}
+
+.heroBuildingImg {
+  width: 100%;
+  height: 100%;
+  max-height: 520px;
+  object-fit: cover;
+  display: block;
+  transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+  filter: drop-shadow(0 20px 45px rgba(0, 0, 0, 0.9));
+}
+
+.heroVisualBox:hover .heroBuildingImg {
+  transform: scale(1.04);
+}
+
+.heroImgOverlay {
+  position: absolute;
+  inset: 0;
+  background: 
+    radial-gradient(ellipse at 50% 35%, transparent 40%, rgba(6, 5, 9, 0.4) 85%, rgba(6, 5, 9, 0.8) 100%),
+    linear-gradient(to top, rgba(6, 5, 9, 0.7) 0%, transparent 35%);
+  pointer-events: none;
+}
+
+/* =========================================================================
+   2. WHO WE ARE SECTION
+   ========================================================================= */
+.whoWeAreSection {
+  position: relative;
+  padding: clamp(5.5rem, 9vw, 8rem) 0 clamp(4.5rem, 7vw, 6.5rem);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  scroll-margin-top: 110px;
+}
+
+.sectionHeaderCenter {
+  text-align: center;
+  max-width: 860px;
+  margin: 0 auto clamp(2.5rem, 5vw, 4rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.sectionTitleCenter {
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: clamp(2rem, 3.4vw, 2.9rem);
+  font-weight: 800;
+  line-height: 1.24;
+  letter-spacing: -0.02em;
+  color: #ffffff;
+  margin: 0 0 1.25rem;
+}
+
+.sectionLeadCenter {
+  font-size: clamp(0.95rem, 1.2vw, 1.08rem);
+  line-height: 1.72;
+  color: #94a3b8;
+  margin: 0 auto;
+  max-width: 720px;
+}
+
+/* Balanced 2-Column Showcase */
+.whoShowcaseGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: clamp(1.75rem, 3.5vw, 2.75rem);
+  align-items: stretch;
+}
+
+/* Left Column: Office Headquarters Visual Showcase */
+.officeCardContainer {
+  position: relative;
+  height: 100%;
+  min-height: 480px;
+  display: flex;
+}
+
+.officeBackdropGlow {
+  position: absolute;
+  inset: -8%;
+  background: radial-gradient(circle at 50% 50%, rgba(255, 140, 20, 0.22) 0%, rgba(255, 90, 0, 0.06) 50%, transparent 75%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 1;
+}
+
+.officeCardFrame {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  border-radius: 24px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(13, 11, 19, 0.65);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: border-color 0.3s ease, transform 0.3s ease;
+}
+
+.officeCardFrame:hover {
+  border-color: rgba(255, 171, 46, 0.4);
+  transform: translateY(-2px);
+}
+
+.officeTopTag {
+  position: absolute;
+  top: 1.25rem;
+  left: 1.25rem;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.38rem 0.95rem;
+  background: rgba(6, 5, 9, 0.82);
+  border: 1px solid rgba(255, 171, 46, 0.45);
+  border-radius: 999px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-family: var(--font-display, "Chakra Petch", monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ffab2e;
+}
+
+.livePulseDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #ffab2e;
+  box-shadow: 0 0 8px #ffab2e;
+  animation: pulseDot 2s infinite ease-in-out;
+}
+
+.officeImgWrapper {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  min-height: 320px;
+  overflow: hidden;
+  background: #0d0b13;
+}
+
+.officeImg {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 80% 36%;
+  transform-origin: 80% 36%;
+  display: block;
+  transition: transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.officeCardFrame:hover .officeImg {
+  transform: scale(1.03);
+}
+
+.officeImgVignette {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to top, rgba(10, 8, 15, 0.7) 0%, transparent 22%);
+  pointer-events: none;
+}
+
+/* Docked Glass Mission Banner */
+.officeDockedBanner {
+  position: relative;
+  z-index: 3;
+  background: rgba(10, 8, 15, 0.88);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 1.25rem 1.6rem;
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+}
+
+.bannerIconCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #ff9500 0%, #ff6200 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  box-shadow: 0 4px 16px rgba(255, 98, 0, 0.35);
+}
+
+.bannerContent {
+  flex: 1;
+}
+
+.bannerHeading {
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.2rem;
+}
+
+.bannerSub {
+  font-size: 0.8rem;
+  line-height: 1.4;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* Right Column: Strategic Pillars */
+.pillarsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  height: 100%;
+  justify-content: space-between;
+}
+
+.pillarFeatureCard {
+  background: rgba(13, 11, 19, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  padding: 1.55rem 1.85rem;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  height: 100%;
+}
+
+.pillarFeatureCard:hover {
+  background: rgba(18, 15, 28, 0.82);
+  border-color: rgba(255, 171, 46, 0.38);
+  transform: translateY(-3px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 122, 0, 0.12);
+}
+
+.pillarCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 1.15rem;
+  margin-bottom: 1rem;
+}
+
+.pillarIconBox {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 122, 0, 0.12);
+  border: 1px solid rgba(255, 122, 0, 0.32);
+  color: #ff9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pillarIconBoxGold {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 192, 67, 0.12);
+  border: 1px solid rgba(255, 192, 67, 0.32);
+  color: #ffc043;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pillarTitleGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.pillarSubBadge {
+  font-family: var(--font-display, "Chakra Petch", monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #ff9500;
+  margin-bottom: 0.15rem;
+}
+
+.pillarSubBadgeGold {
+  font-family: var(--font-display, "Chakra Petch", monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #ffc043;
+  margin-bottom: 0.15rem;
+}
+
+.pillarHeading {
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: 1.22rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.pillarDescription {
+  font-size: 0.88rem;
+  line-height: 1.62;
+  color: #94a3b8;
+  margin: 0 0 1.25rem;
+}
+
+.pillarTagList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.pillarTag {
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  color: #cbd5e1;
+  letter-spacing: 0.02em;
+  transition: all 0.2s ease;
+}
+
+.pillarFeatureCard:hover .pillarTag {
+  background: rgba(255, 171, 46, 0.08);
+  border-color: rgba(255, 171, 46, 0.22);
+  color: #fed7aa;
+}
+
+/* =========================================================================
+   3. OUR PROPRIETARY PRODUCT: KALESH
+   ========================================================================= */
+.kaleshSection {
+  position: relative;
+  padding: clamp(5.5rem, 9vw, 8rem) 0 clamp(4.5rem, 7vw, 6.5rem);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  scroll-margin-top: 110px;
+}
+
+/* Symmetrical 3-Zone Showcase Stage */
+.kaleshShowcaseStage {
+  display: grid;
+  grid-template-columns: 1fr 1.25fr 1fr;
+  gap: clamp(1.25rem, 2.5vw, 2.25rem);
+  align-items: center;
+}
+
+.kaleshFlankCol {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.kaleshModernCard {
+  background: rgba(13, 11, 19, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 1.5rem 1.65rem;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+}
+
+.kaleshModernCard:hover {
+  background: rgba(18, 15, 28, 0.85);
+  border-color: rgba(255, 171, 46, 0.4);
+  transform: translateY(-3px);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), 0 0 25px rgba(255, 122, 0, 0.15);
+}
+
+.cardHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.95rem;
+}
+
+.kaleshIconCircle {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 122, 0, 0.12);
+  border: 1px solid rgba(255, 122, 0, 0.32);
+  color: #ff9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kaleshIconCircleGold {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 192, 67, 0.12);
+  border: 1px solid rgba(255, 192, 67, 0.32);
+  color: #ffc043;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.kaleshCardPill {
+  font-family: var(--font-display, "Chakra Petch", monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 122, 0, 0.1);
+  border: 1px solid rgba(255, 122, 0, 0.28);
+  color: #ff9500;
+}
+
+.kaleshCardPillGold {
+  font-family: var(--font-display, "Chakra Petch", monospace);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 192, 67, 0.1);
+  border: 1px solid rgba(255, 192, 67, 0.28);
+  color: #ffc043;
+}
+
+.kaleshCardHeading {
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: 1.08rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.5rem;
+  line-height: 1.3;
+}
+
+.kaleshCardText {
+  font-size: 0.84rem;
+  line-height: 1.6;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* Center Stage: Phone Mockup */
+.kaleshCenterStage {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.kaleshPhoneWrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+}
+
+.phoneBackdropAura {
+  position: absolute;
+  width: 380px;
+  height: 380px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 122, 0, 0.32) 0%, rgba(255, 98, 0, 0.1) 50%, transparent 75%);
+  filter: blur(55px);
+  z-index: 1;
+  pointer-events: none;
+  animation: auraGlow 5.5s ease-in-out infinite;
+}
+
+.appCenterTag {
+  position: relative;
+  z-index: 3;
+  margin-bottom: 0.85rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.35rem 0.95rem;
+  background: rgba(6, 5, 9, 0.82);
+  border: 1px solid rgba(255, 171, 46, 0.45);
+  border-radius: 999px;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-family: var(--font-display, "Chakra Petch", monospace);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: #ffab2e;
+}
+
+.kaleshPhoneImg {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  display: block;
+  filter: drop-shadow(0 25px 60px rgba(0, 0, 0, 0.95));
+  animation: floatPhone 6s ease-in-out infinite;
+  transition: transform 0.4s ease;
+}
+
+.kaleshPhoneImg:hover {
+  transform: scale(1.03);
+}
+
+@keyframes floatPhone {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-9px);
+  }
+}
+
+/* =========================================================================
+   4. OUR CORE PILLARS: WHAT WE DO
+   ========================================================================= */
+.pillarsSection {
+  position: relative;
+  padding: clamp(5.5rem, 9vw, 8rem) 0 clamp(4.5rem, 7vw, 6.5rem);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  scroll-margin-top: 110px;
+}
+
+.pillarsGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(1.25rem, 2vw, 1.65rem);
+  align-items: stretch;
+}
+
+.pillarRevealWrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+}
+
+.pillarCard {
+  background: rgba(13, 11, 19, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 1.65rem 1.55rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex: 1;
+  box-shadow: 0 16px 45px rgba(0, 0, 0, 0.6);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.pillarCard:hover {
+  background: rgba(18, 15, 28, 0.85);
+  border-color: rgba(255, 171, 46, 0.45);
+  transform: translateY(-4px);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(255, 122, 0, 0.15);
+}
+
+.pillarCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.pillarIconBox {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 122, 0, 0.12);
+  border: 1px solid rgba(255, 122, 0, 0.32);
+  color: #ff9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.pillarNumberBadge {
+  font-family: var(--font-display, "Chakra Petch", monospace);
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #ffab2e;
+  background: rgba(255, 171, 46, 0.1);
+  border: 1px solid rgba(255, 171, 46, 0.28);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  letter-spacing: 0.06em;
+}
+
+.pillarTitle {
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.65rem;
+  line-height: 1.32;
+}
+
+.pillarDesc {
+  font-size: 0.85rem;
+  line-height: 1.62;
+  color: #94a3b8;
+  margin: 0 0 1.25rem;
+  flex: 1;
+}
+
+.pillarFooterTag {
+  font-family: var(--font-display, "Chakra Petch", monospace);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #cbd5e1;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  margin-top: auto;
+}
+
+/* Trust Badges Strip */
+.trustStrip {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+  align-items: center;
+  margin-top: 3.5rem;
+  padding: 1.35rem 1.85rem;
+  border-radius: 18px;
+  background: rgba(13, 11, 19, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.trustItem {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  color: #cbd5e1;
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-align: center;
+}
+
+.trustIcon {
+  color: #ffab2e;
+  flex-shrink: 0;
+}
+
+/* =========================================================================
+   5. WHY CHOOSE DIMISI TECHNOLOGIES
+   ========================================================================= */
+.whyChooseSection {
+  position: relative;
+  padding: clamp(5.5rem, 9vw, 8rem) 0 clamp(4.5rem, 7vw, 6.5rem);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  scroll-margin-top: 110px;
+}
+
+.whyGrid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: clamp(1.25rem, 2vw, 1.65rem);
+  align-items: stretch;
+}
+
+.whyRevealWrapper {
+  display: flex !important;
+  flex-direction: column !important;
+  height: 100% !important;
+}
+
+.whyCard {
+  background: rgba(13, 11, 19, 0.65);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 1.65rem 1.55rem;
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.6);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  flex: 1;
+}
+
+.whyCard:hover {
+  background: rgba(18, 15, 28, 0.85);
+  border-color: rgba(255, 171, 46, 0.45);
+  transform: translateY(-4px);
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.85), 0 0 30px rgba(255, 122, 0, 0.15);
+}
+
+.whyCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.25rem;
+}
+
+.whyIconSquare {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 122, 0, 0.12);
+  border: 1px solid rgba(255, 122, 0, 0.32);
+  color: #ff9500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.whyIconSquareGold {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: rgba(255, 192, 67, 0.12);
+  border: 1px solid rgba(255, 192, 67, 0.32);
+  color: #ffc043;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.whyPillBadge {
+  font-family: var(--font-display, "Chakra Petch", monospace);
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 122, 0, 0.1);
+  border: 1px solid rgba(255, 122, 0, 0.28);
+  color: #ff9500;
+}
+
+.whyPillBadgeGold {
+  font-family: var(--font-display, "Chakra Petch", monospace);
+  font-size: 0.66rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 0.22rem 0.65rem;
+  border-radius: 999px;
+  background: rgba(255, 192, 67, 0.1);
+  border: 1px solid rgba(255, 192, 67, 0.28);
+  color: #ffc043;
+}
+
+.whyCardTitle {
+  font-family: var(--font-display, "Chakra Petch", sans-serif);
+  font-size: 1.12rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 0.65rem;
+  line-height: 1.32;
+}
+
+.whyCardDesc {
+  font-size: 0.85rem;
+  line-height: 1.62;
+  color: #94a3b8;
+  margin: 0 0 1.25rem;
+  flex: 1;
+}
+
+.whyFooterChip {
+  font-family: var(--font-display, "Chakra Petch", monospace);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  color: #cbd5e1;
+  padding-top: 0.85rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.07);
+  margin-top: auto;
+}
+
+/* =========================================================================
+   6. CORPORATE INFORMATION
+   ========================================================================= */
+.corporateSection {
+  position: relative;
+  padding: clamp(3.5rem, 6vw, 5.5rem) 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.corporateGrid {
+  display: grid;
+  grid-template-columns: 0.9fr 1.25fr;
+  align-items: flex-start;
+  gap: clamp(2rem, 5vw, 4rem);
+}
+
+.corporateLeft {
+  display: flex;
+  flex-direction: column;
+}
+
+.corporateDetailsTable {
+  background: rgba(13, 11, 19, 0.78);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 20px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7);
+}
+
+.corpRow {
+  display: grid;
+  grid-template-columns: 210px 1fr;
+  align-items: center;
+  padding: 1.05rem 1.45rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.86rem;
+  transition: background 0.2s ease;
+}
+
+.corpRow:last-child {
+  border-bottom: none;
+}
+
+.corpRow:hover {
+  background: rgba(255, 171, 46, 0.04);
+}
+
+.corpLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #94a3b8;
+  font-weight: 600;
+}
+
+.corpIcon {
+  color: #ffab2e;
+  flex-shrink: 0;
+}
+
+.corpValue {
+  color: #f1f5f9;
+  font-weight: 500;
+  word-break: break-word;
+}
+
+.corpValueMono {
+  font-family: var(--font-display, "Chakra Petch", monospace);
+  font-weight: 700;
+  color: #ffab2e;
+  letter-spacing: 0.05em;
+}
+
+.corpLink {
+  color: #ffab2e;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.corpLink:hover {
+  text-decoration: underline;
+  color: #ffffff;
+}
+
+/* =========================================================================
+   7. BOTTOM CTA SECTION (READY TO BUILD)
+   ========================================================================= */
+.ctaSection {
+  position: relative;
+  padding: clamp(4.5rem, 8vw, 7.5rem) 0 clamp(4rem, 6vw, 6rem);
+  text-align: center;
+  overflow: hidden;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.ctaContent {
+  position: relative;
+  z-index: 5;
+  max-width: 780px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.ctaActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.15rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.ctaGlobalVisual {
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  max-width: 1100px;
+  height: 260px;
+  background-image: url("/images/about/global-network.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  background-position: center bottom;
+  opacity: 0.42;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 30%, transparent 95%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 30%, transparent 95%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* =========================================================================
+   RESPONSIVE DESIGN BREAKPOINTS
+   ========================================================================= */
+@media (max-width: 1100px) {
+  .heroGrid,
+  .whoShowcaseGrid,
+  .corporateGrid {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  .kaleshShowcaseStage {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  .kaleshCenterStage {
+    order: -1;
+  }
+
+  .kaleshFlankCol {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+
+  .heroVisualBox {
+    max-width: 580px;
+    margin: 0 auto;
+    transform: none;
+  }
+
+  .officeCardContainer {
+    max-width: 640px;
+    margin: 0 auto;
+    width: 100%;
+    min-height: 420px;
+  }
+
+  .pillarsGrid,
+  .whyGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.25rem;
+  }
+
+  .trustStrip {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.15rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .heroSection {
+    padding-top: clamp(6.5rem, 12vh, 8rem);
+  }
+
+  .kaleshFlankCol {
+    grid-template-columns: 1fr;
+  }
+
+  .pillarsGrid,
+  .whyGrid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .corpRow {
+    grid-template-columns: 1fr;
+    gap: 0.35rem;
+    padding: 1rem;
+  }
+
+  .trustStrip {
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+    padding: 1.15rem 1.25rem;
+  }
+
+  .trustItem {
+    justify-content: flex-start;
+    text-align: left;
+  }
+}
