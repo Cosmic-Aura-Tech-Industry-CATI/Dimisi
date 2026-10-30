@@ -79,9 +79,9 @@ export const OFFICIAL_EMAILS = [
 
 export const NAV_LINKS: NavLink[] = [
   { label: "Home", to: "/" },
+  { label: "About DIMISI", to: "/about" },
   { label: "Services", to: "/services" },
   { label: "Our Work", to: "/work" },
-  { label: "Reviews", to: "/reviews" },
   { label: "Team", to: "/team" },
   { label: "Blog", to: "/blog" },
   { label: "Events & Gallery", to: "/events" },
