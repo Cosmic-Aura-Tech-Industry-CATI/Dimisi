@@ -6,7 +6,11 @@ export const COMPANY = {
   tagline: "Technology Beyond Limits",
   mission:
     "We help businesses build rock-solid software architectures, scale with data-driven digital marketing, and navigate growth through strategic corporate advisory—while creating next-generation consumer social platforms.",
-  email: "hello@dimisi.in",
+  email: "support@dimisi.tech",
+  supportEmail: "support@dimisi.tech",
+  hrEmail: "hr@dimisi.tech",
+  ceoEmail: "ceo@dimisi.tech",
+  ctoEmail: "cto@dimisi.tech",
   phone: "085450 99251",
   phoneRaw: "08545099251",
   address: "MIG 3/131, Swarn Jayanti Vihar, Koyala Nagar, Kanpur, Uttar Pradesh 208011",
@@ -19,6 +23,29 @@ export const COMPANY = {
   ],
   mapsUrl: "https://maps.google.com/?q=MIG+3/131,+Swarn+Jayanti+Vihar,+Koyala+Nagar,+Kanpur,+Uttar+Pradesh+208011",
 } as const;
+
+export const OFFICIAL_EMAILS = [
+  {
+    role: "Official Support",
+    email: "support@dimisi.tech",
+    description: "Customer service & general helpdesk",
+  },
+  {
+    role: "Careers & HR",
+    email: "hr@dimisi.tech",
+    description: "Talent acquisition & recruitment",
+  },
+  {
+    role: "CEO Office",
+    email: "ceo@dimisi.tech",
+    description: "Executive desk & partnerships",
+  },
+  {
+    role: "CTO Office",
+    email: "cto@dimisi.tech",
+    description: "Architecture & engineering advisory",
+  },
+] as const;
 
 export const NAV_LINKS: NavLink[] = [
   { label: "Home", to: "/" },
@@ -42,7 +69,17 @@ export const LEGAL_LINKS: NavLink[] = [
 
 export const SOCIALS = [
   { label: "X", href: "https://x.com", ariaLabel: "DIMISI on X", id: "x" },
-  { label: "LinkedIn", href: "https://linkedin.com", ariaLabel: "DIMISI on LinkedIn", id: "linkedin" },
-  { label: "Instagram", href: "https://instagram.com", ariaLabel: "DIMISI on Instagram", id: "instagram" },
+  {
+    label: "LinkedIn",
+    href: "https://www.linkedin.com/company/dimisi-technologies-pvt-ltd/",
+    ariaLabel: "DIMISI on LinkedIn",
+    id: "linkedin",
+  },
+  {
+    label: "Instagram",
+    href: "https://www.instagram.com/dimisi.tech?rpxt=MTFuMnptMTFmcml5YQ==",
+    ariaLabel: "DIMISI on Instagram",
+    id: "instagram",
+  },
   { label: "YouTube", href: "https://youtube.com", ariaLabel: "DIMISI on YouTube", id: "youtube" },
 ];

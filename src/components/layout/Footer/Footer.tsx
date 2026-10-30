@@ -1,5 +1,11 @@
 import { Link } from "@tanstack/react-router";
-import { COMPANY, LEGAL_LINKS, NAV_LINKS, SOCIALS } from "@/constants/site";
+import {
+  COMPANY,
+  LEGAL_LINKS,
+  NAV_LINKS,
+  OFFICIAL_EMAILS,
+  SOCIALS,
+} from "@/constants/site";
 import { SILVER_LOGO_URL } from "@/assets/logos";
 import styles from "./Footer.module.css";
 
@@ -45,7 +51,7 @@ const SOCIAL_ICON_MAP = {
 export function Footer() {
   return (
     <footer className={styles.footer}>
-      {/* Subtle atmospheric ambient glow */}
+      {/* Atmospheric ambient glow */}
       <div className={styles.glow} aria-hidden="true" />
 
       <div className={styles.inner}>
@@ -65,13 +71,16 @@ export function Footer() {
 
           <p className={styles.mission}>{COMPANY.mission}</p>
 
-          <a
-            className={styles.mail}
-            href={`mailto:${COMPANY.email}`}
-            aria-label={`Send email to ${COMPANY.email}`}
-          >
-            {COMPANY.email}
-          </a>
+          <div className={styles.leadMailCard}>
+            <span className={styles.leadMailBadge}>Primary Contact</span>
+            <a
+              className={styles.mail}
+              href={`mailto:${COMPANY.supportEmail}`}
+              aria-label={`Send email to ${COMPANY.supportEmail}`}
+            >
+              {COMPANY.supportEmail}
+            </a>
+          </div>
         </div>
 
         {/* Navigation Column */}
@@ -102,31 +111,31 @@ export function Footer() {
           </ul>
         </nav>
 
-        {/* Connect Column (Social Icons) */}
-        <div className={styles.col}>
-          <h3 className={styles.colTitle}>Connect</h3>
-          <div className={styles.socialGrid}>
-            {SOCIALS.map((s) => {
-              const IconComponent = SOCIAL_ICON_MAP[s.id as keyof typeof SOCIAL_ICON_MAP] || IconXTwitter;
-              return (
+        {/* Official Directory / Specialized Desks */}
+        <div className={styles.col} aria-label="Official Desks">
+          <h3 className={styles.colTitle}>Official Desks</h3>
+          <div className={styles.emailList}>
+            {OFFICIAL_EMAILS.map((item) => (
+              <div key={item.email} className={styles.emailItem}>
+                <div className={styles.emailRole}>
+                  <span className={styles.emailRoleDot} aria-hidden="true" />
+                  <span>{item.role}</span>
+                </div>
                 <a
-                  key={s.label}
-                  href={s.href}
-                  className={styles.socialBtn}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={s.ariaLabel || `DIMISI on ${s.label}`}
+                  href={`mailto:${item.email}`}
+                  className={styles.emailLink}
+                  aria-label={`Send email to ${item.role} at ${item.email}`}
                 >
-                  <IconComponent className={styles.socialIcon} aria-hidden="true" />
+                  {item.email}
                 </a>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Company Address & Phone Column */}
+        {/* Headquarters & Connect Column */}
         <div className={styles.col}>
-          <h3 className={styles.colTitle}>Address</h3>
+          <h3 className={styles.colTitle}>Headquarters</h3>
           <a
             href={COMPANY.mapsUrl}
             target="_blank"
@@ -150,6 +159,28 @@ export function Footer() {
             >
               {COMPANY.phone}
             </a>
+          </div>
+
+          <div className={styles.connectBox}>
+            <span className={styles.phoneLabel}>Connect</span>
+            <div className={styles.socialGrid}>
+              {SOCIALS.map((s) => {
+                const IconComponent =
+                  SOCIAL_ICON_MAP[s.id as keyof typeof SOCIAL_ICON_MAP] || IconXTwitter;
+                return (
+                  <a
+                    key={s.label}
+                    href={s.href}
+                    className={styles.socialBtn}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={s.ariaLabel || `DIMISI on ${s.label}`}
+                  >
+                    <IconComponent className={styles.socialIcon} aria-hidden="true" />
+                  </a>
+                );
+              })}
+            </div>
           </div>
         </div>
       </div>
