@@ -40,7 +40,7 @@ export interface HomeHeroConfig {
 }
 
 export const DEFAULT_HOME_HERO_CONFIG: HomeHeroConfig = {
-  badgeText: "Owl wisdom · DIMISI Technologies Pvt Ltd",
+  badgeText: "INNOVATION & ENGINEERING EXCELLENCE",
   headlinePrefix: "Engineering the Future of",
   rotatingWords: [
     "Scalable",
@@ -52,7 +52,7 @@ export const DEFAULT_HOME_HERO_CONFIG: HomeHeroConfig = {
   ],
   headlineSuffix: " Software",
   missionStatement:
-    "DIMISI TECHNOLOGIES PVT LTD is a product and services technology company — we build software, web and mobile platforms, cloud systems and automation for businesses worldwide, and we are building our own app, Kalesh.",
+    "We help businesses build rock-solid software architectures, scale with data-driven digital marketing, and navigate growth through strategic corporate advisory—while creating next-generation consumer social platforms.",
   primaryBtnText: "TALK TO US",
   primaryBtnLink: "/contact",
   secondaryBtnText: "WATCH OUR FILM",

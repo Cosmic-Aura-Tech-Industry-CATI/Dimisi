@@ -196,7 +196,7 @@ export function AdminHeroContent() {
               className={styles.input}
               value={form.badgeText}
               onChange={(e) => setForm({ ...form, badgeText: e.target.value })}
-              placeholder="e.g. Owl wisdom · DIMISI Technologies Pvt Ltd"
+              placeholder="e.g. INNOVATION & ENGINEERING EXCELLENCE"
             />
             <span className={styles.hint}>Displays inside the illuminated pill at the top of hero.</span>
           </div>

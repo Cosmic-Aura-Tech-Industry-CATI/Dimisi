@@ -5,7 +5,7 @@ export const COMPANY = {
   shortName: "DIMISI",
   tagline: "Technology Beyond Limits",
   mission:
-    "DIMISI TECHNOLOGIES PVT LTD is a product and services technology company — we build software, web and mobile platforms, cloud systems and automation for businesses worldwide, and we are building our own app, Kalesh.",
+    "We help businesses build rock-solid software architectures, scale with data-driven digital marketing, and navigate growth through strategic corporate advisory—while creating next-generation consumer social platforms.",
   email: "hello@dimisi.in",
   phone: "085450 99251",
   phoneRaw: "08545099251",

@@ -21,16 +21,15 @@ import { TrustedEcosystem } from "@/components/home/TrustedEcosystem/TrustedEcos
 import { useHomeHeroConfig } from "@/hooks/useHomeHeroConfig";
 import { DEFAULT_HOME_HERO_CONFIG } from "@/types/homeHero.types";
 
-import { COMPANY } from "@/constants/site";
 import { TECHNOLOGIES } from "@/data/home";
 import styles from "./Home.module.css";
 
 // Deferred Below-The-Fold Showcase Sections (Code-Split for Fast Mobile & Low-Data Speeds):
+const KaleshProductShowcase = lazy(() =>
+  import("@/components/home/KaleshProductShowcase/KaleshProductShowcase").then((m) => ({ default: m.KaleshProductShowcase }))
+);
 const ServicesForward = lazy(() =>
   import("@/components/home/ServicesForward/ServicesForward").then((m) => ({ default: m.ServicesForward }))
-);
-const ProjectsShowcase = lazy(() =>
-  import("@/components/home/ProjectsShowcase/ProjectsShowcase").then((m) => ({ default: m.ProjectsShowcase }))
 );
 const SelectedCaseStudies = lazy(() =>
   import("@/components/home/SelectedCaseStudies/SelectedCaseStudies").then((m) => ({ default: m.SelectedCaseStudies }))
@@ -71,7 +70,9 @@ export function Home() {
             <Reveal variant="fade">
               <p className={styles.badge}>
                 <span className={styles.badgeDot} aria-hidden="true" />
-                {heroConfig.badgeText}
+                {heroConfig.badgeText && !heroConfig.badgeText.includes("Owl wisdom")
+                  ? heroConfig.badgeText
+                  : DEFAULT_HOME_HERO_CONFIG.badgeText}
               </p>
             </Reveal>
 
@@ -87,7 +88,11 @@ export function Home() {
             </h1>
 
             <Reveal variant="up" delay={200}>
-              <p className={styles.heroSub}>{heroConfig.missionStatement || COMPANY.mission}</p>
+              <p className={styles.heroSub}>
+                {heroConfig.missionStatement && !heroConfig.missionStatement.includes("product and services technology company")
+                  ? heroConfig.missionStatement
+                  : DEFAULT_HOME_HERO_CONFIG.missionStatement}
+              </p>
             </Reveal>
 
             <Reveal variant="up" delay={300}>
@@ -185,6 +190,15 @@ export function Home() {
         </div>
       </div>
 
+      {/* KALESH FLAGSHIP PRODUCT SHOWCASE */}
+      <div id="product-kalesh">
+        <ScrollScene variant="lift">
+          <Suspense fallback={<div style={{ minHeight: "400px" }} />}>
+            <KaleshProductShowcase />
+          </Suspense>
+        </ScrollScene>
+      </div>
+
       {/* DYNAMIC SERVICES & DISCIPLINES */}
       <div id="services">
         <ScrollScene variant="lift">
@@ -194,13 +208,7 @@ export function Home() {
 
       {/* PRODUCTS & WORK */}
       <div id="products">
-        <ScrollScene variant="center">
-          <Suspense fallback={<div style={{ minHeight: "260px" }} />}><ProjectsShowcase /></Suspense>
-        </ScrollScene>
-
-        <ScrollScene variant="lift">
-          <Suspense fallback={<div style={{ minHeight: "260px" }} />}><SelectedCaseStudies /></Suspense>
-        </ScrollScene>
+        <Suspense fallback={<div style={{ minHeight: "260px" }} />}><SelectedCaseStudies /></Suspense>
       </div>
 
       {/* WHY CHOOSE US & HIGHLIGHTS */}

@@ -340,19 +340,52 @@ export function RobotGuide() {
     return () => window.clearInterval(id);
   }, []);
 
-  // Head follows the cursor
+  // Head follows the cursor (Optimized: No thrashing, cached rect, RAF-batched)
   useEffect(() => {
     const el = shellRef.current;
     if (!el) return;
-    const onMove = (e: PointerEvent) => {
+    if (window.matchMedia("(hover: none)").matches) return;
+
+    let rafId = 0;
+    let clientX = 0;
+    let clientY = 0;
+    let centerX = 0;
+    let centerY = 0;
+
+    const updateRect = () => {
+      if (!el) return;
       const rect = el.getBoundingClientRect();
-      const dx = (e.clientX - (rect.left + rect.width / 2)) / window.innerWidth;
-      const dy = (e.clientY - (rect.top + rect.height / 2)) / window.innerHeight;
+      centerX = rect.left + rect.width / 2;
+      centerY = rect.top + rect.height / 2;
+    };
+    updateRect();
+
+    const applyLook = () => {
+      const dx = (clientX - centerX) / (window.innerWidth || 1);
+      const dy = (clientY - centerY) / (window.innerHeight || 1);
       el.style.setProperty("--look-x", `${Math.max(-1, Math.min(1, dx * 2)) * 5}px`);
       el.style.setProperty("--look-y", `${Math.max(-1, Math.min(1, dy * 2)) * 3}px`);
+      rafId = 0;
     };
+
+    const onMove = (e: PointerEvent) => {
+      clientX = e.clientX;
+      clientY = e.clientY;
+      if (!rafId) {
+        rafId = window.requestAnimationFrame(applyLook);
+      }
+    };
+
     window.addEventListener("pointermove", onMove, { passive: true });
-    return () => window.removeEventListener("pointermove", onMove);
+    window.addEventListener("resize", updateRect, { passive: true });
+    window.addEventListener("scroll", updateRect, { passive: true });
+
+    return () => {
+      if (rafId) window.cancelAnimationFrame(rafId);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("resize", updateRect);
+      window.removeEventListener("scroll", updateRect);
+    };
   }, []);
 
   const celebrate = () => {

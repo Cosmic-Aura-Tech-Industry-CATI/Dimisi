@@ -111,7 +111,7 @@ export function ScrollScene({
     const paint = () => {
       const a = Math.abs(current) * k;
 
-      if (a <= 0.001) {
+      if (a <= 0.002) {
         el.style.transform = "translate3d(0,0,0)";
         el.style.opacity = "1";
         el.style.willChange = "auto";
@@ -120,64 +120,14 @@ export function ScrollScene({
       }
 
       const entering = current > 0;
-      const vw = Math.min(window.innerWidth || 1, 1400);
-      const vh = Math.min(window.innerHeight || 1, 900);
+      // Lightweight 2D GPU compositor offset (gentle 24px vertical drift, no expensive 3D warping)
+      const y = (entering ? 24 : -18) * a;
+      const op = Math.max(0.12, 1 - Math.min(1, a * 0.85));
 
-      let x = 0;
-      let y = 0;
-      let z = 0;
-      let rotX = 0;
-      let rotY = 0;
-      let rotZ = 0;
-      let sc = 1;
-
-      // 3D Background Emergence depth physics (Z-axis origin & zoom scale)
-      if (entering) {
-        // Content emerges small & deep from inside the 3D background void
-        z = -420 * a;
-        sc = 1 - 0.22 * a;
-      } else {
-        // Content exits forward past the camera in the opposite direction
-        z = 240 * a;
-        sc = 1 + 0.16 * a;
-      }
-
-      if (dir === "left") {
-        // Enters from deep background Left -> Exits to Right (Opposite Direction!)
-        x = (entering ? -1 : 1) * vw * 0.22 * a;
-        y = entering ? 18 * a : -18 * a;
-        rotY = (entering ? -1 : 1) * 5 * a;
-        rotZ = (entering ? -1 : 1) * 1.5 * a;
-      } else if (dir === "right") {
-        // Enters from deep background Right -> Exits to Left (Opposite Direction!)
-        x = (entering ? 1 : -1) * vw * 0.22 * a;
-        y = entering ? 18 * a : -18 * a;
-        rotY = (entering ? 1 : -1) * 5 * a;
-        rotZ = (entering ? 1 : -1) * 1.5 * a;
-      } else if (dir === "top") {
-        // Enters from deep background Top -> Exits to Bottom (Opposite Direction!)
-        y = (entering ? -1 : 1) * vh * 0.20 * a;
-        rotX = (entering ? -1 : 1) * 5 * a;
-      } else if (dir === "bottom") {
-        // Enters from deep background Bottom -> Exits to Top (Opposite Direction!)
-        y = (entering ? 1 : -1) * vh * 0.20 * a;
-        rotX = (entering ? 1 : -1) * 5 * a;
-      } else {
-        // Center / Depth: Enters straight from deep cosmic core -> Exits forward past camera
-        z = entering ? -520 * a : 340 * a;
-        y = entering ? 16 * a : -16 * a;
-        sc = entering ? 1 - 0.28 * a : 1 + 0.22 * a;
-      }
-
-      // Smooth opacity curve from depth into full solid visibility
-      const op = Math.max(0.08, 1 - Math.min(1, a * 0.90));
-
-      el.style.transformOrigin = "50% 50%";
-      // Use pure GPU composite layers (transform + opacity), avoiding expensive filter: blur
       el.style.willChange = "transform, opacity";
-      el.style.transform = `perspective(1200px) translate3d(${x.toFixed(2)}px, ${y.toFixed(2)}px, ${z.toFixed(2)}px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg) rotateZ(${rotZ.toFixed(2)}deg) scale(${sc.toFixed(4)})`;
+      el.style.transform = `translate3d(0, ${y.toFixed(1)}px, 0)`;
       el.style.opacity = op.toFixed(3);
-      el.style.pointerEvents = op < 0.2 ? "none" : "auto";
+      el.style.pointerEvents = op < 0.25 ? "none" : "auto";
     };
 
     const tick = () => {
@@ -229,10 +179,15 @@ export function ScrollScene({
     );
     io.observe(el);
 
-    // Awaken only on actual scroll/resize events instead of polling
+    // Awaken only on actual scroll/resize events (RAF-batched to prevent layout thrashing)
+    let scrollScheduled = false;
     const onScroll = () => {
-      if (visible && isSleeping) {
-        wake();
+      if (visible && isSleeping && !scrollScheduled) {
+        scrollScheduled = true;
+        window.requestAnimationFrame(() => {
+          scrollScheduled = false;
+          wake();
+        });
       }
     };
 
@@ -247,6 +202,7 @@ export function ScrollScene({
       io.disconnect();
       visible = false;
       isSleeping = true;
+      scrollScheduled = false;
       if (raf) cancelAnimationFrame(raf);
       window.removeEventListener("scroll", onScroll);
       window.removeEventListener("resize", onScroll);

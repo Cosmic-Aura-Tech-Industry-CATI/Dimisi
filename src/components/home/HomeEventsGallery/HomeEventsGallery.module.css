@@ -94,14 +94,31 @@
 /* Event Showcase Grid (Featured + Supporting) */
 .eventsLayout {
   display: grid;
-  grid-template-columns: 1.35fr 1fr;
-  gap: 1.75rem;
-  margin-bottom: 3.5rem;
+  grid-template-columns: 1.25fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+  align-items: start;
+}
+
+.eventsLayoutSingle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+}
+
+.singleRevealWrap {
+  width: 100%;
+  max-width: 520px;
+  margin: 0 auto;
 }
 
 @media (max-width: 980px) {
   .eventsLayout {
     grid-template-columns: 1fr;
+    max-width: 540px;
+    margin-left: auto;
+    margin-right: auto;
   }
 }
 
@@ -109,7 +126,7 @@
 .featuredCard {
   background: rgba(14, 14, 17, 0.72);
   border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 1.5rem;
+  border-radius: 1.25rem;
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -118,6 +135,12 @@
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s, box-shadow 0.3s;
   cursor: pointer;
   position: relative;
+  width: 100%;
+}
+
+.eventsLayoutSingle .featuredCard {
+  max-width: 520px;
+  margin: 0 auto;
 }
 
 .featuredCard:hover {
@@ -131,13 +154,13 @@
 .featuredMediaWrap {
   position: relative;
   width: 100%;
-  height: 300px;
+  height: 200px;
   overflow: hidden;
 }
 
 @media (max-width: 600px) {
   .featuredMediaWrap {
-    height: 220px;
+    height: 175px;
   }
 }
 
@@ -157,17 +180,17 @@
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(14, 14, 17, 0.1) 0%,
-    rgba(14, 14, 17, 0.6) 60%,
+    rgba(14, 14, 17, 0.08) 0%,
+    rgba(14, 14, 17, 0.5) 60%,
     rgba(14, 14, 17, 0.95) 100%
   );
 }
 
 .featuredTopPills {
   position: absolute;
-  top: 1.25rem;
-  left: 1.25rem;
-  right: 1.25rem;
+  top: 1rem;
+  left: 1rem;
+  right: 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -177,11 +200,11 @@
 .statusBadge {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.3rem 0.85rem;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
   border-radius: 999px;
   font-family: var(--dm-font-display, "Chakra Petch", monospace);
-  font-size: 0.7rem;
+  font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -228,7 +251,7 @@
 }
 
 .featuredBody {
-  padding: 1.75rem 2rem 2rem;
+  padding: 1.25rem 1.4rem 1.35rem;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -237,75 +260,90 @@
 .metaRow {
   display: flex;
   align-items: center;
-  gap: 1.25rem;
-  margin-bottom: 0.95rem;
+  gap: 1rem;
+  margin-bottom: 0.6rem;
   flex-wrap: wrap;
 }
 
 .metaItem {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
+  gap: 0.35rem;
   color: var(--dm-amber, #ffab2e);
-  font-size: 0.82rem;
+  font-size: 0.78rem;
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
   font-weight: 600;
 }
 
 .featuredTitle {
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
-  font-size: clamp(1.4rem, 2.5vw, 1.85rem);
+  font-size: clamp(1.15rem, 1.8vw, 1.35rem);
   font-weight: 700;
   color: var(--dm-warm, #fbf3e9);
-  margin: 0 0 0.85rem;
-  line-height: 1.25;
+  margin: 0 0 0.45rem;
+  line-height: 1.3;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .locationRow {
   display: flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   color: var(--dm-dim, #a09587);
-  font-size: 0.85rem;
-  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.65rem;
 }
 
 .featuredDesc {
-  color: rgba(251, 243, 233, 0.8);
-  font-size: 0.92rem;
-  line-height: 1.65;
-  margin: 0 0 1.5rem;
+  color: rgba(251, 243, 233, 0.78);
+  font-size: 0.85rem;
+  line-height: 1.55;
+  margin: 0 0 0.95rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   flex: 1;
 }
 
 .highlightsList {
   list-style: none;
   padding: 0;
-  margin: 0 0 1.5rem;
+  margin: 0 0 1rem;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
 .highlightItem {
   display: flex;
-  align-items: flex-start;
-  gap: 0.55rem;
-  font-size: 0.85rem;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.78rem;
   color: rgba(251, 243, 233, 0.85);
+  line-height: 1.35;
+}
+
+.highlightItem span {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .hlIcon {
   color: var(--dm-amber, #ffab2e);
   flex-shrink: 0;
-  margin-top: 2px;
 }
 
 .cardFooter {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 1.25rem;
+  padding-top: 0.95rem;
   border-top: 1px solid rgba(255, 255, 255, 0.08);
   margin-top: auto;
 }
@@ -313,10 +351,10 @@
 .detailsAction {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
+  gap: 0.4rem;
   color: var(--dm-amber, #ffab2e);
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
-  font-size: 0.84rem;
+  font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -334,7 +372,7 @@
   align-items: center;
   gap: 0.35rem;
   color: var(--dm-dim, #a09587);
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   font-family: var(--dm-font-display, "Chakra Petch", monospace);
 }
 
