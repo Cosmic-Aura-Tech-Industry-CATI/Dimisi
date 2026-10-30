@@ -91,38 +91,39 @@
   margin: 0;
 }
 
-/* Event Showcase Grid (Featured + Supporting) */
-.eventsLayout {
+/* Event Showcase Grid (Symmetric, Unified Proportions) */
+.eventsGrid {
   display: grid;
-  grid-template-columns: 1.25fr 1fr;
-  gap: 1.5rem;
-  margin-bottom: 3rem;
-  align-items: start;
+  gap: 1.6rem;
+  margin-bottom: 3.5rem;
+  align-items: stretch;
 }
 
-.eventsLayoutSingle {
-  display: flex;
+.eventsGrid1 {
+  grid-template-columns: minmax(0, 560px);
   justify-content: center;
-  align-items: center;
-  width: 100%;
 }
 
-.singleRevealWrap {
-  width: 100%;
-  max-width: 520px;
-  margin: 0 auto;
+.eventsGrid2 {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.eventsGrid3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 @media (max-width: 980px) {
-  .eventsLayout {
+  .eventsGrid2,
+  .eventsGrid3 {
     grid-template-columns: 1fr;
-    max-width: 540px;
+    max-width: 560px;
     margin-left: auto;
     margin-right: auto;
   }
 }
 
-/* 1. Featured Spotlight Card */
+/* Unified High-End Event Card */
+.eventCard,
 .featuredCard {
   background: rgba(14, 14, 17, 0.72);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -130,6 +131,7 @@
   overflow: hidden;
   display: flex;
   flex-direction: column;
+  height: 100%;
   backdrop-filter: blur(20px);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
   transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s, box-shadow 0.3s;
@@ -138,11 +140,7 @@
   width: 100%;
 }
 
-.eventsLayoutSingle .featuredCard {
-  max-width: 520px;
-  margin: 0 auto;
-}
-
+.eventCard:hover,
 .featuredCard:hover {
   transform: translateY(-4px);
   border-color: rgba(255, 171, 46, 0.4);
@@ -151,26 +149,32 @@
     0 0 30px rgba(255, 122, 24, 0.15);
 }
 
+.eventMediaWrap,
 .featuredMediaWrap {
   position: relative;
   width: 100%;
-  height: 200px;
+  height: 230px;
   overflow: hidden;
+  background: #09090b;
 }
 
 @media (max-width: 600px) {
+  .eventMediaWrap,
   .featuredMediaWrap {
-    height: 175px;
+    height: 195px;
   }
 }
 
+.eventImg,
 .featuredImg {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center 20%; /* Crucial: focal point at upper 20% preserves faces and heads */
   transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+.eventCard:hover .eventImg,
 .featuredCard:hover .featuredImg {
   transform: scale(1.05);
 }
@@ -180,12 +184,14 @@
   inset: 0;
   background: linear-gradient(
     to bottom,
-    rgba(14, 14, 17, 0.08) 0%,
-    rgba(14, 14, 17, 0.5) 60%,
-    rgba(14, 14, 17, 0.95) 100%
+    rgba(14, 14, 17, 0.3) 0%,
+    transparent 35%,
+    rgba(14, 14, 17, 0.88) 100%
   );
+  pointer-events: none;
 }
 
+.eventTopPills,
 .featuredTopPills {
   position: absolute;
   top: 1rem;
@@ -194,6 +200,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 0.5rem;
   z-index: 2;
 }
 
@@ -250,8 +257,9 @@
   text-transform: uppercase;
 }
 
+.eventBody,
 .featuredBody {
-  padding: 1.25rem 1.4rem 1.35rem;
+  padding: 1.35rem 1.45rem 1.4rem;
   display: flex;
   flex-direction: column;
   flex: 1;
@@ -261,7 +269,7 @@
   display: flex;
   align-items: center;
   gap: 1rem;
-  margin-bottom: 0.6rem;
+  margin-bottom: 0.55rem;
   flex-wrap: wrap;
 }
 
@@ -275,17 +283,19 @@
   font-weight: 600;
 }
 
+.eventTitle,
 .featuredTitle {
   font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
-  font-size: clamp(1.15rem, 1.8vw, 1.35rem);
+  font-size: clamp(1.12rem, 1.6vw, 1.28rem);
   font-weight: 700;
   color: var(--dm-warm, #fbf3e9);
-  margin: 0 0 0.45rem;
-  line-height: 1.3;
+  margin: 0 0 0.5rem;
+  line-height: 1.32;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  min-height: 2.64em;
 }
 
 .locationRow {
@@ -295,8 +305,13 @@
   color: var(--dm-dim, #a09587);
   font-size: 0.8rem;
   margin-bottom: 0.65rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
+.eventDesc,
 .featuredDesc {
   color: rgba(251, 243, 233, 0.78);
   font-size: 0.85rem;
@@ -521,6 +536,7 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center 20%;
   transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
