@@ -56,9 +56,7 @@ export function TeamPage() {
 
             <Reveal variant="up" delay={150}>
               <p className={styles.heroLead}>
-                From strategic corporate leadership to production commits — meet the directors,
-                core engineering leads, and innovation cohort building resilient software architectures
-                and the Kalesh social polling platform.
+                From founding directors and core engineering leads to the innovation cohort and honored alumni — meet the architects driving resilient software systems, consumer platforms, and the Kalesh ecosystem.
               </p>
             </Reveal>
 
@@ -66,12 +64,12 @@ export function TeamPage() {
             <Reveal variant="up" delay={220}>
               <div className={styles.heroStatsRow}>
                 <div className={styles.statChip}>
-                  <Users size={15} className={styles.statIcon} />
+                  <Users size={14} className={styles.statIcon} />
                   <span>{TEAM_MEMBERS.length} Documented Profiles</span>
                 </div>
                 <div className={styles.statChip}>
-                  <ShieldCheck size={15} className={styles.statIconGov} />
-                  <span>Incorporated Corporate Leadership</span>
+                  <ShieldCheck size={14} className={styles.statIconGov} />
+                  <span>MCA Registered & DPIIT Recognized</span>
                 </div>
                 <a
                   href="https://www.dimisipedia.me"
@@ -86,16 +84,19 @@ export function TeamPage() {
                 </a>
               </div>
             </Reveal>
+          </div>
 
-            {/* Interactive Filter Pills */}
-            <Reveal variant="up" delay={280}>
+          {/* Interactive Filter Pills - Wide Organized Bar */}
+          <Reveal variant="up" delay={280}>
+            <div className={styles.filterBarWrapper}>
               <div className={styles.filterBar} role="tablist" aria-label="Filter Team by Tier">
                 <button
                   type="button"
                   className={[styles.filterBtn, activeTier === "All" ? styles.filterActive : ""].join(" ")}
                   onClick={() => setActiveTier("All")}
                 >
-                  All Team ({TEAM_MEMBERS.length})
+                  <Users size={14} className={styles.btnIcon} />
+                  <span>All ({TEAM_MEMBERS.length})</span>
                 </button>
                 <button
                   type="button"
@@ -105,7 +106,8 @@ export function TeamPage() {
                   ].join(" ")}
                   onClick={() => setActiveTier("Founders & Executive Directors")}
                 >
-                  Founders & Directors ({founders.length})
+                  <Sparkles size={14} className={styles.btnIcon} />
+                  <span>Founders & Directors ({founders.length})</span>
                 </button>
                 <button
                   type="button"
@@ -115,7 +117,8 @@ export function TeamPage() {
                   ].join(" ")}
                   onClick={() => setActiveTier("Core Engineering & Leads")}
                 >
-                  Core Engineering Leads ({coreLeads.length})
+                  <Cpu size={14} className={styles.btnIcon} />
+                  <span>Core Engineering ({coreLeads.length})</span>
                 </button>
                 <button
                   type="button"
@@ -125,7 +128,8 @@ export function TeamPage() {
                   ].join(" ")}
                   onClick={() => setActiveTier("Innovation Cohort & Interns")}
                 >
-                  Innovation Cohort & Interns ({interns.length})
+                  <Rocket size={14} className={styles.btnIcon} />
+                  <span>Intern Cohort ({interns.length})</span>
                 </button>
                 {alumni.length > 0 && (
                   <button
@@ -136,12 +140,13 @@ export function TeamPage() {
                     ].join(" ")}
                     onClick={() => setActiveTier("Alumni & Former Members")}
                   >
-                    Alumni / Ex-Team ({alumni.length})
+                    <Award size={14} className={styles.btnIcon} />
+                    <span>Alumni / Ex-Team ({alumni.length})</span>
                   </button>
                 )}
               </div>
-            </Reveal>
-          </div>
+            </div>
+          </Reveal>
         </div>
       </section>
 
@@ -232,7 +237,7 @@ export function TeamPage() {
                     </p>
                   </div>
 
-                  <div className={styles.internsGrid}>
+                  <div className={styles.alumniGrid}>
                     {alumni.map((member, idx) => (
                       <AlumniCard key={member.slug} member={member} delay={idx * 60} />
                     ))}
@@ -242,13 +247,50 @@ export function TeamPage() {
             </div>
           ) : (
             // FILTERED VIEW
-            <div className={styles.filteredGrid}>
-              {filteredMembers.map((member, idx) =>
-                member.isExEmployee ? (
-                  <AlumniCard key={member.slug} member={member} delay={idx * 60} />
-                ) : (
-                  <LeadCard key={member.slug} member={member} delay={idx * 60} />
-                )
+            <div className={styles.filteredSection}>
+              <div className={styles.filteredHeader}>
+                <h2 className={styles.filteredTitle}>
+                  Showing <span className={styles.accentText}>{activeTier}</span> ({filteredMembers.length})
+                </h2>
+                <button
+                  type="button"
+                  onClick={() => setActiveTier("All")}
+                  className={styles.resetFilterBtn}
+                >
+                  View All Members ({TEAM_MEMBERS.length})
+                </button>
+              </div>
+
+              {activeTier === "Founders & Executive Directors" && (
+                <div className={styles.foundersGrid}>
+                  {filteredMembers.map((member, idx) => (
+                    <FounderCard key={member.slug} member={member} delay={idx * 80} />
+                  ))}
+                </div>
+              )}
+
+              {activeTier === "Core Engineering & Leads" && (
+                <div className={styles.coreGrid}>
+                  {filteredMembers.map((member, idx) => (
+                    <LeadCard key={member.slug} member={member} delay={idx * 60} />
+                  ))}
+                </div>
+              )}
+
+              {activeTier === "Innovation Cohort & Interns" && (
+                <div className={styles.internsGrid}>
+                  {filteredMembers.map((member, idx) => (
+                    <InternCard key={member.slug} member={member} delay={idx * 60} />
+                  ))}
+                </div>
+              )}
+
+              {activeTier === "Alumni & Former Members" && (
+                <div className={styles.alumniGrid}>
+                  {filteredMembers.map((member, idx) => (
+                    <AlumniCard key={member.slug} member={member} delay={idx * 60} />
+                  ))}
+                </div>
               )}
             </div>
           )}
