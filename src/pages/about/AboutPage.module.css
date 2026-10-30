@@ -1255,3 +1255,363 @@
     text-align: left;
   }
 }
+
+
+/* =========================================================================
+   6. OFFICIAL STARTUP RECOGNITIONS & ACCREDITATIONS
+   ========================================================================= */
+.recognitionsSection {
+  position: relative;
+  padding: clamp(5.5rem, 9vw, 8rem) 0 clamp(4.5rem, 7vw, 6.5rem);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  scroll-margin-top: 110px;
+}
+
+.recGrid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: clamp(1.4rem, 2.5vw, 2.2rem);
+  align-items: stretch;
+}
+
+.recCard {
+  position: relative;
+  border-radius: 20px;
+  background: rgba(13, 11, 19, 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 2rem 2rem 1.8rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.5);
+  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+              border-color 0.35s ease,
+              box-shadow 0.35s ease;
+}
+
+.recCard:hover {
+  transform: translateY(-4px);
+}
+
+.recCardNvidia:hover {
+  border-color: rgba(118, 185, 0, 0.45);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7),
+              0 0 35px rgba(118, 185, 0, 0.16);
+}
+
+.recCardStartupIndia:hover {
+  border-color: rgba(255, 159, 28, 0.45);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.7),
+              0 0 35px rgba(255, 122, 24, 0.16);
+}
+
+.recCardGlow {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 220px;
+  height: 220px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.recCardNvidia .recCardGlow {
+  background: radial-gradient(circle, rgba(118, 185, 0, 0.12) 0%, transparent 70%);
+}
+
+.recCardStartupIndia .recCardGlow {
+  background: radial-gradient(circle, rgba(255, 159, 28, 0.12) 0%, transparent 70%);
+}
+
+.recCardTop {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-bottom: 1.4rem;
+  position: relative;
+  z-index: 1;
+}
+
+.recPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(118, 185, 0, 0.1);
+  border: 1px solid rgba(118, 185, 0, 0.32);
+  color: #8ed500;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.recPillGov {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  background: rgba(255, 159, 28, 0.1);
+  border: 1px solid rgba(255, 159, 28, 0.32);
+  color: #ffab2e;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.recStatusLive {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #8ed500;
+  background: rgba(118, 185, 0, 0.08);
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(118, 185, 0, 0.2);
+}
+
+.recStatusDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #76b900;
+  box-shadow: 0 0 8px #76b900;
+  animation: recPulseLive 2s infinite ease-in-out;
+}
+
+@keyframes recPulseLive {
+  0%, 100% {
+    opacity: 0.5;
+    transform: scale(0.85);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+}
+
+.recCertPill {
+  display: inline-flex;
+  align-items: center;
+  font-family: var(--dm-font-mono, monospace);
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #ffab2e;
+  background: rgba(255, 159, 28, 0.08);
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 159, 28, 0.2);
+  letter-spacing: 0.04em;
+}
+
+.recBrandRow {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.25rem;
+  position: relative;
+  z-index: 1;
+}
+
+.recLogoBox {
+  width: 96px;
+  height: 64px;
+  background: #ffffff;
+  border-radius: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.6rem;
+  flex-shrink: 0;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.recLogoBoxGov {
+  width: 120px;
+  height: 64px;
+  background: #ffffff;
+  border-radius: 0.85rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.4rem 0.7rem;
+  flex-shrink: 0;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.recBrandLogo,
+.recBrandLogoGov {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.recBrandMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.recCardTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--dm-warm, #fbf3e9);
+  line-height: 1.3;
+  margin: 0;
+}
+
+.recOrgLabel {
+  font-size: 0.78rem;
+  color: rgba(251, 243, 233, 0.6);
+  font-weight: 500;
+  letter-spacing: 0.03em;
+}
+
+.recCardDesc {
+  font-size: 0.86rem;
+  line-height: 1.62;
+  color: rgba(251, 243, 233, 0.76);
+  margin: 0 0 1.35rem;
+  position: relative;
+  z-index: 1;
+}
+
+.recFeatureList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+  margin-bottom: 1.6rem;
+  padding-top: 0.95rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  position: relative;
+  z-index: 1;
+}
+
+.recFeatureItem {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.8rem;
+  color: rgba(251, 243, 233, 0.84);
+  line-height: 1.45;
+}
+
+.recCheckIcon {
+  color: #76b900;
+  flex-shrink: 0;
+}
+
+.recCheckIconGov {
+  color: #ffab2e;
+  flex-shrink: 0;
+}
+
+.recCardFooter {
+  margin-top: auto;
+  padding-top: 1.2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  position: relative;
+  z-index: 1;
+}
+
+.recActionBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 0.65rem;
+  background: rgba(118, 185, 0, 0.12);
+  border: 1px solid rgba(118, 185, 0, 0.35);
+  color: #92e000;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.25s ease;
+}
+
+.recActionBtn:hover {
+  background: rgba(118, 185, 0, 0.22);
+  border-color: rgba(118, 185, 0, 0.6);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(118, 185, 0, 0.25);
+}
+
+.recActionBtnGov {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.1rem;
+  border-radius: 0.65rem;
+  background: rgba(255, 159, 28, 0.12);
+  border: 1px solid rgba(255, 159, 28, 0.35);
+  color: #ffab2e;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.25s ease;
+}
+
+.recActionBtnGov:hover {
+  background: rgba(255, 159, 28, 0.22);
+  border-color: rgba(255, 159, 28, 0.6);
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(255, 122, 24, 0.25);
+}
+
+.recMetaBadge,
+.recMetaBadgeGov {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(251, 243, 233, 0.45);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+@media (max-width: 1100px) {
+  .recGrid {
+    grid-template-columns: 1fr;
+    max-width: 600px;
+    margin-inline: auto;
+  }
+}
+
+@media (max-width: 600px) {
+  .recCard {
+    padding: 1.4rem 1.25rem 1.35rem;
+  }
+  .recBrandRow {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .recCardFooter {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  .recActionBtn,
+  .recActionBtnGov {
+    width: 100%;
+    justify-content: center;
+  }
+}
