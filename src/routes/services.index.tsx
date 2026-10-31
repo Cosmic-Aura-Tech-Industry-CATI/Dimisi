@@ -10,7 +10,10 @@ export const Route = createFileRoute("/services/")({
         content:
           "End-to-end digital engineering and industry solutions across Education, Healthcare, Retail, E-Commerce, Startups, SaaS, Enterprise, and Finance. Web, Mobile, AI, Cloud, and Software.",
       },
-      { property: "og:title", content: "Our Services — Solutions Built for Business Growth | DIMISI Technologies" },
+      {
+        property: "og:title",
+        content: "Our Services — Solutions Built for Business Growth | DIMISI Technologies",
+      },
       {
         property: "og:description",
         content:
@@ -19,6 +22,7 @@ export const Route = createFileRoute("/services/")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "canonical", href: "https://www.dimisi.tech/services" }],
   }),
   component: ServicesPage,
 });

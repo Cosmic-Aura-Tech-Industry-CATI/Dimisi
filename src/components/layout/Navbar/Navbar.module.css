@@ -5,7 +5,9 @@
   right: 0;
   z-index: 80;
   padding: 1rem clamp(1rem, 4vw, 3rem);
-  transition: transform 0.45s var(--dm-ease), opacity 0.35s var(--dm-ease);
+  transition:
+    transform 0.45s var(--dm-ease),
+    opacity 0.35s var(--dm-ease);
 }
 
 .hidden {
@@ -45,14 +47,14 @@
   height: 30px;
   width: auto;
   object-fit: contain;
-  filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.55)) drop-shadow(0 0 30px rgba(255, 159, 28, 0.55))
-    brightness(1.35);
+  filter: drop-shadow(0 0 14px rgba(255, 255, 255, 0.55))
+    drop-shadow(0 0 30px rgba(255, 159, 28, 0.55)) brightness(1.35);
   transition: filter 0.4s var(--dm-ease);
 }
 
 .brand:hover .mark {
-  filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.8)) drop-shadow(0 0 40px rgba(255, 159, 28, 0.75))
-    brightness(1.5);
+  filter: drop-shadow(0 0 18px rgba(255, 255, 255, 0.8))
+    drop-shadow(0 0 40px rgba(255, 159, 28, 0.75)) brightness(1.5);
 }
 
 .brandText {
@@ -168,7 +170,9 @@
   display: block;
   height: 1.5px;
   background: var(--dm-warm);
-  transition: transform 0.35s var(--dm-ease), opacity 0.2s;
+  transition:
+    transform 0.35s var(--dm-ease),
+    opacity 0.2s;
 }
 
 .barTop {

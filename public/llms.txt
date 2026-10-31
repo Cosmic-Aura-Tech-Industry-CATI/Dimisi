@@ -1,0 +1,36 @@
+# DIMISI Technologies Pvt Ltd
+> Engineering the Future of Scalable Software — Autonomous Agents, Cinematic WebGL & Enterprise Digital Systems.
+
+DIMISI Technologies Private Limited is a deep-technology software engineering company headquartered in Kanpur, India. Recognized by the Government of India (DPIIT Certificate DIPP173003, CIN U62013UP2024PTC200921) and a member of the global NVIDIA Inception Program, DIMISI builds enterprise software architectures, autonomous AI agents, computer vision pipelines, and immersive WebGL experiences for clients worldwide.
+
+## Key Facts
+- Full Legal Name: DIMISI Technologies Private Limited
+- Headquarters: Kanpur, Uttar Pradesh, India
+- Website: https://www.dimisi.tech
+- Accreditation: NVIDIA Inception Program Member, DPIIT Recognized Startup (Govt. of India)
+- Primary Flagship Product: Kalesh (The Unfiltered Social Sphere — https://thekalesh.com)
+
+## Core Engineering Disciplines
+- **Autonomous AI & Multi-Agent Systems**: Agentic workflows, custom LLM orchestration, RAG pipelines, neural computer vision, and cognitive automation.
+- **Cinematic WebGL & Spatial Interfaces**: High-performance 3D web experiences built with Three.js, WebGPU, and custom GLSL shaders running at 60 FPS.
+- **Enterprise Software Architecture**: Resilient microservices, cloud-native backend systems (Node.js, Go, Python, PostgreSQL, Redis, Docker, Kubernetes).
+- **Native & Cross-Platform Mobile Applications**: High-throughput iOS & Android solutions using React Native and Flutter with real-time sync.
+- **Data-Driven Digital Platforms & Growth Advisory**: End-to-end product strategy, corporate tech advisory, and scalable SaaS infrastructure.
+
+## Flagship Products
+- **Kalesh**: Real-time anonymous public opinion platform with cryptographic zero-knowledge hashing, live polling, and sentiment stream analysis.
+- **Karyon**: On-demand verified home services dispatch platform with automated matching and low-latency tracking.
+
+## Official Pages & Links
+- [Home](https://www.dimisi.tech/): Overview of services, flagship products, and engineering recognitions.
+- [About Us](https://www.dimisi.tech/about): Company heritage, leadership, DPIIT registration, and engineering philosophy.
+- [Services](https://www.dimisi.tech/services): Comprehensive breakdown of enterprise digital solutions.
+- [Work & Case Studies](https://www.dimisi.tech/work): Shipped production systems, architectures, and performance metrics.
+- [Products](https://www.dimisi.tech/products): Proprietary platforms engineered in-house.
+- [Reviews](https://www.dimisi.tech/reviews): Verified client and collaborator reviews.
+- [Contact](https://www.dimisi.tech/contact): Direct intake for 48-hour architectural blueprint proposals.
+
+## Contact Information
+- Inquiries: contact@dimisi.tech
+- Leadership & Advisory: ceo@dimisi.tech
+- Location: Kanpur, Uttar Pradesh, India

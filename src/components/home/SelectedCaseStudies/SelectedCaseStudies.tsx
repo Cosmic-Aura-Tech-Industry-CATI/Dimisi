@@ -1,13 +1,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import {
-  ExternalLink,
-  ChevronLeft,
-  ChevronRight,
-  Zap,
-  ArrowRight,
-} from "lucide-react";
+import { ExternalLink, ChevronLeft, ChevronRight, Zap, ArrowRight } from "lucide-react";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
 import { getPublicWorkData } from "@/lib/work.functions";
 import type { ProjectItem } from "@/lib/work.shared";
@@ -34,12 +28,12 @@ const SEEDED_SHOWCASE_PROJECTS: CaseStudyCardData[] = [
   {
     id: "seed-yaduvanshi",
     slug: "yaduvanshi-tours-travels",
-    title: "Yaduvanshi Tours & Travels",
-    tagline: "Our Packages, Car Rentals & Wedding Travel in One Place",
-    category: "Software Development",
+    title: "Yaduvanshi Mobility & Fleet Portal",
+    tagline: "High-Throughput Digital Booking & Route Dispatch Architecture",
+    category: "Enterprise Software",
     type: "work",
     overview:
-      "The website provides Yaduvanshi Tours & Travels with a central digital platform to showcase its services, present travel options, and connect prospective customers through inquiry channels.",
+      "DIMISI Technologies engineered a responsive high-speed booking and inventory platform for regional fleet operations, featuring sub-350ms response times and automated customer inquiry pipelines.",
     coverImage:
       "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
     websiteUrl: "https://yaduvanshitravels.com",
@@ -54,12 +48,12 @@ const SEEDED_SHOWCASE_PROJECTS: CaseStudyCardData[] = [
   {
     id: "seed-rudra",
     slug: "rudra-tours-travels",
-    title: "Rudra Tours & Travels",
-    tagline: "Travel Experiences Designed Around Your Journey",
-    category: "Software Development",
+    title: "Rudra Transit & Reservation Engine",
+    tagline: "Automated Journey Dispatch & Cloud Logistics Platform",
+    category: "Cloud Architecture",
     type: "work",
     overview:
-      "The website provides Rudra Tours & Travels with a dedicated digital platform to showcase its offerings and connect with potential customers. It creates an accessible starting point for travelers.",
+      "Engineered an automated reservation workflow and cloud backend architecture that accelerated customer acquisition with instant quote calculation and real-time fleet scheduling.",
     coverImage:
       "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80",
     websiteUrl: "https://rudratourtravels.com",
@@ -147,8 +141,10 @@ export function SelectedCaseStudies() {
           id: p.id,
           slug: p.slug,
           title: p.client_name || p.title,
-          tagline: p.tagline || p.outcome || "Production-grade digital architecture built to scale.",
-          category: p.category || (p.type === "product" ? "Product Platform" : "Software Development"),
+          tagline:
+            p.tagline || p.outcome || "Production-grade digital architecture built to scale.",
+          category:
+            p.category || (p.type === "product" ? "Product Platform" : "Software Development"),
           type: p.type || "work",
           overview:
             p.overview ||
@@ -158,8 +154,8 @@ export function SelectedCaseStudies() {
             p.cover_image && !p.cover_image.includes("placeholder")
               ? p.cover_image
               : p.slug.includes("kalesh")
-              ? "/images/kalesh-logo.jpg"
-              : "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
+                ? "/images/kalesh-logo.jpg"
+                : "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80",
           websiteUrl: p.website_url,
           isFeatured: p.is_featured,
           metrics,
@@ -292,9 +288,7 @@ export function SelectedCaseStudies() {
       // Auto-rotation only engages when user is truly idle:
       // Not dragging, not hovering, and hasn't scrolled in the last 900ms
       const isIdle =
-        !isDraggingRef.current &&
-        !isHoveredRef.current &&
-        now - lastScrollTimeRef.current > 900;
+        !isDraggingRef.current && !isHoveredRef.current && now - lastScrollTimeRef.current > 900;
 
       if (isIdle) {
         // Very gentle, elegant auto-drift (1.8 deg/sec)
@@ -340,7 +334,7 @@ export function SelectedCaseStudies() {
             stopLoop();
           }
         },
-        { rootMargin: "200px" }
+        { rootMargin: "200px" },
       );
       io.observe(pinWrapperRef.current);
     } else {
@@ -411,7 +405,7 @@ export function SelectedCaseStudies() {
       const target = -cardIndex * angleStep;
       manualOffsetRef.current = target - scrollAngleRef.current;
     },
-    [angleStep]
+    [angleStep],
   );
 
   const handlePrev = () => {
@@ -439,7 +433,7 @@ export function SelectedCaseStudies() {
             <span className={styles.badgeText}>03 · Our Work &amp; Case Studies</span>
           </div>
 
-          <h2 className={styles.title}>
+          <h2 className={styles.title} id="heading-work">
             Engineering Impact Across{" "}
             <span className={styles.gradientTitle}>Production Platforms</span>
           </h2>
@@ -489,8 +483,8 @@ export function SelectedCaseStudies() {
                 ? isCenter
                   ? 1
                   : isMobile
-                  ? Math.max(0.18, 0.42 - (absAngle / 90) * 0.3)
-                  : Math.max(0.48, 0.95 - (absAngle / 90) * 0.52)
+                    ? Math.max(0.18, 0.42 - (absAngle / 90) * 0.3)
+                    : Math.max(0.48, 0.95 - (absAngle / 90) * 0.52)
                 : 0;
 
               const scale = isCenter ? 1 : isMobile ? 0.86 : 0.94;
@@ -500,9 +494,7 @@ export function SelectedCaseStudies() {
               return (
                 <article
                   key={`${project.id}-${i}`}
-                  className={`${styles.cylinderCard} ${
-                    isCenter ? styles.cylinderCardActive : ""
-                  }`}
+                  className={`${styles.cylinderCard} ${isCenter ? styles.cylinderCardActive : ""}`}
                   style={{
                     transform: `rotateY(${cardBaseAngle}deg) translateZ(${cylinderRadius}px) scale(${scale})`,
                     opacity,
@@ -523,6 +515,9 @@ export function SelectedCaseStudies() {
                       alt={project.title}
                       className={styles.coverImage}
                       loading="lazy"
+                      decoding="async"
+                      width={1200}
+                      height={800}
                     />
                     <div className={styles.imageGradientFade} aria-hidden="true" />
 

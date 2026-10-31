@@ -87,14 +87,16 @@ export function WhyChooseUs() {
           </Reveal>
 
           <Reveal variant="up" delay={80}>
-            <h2 className={styles.title}>
-              Engineering With <span className={styles.gradientTitle}>Uncompromising Standards</span>
+            <h2 className={styles.title} id="heading-why-us">
+              Engineering With{" "}
+              <span className={styles.gradientTitle}>Uncompromising Standards</span>
             </h2>
           </Reveal>
 
           <Reveal variant="up" delay={140}>
             <p className={styles.subtitle}>
-              Seven foundational commitments that define our engineering precision, startup velocity, and enduring client partnerships.
+              Seven foundational commitments that define our engineering precision, startup
+              velocity, and enduring client partnerships.
             </p>
           </Reveal>
         </div>
