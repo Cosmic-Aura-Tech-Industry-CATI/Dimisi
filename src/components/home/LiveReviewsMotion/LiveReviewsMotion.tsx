@@ -25,7 +25,9 @@ function StarRating({ rating }: { rating: number }) {
       {[1, 2, 3, 4, 5].map((star) => (
         <Star
           key={star}
-          className={[styles.starIcon, star <= rating ? styles.starFilled : styles.starEmpty].join(" ")}
+          className={[styles.starIcon, star <= rating ? styles.starFilled : styles.starEmpty].join(
+            " ",
+          )}
           aria-hidden="true"
         />
       ))}
@@ -182,7 +184,9 @@ export function LiveReviewsMotion() {
     const half = Math.ceil(total / 2);
     const row1 = activeReviews.slice(0, half);
     const row2 =
-      activeReviews.slice(half).length > 0 ? activeReviews.slice(half) : activeReviews.slice(0, half);
+      activeReviews.slice(half).length > 0
+        ? activeReviews.slice(half)
+        : activeReviews.slice(0, half);
 
     // Duplicate for seamless 360 loop animation
     return {
@@ -193,9 +197,7 @@ export function LiveReviewsMotion() {
 
   const totalReviewsCount =
     serverPayload?.stats?.total || serverPayload?.totalApproved || (activeReviews?.length ?? 0);
-  const avgScore = serverPayload?.stats?.average
-    ? serverPayload.stats.average.toFixed(1)
-    : "5.0";
+  const avgScore = serverPayload?.stats?.average ? serverPayload.stats.average.toFixed(1) : "5.0";
 
   return (
     <section className={styles.section} id="live-reviews" aria-label="Customer & Staff Reviews">
@@ -213,15 +215,15 @@ export function LiveReviewsMotion() {
           </Reveal>
 
           <Reveal variant="up" delay={80}>
-            <h2 className={styles.title}>
+            <h2 className={styles.title} id="heading-reviews">
               What People Say <span className={styles.gradientTitle}>About DIMISI</span>
             </h2>
           </Reveal>
 
           <Reveal variant="up" delay={140}>
             <p className={styles.subtitle}>
-              Unfiltered endorsements from founders, CTOs, and the engineers building DIMISI from within.
-              Synchronized dynamically with our verified reviews system in real time.
+              Unfiltered endorsements from founders, CTOs, and the engineers building DIMISI from
+              within. Synchronized dynamically with our verified reviews system in real time.
             </p>
           </Reveal>
 
@@ -267,7 +269,8 @@ export function LiveReviewsMotion() {
             <AlertTriangle size={36} className={styles.stateIcon} />
             <h3 className={styles.stateTitle}>Unable to load live reviews right now.</h3>
             <p className={styles.stateText}>
-              Real-time synchronization encountered a transient issue. The rest of the page remains functional.
+              Real-time synchronization encountered a transient issue. The rest of the page remains
+              functional.
             </p>
             <button
               type="button"

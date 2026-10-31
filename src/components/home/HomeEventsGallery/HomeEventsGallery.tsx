@@ -61,8 +61,7 @@ export function HomeEventsGallery() {
 
       // 3. Newest first
       return (
-        new Date(b.created_at || b.date).getTime() -
-        new Date(a.created_at || a.date).getTime()
+        new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime()
       );
     });
 
@@ -90,9 +89,7 @@ export function HomeEventsGallery() {
             prev === null ? 0 : (prev - 1 + curatedGallery.length) % curatedGallery.length,
           );
         } else if (e.key === "ArrowRight") {
-          setActiveLightboxIdx((prev) =>
-            prev === null ? 0 : (prev + 1) % curatedGallery.length,
-          );
+          setActiveLightboxIdx((prev) => (prev === null ? 0 : (prev + 1) % curatedGallery.length));
         }
       }
     },
@@ -123,8 +120,7 @@ export function HomeEventsGallery() {
     };
   }, [activeModalEvent, activeLightboxIdx, handleKeyDown]);
 
-  const activeLightboxItem =
-    activeLightboxIdx !== null ? curatedGallery[activeLightboxIdx] : null;
+  const activeLightboxItem = activeLightboxIdx !== null ? curatedGallery[activeLightboxIdx] : null;
 
   return (
     <section className={styles.section} id="events-gallery" aria-label="Events & Gallery">
@@ -172,7 +168,8 @@ export function HomeEventsGallery() {
             <AlertTriangle size={36} className={styles.stateIcon} />
             <h3 className={styles.stateTitle}>Unable to load events right now.</h3>
             <p className={styles.stateText}>
-              Live synchronization encountered a transient issue. The rest of the platform remains fully functional.
+              Live synchronization encountered a transient issue. The rest of the platform remains
+              fully functional.
             </p>
             <button
               type="button"
@@ -345,13 +342,16 @@ export function HomeEventsGallery() {
                           alt={item.title}
                           className={styles.galleryThumb}
                           loading="lazy"
+                          decoding="async"
+                          width={400}
+                          height={280}
                           onError={(e) => {
                             (e.currentTarget as HTMLImageElement).src = DEFAULT_EVENT_IMG;
                           }}
                         />
                         <div className={styles.galleryOverlay}>
                           <span className={styles.galleryTag}>{item.category}</span>
-                          <h5 className={styles.galleryItemTitle}>{item.title}</h5>
+                          <h4 className={styles.galleryItemTitle}>{item.title}</h4>
                         </div>
                         <div className={styles.galleryZoomIcon} aria-hidden="true">
                           <Maximize2 size={14} />

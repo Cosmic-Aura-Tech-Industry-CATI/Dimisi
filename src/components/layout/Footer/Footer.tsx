@@ -72,9 +72,7 @@ export function Footer() {
           </Link>
 
           {/* Corporate Location Tagline */}
-          <p className={styles.corpLocation}>
-            Technologies Private Limited — Kanpur
-          </p>
+          <p className={styles.corpLocation}>Technologies Private Limited — Kanpur</p>
 
           {/* CIN, MCA, DPIIT Corporate Identification Group */}
           <div className={styles.corpLeadStack}>
@@ -82,11 +80,15 @@ export function Footer() {
               <span className={styles.corpLeadKey}>CIN:</span>
               <span className={styles.corpLeadVal}>{COMPANY.cin}</span>
             </div>
-            <span className={styles.corpLeadDot} aria-hidden="true">·</span>
+            <span className={styles.corpLeadDot} aria-hidden="true">
+              ·
+            </span>
             <div className={styles.corpLeadItem}>
               <span className={styles.corpLeadBadge}>{COMPANY.mcaRegistered}</span>
             </div>
-            <span className={styles.corpLeadDot} aria-hidden="true">·</span>
+            <span className={styles.corpLeadDot} aria-hidden="true">
+              ·
+            </span>
             <div className={styles.corpLeadItem}>
               <span className={styles.corpLeadKey}>DPIIT:</span>
               <span className={styles.corpLeadVal}>{COMPANY.dpiitNumber}</span>
@@ -218,6 +220,8 @@ export function Footer() {
                   className={styles.recLogoImg}
                   loading="lazy"
                   decoding="async"
+                  width={180}
+                  height={60}
                 />
               </div>
               <div className={styles.recContent}>
@@ -258,7 +262,7 @@ export function Footer() {
       {/* Footer Bottom Bar with Copyright */}
       <div className={styles.bottom}>
         <span className={styles.copyright}>
-          © 2026 {COMPANY.name}. All rights reserved.
+          © <time dateTime="2026-10-31">2026</time> {COMPANY.name}. All rights reserved.
         </span>
 
         <span className={styles.status}>

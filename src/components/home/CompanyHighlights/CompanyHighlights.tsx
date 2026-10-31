@@ -1,12 +1,4 @@
-import {
-  Layers,
-  Rocket,
-  Cpu,
-  Building2,
-  Flame,
-  Sparkles,
-  CheckCircle,
-} from "lucide-react";
+import { Layers, Rocket, Cpu, Building2, Flame, Sparkles, CheckCircle } from "lucide-react";
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import styles from "./CompanyHighlights.module.css";
 
@@ -75,13 +67,14 @@ export function CompanyHighlights() {
             </div>
           </Reveal>
           <Reveal variant="up" delay={60}>
-            <h3 className={styles.stripTitle}>
+            <h2 className={styles.stripTitle} id="heading-highlights">
               DIMISI Technologies <span className={styles.gradientText}>At A Glance</span>
-            </h3>
+            </h2>
           </Reveal>
           <Reveal variant="up" delay={120}>
             <p className={styles.stripSubtitle}>
-              A quick overview of our engineering scale, product ecosystem, and continuous innovation initiatives.
+              A quick overview of our engineering scale, product ecosystem, and continuous
+              innovation initiatives.
             </p>
           </Reveal>
         </div>
@@ -95,7 +88,9 @@ export function CompanyHighlights() {
                 <div className={styles.card}>
                   <div
                     className={styles.cardGlow}
-                    style={{ background: `radial-gradient(circle, ${item.accentGlow} 0%, transparent 70%)` }}
+                    style={{
+                      background: `radial-gradient(circle, ${item.accentGlow} 0%, transparent 70%)`,
+                    }}
                     aria-hidden="true"
                   />
 
@@ -107,7 +102,7 @@ export function CompanyHighlights() {
                   </div>
 
                   <div className={styles.cardBody}>
-                    <h4 className={styles.cardLabel}>{item.label}</h4>
+                    <h3 className={styles.cardLabel}>{item.label}</h3>
                     <p className={styles.cardSubtext}>{item.subtext}</p>
                   </div>
 

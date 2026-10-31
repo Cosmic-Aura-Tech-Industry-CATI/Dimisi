@@ -92,9 +92,10 @@
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
-  transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
-              border-color 0.35s ease,
-              box-shadow 0.35s ease;
+  transition:
+    transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.35s ease,
+    box-shadow 0.35s ease;
 }
 
 .card:hover {
@@ -103,14 +104,16 @@
 
 .cardNvidia:hover {
   border-color: rgba(118, 185, 0, 0.45);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6),
-              0 0 35px rgba(118, 185, 0, 0.16);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    0 0 35px rgba(118, 185, 0, 0.16);
 }
 
 .cardStartupIndia:hover {
   border-color: rgba(255, 159, 28, 0.45);
-  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6),
-              0 0 35px rgba(255, 122, 24, 0.16);
+  box-shadow:
+    0 20px 50px rgba(0, 0, 0, 0.6),
+    0 0 35px rgba(255, 122, 24, 0.16);
 }
 
 .cardGlow {
@@ -202,7 +205,8 @@
 }
 
 @keyframes pulseLive {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.5;
     transform: scale(0.85);
   }
@@ -419,7 +423,7 @@
   .card {
     padding: 1.4rem 1.25rem 1.35rem;
   }
-  
+
   .brandRow {
     flex-direction: column;
     align-items: flex-start;
