@@ -2,7 +2,7 @@
 
 ## 1. Executive Summary
 DIMISI Technologies Private Limited is an advanced software engineering studio and deep-technology venture studio based in Kanpur, Uttar Pradesh, India.
-The company is recognized by the Ministry of Commerce & Industry (DPIIT Certificate: DIPP173003) and operates within the global NVIDIA Inception ecosystem.
+The company is recognized by the Ministry of Commerce & Industry (Startup India DPIIT, Valid Till 2036) and operates within the global NVIDIA Inception ecosystem.
 
 DIMISI bridges high-concept visual computing with battle-tested enterprise architecture:
 - Autonomous Multi-Agent AI systems
@@ -13,7 +13,7 @@ DIMISI bridges high-concept visual computing with battle-tested enterprise archi
 ## 2. Company Identity & Registration
 - Legal Name: DIMISI Technologies Private Limited
 - CIN: U62013UP2024PTC200921
-- DPIIT Recognition: DIPP173003 (Startup India)
+- DPIIT Recognition: Startup India Recognized (Valid Till 2036)
 - Domain: https://www.dimisi.tech
 - Headquarters: Kanpur, Uttar Pradesh, India
 - Established: 2024 (Recognition valid through 2036)

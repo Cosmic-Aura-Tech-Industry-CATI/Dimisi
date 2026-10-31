@@ -354,7 +354,7 @@ export function HomeAeoGeoSection() {
             </h3>
             <p className={styles.faqAnswer}>
               DIMISI Technologies Private Limited is a registered Indian technology company
-              recognized under Startup India by DPIIT (Certificate DIPP173003) and a member of the
+              recognized under Startup India by DPIIT (Valid Till 2036) and a member of the
               NVIDIA Inception Program. We specialize in autonomous multi-agent AI systems,
               cinematic WebGL experiences, and scalable enterprise cloud software architectures.
             </p>

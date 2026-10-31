@@ -1,7 +1,7 @@
 # DIMISI Technologies Pvt Ltd
 > Engineering the Future of Scalable Software — Autonomous Agents, Cinematic WebGL & Enterprise Digital Systems.
 
-DIMISI Technologies Private Limited is a deep-technology software engineering company headquartered in Kanpur, India. Recognized by the Government of India (DPIIT Certificate DIPP173003, CIN U62013UP2024PTC200921) and a member of the global NVIDIA Inception Program, DIMISI builds enterprise software architectures, autonomous AI agents, computer vision pipelines, and immersive WebGL experiences for clients worldwide.
+DIMISI Technologies Private Limited is a deep-technology software engineering company headquartered in Kanpur, India. Recognized by the Government of India (Startup India DPIIT, Valid Till 2036, CIN U62013UP2024PTC200921) and a member of the global NVIDIA Inception Program, DIMISI builds enterprise software architectures, autonomous AI agents, computer vision pipelines, and immersive WebGL experiences for clients worldwide.
 
 ## Key Facts
 - Full Legal Name: DIMISI Technologies Private Limited

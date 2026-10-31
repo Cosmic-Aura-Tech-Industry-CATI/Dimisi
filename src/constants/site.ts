@@ -6,8 +6,8 @@ export const COMPANY = {
   tagline: "Technology Beyond Limits",
   cin: "U62013UP2026PTC246506",
   mcaRegistered: "MCA Registered (India)",
-  dpiitNumber: "DIPP283489",
-  dpiitValidUpto: "08-04-2036",
+  dpiitValidTill: "Valid Till 2036",
+  dpiitValidUpto: "2036",
   mission:
     "We help businesses build rock-solid software architectures, scale with data-driven digital marketing, and navigate growth through strategic corporate advisory—while creating next-generation consumer social platforms.",
   email: "support@dimisi.tech",
@@ -25,7 +25,8 @@ export const COMPANY = {
     "Kanpur,",
     "Uttar Pradesh 208011",
   ],
-  mapsUrl: "https://maps.google.com/?q=MIG+3/131,+Swarn+Jayanti+Vihar,+Koyala+Nagar,+Kanpur,+Uttar+Pradesh+208011",
+  mapsUrl:
+    "https://maps.google.com/?q=MIG+3/131,+Swarn+Jayanti+Vihar,+Koyala+Nagar,+Kanpur,+Uttar+Pradesh+208011",
 } as const;
 
 export const STARTUP_RECOGNITIONS = [
@@ -48,9 +49,7 @@ export const STARTUP_RECOGNITIONS = [
       "Recognized by the Department for Promotion of Industry and Internal Trade (DPIIT), Ministry of Commerce & Industry, Government of India. Valid through April 2036.",
     logo: "/images/startup-india-clean.png",
     alt: "Startup India DPIIT Recognition",
-    certNumber: "DIPP283489",
-    link: "/documents/dimisi-dpiit-certificate.pdf",
-    actionText: "View Recognition Certificate",
+    validity: "Valid Till 2036",
   },
 ] as const;
 
