@@ -91,7 +91,7 @@ export function Footer() {
             </span>
             <div className={styles.corpLeadItem}>
               <span className={styles.corpLeadKey}>DPIIT:</span>
-              <span className={styles.corpLeadVal}>{COMPANY.dpiitNumber}</span>
+              <span className={styles.corpLeadVal}>Recognized (Valid Till 2036)</span>
             </div>
           </div>
 
@@ -231,20 +231,22 @@ export function Footer() {
                 </div>
                 <p className={styles.recDesc}>{rec.description}</p>
                 <div className={styles.recActionRow}>
-                  <a
-                    href={rec.link}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.recActionLink}
-                    aria-label={`${rec.actionText} for ${rec.title}`}
-                  >
-                    <span>{rec.actionText}</span>
-                    <ArrowUpRight size={13} aria-hidden="true" />
-                  </a>
-                  {"certNumber" in rec && rec.certNumber ? (
+                  {"link" in rec && rec.link && "actionText" in rec && rec.actionText ? (
+                    <a
+                      href={rec.link}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={styles.recActionLink}
+                      aria-label={`${rec.actionText} for ${rec.title}`}
+                    >
+                      <span>{rec.actionText}</span>
+                      <ArrowUpRight size={13} aria-hidden="true" />
+                    </a>
+                  ) : null}
+                  {"validity" in rec && rec.validity ? (
                     <span className={styles.certPill}>
                       <ShieldCheck size={12} className={styles.certCheck} aria-hidden="true" />
-                      <span>Cert: {rec.certNumber}</span>
+                      <span>{rec.validity}</span>
                     </span>
                   ) : null}
                 </div>

@@ -22,7 +22,6 @@ import {
   Star,
   CheckCircle2,
   Cpu,
-  FileText,
 } from "lucide-react";
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
@@ -35,7 +34,11 @@ export function AboutPage() {
       {/* =========================================================================
           1. HERO SECTION
           ========================================================================= */}
-      <section className={styles.heroSection} id="about-hero" aria-label="About DIMISI Technologies">
+      <section
+        className={styles.heroSection}
+        id="about-hero"
+        aria-label="About DIMISI Technologies"
+      >
         <div className={styles.container}>
           <div className={styles.heroGrid}>
             {/* Left Content */}
@@ -56,7 +59,9 @@ export function AboutPage() {
 
               <Reveal variant="up" delay={150}>
                 <p className={styles.sectionLead}>
-                  We help businesses build rock-solid software architectures, scale with data-driven digital marketing, and navigate growth through strategic corporate advisory—while creating next-generation consumer social platforms.
+                  We help businesses build rock-solid software architectures, scale with data-driven
+                  digital marketing, and navigate growth through strategic corporate advisory—while
+                  creating next-generation consumer social platforms.
                 </p>
               </Reveal>
 
@@ -176,7 +181,9 @@ export function AboutPage() {
                       <Users size={20} />
                     </div>
                     <div className={styles.bannerContent}>
-                      <h4 className={styles.bannerHeading}>Driven by Innovation. Built for Impact.</h4>
+                      <h4 className={styles.bannerHeading}>
+                        Driven by Innovation. Built for Impact.
+                      </h4>
                       <p className={styles.bannerSub}>
                         Turning ambitious ideas into scalable, real-world solutions.
                       </p>
@@ -244,7 +251,11 @@ export function AboutPage() {
       {/* =========================================================================
           3. OUR PROPRIETARY PRODUCT: KALESH
           ========================================================================= */}
-      <section className={styles.kaleshSection} id="kalesh-product" aria-label="Our Proprietary Product">
+      <section
+        className={styles.kaleshSection}
+        id="kalesh-product"
+        aria-label="Our Proprietary Product"
+      >
         <div className={styles.container}>
           {/* Section Header: Centered & Spacious */}
           <div className={styles.sectionHeaderCenter}>
@@ -257,14 +268,15 @@ export function AboutPage() {
 
             <Reveal variant="up" delay={80}>
               <h2 className={styles.sectionTitleCenter}>
-                Kalesh — <span className={styles.accentGradient}>Anonymous Social Polling Platform</span>
+                Kalesh —{" "}
+                <span className={styles.accentGradient}>Anonymous Social Polling Platform</span>
               </h2>
             </Reveal>
 
             <Reveal variant="up" delay={140}>
               <p className={styles.sectionLeadCenter}>
-                People often hesitate to share their honest feedback or personal thoughts because
-                of judgment or privacy concerns. To solve this, Dimisi Technologies is actively
+                People often hesitate to share their honest feedback or personal thoughts because of
+                judgment or privacy concerns. To solve this, Dimisi Technologies is actively
                 engineering a next-generation <strong>Anonymous Social Polling App</strong> where
                 users can express themselves without any <strong>fear</strong>.
               </p>
@@ -389,8 +401,8 @@ export function AboutPage() {
 
             <Reveal variant="up" delay={140}>
               <p className={styles.sectionLeadCenter}>
-                From modern full-cycle engineering to high-performance marketing and advisory,
-                we build end-to-end digital solutions that drive real business velocity.
+                From modern full-cycle engineering to high-performance marketing and advisory, we
+                build end-to-end digital solutions that drive real business velocity.
               </p>
             </Reveal>
           </div>
@@ -407,7 +419,8 @@ export function AboutPage() {
                 <h3 className={styles.pillarTitle}>Scalable Software Architectures</h3>
                 <p className={styles.pillarDesc}>
                   We write clean, modular, and secure code. Our cloud-native architectures ensure
-                  your applications perform reliably whether serving 100 users or millions of concurrent visitors.
+                  your applications perform reliably whether serving 100 users or millions of
+                  concurrent visitors.
                 </p>
                 <div className={styles.pillarFooterTag}>Architecture & Cloud</div>
               </div>
@@ -423,8 +436,8 @@ export function AboutPage() {
                 </div>
                 <h3 className={styles.pillarTitle}>Full-Cycle Digital Services</h3>
                 <p className={styles.pillarDesc}>
-                  From interactive web apps and responsive mobile apps to high-throughput backend APIs,
-                  we manage end-to-end development, deployment, and ongoing maintenance.
+                  From interactive web apps and responsive mobile apps to high-throughput backend
+                  APIs, we manage end-to-end development, deployment, and ongoing maintenance.
                 </p>
                 <div className={styles.pillarFooterTag}>Web & Mobile Apps</div>
               </div>
@@ -440,8 +453,9 @@ export function AboutPage() {
                 </div>
                 <h3 className={styles.pillarTitle}>Performance Digital Marketing</h3>
                 <p className={styles.pillarDesc}>
-                  Our growth team leverages data-driven technical SEO, ROI-targeted performance campaigns,
-                  and high-conversion funnels to transform organic and paid traffic into recurring revenue.
+                  Our growth team leverages data-driven technical SEO, ROI-targeted performance
+                  campaigns, and high-conversion funnels to transform organic and paid traffic into
+                  recurring revenue.
                 </p>
                 <div className={styles.pillarFooterTag}>Growth & Conversion</div>
               </div>
@@ -528,7 +542,8 @@ export function AboutPage() {
                 <h3 className={styles.whyCardTitle}>Built for Real Scale</h3>
                 <p className={styles.whyCardDesc}>
                   We do not rely on fragile shortcuts. We architect resilient, high-throughput cloud
-                  backends engineered to handle massive enterprise traffic and scale smoothly with your growth.
+                  backends engineered to handle massive enterprise traffic and scale smoothly with
+                  your growth.
                 </p>
                 <div className={styles.whyFooterChip}>Zero Compromise Engineering</div>
               </div>
@@ -544,8 +559,9 @@ export function AboutPage() {
                 </div>
                 <h3 className={styles.whyCardTitle}>End-to-End Growth Partner</h3>
                 <p className={styles.whyCardDesc}>
-                  Eliminate the friction of juggling multiple agencies. We orchestrate product design,
-                  custom engineering, growth marketing, and ongoing operations under one roof.
+                  Eliminate the friction of juggling multiple agencies. We orchestrate product
+                  design, custom engineering, growth marketing, and ongoing operations under one
+                  roof.
                 </p>
                 <div className={styles.whyFooterChip}>Unified Team & Delivery</div>
               </div>
@@ -561,8 +577,9 @@ export function AboutPage() {
                 </div>
                 <h3 className={styles.whyCardTitle}>User-Centric Innovation</h3>
                 <p className={styles.whyCardDesc}>
-                  Building proprietary consumer platforms (such as Kalesh) keeps our engineering agile,
-                  battle-tested in live production, and deeply attuned to actual end-user behavior.
+                  Building proprietary consumer platforms (such as Kalesh) keeps our engineering
+                  agile, battle-tested in live production, and deeply attuned to actual end-user
+                  behavior.
                 </p>
                 <div className={styles.whyFooterChip}>Real-World Insights</div>
               </div>
@@ -578,8 +595,9 @@ export function AboutPage() {
                 </div>
                 <h3 className={styles.whyCardTitle}>Accountability & Trust</h3>
                 <p className={styles.whyCardDesc}>
-                  As an officially registered corporate entity in India, we deliver every milestone with
-                  contractual transparency, stringent data security, and uncompromising statutory compliance.
+                  As an officially registered corporate entity in India, we deliver every milestone
+                  with contractual transparency, stringent data security, and uncompromising
+                  statutory compliance.
                 </p>
                 <div className={styles.whyFooterChip}>Statutory Compliance & SLA</div>
               </div>
@@ -591,7 +609,11 @@ export function AboutPage() {
       {/* =========================================================================
           6. STARTUP RECOGNITIONS & GLOBAL ACCREDITATIONS
           ========================================================================= */}
-      <section className={styles.recognitionsSection} id="startup-recognitions" aria-label="Startup Recognitions">
+      <section
+        className={styles.recognitionsSection}
+        id="startup-recognitions"
+        aria-label="Startup Recognitions"
+      >
         <div className={styles.container}>
           {/* Section Header */}
           <div className={styles.sectionHeaderCenter}>
@@ -604,13 +626,17 @@ export function AboutPage() {
 
             <Reveal variant="up" delay={80}>
               <h2 className={styles.sectionTitleCenter}>
-                Empowered by <span className={styles.accentGradient}>Global AI Innovation</span> & Recognized Nationally
+                Empowered by <span className={styles.accentGradient}>Global AI Innovation</span> &
+                Recognized Nationally
               </h2>
             </Reveal>
 
             <Reveal variant="up" delay={140}>
               <p className={styles.sectionLeadCenter}>
-                DIMISI Technologies Private Limited is a proud member of the NVIDIA Inception Program and is officially recognized as an innovative startup under Startup India by the Department for Promotion of Industry and Internal Trade (DPIIT), Ministry of Commerce & Industry, Government of India.
+                DIMISI Technologies Private Limited is a proud member of the NVIDIA Inception
+                Program and is officially recognized as an innovative startup under Startup India by
+                the Department for Promotion of Industry and Internal Trade (DPIIT), Ministry of
+                Commerce & Industry, Government of India.
               </p>
             </Reveal>
           </div>
@@ -650,7 +676,10 @@ export function AboutPage() {
                 </div>
 
                 <p className={styles.recCardDesc}>
-                  DIMISI Technologies Private Limited is a proud member of the NVIDIA Inception Program, a global initiative supporting innovative startups with access to cutting-edge technology resources, GPU developer tools, technical training, and business growth opportunities.
+                  DIMISI Technologies Private Limited is a proud member of the NVIDIA Inception
+                  Program, a global initiative supporting innovative startups with access to
+                  cutting-edge technology resources, GPU developer tools, technical training, and
+                  business growth opportunities.
                 </p>
 
                 <div className={styles.recFeatureList}>
@@ -695,7 +724,7 @@ export function AboutPage() {
                     <span>Govt. of India · DPIIT</span>
                   </div>
                   <span className={styles.recCertPill}>
-                    <span>Cert: {COMPANY.dpiitNumber}</span>
+                    <span>Valid Till 2036</span>
                   </span>
                 </div>
 
@@ -716,13 +745,15 @@ export function AboutPage() {
                 </div>
 
                 <p className={styles.recCardDesc}>
-                  Officially recognized as an innovative startup under the Startup India initiative by the Department for Promotion of Industry and Internal Trade (DPIIT), Ministry of Commerce & Industry, Government of India. Valid through April 2036.
+                  Officially recognized as an innovative startup under the Startup India initiative
+                  by the Department for Promotion of Industry and Internal Trade (DPIIT), Ministry
+                  of Commerce & Industry, Government of India. Valid through April 2036.
                 </p>
 
                 <div className={styles.recFeatureList}>
                   <div className={styles.recFeatureItem}>
                     <CheckCircle2 size={14} className={styles.recCheckIconGov} aria-hidden="true" />
-                    <span>DPIIT Recognition Certificate No: {COMPANY.dpiitNumber}</span>
+                    <span>Official DPIIT Recognition (Govt. of India)</span>
                   </div>
                   <div className={styles.recFeatureItem}>
                     <CheckCircle2 size={14} className={styles.recCheckIconGov} aria-hidden="true" />
@@ -730,22 +761,11 @@ export function AboutPage() {
                   </div>
                   <div className={styles.recFeatureItem}>
                     <CheckCircle2 size={14} className={styles.recCheckIconGov} aria-hidden="true" />
-                    <span>10-Year Statutory Period (Valid Upto {COMPANY.dpiitValidUpto})</span>
+                    <span>10-Year Statutory Period (Valid Till 2036)</span>
                   </div>
                 </div>
 
                 <div className={styles.recCardFooter}>
-                  <a
-                    href="/documents/dimisi-dpiit-certificate.pdf"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.recActionBtnGov}
-                    aria-label="View official Startup India DPIIT certificate PDF"
-                  >
-                    <FileText size={14} aria-hidden="true" />
-                    <span>View Recognition Certificate</span>
-                    <ArrowUpRight size={14} aria-hidden="true" />
-                  </a>
                   <span className={styles.recMetaBadgeGov}>DPIIT Verified</span>
                 </div>
               </div>
@@ -757,7 +777,11 @@ export function AboutPage() {
       {/* =========================================================================
           7. CORPORATE INFORMATION SECTION
           ========================================================================= */}
-      <section className={styles.corporateSection} id="corporate-info" aria-label="Corporate Information">
+      <section
+        className={styles.corporateSection}
+        id="corporate-info"
+        aria-label="Corporate Information"
+      >
         <div className={styles.container}>
           <div className={styles.corporateGrid}>
             {/* Left Column Text */}
@@ -769,7 +793,7 @@ export function AboutPage() {
                 </div>
               </Reveal>
 
-            <Reveal variant="up" delay={80}>
+              <Reveal variant="up" delay={80}>
                 <h2 className={styles.sectionTitle}>
                   DIMISI TECHNOLOGIES <br />
                   <span className={styles.accentGradient}>PRIVATE LIMITED</span>
@@ -792,9 +816,7 @@ export function AboutPage() {
                     <Building2 size={16} className={styles.corpIcon} />
                     <span>Legal Entity Name</span>
                   </div>
-                  <div className={styles.corpValue}>
-                    {COMPANY.name}
-                  </div>
+                  <div className={styles.corpValue}>{COMPANY.name}</div>
                 </div>
 
                 <div className={styles.corpRow}>
@@ -812,9 +834,7 @@ export function AboutPage() {
                     <Award size={16} className={styles.corpIcon} />
                     <span>DPIIT Recognition</span>
                   </div>
-                  <div className={styles.corpValue}>
-                    Certificate: <strong>{COMPANY.dpiitNumber}</strong> (Startup India · Valid Upto {COMPANY.dpiitValidUpto})
-                  </div>
+                  <div className={styles.corpValue}>Startup India Recognized (Valid Till 2036)</div>
                 </div>
 
                 <div className={styles.corpRow}>
@@ -832,9 +852,7 @@ export function AboutPage() {
                     <MapPin size={16} className={styles.corpIcon} />
                     <span>Registered Office</span>
                   </div>
-                  <div className={styles.corpValue}>
-                    {COMPANY.address}
-                  </div>
+                  <div className={styles.corpValue}>{COMPANY.address}</div>
                 </div>
 
                 <div className={styles.corpRow}>

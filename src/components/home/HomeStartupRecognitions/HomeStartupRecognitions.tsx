@@ -101,7 +101,7 @@ export function HomeStartupRecognitions() {
               <span>Govt. of India · DPIIT</span>
             </div>
             <span className={styles.certPill}>
-              <span>Cert: {COMPANY.dpiitNumber}</span>
+              <span>Valid Till 2036</span>
             </span>
           </div>
 
@@ -132,7 +132,7 @@ export function HomeStartupRecognitions() {
           <div className={styles.featuresList}>
             <div className={styles.featureItem}>
               <CheckCircle2 size={13} className={styles.featureCheckGov} aria-hidden="true" />
-              <span>DPIIT Certificate No: {COMPANY.dpiitNumber}</span>
+              <span>Official DPIIT Recognition (Govt. of India)</span>
             </div>
             <div className={styles.featureItem}>
               <CheckCircle2 size={13} className={styles.featureCheckGov} aria-hidden="true" />
@@ -140,7 +140,7 @@ export function HomeStartupRecognitions() {
             </div>
             <div className={styles.featureItem}>
               <CheckCircle2 size={13} className={styles.featureCheckGov} aria-hidden="true" />
-              <span>Ten-Year Recognition (Valid Upto 2036)</span>
+              <span>Ten-Year Recognition (Valid Till 2036)</span>
             </div>
           </div>
 
