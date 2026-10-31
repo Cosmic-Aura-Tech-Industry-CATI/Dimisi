@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import {
   ArrowRight,
+  ArrowUpRight,
   ShieldCheck,
   TrendingUp,
   Rocket,
@@ -20,9 +21,12 @@ import {
   Mail,
   Star,
   CheckCircle2,
+  Cpu,
+  FileText,
 } from "lucide-react";
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
+import { COMPANY } from "@/constants/site";
 import styles from "./AboutPage.module.css";
 
 export function AboutPage() {
@@ -585,7 +589,173 @@ export function AboutPage() {
       </section>
 
       {/* =========================================================================
-          6. CORPORATE INFORMATION SECTION
+          6. STARTUP RECOGNITIONS & GLOBAL ACCREDITATIONS
+          ========================================================================= */}
+      <section className={styles.recognitionsSection} id="startup-recognitions" aria-label="Startup Recognitions">
+        <div className={styles.container}>
+          {/* Section Header */}
+          <div className={styles.sectionHeaderCenter}>
+            <Reveal variant="fade">
+              <div className={styles.eyebrowBadge}>
+                <span className={styles.badgeDot} aria-hidden="true" />
+                <span className={styles.badgeText}>OFFICIAL ACCREDITATIONS</span>
+              </div>
+            </Reveal>
+
+            <Reveal variant="up" delay={80}>
+              <h2 className={styles.sectionTitleCenter}>
+                Empowered by <span className={styles.accentGradient}>Global AI Innovation</span> & Recognized Nationally
+              </h2>
+            </Reveal>
+
+            <Reveal variant="up" delay={140}>
+              <p className={styles.sectionLeadCenter}>
+                DIMISI Technologies Private Limited is a proud member of the NVIDIA Inception Program and is officially recognized as an innovative startup under Startup India by the Department for Promotion of Industry and Internal Trade (DPIIT), Ministry of Commerce & Industry, Government of India.
+              </p>
+            </Reveal>
+          </div>
+
+          {/* 2-Card Symmetrical Grid */}
+          <div className={styles.recGrid}>
+            {/* Card 1: NVIDIA Inception */}
+            <Reveal variant="up" delay={180}>
+              <div className={[styles.recCard, styles.recCardNvidia].join(" ")}>
+                <div className={styles.recCardGlow} aria-hidden="true" />
+
+                <div className={styles.recCardTop}>
+                  <div className={styles.recPill}>
+                    <Cpu size={12} aria-hidden="true" />
+                    <span>AI & Startup Ecosystem</span>
+                  </div>
+                  <span className={styles.recStatusLive}>
+                    <span className={styles.recStatusDot} aria-hidden="true" />
+                    Active Member
+                  </span>
+                </div>
+
+                <div className={styles.recBrandRow}>
+                  <div className={styles.recLogoBox}>
+                    <img
+                      src="/images/nvidia-inception-clean.png"
+                      alt="NVIDIA Inception Program Member"
+                      className={styles.recBrandLogo}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                  <div className={styles.recBrandMeta}>
+                    <h3 className={styles.recCardTitle}>NVIDIA Inception Program</h3>
+                    <span className={styles.recOrgLabel}>Global AI Startup Network</span>
+                  </div>
+                </div>
+
+                <p className={styles.recCardDesc}>
+                  DIMISI Technologies Private Limited is a proud member of the NVIDIA Inception Program, a global initiative supporting innovative startups with access to cutting-edge technology resources, GPU developer tools, technical training, and business growth opportunities.
+                </p>
+
+                <div className={styles.recFeatureList}>
+                  <div className={styles.recFeatureItem}>
+                    <CheckCircle2 size={14} className={styles.recCheckIcon} aria-hidden="true" />
+                    <span>Access to Cutting-Edge GPU Acceleration & AI Tools</span>
+                  </div>
+                  <div className={styles.recFeatureItem}>
+                    <CheckCircle2 size={14} className={styles.recCheckIcon} aria-hidden="true" />
+                    <span>NVIDIA Deep Learning Institute (DLI) Training & Credits</span>
+                  </div>
+                  <div className={styles.recFeatureItem}>
+                    <CheckCircle2 size={14} className={styles.recCheckIcon} aria-hidden="true" />
+                    <span>Global Co-Marketing & AI Enterprise Venture Network</span>
+                  </div>
+                </div>
+
+                <div className={styles.recCardFooter}>
+                  <a
+                    href="https://www.nvidia.com/en-us/deep-learning-ai/startups/"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.recActionBtn}
+                    aria-label="Explore NVIDIA Inception Program official page"
+                  >
+                    <span>Explore NVIDIA Inception</span>
+                    <ArrowUpRight size={14} aria-hidden="true" />
+                  </a>
+                  <span className={styles.recMetaBadge}>Global AI Member</span>
+                </div>
+              </div>
+            </Reveal>
+
+            {/* Card 2: Startup India / DPIIT */}
+            <Reveal variant="up" delay={240}>
+              <div className={[styles.recCard, styles.recCardStartupIndia].join(" ")}>
+                <div className={styles.recCardGlow} aria-hidden="true" />
+
+                <div className={styles.recCardTop}>
+                  <div className={styles.recPillGov}>
+                    <ShieldCheck size={12} aria-hidden="true" />
+                    <span>Govt. of India · DPIIT</span>
+                  </div>
+                  <span className={styles.recCertPill}>
+                    <span>Cert: {COMPANY.dpiitNumber}</span>
+                  </span>
+                </div>
+
+                <div className={styles.recBrandRow}>
+                  <div className={styles.recLogoBoxGov}>
+                    <img
+                      src="/images/startup-india-clean.png"
+                      alt="Startup India DPIIT Recognition"
+                      className={styles.recBrandLogoGov}
+                      loading="lazy"
+                      decoding="async"
+                    />
+                  </div>
+                  <div className={styles.recBrandMeta}>
+                    <h3 className={styles.recCardTitle}>Startup India Recognized</h3>
+                    <span className={styles.recOrgLabel}>Ministry of Commerce & Industry</span>
+                  </div>
+                </div>
+
+                <p className={styles.recCardDesc}>
+                  Officially recognized as an innovative startup under the Startup India initiative by the Department for Promotion of Industry and Internal Trade (DPIIT), Ministry of Commerce & Industry, Government of India. Valid through April 2036.
+                </p>
+
+                <div className={styles.recFeatureList}>
+                  <div className={styles.recFeatureItem}>
+                    <CheckCircle2 size={14} className={styles.recCheckIconGov} aria-hidden="true" />
+                    <span>DPIIT Recognition Certificate No: {COMPANY.dpiitNumber}</span>
+                  </div>
+                  <div className={styles.recFeatureItem}>
+                    <CheckCircle2 size={14} className={styles.recCheckIconGov} aria-hidden="true" />
+                    <span>MCA Corporate ID (CIN): {COMPANY.cin}</span>
+                  </div>
+                  <div className={styles.recFeatureItem}>
+                    <CheckCircle2 size={14} className={styles.recCheckIconGov} aria-hidden="true" />
+                    <span>10-Year Statutory Period (Valid Upto {COMPANY.dpiitValidUpto})</span>
+                  </div>
+                </div>
+
+                <div className={styles.recCardFooter}>
+                  <a
+                    href="/documents/dimisi-dpiit-certificate.pdf"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.recActionBtnGov}
+                    aria-label="View official Startup India DPIIT certificate PDF"
+                  >
+                    <FileText size={14} aria-hidden="true" />
+                    <span>View Recognition Certificate</span>
+                    <ArrowUpRight size={14} aria-hidden="true" />
+                  </a>
+                  <span className={styles.recMetaBadgeGov}>DPIIT Verified</span>
+                </div>
+              </div>
+            </Reveal>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================================
+          7. CORPORATE INFORMATION SECTION
           ========================================================================= */}
       <section className={styles.corporateSection} id="corporate-info" aria-label="Corporate Information">
         <div className={styles.container}>
@@ -599,7 +769,7 @@ export function AboutPage() {
                 </div>
               </Reveal>
 
-              <Reveal variant="up" delay={80}>
+            <Reveal variant="up" delay={80}>
                 <h2 className={styles.sectionTitle}>
                   DIMISI TECHNOLOGIES <br />
                   <span className={styles.accentGradient}>PRIVATE LIMITED</span>
@@ -623,7 +793,7 @@ export function AboutPage() {
                     <span>Legal Entity Name</span>
                   </div>
                   <div className={styles.corpValue}>
-                    DIMISI TECHNOLOGIES PRIVATE LIMITED
+                    {COMPANY.name}
                   </div>
                 </div>
 
@@ -633,17 +803,27 @@ export function AboutPage() {
                     <span>Corporate ID (CIN)</span>
                   </div>
                   <div className={[styles.corpValue, styles.corpValueMono].join(" ")}>
-                    U62013UP2024PTC214606
+                    {COMPANY.cin}
                   </div>
                 </div>
 
                 <div className={styles.corpRow}>
                   <div className={styles.corpLabel}>
                     <Award size={16} className={styles.corpIcon} />
+                    <span>DPIIT Recognition</span>
+                  </div>
+                  <div className={styles.corpValue}>
+                    Certificate: <strong>{COMPANY.dpiitNumber}</strong> (Startup India · Valid Upto {COMPANY.dpiitValidUpto})
+                  </div>
+                </div>
+
+                <div className={styles.corpRow}>
+                  <div className={styles.corpLabel}>
+                    <ShieldCheck size={16} className={styles.corpIcon} />
                     <span>Registration Authority</span>
                   </div>
                   <div className={styles.corpValue}>
-                    Incorporated under the Companies Act, 2013 (Ministry of Corporate Affairs, India)
+                    Incorporated under the Companies Act, 2013 ({COMPANY.mcaRegistered})
                   </div>
                 </div>
 
@@ -653,7 +833,7 @@ export function AboutPage() {
                     <span>Registered Office</span>
                   </div>
                   <div className={styles.corpValue}>
-                    3/131, I E G Swam Jayanti, Kankanpur, Kidwai Nagar, Kanpur, Uttar Pradesh, India - 208011
+                    {COMPANY.address}
                   </div>
                 </div>
 
@@ -663,8 +843,8 @@ export function AboutPage() {
                     <span>Official Email</span>
                   </div>
                   <div className={styles.corpValue}>
-                    <a href="mailto:dimisitechnologiespvtltd@gmail.com" className={styles.corpLink}>
-                      dimisitechnologiespvtltd@gmail.com
+                    <a href={`mailto:${COMPANY.supportEmail}`} className={styles.corpLink}>
+                      {COMPANY.supportEmail}
                     </a>
                   </div>
                 </div>

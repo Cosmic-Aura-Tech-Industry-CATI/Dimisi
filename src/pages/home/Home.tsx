@@ -18,6 +18,7 @@ import { ScrollScene } from "@/components/common/ScrollScene/ScrollScene";
 // Critical First-Paint Viewport Components (Eager):
 import { HeroCyberGlobe } from "@/components/home/HeroCyberGlobe/HeroCyberGlobe";
 import { TrustedEcosystem } from "@/components/home/TrustedEcosystem/TrustedEcosystem";
+import { HomeStartupRecognitions } from "@/components/home/HomeStartupRecognitions/HomeStartupRecognitions";
 import { useHomeHeroConfig } from "@/hooks/useHomeHeroConfig";
 import { DEFAULT_HOME_HERO_CONFIG } from "@/types/homeHero.types";
 
@@ -162,8 +163,13 @@ export function Home() {
           </div>
         </Reveal>
 
-        {/* 4. TRUSTED ECOSYSTEM PARTNER STRIP */}
-        <Reveal variant="up" delay={480} className={styles.fullWidthReveal}>
+        {/* 4. OFFICIAL STARTUP ACCREDITATIONS & GLOBAL ECOSYSTEM (NVIDIA INCEPTION & STARTUP INDIA) */}
+        <Reveal variant="up" delay={460} className={styles.fullWidthReveal}>
+          <HomeStartupRecognitions />
+        </Reveal>
+
+        {/* 5. TRUSTED ECOSYSTEM PARTNER STRIP */}
+        <Reveal variant="up" delay={500} className={styles.fullWidthReveal}>
           <TrustedEcosystem />
         </Reveal>
 

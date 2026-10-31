@@ -34,6 +34,8 @@ import { Route as ReviewIndexRouteImport } from './routes/review.index'
 import { Route as ReviewSlugRouteImport } from './routes/review.$slug'
 import { Route as ServicesIndexRouteImport } from './routes/services.index'
 import { Route as ServicesSlugRouteImport } from './routes/services.$slug'
+import { Route as TeamIndexRouteImport } from './routes/team.index'
+import { Route as TeamSlugRouteImport } from './routes/team.$slug'
 import { Route as WorkIndexRouteImport } from './routes/work.index'
 import { Route as WorkSlugRouteImport } from './routes/work.$slug'
 
@@ -162,6 +164,16 @@ const ServicesSlugRoute = ServicesSlugRouteImport.update({
   path: '/$slug',
   getParentRoute: () => ServicesRoute,
 } as any)
+const TeamIndexRoute = TeamIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => TeamRoute,
+} as any)
+const TeamSlugRoute = TeamSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => TeamRoute,
+} as any)
 const WorkIndexRoute = WorkIndexRouteImport.update({
   id: '/work/',
   path: '/work/',
@@ -187,7 +199,7 @@ export interface FileRoutesByFullPath {
   '/review': typeof ReviewRouteWithChildren
   '/reviews': typeof ReviewsRoute
   '/services': typeof ServicesRouteWithChildren
-  '/team': typeof TeamRoute
+  '/team': typeof TeamRouteWithChildren
   '/terms': typeof TermsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/dimisi-admin/$tab': typeof DimisiAdminTabRoute
@@ -195,11 +207,13 @@ export interface FileRoutesByFullPath {
   '/dimisi-admin/overview': typeof DimisiAdminOverviewRoute
   '/review/$slug': typeof ReviewSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
+  '/team/$slug': typeof TeamSlugRoute
   '/work/$slug': typeof WorkSlugRoute
   '/blog/': typeof BlogIndexRoute
   '/dimisi-admin/': typeof DimisiAdminIndexRoute
   '/review/': typeof ReviewIndexRoute
   '/services/': typeof ServicesIndexRoute
+  '/team/': typeof TeamIndexRoute
   '/work/': typeof WorkIndexRoute
 }
 export interface FileRoutesByTo {
@@ -212,7 +226,6 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/products': typeof ProductsRoute
   '/reviews': typeof ReviewsRoute
-  '/team': typeof TeamRoute
   '/terms': typeof TermsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/dimisi-admin/$tab': typeof DimisiAdminTabRoute
@@ -220,11 +233,13 @@ export interface FileRoutesByTo {
   '/dimisi-admin/overview': typeof DimisiAdminOverviewRoute
   '/review/$slug': typeof ReviewSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
+  '/team/$slug': typeof TeamSlugRoute
   '/work/$slug': typeof WorkSlugRoute
   '/blog': typeof BlogIndexRoute
   '/dimisi-admin': typeof DimisiAdminIndexRoute
   '/review': typeof ReviewIndexRoute
   '/services': typeof ServicesIndexRoute
+  '/team': typeof TeamIndexRoute
   '/work': typeof WorkIndexRoute
 }
 export interface FileRoutesById {
@@ -242,7 +257,7 @@ export interface FileRoutesById {
   '/review': typeof ReviewRouteWithChildren
   '/reviews': typeof ReviewsRoute
   '/services': typeof ServicesRouteWithChildren
-  '/team': typeof TeamRoute
+  '/team': typeof TeamRouteWithChildren
   '/terms': typeof TermsRoute
   '/blog/$slug': typeof BlogSlugRoute
   '/dimisi-admin/$tab': typeof DimisiAdminTabRoute
@@ -250,11 +265,13 @@ export interface FileRoutesById {
   '/dimisi-admin/overview': typeof DimisiAdminOverviewRoute
   '/review/$slug': typeof ReviewSlugRoute
   '/services/$slug': typeof ServicesSlugRoute
+  '/team/$slug': typeof TeamSlugRoute
   '/work/$slug': typeof WorkSlugRoute
   '/blog/': typeof BlogIndexRoute
   '/dimisi-admin/': typeof DimisiAdminIndexRoute
   '/review/': typeof ReviewIndexRoute
   '/services/': typeof ServicesIndexRoute
+  '/team/': typeof TeamIndexRoute
   '/work/': typeof WorkIndexRoute
 }
 export interface FileRouteTypes {
@@ -281,11 +298,13 @@ export interface FileRouteTypes {
     | '/dimisi-admin/overview'
     | '/review/$slug'
     | '/services/$slug'
+    | '/team/$slug'
     | '/work/$slug'
     | '/blog/'
     | '/dimisi-admin/'
     | '/review/'
     | '/services/'
+    | '/team/'
     | '/work/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -298,7 +317,6 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/products'
     | '/reviews'
-    | '/team'
     | '/terms'
     | '/blog/$slug'
     | '/dimisi-admin/$tab'
@@ -306,11 +324,13 @@ export interface FileRouteTypes {
     | '/dimisi-admin/overview'
     | '/review/$slug'
     | '/services/$slug'
+    | '/team/$slug'
     | '/work/$slug'
     | '/blog'
     | '/dimisi-admin'
     | '/review'
     | '/services'
+    | '/team'
     | '/work'
   id:
     | '__root__'
@@ -335,11 +355,13 @@ export interface FileRouteTypes {
     | '/dimisi-admin/overview'
     | '/review/$slug'
     | '/services/$slug'
+    | '/team/$slug'
     | '/work/$slug'
     | '/blog/'
     | '/dimisi-admin/'
     | '/review/'
     | '/services/'
+    | '/team/'
     | '/work/'
   fileRoutesById: FileRoutesById
 }
@@ -357,7 +379,7 @@ export interface RootRouteChildren {
   ReviewRoute: typeof ReviewRouteWithChildren
   ReviewsRoute: typeof ReviewsRoute
   ServicesRoute: typeof ServicesRouteWithChildren
-  TeamRoute: typeof TeamRoute
+  TeamRoute: typeof TeamRouteWithChildren
   TermsRoute: typeof TermsRoute
   WorkSlugRoute: typeof WorkSlugRoute
   WorkIndexRoute: typeof WorkIndexRoute
@@ -540,6 +562,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ServicesSlugRouteImport
       parentRoute: typeof ServicesRoute
     }
+    '/team/': {
+      id: '/team/'
+      path: '/'
+      fullPath: '/team/'
+      preLoaderRoute: typeof TeamIndexRouteImport
+      parentRoute: typeof TeamRoute
+    }
+    '/team/$slug': {
+      id: '/team/$slug'
+      path: '/$slug'
+      fullPath: '/team/$slug'
+      preLoaderRoute: typeof TeamSlugRouteImport
+      parentRoute: typeof TeamRoute
+    }
     '/work/': {
       id: '/work/'
       path: '/work'
@@ -614,6 +650,18 @@ const ServicesRouteWithChildren = ServicesRoute._addFileChildren(
   ServicesRouteChildren,
 )
 
+interface TeamRouteChildren {
+  TeamSlugRoute: typeof TeamSlugRoute
+  TeamIndexRoute: typeof TeamIndexRoute
+}
+
+const TeamRouteChildren: TeamRouteChildren = {
+  TeamSlugRoute: TeamSlugRoute,
+  TeamIndexRoute: TeamIndexRoute,
+}
+
+const TeamRouteWithChildren = TeamRoute._addFileChildren(TeamRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -628,7 +676,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReviewRoute: ReviewRouteWithChildren,
   ReviewsRoute: ReviewsRoute,
   ServicesRoute: ServicesRouteWithChildren,
-  TeamRoute: TeamRoute,
+  TeamRoute: TeamRouteWithChildren,
   TermsRoute: TermsRoute,
   WorkSlugRoute: WorkSlugRoute,
   WorkIndexRoute: WorkIndexRoute,

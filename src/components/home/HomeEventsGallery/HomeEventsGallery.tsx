@@ -44,9 +44,9 @@ export function HomeEventsGallery() {
   const rawGallery = payload?.galleryItems || [];
 
   // Curate maximum 3 events with strict priority: Featured -> Upcoming/Ongoing -> Latest
-  const { featuredEvent, sideEvents } = useMemo(() => {
+  const showcaseEvents = useMemo(() => {
     if (!rawEvents.length) {
-      return { featuredEvent: null, sideEvents: [] };
+      return [];
     }
 
     const sorted = [...rawEvents].sort((a, b) => {
@@ -60,14 +60,13 @@ export function HomeEventsGallery() {
       if (diff !== 0) return diff;
 
       // 3. Newest first
-      return new Date(b.created_at || b.date).getTime() - new Date(a.created_at || a.date).getTime();
+      return (
+        new Date(b.created_at || b.date).getTime() -
+        new Date(a.created_at || a.date).getTime()
+      );
     });
 
-    const curated = sorted.slice(0, 3);
-    return {
-      featuredEvent: curated[0] || null,
-      sideEvents: curated.slice(1, 3),
-    };
+    return sorted.slice(0, 3);
   }, [rawEvents]);
 
   // Curate top 4 gallery visual plates
@@ -188,7 +187,7 @@ export function HomeEventsGallery() {
         )}
 
         {/* 3. Empty State */}
-        {!isLoading && !isError && !featuredEvent && (
+        {!isLoading && !isError && showcaseEvents.length === 0 && (
           <div className={styles.stateBox}>
             <Sparkles size={36} className={styles.stateIcon} />
             <h3 className={styles.stateTitle}>No events to showcase right now.</h3>
@@ -200,191 +199,119 @@ export function HomeEventsGallery() {
         )}
 
         {/* 4. Live Dynamic Content */}
-        {!isLoading && !isError && featuredEvent && (
+        {!isLoading && !isError && showcaseEvents.length > 0 && (
           <>
-            {/* Top Showcase: Featured Event + 2 Supporting Cards */}
+            {/* Top Showcase: Balanced, Symmetric Events Grid */}
             <div
               className={[
-                styles.eventsLayout,
-                sideEvents.length === 0 ? styles.eventsLayoutSingle : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
+                styles.eventsGrid,
+                showcaseEvents.length === 1
+                  ? styles.eventsGrid1
+                  : showcaseEvents.length === 2
+                    ? styles.eventsGrid2
+                    : styles.eventsGrid3,
+              ].join(" ")}
             >
-              {/* Featured Card (Normalized, Balanced Proportions) */}
-              <Reveal
-                variant="up"
-                delay={100}
-                className={sideEvents.length === 0 ? styles.singleRevealWrap : undefined}
-              >
-                <article
-                  className={styles.featuredCard}
-                  onClick={() => setActiveModalEvent(featuredEvent)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      setActiveModalEvent(featuredEvent);
-                    }
-                  }}
-                  aria-label={`View details for ${featuredEvent.title}`}
-                >
-                  <div className={styles.featuredMediaWrap}>
-                    <img
-                      src={featuredEvent.cover_image || DEFAULT_EVENT_IMG}
-                      alt={featuredEvent.title}
-                      className={styles.featuredImg}
-                      loading="lazy"
-                      onError={(e) => {
-                        (e.currentTarget as HTMLImageElement).src = DEFAULT_EVENT_IMG;
-                      }}
-                    />
-                    <div className={styles.mediaGradientOverlay} aria-hidden="true" />
-                    <div className={styles.featuredTopPills}>
-                      <span
-                        className={[
-                          styles.statusBadge,
-                          featuredEvent.status === "upcoming"
-                            ? styles.statusUpcoming
-                            : featuredEvent.status === "ongoing"
-                              ? styles.statusOngoing
-                              : styles.statusCompleted,
-                        ].join(" ")}
-                      >
-                        <span className={styles.liveDot} />
-                        {featuredEvent.status === "upcoming"
-                          ? "Upcoming"
-                          : featuredEvent.status === "ongoing"
-                            ? "Live Now"
-                            : "Concluded"}
-                      </span>
-                      <span className={styles.categoryTag}>{featuredEvent.category}</span>
-                    </div>
-                  </div>
-
-                  <div className={styles.featuredBody}>
-                    <div className={styles.metaRow}>
-                      <span className={styles.metaItem}>
-                        <Calendar size={14} />
-                        <span>{featuredEvent.date}</span>
-                      </span>
-                      {featuredEvent.start_time && (
-                        <span className={styles.metaItem}>
-                          <Clock size={14} />
-                          <span>{featuredEvent.start_time}</span>
-                        </span>
-                      )}
-                    </div>
-
-                    <h3 className={styles.featuredTitle}>{featuredEvent.title}</h3>
-
-                    <div className={styles.locationRow}>
-                      <MapPin size={14} />
-                      <span>{featuredEvent.location}</span>
-                    </div>
-
-                    <p className={styles.featuredDesc}>{featuredEvent.description}</p>
-
-                    {featuredEvent.highlights && featuredEvent.highlights.length > 0 && (
-                      <ul className={styles.highlightsList}>
-                        {featuredEvent.highlights.slice(0, 2).map((hl, i) => (
-                          <li key={i} className={styles.highlightItem}>
-                            <CheckCircle2 size={14} className={styles.hlIcon} />
-                            <span>{hl}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    )}
-
-                    <div className={styles.cardFooter}>
-                      <span className={styles.detailsAction}>
-                        <span>View Details</span>
-                        <ArrowUpRight size={15} />
-                      </span>
-                      {featuredEvent.attendees_count ? (
-                        <span className={styles.attendeeTag}>
-                          <Users size={13} />
-                          <span>{featuredEvent.attendees_count.toLocaleString()} expected</span>
-                        </span>
-                      ) : null}
-                    </div>
-                  </div>
-                </article>
-              </Reveal>
-
-              {/* 2 Supporting Side Cards (Render only if present) */}
-              {sideEvents.length > 0 && (
-                <div className={styles.sideCardsCol}>
-                  {sideEvents.map((event, idx) => (
-                    <Reveal key={event.id || event.slug} delay={180 + idx * 80}>
-                      <article
-                        className={styles.sideCard}
-                        onClick={() => setActiveModalEvent(event)}
-                        role="button"
-                        tabIndex={0}
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" || e.key === " ") {
-                            e.preventDefault();
-                            setActiveModalEvent(event);
-                          }
+              {showcaseEvents.map((event, idx) => (
+                <Reveal key={event.id || event.slug} delay={100 + idx * 80}>
+                  <article
+                    className={styles.eventCard}
+                    onClick={() => setActiveModalEvent(event)}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" || e.key === " ") {
+                        e.preventDefault();
+                        setActiveModalEvent(event);
+                      }
+                    }}
+                    aria-label={`View details for ${event.title}`}
+                  >
+                    <div className={styles.eventMediaWrap}>
+                      <img
+                        src={event.cover_image || DEFAULT_EVENT_IMG}
+                        alt={event.title}
+                        className={styles.eventImg}
+                        loading="lazy"
+                        onError={(e) => {
+                          (e.currentTarget as HTMLImageElement).src = DEFAULT_EVENT_IMG;
                         }}
-                        aria-label={`View details for ${event.title}`}
-                      >
-                        <div className={styles.sideCardTop}>
-                          <img
-                            src={event.cover_image || DEFAULT_EVENT_IMG}
-                            alt={event.title}
-                            className={styles.sideCardImg}
-                            loading="lazy"
-                            onError={(e) => {
-                              (e.currentTarget as HTMLImageElement).src = DEFAULT_EVENT_IMG;
-                            }}
-                          />
-                          <div className={styles.mediaGradientOverlay} aria-hidden="true" />
-                          <div className={styles.featuredTopPills}>
-                            <span
-                              className={[
-                                styles.statusBadge,
-                                event.status === "upcoming"
-                                  ? styles.statusUpcoming
-                                  : event.status === "ongoing"
-                                    ? styles.statusOngoing
-                                    : styles.statusCompleted,
-                              ].join(" ")}
-                            >
-                              <span className={styles.liveDot} />
-                              {event.status === "upcoming"
-                                ? "Upcoming"
-                                : event.status === "ongoing"
-                                  ? "Live Now"
-                                  : "Concluded"}
-                            </span>
-                            <span className={styles.categoryTag}>{event.category}</span>
-                          </div>
-                        </div>
+                      />
+                      <div className={styles.mediaGradientOverlay} aria-hidden="true" />
+                      <div className={styles.eventTopPills}>
+                        <span
+                          className={[
+                            styles.statusBadge,
+                            event.status === "upcoming"
+                              ? styles.statusUpcoming
+                              : event.status === "ongoing"
+                                ? styles.statusOngoing
+                                : styles.statusCompleted,
+                          ].join(" ")}
+                        >
+                          <span className={styles.liveDot} />
+                          {event.status === "upcoming"
+                            ? "Upcoming"
+                            : event.status === "ongoing"
+                              ? "Live Now"
+                              : "Concluded"}
+                        </span>
+                        <span className={styles.categoryTag}>{event.category}</span>
+                      </div>
+                    </div>
 
-                        <div className={styles.sideCardBody}>
-                          <div className={styles.metaRow}>
-                            <span className={styles.metaItem}>
-                              <Calendar size={13} />
-                              <span>{event.date}</span>
-                            </span>
-                          </div>
-                          <h4 className={styles.sideCardTitle}>{event.title}</h4>
-                          <p className={styles.sideCardDesc}>{event.description}</p>
-                          <div className={styles.cardFooter}>
-                            <span className={styles.detailsAction}>
-                              <span>View Details</span>
-                              <ArrowUpRight size={15} />
-                            </span>
-                          </div>
+                    <div className={styles.eventBody}>
+                      <div className={styles.metaRow}>
+                        <span className={styles.metaItem}>
+                          <Calendar size={14} />
+                          <span>{event.date}</span>
+                        </span>
+                        {event.start_time && (
+                          <span className={styles.metaItem}>
+                            <Clock size={14} />
+                            <span>{event.start_time}</span>
+                          </span>
+                        )}
+                      </div>
+
+                      <h3 className={styles.eventTitle}>{event.title}</h3>
+
+                      {event.location ? (
+                        <div className={styles.locationRow}>
+                          <MapPin size={14} />
+                          <span>{event.location}</span>
                         </div>
-                      </article>
-                    </Reveal>
-                  ))}
-                </div>
-              )}
+                      ) : null}
+
+                      <p className={styles.eventDesc}>{event.description}</p>
+
+                      {event.highlights && event.highlights.length > 0 ? (
+                        <ul className={styles.highlightsList}>
+                          {event.highlights.slice(0, 2).map((hl, i) => (
+                            <li key={i} className={styles.highlightItem}>
+                              <CheckCircle2 size={14} className={styles.hlIcon} />
+                              <span>{hl}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+
+                      <div className={styles.cardFooter}>
+                        <span className={styles.detailsAction}>
+                          <span>View Details</span>
+                          <ArrowUpRight size={15} />
+                        </span>
+                        {event.attendees_count ? (
+                          <span className={styles.attendeeTag}>
+                            <Users size={13} />
+                            <span>{event.attendees_count.toLocaleString()} expected</span>
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </article>
+                </Reveal>
+              ))}
             </div>
 
             {/* Visual Moments Gallery Strip */}

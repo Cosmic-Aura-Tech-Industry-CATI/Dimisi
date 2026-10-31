@@ -1,5 +1,13 @@
 import { Link } from "@tanstack/react-router";
-import { COMPANY, LEGAL_LINKS, NAV_LINKS, SOCIALS } from "@/constants/site";
+import { ArrowUpRight, Award, ShieldCheck } from "lucide-react";
+import {
+  COMPANY,
+  LEGAL_LINKS,
+  NAV_LINKS,
+  OFFICIAL_EMAILS,
+  SOCIALS,
+  STARTUP_RECOGNITIONS,
+} from "@/constants/site";
 import { SILVER_LOGO_URL } from "@/assets/logos";
 import styles from "./Footer.module.css";
 
@@ -45,7 +53,7 @@ const SOCIAL_ICON_MAP = {
 export function Footer() {
   return (
     <footer className={styles.footer}>
-      {/* Subtle atmospheric ambient glow */}
+      {/* Atmospheric ambient glow */}
       <div className={styles.glow} aria-hidden="true" />
 
       <div className={styles.inner}>
@@ -63,15 +71,29 @@ export function Footer() {
             />
           </Link>
 
-          <p className={styles.mission}>{COMPANY.mission}</p>
+          {/* Corporate Location Tagline */}
+          <p className={styles.corpLocation}>
+            Technologies Private Limited — Kanpur
+          </p>
 
-          <a
-            className={styles.mail}
-            href={`mailto:${COMPANY.email}`}
-            aria-label={`Send email to ${COMPANY.email}`}
-          >
-            {COMPANY.email}
-          </a>
+          {/* CIN, MCA, DPIIT Corporate Identification Group */}
+          <div className={styles.corpLeadStack}>
+            <div className={styles.corpLeadItem}>
+              <span className={styles.corpLeadKey}>CIN:</span>
+              <span className={styles.corpLeadVal}>{COMPANY.cin}</span>
+            </div>
+            <span className={styles.corpLeadDot} aria-hidden="true">·</span>
+            <div className={styles.corpLeadItem}>
+              <span className={styles.corpLeadBadge}>{COMPANY.mcaRegistered}</span>
+            </div>
+            <span className={styles.corpLeadDot} aria-hidden="true">·</span>
+            <div className={styles.corpLeadItem}>
+              <span className={styles.corpLeadKey}>DPIIT:</span>
+              <span className={styles.corpLeadVal}>{COMPANY.dpiitNumber}</span>
+            </div>
+          </div>
+
+          <p className={styles.mission}>{COMPANY.mission}</p>
         </div>
 
         {/* Navigation Column */}
@@ -102,31 +124,31 @@ export function Footer() {
           </ul>
         </nav>
 
-        {/* Connect Column (Social Icons) */}
-        <div className={styles.col}>
-          <h3 className={styles.colTitle}>Connect</h3>
-          <div className={styles.socialGrid}>
-            {SOCIALS.map((s) => {
-              const IconComponent = SOCIAL_ICON_MAP[s.id as keyof typeof SOCIAL_ICON_MAP] || IconXTwitter;
-              return (
+        {/* Official Directory / Specialized Desks */}
+        <div className={styles.col} aria-label="Official Desks">
+          <h3 className={styles.colTitle}>Official Desks</h3>
+          <div className={styles.emailList}>
+            {OFFICIAL_EMAILS.map((item) => (
+              <div key={item.email} className={styles.emailItem}>
+                <div className={styles.emailRole}>
+                  <span className={styles.emailRoleDot} aria-hidden="true" />
+                  <span>{item.role}</span>
+                </div>
                 <a
-                  key={s.label}
-                  href={s.href}
-                  className={styles.socialBtn}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={s.ariaLabel || `DIMISI on ${s.label}`}
+                  href={`mailto:${item.email}`}
+                  className={styles.emailLink}
+                  aria-label={`Send email to ${item.role} at ${item.email}`}
                 >
-                  <IconComponent className={styles.socialIcon} aria-hidden="true" />
+                  {item.email}
                 </a>
-              );
-            })}
+              </div>
+            ))}
           </div>
         </div>
 
-        {/* Company Address & Phone Column */}
+        {/* Headquarters & Connect Column */}
         <div className={styles.col}>
-          <h3 className={styles.colTitle}>Address</h3>
+          <h3 className={styles.colTitle}>Headquarters</h3>
           <a
             href={COMPANY.mapsUrl}
             target="_blank"
@@ -151,19 +173,94 @@ export function Footer() {
               {COMPANY.phone}
             </a>
           </div>
+
+          <div className={styles.connectBox}>
+            <span className={styles.phoneLabel}>Connect</span>
+            <div className={styles.socialGrid}>
+              {SOCIALS.map((s) => {
+                const IconComponent =
+                  SOCIAL_ICON_MAP[s.id as keyof typeof SOCIAL_ICON_MAP] || IconXTwitter;
+                return (
+                  <a
+                    key={s.label}
+                    href={s.href}
+                    className={styles.socialBtn}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={s.ariaLabel || `DIMISI on ${s.label}`}
+                  >
+                    <IconComponent className={styles.socialIcon} aria-hidden="true" />
+                  </a>
+                );
+              })}
+            </div>
+          </div>
         </div>
       </div>
+
+      {/* Startup Recognitions & Accreditations Showcase */}
+      <section className={styles.recognitionsSection} aria-label="Startup Recognitions">
+        <div className={styles.recognitionsHeader}>
+          <div className={styles.recognitionsTag}>
+            <Award size={13} className={styles.recTagIcon} aria-hidden="true" />
+            <span>STARTUP RECOGNITION & ACCREDITATIONS</span>
+          </div>
+          <span className={styles.recDivider} aria-hidden="true" />
+        </div>
+
+        <div className={styles.recognitionsGrid}>
+          {STARTUP_RECOGNITIONS.map((rec) => (
+            <div key={rec.id} className={styles.recCard}>
+              <div className={styles.recLogoWrap}>
+                <img
+                  src={rec.logo}
+                  alt={rec.alt}
+                  className={styles.recLogoImg}
+                  loading="lazy"
+                  decoding="async"
+                />
+              </div>
+              <div className={styles.recContent}>
+                <div className={styles.recTopRow}>
+                  <h4 className={styles.recTitle}>{rec.title}</h4>
+                  <span className={styles.recBadge}>{rec.badge}</span>
+                </div>
+                <p className={styles.recDesc}>{rec.description}</p>
+                <div className={styles.recActionRow}>
+                  <a
+                    href={rec.link}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.recActionLink}
+                    aria-label={`${rec.actionText} for ${rec.title}`}
+                  >
+                    <span>{rec.actionText}</span>
+                    <ArrowUpRight size={13} aria-hidden="true" />
+                  </a>
+                  {"certNumber" in rec && rec.certNumber ? (
+                    <span className={styles.certPill}>
+                      <ShieldCheck size={12} className={styles.certCheck} aria-hidden="true" />
+                      <span>Cert: {rec.certNumber}</span>
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       {/* Decorative Large Watermark */}
       <p className={styles.mega} aria-hidden="true">
         DIMISI Technologies
       </p>
 
-      {/* Footer Bottom Bar */}
+      {/* Footer Bottom Bar with Copyright */}
       <div className={styles.bottom}>
         <span className={styles.copyright}>
-          © 2026 {COMPANY.name}. {COMPANY.tagline}.
+          © 2026 {COMPANY.name}. All rights reserved.
         </span>
+
         <span className={styles.status}>
           <i className={styles.pulse} aria-hidden="true" /> All systems operational
         </span>
