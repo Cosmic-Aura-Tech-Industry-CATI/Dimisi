@@ -412,6 +412,7 @@
   color: rgba(251, 243, 233, 0.45);
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  margin-left: auto;
 }
 
 @media (max-width: 600px) {
