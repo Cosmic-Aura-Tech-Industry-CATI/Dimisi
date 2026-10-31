@@ -1578,13 +1578,21 @@
   box-shadow: 0 4px 15px rgba(255, 122, 24, 0.25);
 }
 
-.recMetaBadge,
+.recMetaBadge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: rgba(251, 243, 233, 0.45);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
 .recMetaBadgeGov {
   font-size: 0.72rem;
   font-weight: 600;
   color: rgba(251, 243, 233, 0.45);
   letter-spacing: 0.05em;
   text-transform: uppercase;
+  margin-left: auto;
 }
 
 @media (max-width: 1100px) {
@@ -1613,5 +1621,8 @@
   .recActionBtnGov {
     width: 100%;
     justify-content: center;
+  }
+  .recMetaBadgeGov {
+    margin-left: 0;
   }
 }
