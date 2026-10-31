@@ -79,25 +79,36 @@
   transform: translateX(-50%);
   display: flex;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.2rem;
   list-style: none;
   margin: 0;
   padding: 0;
   justify-content: center;
+  white-space: nowrap;
 }
 
-
+.links li {
+  display: inline-flex;
+  align-items: center;
+  flex-shrink: 0;
+}
 
 .link {
   position: relative;
-  display: inline-block;
-  padding: 0.5rem 0.7rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.45rem 0.65rem;
   border-radius: 999px;
-  font-size: 0.78rem;
-  letter-spacing: 0.04em;
-  color: rgba(255, 244, 230, 0.62);
+  font-size: 0.76rem;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: rgba(255, 244, 230, 0.64);
   text-decoration: none;
-  transition: all 0.35s var(--dm-ease);
+  white-space: nowrap;
+  flex-shrink: 0;
+  line-height: 1.2;
+  transition: all 0.25s var(--dm-ease);
 }
 
 .link:hover {
@@ -109,10 +120,13 @@
   color: #100c06;
   background: var(--dm-grad-flare);
   box-shadow: 0 8px 26px rgba(255, 122, 18, 0.35);
+  font-weight: 600;
 }
 
 .contactWrap {
   margin-left: auto;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .cta {
@@ -208,7 +222,7 @@
   }
 }
 
-@media (max-width: 1080px) {
+@media (max-width: 1160px) {
   .links,
   .contactWrap,
   .cta {

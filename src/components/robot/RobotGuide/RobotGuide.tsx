@@ -94,6 +94,109 @@ export function RobotGuide() {
   const navigate = useNavigate();
   const shellRef = useRef<HTMLDivElement>(null);
   const logRef = useRef<HTMLDivElement>(null);
+  const dockRef = useRef<HTMLElement>(null);
+
+  // Movable / Draggable Robot Position State
+  const [position, setPosition] = useState<{ x: number; y: number } | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const saved = localStorage.getItem("dimisi_robot_pos");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (typeof parsed.x === "number" && typeof parsed.y === "number") {
+          return parsed;
+        }
+      }
+    } catch {
+      // Ignore storage errors
+    }
+    return null;
+  });
+
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ startX: number; startY: number; initX: number; initY: number }>({
+    startX: 0,
+    startY: 0,
+    initX: 0,
+    initY: 0,
+  });
+  const hasMovedRef = useRef(false);
+
+  const handlePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0 && e.pointerType === "mouse") return;
+    const dock = dockRef.current;
+    if (!dock) return;
+
+    const rect = dock.getBoundingClientRect();
+    dragStartRef.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      initX: rect.left,
+      initY: rect.top,
+    };
+    hasMovedRef.current = false;
+    setIsDragging(true);
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handlePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!isDragging) return;
+
+    const dx = e.clientX - dragStartRef.current.startX;
+    const dy = e.clientY - dragStartRef.current.startY;
+
+    if (Math.hypot(dx, dy) > 5) {
+      hasMovedRef.current = true;
+    }
+
+    if (hasMovedRef.current) {
+      const dock = dockRef.current;
+      const width = dock ? dock.offsetWidth : 80;
+      const height = dock ? dock.offsetHeight : 100;
+
+      const newX = Math.max(10, Math.min(window.innerWidth - width - 10, dragStartRef.current.initX + dx));
+      const newY = Math.max(10, Math.min(window.innerHeight - height - 10, dragStartRef.current.initY + dy));
+
+      setPosition({ x: newX, y: newY });
+    }
+  };
+
+  const handlePointerUp = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (!isDragging) return;
+    setIsDragging(false);
+    try {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    } catch {
+      // ignore
+    }
+
+    if (hasMovedRef.current && position) {
+      try {
+        localStorage.setItem("dimisi_robot_pos", JSON.stringify(position));
+      } catch {
+        // ignore
+      }
+    }
+  };
+
+  const handleRobotClick = (e: React.MouseEvent) => {
+    if (hasMovedRef.current) {
+      e.preventDefault();
+      e.stopPropagation();
+      hasMovedRef.current = false;
+      return;
+    }
+    if (chatOpen) {
+      setChatOpen(false);
+    } else {
+      triggerWakeUpAnimation();
+      setChatOpen(true);
+    }
+  };
 
   useEffect(() => {
     if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight;
@@ -394,8 +497,32 @@ export function RobotGuide() {
     window.setTimeout(() => setExcited(false), 900);
   };
 
+  const isRightSide = position
+    ? position.x > (typeof window !== "undefined" ? window.innerWidth / 2 : 500)
+    : false;
+
+  const dockStyle: React.CSSProperties = position
+    ? {
+        left: `${position.x}px`,
+        top: `${position.y}px`,
+        bottom: "auto",
+        right: "auto",
+      }
+    : {};
+
   return (
-    <aside className={styles.dock} aria-live="polite">
+    <aside
+      ref={dockRef}
+      className={[
+        styles.dock,
+        isRightSide ? styles.dockRightAligned : "",
+        isDragging ? styles.dockDragging : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      style={dockStyle}
+      aria-live="polite"
+    >
       {chatOpen ? (
         <div className={styles.panel}>
           <div className={styles.panelHead}>
@@ -736,16 +863,29 @@ export function RobotGuide() {
 
       <button
         type="button"
-        className={[styles.robot, excited ? styles.excited : "", waking ? styles.waking : ""].join(" ")}
-        onClick={() => {
-          if (chatOpen) {
-            setChatOpen(false);
-          } else {
-            triggerWakeUpAnimation();
-            setChatOpen(true);
+        className={[
+          styles.robot,
+          excited ? styles.excited : "",
+          waking ? styles.waking : "",
+          isDragging ? styles.dragging : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
+        onClick={handleRobotClick}
+        onDoubleClick={() => {
+          setPosition(null);
+          try {
+            localStorage.removeItem("dimisi_robot_pos");
+          } catch {
+            // ignore
           }
         }}
         aria-label={chatOpen ? "Close DIMISI AI" : "Chat with DIMISI AI, your intelligent assistant"}
+        title="DIMISI AI Assistant (Drag to move anywhere · Double-click to reset position)"
       >
         <span className={styles.shell} ref={shellRef}>
           <span className={styles.antenna} aria-hidden="true" />
