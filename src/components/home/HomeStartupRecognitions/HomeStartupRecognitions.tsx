@@ -1,4 +1,4 @@
-import { ArrowUpRight, Award, CheckCircle2, Cpu, ExternalLink, FileText, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowUpRight, Award, CheckCircle2, Cpu, ShieldCheck } from "lucide-react";
 import { STARTUP_RECOGNITIONS, COMPANY } from "@/constants/site";
 import styles from "./HomeStartupRecognitions.module.css";
 
@@ -134,17 +134,6 @@ export function HomeStartupRecognitions() {
           </div>
 
           <div className={styles.cardFooter}>
-            <a
-              href="/documents/dimisi-dpiit-certificate.pdf"
-              target="_blank"
-              rel="noopener noreferrer"
-              className={styles.actionBtnGov}
-              aria-label="View official Startup India DPIIT certificate PDF"
-            >
-              <FileText size={14} aria-hidden="true" />
-              <span>View Recognition Certificate</span>
-              <ArrowUpRight size={14} aria-hidden="true" />
-            </a>
             <span className={styles.metaBadgeGov}>DPIIT Verified</span>
           </div>
         </div>
