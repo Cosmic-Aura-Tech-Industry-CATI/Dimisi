@@ -38,7 +38,9 @@
 .logoLink {
   display: inline-block;
   text-decoration: none;
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease;
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.3s ease;
 }
 
 .logoLink:hover {
@@ -202,7 +204,9 @@
   text-decoration: none;
   letter-spacing: 0.01em;
   word-break: break-all;
-  transition: color 0.2s ease, text-shadow 0.2s ease;
+  transition:
+    color 0.2s ease,
+    text-shadow 0.2s ease;
 }
 
 .emailItem:hover .emailLink {
@@ -254,7 +258,9 @@
   letter-spacing: 0.04em;
   font-family: var(--dm-font-mono, monospace);
   width: fit-content;
-  transition: color 0.25s ease, transform 0.25s ease;
+  transition:
+    color 0.25s ease,
+    transform 0.25s ease;
 }
 
 .phoneLink:hover {
@@ -346,7 +352,12 @@
 .recDivider {
   flex: 1;
   height: 1px;
-  background: linear-gradient(90deg, rgba(255, 140, 26, 0.3) 0%, rgba(255, 255, 255, 0.05) 50%, transparent 100%);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 140, 26, 0.3) 0%,
+    rgba(255, 255, 255, 0.05) 50%,
+    transparent 100%
+  );
 }
 
 .recognitionsGrid {
@@ -364,13 +375,18 @@
   background: rgba(14, 14, 17, 0.75);
   border: 1px solid rgba(255, 255, 255, 0.08);
   backdrop-filter: blur(16px);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s, box-shadow 0.3s;
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s,
+    box-shadow 0.3s;
 }
 
 .recCard:hover {
   transform: translateY(-3px);
   border-color: rgba(255, 140, 26, 0.4);
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.5), 0 0 24px rgba(255, 140, 26, 0.12);
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.5),
+    0 0 24px rgba(255, 140, 26, 0.12);
 }
 
 .recLogoWrap {
@@ -498,7 +514,12 @@
   line-height: 0.9;
   letter-spacing: -0.02em;
   text-align: center;
-  background: linear-gradient(180deg, rgba(255, 140, 26, 0.2) 0%, rgba(255, 140, 26, 0.01) 85%, transparent 100%);
+  background: linear-gradient(
+    180deg,
+    rgba(255, 140, 26, 0.2) 0%,
+    rgba(255, 140, 26, 0.01) 85%,
+    transparent 100%
+  );
   -webkit-background-clip: text;
   background-clip: text;
   color: transparent;

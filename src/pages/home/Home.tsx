@@ -1,13 +1,5 @@
 import { useState, lazy, Suspense } from "react";
-import {
-  Code2,
-  Smartphone,
-  Cloud,
-  Megaphone,
-  Compass,
-  Play,
-  ArrowRight,
-} from "lucide-react";
+import { Code2, Smartphone, Cloud, Megaphone, Compass, Play, ArrowRight } from "lucide-react";
 import { SplitText } from "@/components/common/SplitText/SplitText";
 import { Reveal } from "@/components/common/Reveal/Reveal";
 import { MagneticButton } from "@/components/common/MagneticButton/MagneticButton";
@@ -23,32 +15,45 @@ import { useHomeHeroConfig } from "@/hooks/useHomeHeroConfig";
 import { DEFAULT_HOME_HERO_CONFIG } from "@/types/homeHero.types";
 
 import { TECHNOLOGIES } from "@/data/home";
+import { HomeAeoGeoSection } from "@/components/home/HomeAeoGeoSection/HomeAeoGeoSection";
 import styles from "./Home.module.css";
 
 // Deferred Below-The-Fold Showcase Sections (Code-Split for Fast Mobile & Low-Data Speeds):
 const KaleshProductShowcase = lazy(() =>
-  import("@/components/home/KaleshProductShowcase/KaleshProductShowcase").then((m) => ({ default: m.KaleshProductShowcase }))
+  import("@/components/home/KaleshProductShowcase/KaleshProductShowcase").then((m) => ({
+    default: m.KaleshProductShowcase,
+  })),
 );
 const ServicesForward = lazy(() =>
-  import("@/components/home/ServicesForward/ServicesForward").then((m) => ({ default: m.ServicesForward }))
+  import("@/components/home/ServicesForward/ServicesForward").then((m) => ({
+    default: m.ServicesForward,
+  })),
 );
 const SelectedCaseStudies = lazy(() =>
-  import("@/components/home/SelectedCaseStudies/SelectedCaseStudies").then((m) => ({ default: m.SelectedCaseStudies }))
+  import("@/components/home/SelectedCaseStudies/SelectedCaseStudies").then((m) => ({
+    default: m.SelectedCaseStudies,
+  })),
 );
 const WhyChooseUs = lazy(() =>
-  import("@/components/home/WhyChooseUs/WhyChooseUs").then((m) => ({ default: m.WhyChooseUs }))
+  import("@/components/home/WhyChooseUs/WhyChooseUs").then((m) => ({ default: m.WhyChooseUs })),
 );
 const CompanyHighlights = lazy(() =>
-  import("@/components/home/CompanyHighlights/CompanyHighlights").then((m) => ({ default: m.CompanyHighlights }))
+  import("@/components/home/CompanyHighlights/CompanyHighlights").then((m) => ({
+    default: m.CompanyHighlights,
+  })),
 );
 const HomeEventsGallery = lazy(() =>
-  import("@/components/home/HomeEventsGallery/HomeEventsGallery").then((m) => ({ default: m.HomeEventsGallery }))
+  import("@/components/home/HomeEventsGallery/HomeEventsGallery").then((m) => ({
+    default: m.HomeEventsGallery,
+  })),
 );
 const LiveReviewsMotion = lazy(() =>
-  import("@/components/home/LiveReviewsMotion/LiveReviewsMotion").then((m) => ({ default: m.LiveReviewsMotion }))
+  import("@/components/home/LiveReviewsMotion/LiveReviewsMotion").then((m) => ({
+    default: m.LiveReviewsMotion,
+  })),
 );
 const StoryVideo = lazy(() =>
-  import("@/components/media/StoryVideo/StoryVideo").then((m) => ({ default: m.StoryVideo }))
+  import("@/components/media/StoryVideo/StoryVideo").then((m) => ({ default: m.StoryVideo })),
 );
 
 const SERVICE_ICONS = [Code2, Smartphone, Cloud, Megaphone, Compass];
@@ -60,7 +65,11 @@ export function Home() {
   return (
     <div className={styles.page}>
       {/* 0. BRAND FILM MODAL OVERLAY */}
-      {storyOpen ? <Suspense fallback={null}><StoryVideo onClose={() => setStoryOpen(false)} /></Suspense> : null}
+      {storyOpen ? (
+        <Suspense fallback={null}>
+          <StoryVideo onClose={() => setStoryOpen(false)} />
+        </Suspense>
+      ) : null}
 
       {/* 1. UPGRADED HERO SECTION */}
       <section id="hero" className={[styles.section, styles.hero].join(" ")}>
@@ -89,8 +98,9 @@ export function Home() {
             </h1>
 
             <Reveal variant="up" delay={200}>
-              <p className={styles.heroSub}>
-                {heroConfig.missionStatement && !heroConfig.missionStatement.includes("product and services technology company")
+              <p className={styles.heroSub} id="hero-lead-summary">
+                {heroConfig.missionStatement &&
+                !heroConfig.missionStatement.includes("product and services technology company")
                   ? heroConfig.missionStatement
                   : DEFAULT_HOME_HERO_CONFIG.missionStatement}
               </p>
@@ -98,7 +108,10 @@ export function Home() {
 
             <Reveal variant="up" delay={300}>
               <div className={styles.heroActions}>
-                <MagneticButton to={heroConfig.primaryBtnLink || "/contact"} className={styles.heroBtnTalk}>
+                <MagneticButton
+                  to={heroConfig.primaryBtnLink || "/contact"}
+                  className={styles.heroBtnTalk}
+                >
                   <span className={styles.heroBtnContent}>
                     <span>{heroConfig.primaryBtnText}</span>
                     <ArrowRight size={15} className={styles.heroBtnIcon} aria-hidden="true" />
@@ -131,15 +144,14 @@ export function Home() {
 
         {/* 2. 5-CARD CORE SERVICES QUICK STRIP */}
         <Reveal variant="up" delay={350} className={styles.fullWidthReveal}>
+          <h2 className="sr-only" id="heading-disciplines">
+            Core Engineering Disciplines &amp; Services
+          </h2>
           <div className={styles.servicesQuickStrip}>
             {(heroConfig.services || DEFAULT_HOME_HERO_CONFIG.services).map((srv, idx) => {
               const Icon = SERVICE_ICONS[idx % SERVICE_ICONS.length] || Code2;
               return (
-                <a
-                  key={idx}
-                  href={srv.link}
-                  className={styles.serviceQuickCard}
-                >
+                <a key={idx} href={srv.link} className={styles.serviceQuickCard}>
                   <div className={styles.serviceIconBox}>
                     <Icon size={19} />
                   </div>
@@ -175,10 +187,7 @@ export function Home() {
 
         {/* SCROLL INDICATOR CUE */}
         <div className={styles.scrollCue}>
-          <span
-            className={[styles.cueLine, styles.cueLineReverse].join(" ")}
-            aria-hidden="true"
-          />
+          <span className={[styles.cueLine, styles.cueLineReverse].join(" ")} aria-hidden="true" />
           <span>Scroll to explore</span>
           <span className={styles.cueLine} aria-hidden="true" />
         </div>
@@ -208,46 +217,63 @@ export function Home() {
       {/* DYNAMIC SERVICES & DISCIPLINES */}
       <div id="services">
         <ScrollScene variant="lift">
-          <Suspense fallback={<div style={{ minHeight: "260px" }} />}><ServicesForward /></Suspense>
+          <Suspense fallback={<div style={{ minHeight: "260px" }} />}>
+            <ServicesForward />
+          </Suspense>
         </ScrollScene>
       </div>
 
       {/* PRODUCTS & WORK */}
       <div id="products">
-        <Suspense fallback={<div style={{ minHeight: "260px" }} />}><SelectedCaseStudies /></Suspense>
+        <Suspense fallback={<div style={{ minHeight: "260px" }} />}>
+          <SelectedCaseStudies />
+        </Suspense>
       </div>
 
       {/* WHY CHOOSE US & HIGHLIGHTS */}
       <div id="arsenal">
         <ScrollScene variant="top">
-          <Suspense fallback={<div style={{ minHeight: "260px" }} />}><WhyChooseUs /></Suspense>
+          <Suspense fallback={<div style={{ minHeight: "260px" }} />}>
+            <WhyChooseUs />
+          </Suspense>
         </ScrollScene>
 
         <ScrollScene variant="right">
-          <Suspense fallback={<div style={{ minHeight: "260px" }} />}><CompanyHighlights /></Suspense>
+          <Suspense fallback={<div style={{ minHeight: "260px" }} />}>
+            <CompanyHighlights />
+          </Suspense>
         </ScrollScene>
       </div>
 
       {/* EVENTS & MOMENTS GALLERY */}
       <ScrollScene variant="lift">
-        <Suspense fallback={<div style={{ minHeight: "260px" }} />}><HomeEventsGallery /></Suspense>
+        <Suspense fallback={<div style={{ minHeight: "260px" }} />}>
+          <HomeEventsGallery />
+        </Suspense>
       </ScrollScene>
 
       {/* LIVE VERIFIED REVIEWS FEED */}
       <div id="reviews">
         <ScrollScene variant="right">
-          <Suspense fallback={<div style={{ minHeight: "260px" }} />}><LiveReviewsMotion /></Suspense>
+          <Suspense fallback={<div style={{ minHeight: "260px" }} />}>
+            <LiveReviewsMotion />
+          </Suspense>
         </ScrollScene>
       </div>
+
+      {/* AEO, GEO & SEARCH OPTIMIZATIONS (FAQ, PROTOCOL, DEFINITIONS, COMPARISON) */}
+      <HomeAeoGeoSection />
 
       {/* BOTTOM CONVERSION CTA */}
       <ScrollScene variant="center">
         <section className={styles.section}>
           <div className={styles.cta}>
-            <h2 className={styles.ctaTitle}>Let's build something that thinks</h2>
+            <h2 className={styles.ctaTitle} id="heading-cta">
+              Let's build something that thinks
+            </h2>
             <p className={styles.ctaText}>
-              Tell us the problem. We'll come back with an architecture, a timeline
-              and a number — usually within forty-eight hours.
+              Tell us the problem. We'll come back with an architecture, a timeline and a number —
+              usually within forty-eight hours.
             </p>
             <MagneticButton to="/contact">Talk to DIMISI Technologies</MagneticButton>
           </div>

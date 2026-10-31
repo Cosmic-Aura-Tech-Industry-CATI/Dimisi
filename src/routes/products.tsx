@@ -8,13 +8,13 @@ export const Route = createFileRoute("/products")({
   },
   head: () => ({
     meta: [
-      { title: "Our Work & Products — DIMISI Technologies" },
+      { title: "Proprietary Products & Platforms — DIMISI Technologies" },
       {
         name: "description",
         content:
           "Explore selected case studies and proprietary products engineered by DIMISI Technologies — client solutions, digital products, and scalable enterprise architectures.",
       },
-      { property: "og:title", content: "Our Work & Products — DIMISI Technologies" },
+      { property: "og:title", content: "Proprietary Products & Platforms — DIMISI Technologies" },
       {
         property: "og:description",
         content:
@@ -23,6 +23,7 @@ export const Route = createFileRoute("/products")({
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
+    links: [{ rel: "canonical", href: "https://www.dimisi.tech/products" }],
   }),
   component: WorkPage,
 });

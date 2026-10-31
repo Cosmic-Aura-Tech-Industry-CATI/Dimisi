@@ -78,7 +78,8 @@
 }
 
 @keyframes pulseDot {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.4;
     transform: scale(0.85);
   }
@@ -121,7 +122,6 @@
   color: rgba(255, 244, 230, 0.85);
   text-shadow: 0 2px 14px rgba(0, 0, 0, 0.8);
 }
-
 
 .heroBtnContent {
   display: inline-flex;
@@ -183,7 +183,10 @@
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
-  transition: transform 0.3s var(--dm-ease), border-color 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    transform 0.3s var(--dm-ease),
+    border-color 0.3s ease,
+    box-shadow 0.3s ease;
   text-decoration: none;
   cursor: pointer;
 }
@@ -204,7 +207,9 @@
   align-items: center;
   justify-content: center;
   color: var(--dm-amber);
-  transition: transform 0.3s ease, background 0.3s ease;
+  transition:
+    transform 0.3s ease,
+    background 0.3s ease;
 }
 
 .serviceQuickCard:hover .serviceIconBox {
@@ -369,7 +374,9 @@
   height: 17px;
   flex-shrink: 0;
   color: var(--dm-amber);
-  transition: transform 0.25s var(--dm-ease), color 0.25s var(--dm-ease);
+  transition:
+    transform 0.25s var(--dm-ease),
+    color 0.25s var(--dm-ease);
   filter: drop-shadow(0 0 4px rgba(255, 122, 24, 0.3));
 }
 

@@ -10,11 +10,13 @@ export function HomeStartupRecognitions() {
           <Award size={14} className={styles.tagIcon} aria-hidden="true" />
           <span className={styles.tagText}>OFFICIAL STARTUP ACCREDITATIONS & GLOBAL NETWORK</span>
         </div>
-        <h3 className={styles.title}>
-          Backed by <span className={styles.gradientText}>Global AI Ecosystem</span> & Recognized Nationally
-        </h3>
+        <h2 className={styles.title} id="heading-accreditations">
+          Backed by <span className={styles.gradientText}>Global AI Ecosystem</span> & Recognized
+          Nationally
+        </h2>
         <p className={styles.subtitle}>
-          DIMISI Technologies Private Limited is officially recognized by the Government of India and accelerates through NVIDIA's global startup ecosystem.
+          DIMISI Technologies Private Limited is officially recognized by the Government of India
+          and accelerates through NVIDIA's global startup ecosystem.
         </p>
       </div>
 
@@ -22,7 +24,7 @@ export function HomeStartupRecognitions() {
         {/* 1. NVIDIA INCEPTION PROGRAM CARD */}
         <div className={[styles.card, styles.cardNvidia].join(" ")}>
           <div className={styles.cardGlow} aria-hidden="true" />
-          
+
           <div className={styles.cardTop}>
             <div className={styles.badgePill}>
               <Cpu size={12} className={styles.pillIcon} aria-hidden="true" />
@@ -42,16 +44,21 @@ export function HomeStartupRecognitions() {
                 className={styles.brandLogo}
                 loading="lazy"
                 decoding="async"
+                width={971}
+                height={889}
               />
             </div>
             <div className={styles.brandMeta}>
-              <h4 className={styles.cardTitle}>NVIDIA Inception Program</h4>
+              <h3 className={styles.cardTitle}>NVIDIA Inception Program</h3>
               <span className={styles.orgLabel}>Global AI Startup Network</span>
             </div>
           </div>
 
           <p className={styles.cardDesc}>
-            DIMISI Technologies Private Limited is a proud member of the NVIDIA Inception Program, a global initiative supporting innovative startups with access to cutting-edge technology resources, GPU developer tools, technical training, and global business growth opportunities.
+            DIMISI Technologies Private Limited is a proud member of the NVIDIA Inception Program, a
+            global initiative supporting innovative startups with access to cutting-edge technology
+            resources, GPU developer tools, technical training, and global business growth
+            opportunities.
           </p>
 
           <div className={styles.featuresList}>
@@ -106,16 +113,20 @@ export function HomeStartupRecognitions() {
                 className={styles.brandLogoGov}
                 loading="lazy"
                 decoding="async"
+                width={1024}
+                height={425}
               />
             </div>
             <div className={styles.brandMeta}>
-              <h4 className={styles.cardTitle}>Startup India Recognized</h4>
+              <h3 className={styles.cardTitle}>Startup India Recognized</h3>
               <span className={styles.orgLabel}>Ministry of Commerce & Industry</span>
             </div>
           </div>
 
           <p className={styles.cardDesc}>
-            Officially recognized as an innovative startup under the Startup India initiative by the Department for Promotion of Industry and Internal Trade (DPIIT), Ministry of Commerce & Industry, Government of India. Valid through April 2036.
+            Officially recognized as an innovative startup under the Startup India initiative by the
+            Department for Promotion of Industry and Internal Trade (DPIIT), Ministry of Commerce &
+            Industry, Government of India. Valid through April 2036.
           </p>
 
           <div className={styles.featuresList}>

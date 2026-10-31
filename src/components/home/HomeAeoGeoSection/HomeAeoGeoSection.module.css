@@ -1,0 +1,351 @@
+.wrapper {
+  position: relative;
+  z-index: 2;
+  max-width: 78rem;
+  margin: 0 auto;
+  padding: clamp(3rem, 6vh, 5rem) clamp(1.2rem, 5vw, 4rem);
+  display: flex;
+  flex-direction: column;
+  gap: clamp(3.5rem, 7vh, 6rem);
+}
+
+/* Quick Navigation Anchor Bar */
+.tocSection {
+  background: rgba(18, 18, 22, 0.6);
+  border: 1px solid rgba(255, 122, 0, 0.18);
+  border-radius: 1rem;
+  padding: 1.25rem 1.5rem;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.tocHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.85rem;
+}
+
+.tocTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  color: #ff9f1c;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+}
+
+.timestamp {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  font-family: var(--dm-font-mono, monospace);
+}
+
+.tocLinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.tocLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.78rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.tocLink:hover {
+  background: rgba(255, 122, 0, 0.15);
+  border-color: rgba(255, 122, 0, 0.4);
+  color: #ffb300;
+}
+
+/* WebMCP Interactive Bar */
+.webmcpBar {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+@media (max-width: 768px) {
+  .webmcpBar {
+    grid-template-columns: 1fr;
+  }
+}
+
+.webmcpForm {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.webmcpInput,
+.webmcpSelect {
+  flex: 1;
+  background: rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 0.5rem;
+  padding: 0.5rem 0.85rem;
+  color: #fff;
+  font-size: 0.82rem;
+  font-family: inherit;
+}
+
+.webmcpInput:focus,
+.webmcpSelect:focus {
+  outline: none;
+  border-color: #ff7a00;
+}
+
+.webmcpBtn {
+  background: #ff7a00;
+  color: #000;
+  font-weight: 600;
+  font-size: 0.78rem;
+  padding: 0.5rem 0.9rem;
+  border: none;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.webmcpBtn:hover {
+  opacity: 0.9;
+}
+
+/* Section Header Typography */
+.sectionHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-bottom: 2rem;
+}
+
+.eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.2em;
+  color: #ff9f1c;
+}
+
+.sectionTitle {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: clamp(1.6rem, 3.2vw, 2.4rem);
+  font-weight: 700;
+  line-height: 1.2;
+  color: #f7f7f7;
+  margin: 0;
+}
+
+.sectionSubtitle {
+  font-size: clamp(0.9rem, 1.4vw, 1.05rem);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.65);
+  max-width: 48rem;
+  margin: 0;
+}
+
+/* Comparison Table */
+.tableCard {
+  background: rgba(14, 14, 18, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+}
+
+.tableWrap {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.comparisonTable {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.88rem;
+}
+
+.comparisonTable th {
+  background: rgba(255, 255, 255, 0.03);
+  padding: 1.1rem 1.4rem;
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-weight: 600;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  color: #fff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.comparisonTable th:last-child {
+  color: #ff9f1c;
+  background: rgba(255, 122, 0, 0.05);
+}
+
+.comparisonTable td {
+  padding: 1.1rem 1.4rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.8);
+  line-height: 1.5;
+  vertical-align: top;
+}
+
+.comparisonTable tr:last-child td {
+  border-bottom: none;
+}
+
+.dimensionCell {
+  font-weight: 600;
+  color: #fff !important;
+  white-space: nowrap;
+}
+
+.dimisiCell {
+  background: rgba(255, 122, 0, 0.04);
+  color: #fff !important;
+  font-weight: 500;
+}
+
+/* 4-Step Engineering Protocol */
+.stepList {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1.5rem;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.stepItem {
+  background: rgba(16, 16, 20, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.85rem;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  position: relative;
+  transition:
+    transform 0.2s,
+    border-color 0.2s;
+}
+
+.stepItem:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 122, 0, 0.35);
+}
+
+.stepNumber {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #ff7a00;
+  line-height: 1;
+}
+
+.stepHeading {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  line-height: 1.3;
+}
+
+.stepDesc {
+  font-size: 0.86rem;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.7);
+  margin: 0;
+}
+
+/* Definition List */
+.defListCard {
+  background: rgba(14, 14, 18, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 1rem;
+  padding: 1.8rem;
+}
+
+.defList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.4rem;
+  margin: 0;
+}
+
+.defTerm {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: #ff9f1c;
+  margin-bottom: 0.35rem;
+}
+
+.defDesc {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+  padding-left: 0;
+}
+
+/* FAQ Section */
+.faqGrid {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.faqItem {
+  background: rgba(16, 16, 20, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.85rem;
+  padding: 1.4rem 1.6rem;
+  transition: border-color 0.2s ease;
+}
+
+.faqItem:hover {
+  border-color: rgba(255, 122, 0, 0.25);
+}
+
+.faqQuestion {
+  font-family: var(--dm-font-display, "Chakra Petch", sans-serif);
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 0.65rem 0;
+  line-height: 1.35;
+}
+
+.faqAnswer {
+  font-size: 0.88rem;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.75);
+  margin: 0;
+}

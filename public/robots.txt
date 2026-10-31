@@ -1,14 +1,49 @@
+# Robots.txt for DIMISI Technologies (https://www.dimisi.tech)
+User-agent: *
+Allow: /
+Disallow: /dimisi-admin/
+Disallow: /dimisi-admin/*
+Disallow: /api/
+
+# Explicit permissions for major search engines and AI answer engines
 User-agent: Googlebot
 Allow: /
 
 User-agent: Bingbot
 Allow: /
 
-User-agent: Twitterbot
+User-agent: Applebot
 Allow: /
 
-User-agent: facebookexternalhit
+User-agent: Applebot-Extended
 Allow: /
 
-User-agent: *
+User-agent: GPTBot
 Allow: /
+
+User-agent: ChatGPT-User
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: Amazonbot
+Allow: /
+
+User-agent: Cohere-ai
+Allow: /
+
+User-agent: meta-externalagent
+Allow: /
+
+# Canonical XML Sitemap & LLM context directives
+Sitemap: https://www.dimisi.tech/sitemap.xml

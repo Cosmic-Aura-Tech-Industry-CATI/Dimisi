@@ -64,13 +64,20 @@ export function Navbar() {
         .join(" ")}
     >
       <nav className={styles.bar} aria-label="Primary">
-        <Link to="/" className={styles.brand} onClick={() => setOpen(false)}>
+        <Link
+          to="/"
+          className={styles.brand}
+          onClick={() => setOpen(false)}
+          aria-label="DIMISI Technologies Home"
+        >
           <img
             src={LOCKUP_URL}
             alt="DIMISI Technologies Pvt Ltd"
             className={styles.mark}
             fetchPriority="high"
             decoding="async"
+            width={1740}
+            height={428}
           />
         </Link>
 

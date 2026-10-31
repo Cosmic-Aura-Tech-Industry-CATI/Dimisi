@@ -17,7 +17,10 @@ export const Route = createFileRoute("/career")({
             hero?.subline ||
             "Join a curious, innovation-focused team where your work ships and your ideas matter. Open roles for content writers, graphic designers, engineers, and creatives.",
         },
-        { property: "og:title", content: "Careers — DIMISI Technologies" },
+        {
+          property: "og:title",
+          content: "Careers in Deep-Tech & AI Engineering — DIMISI Technologies",
+        },
         {
           property: "og:description",
           content:
@@ -27,6 +30,7 @@ export const Route = createFileRoute("/career")({
         { name: "twitter:card", content: "summary_large_image" },
         { name: "twitter:title", content: "Careers — DIMISI Technologies" },
       ],
+      links: [{ rel: "canonical", href: "https://www.dimisi.tech/career" }],
     };
   },
   component: CareerPage,

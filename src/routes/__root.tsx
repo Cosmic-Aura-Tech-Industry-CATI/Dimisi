@@ -110,29 +110,125 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   );
 }
 
+const ORGANIZATION_JSON_LD = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "Organization",
+      "@id": "https://www.dimisi.tech/#organization",
+      name: "DIMISI Technologies Pvt Ltd",
+      legalName: "DIMISI Technologies Private Limited",
+      url: "https://www.dimisi.tech",
+      logo: "https://www.dimisi.tech/dimisi-silver-logo.png",
+      description:
+        "DIMISI Technologies engineers autonomous AI agents, computer vision, cinematic WebGL experiences, and scalable enterprise software architectures.",
+      foundingDate: "2024",
+      sameAs: [
+        "https://www.linkedin.com/company/dimisi-technologies",
+        "https://twitter.com/dimisitech",
+        "https://github.com/dimisitech",
+        "https://www.instagram.com/dimisitech",
+        "https://thekalesh.com",
+      ],
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: "Kanpur",
+        addressRegion: "Uttar Pradesh",
+        addressCountry: "IN",
+      },
+      contactPoint: {
+        "@type": "ContactPoint",
+        contactType: "Customer Support & Technical Inquiries",
+        email: "contact@dimisi.tech",
+        telephone: "+91-9450346850",
+        availableLanguage: ["English", "Hindi"],
+      },
+      knowsAbout: [
+        "Artificial Intelligence",
+        "Autonomous Agents",
+        "Computer Vision",
+        "WebGL",
+        "Three.js",
+        "Cloud Architecture",
+        "Full-Stack Software Engineering",
+        "Distributed Systems",
+      ],
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://www.dimisi.tech/#website",
+      url: "https://www.dimisi.tech",
+      name: "DIMISI Technologies",
+      publisher: {
+        "@id": "https://www.dimisi.tech/#organization",
+      },
+      potentialAction: {
+        "@type": "SearchAction",
+        target: "https://www.dimisi.tech/services?q={search_term_string}",
+        "query-input": "required name=search_term_string",
+      },
+    },
+  ],
+};
+
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "DIMISI Technologies Pvt Ltd — Technology Beyond Limits" },
+      { title: "DIMISI Technologies Pvt Ltd — Enterprise AI, WebGL & Scalable Software" },
       {
         name: "description",
         content:
-          "DIMISI Technologies builds futuristic AI products, automation systems and immersive digital experiences for businesses worldwide.",
+          "DIMISI Technologies engineers autonomous AI agents, computer vision, cinematic WebGL experiences, and scalable enterprise software architectures for visionary teams worldwide.",
+      },
+      {
+        name: "keywords",
+        content:
+          "DIMISI Technologies, Autonomous Agents, AI Development, WebGL 3D, Enterprise Software Engineering, Computer Vision, Scalable Architecture, Full-Stack Development, Three.js",
       },
       { name: "author", content: "DIMISI Technologies" },
       { name: "theme-color", content: "#050505" },
-      { property: "og:title", content: "DIMISI Technologies Pvt Ltd — Technology Beyond Limits" },
+      {
+        name: "robots",
+        content: "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1",
+      },
+      { name: "googlebot", content: "index, follow, max-snippet:-1, max-image-preview:large" },
+      { name: "bingbot", content: "index, follow, max-snippet:-1, max-image-preview:large" },
+      { property: "og:site_name", content: "DIMISI Technologies" },
+      {
+        property: "og:title",
+        content: "DIMISI Technologies Pvt Ltd — Enterprise AI, WebGL & Scalable Software",
+      },
       {
         property: "og:description",
         content:
-          "Futuristic AI products, automation systems and immersive digital experiences.",
+          "Autonomous AI agents, computer vision, cinematic WebGL, and resilient enterprise software engineered end to end.",
       },
       { property: "og:type", content: "website" },
+      { property: "og:url", content: "https://www.dimisi.tech/" },
+      { property: "og:image", content: "https://www.dimisi.tech/images/about/global-network.png" },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "DIMISI Technologies — Technology Beyond Limits" },
+      { property: "og:locale", content: "en_US" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:site", content: "@dimisitech" },
+      { name: "twitter:creator", content: "@dimisitech" },
+      {
+        name: "twitter:title",
+        content: "DIMISI Technologies Pvt Ltd — Enterprise AI, WebGL & Scalable Software",
+      },
+      {
+        name: "twitter:description",
+        content:
+          "Autonomous AI agents, computer vision, cinematic WebGL, and scalable enterprise software architectures.",
+      },
+      { name: "twitter:image", content: "https://www.dimisi.tech/images/about/global-network.png" },
     ],
     links: [
+      { rel: "canonical", href: "https://www.dimisi.tech/" },
+      { rel: "sitemap", type: "application/xml", title: "Sitemap", href: "/sitemap.xml" },
       {
         rel: "stylesheet",
         href: appCss,
@@ -157,8 +253,18 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(ORGANIZATION_JSON_LD) }}
+        />
       </head>
       <body suppressHydrationWarning>
+        <a
+          href="#content"
+          className="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[99999] focus:px-4 focus:py-2 focus:bg-[#ff7a00] focus:text-black focus:font-semibold focus:rounded-md focus:shadow-xl focus:outline-none"
+        >
+          Skip to main content
+        </a>
         {children}
         <Scripts />
       </body>

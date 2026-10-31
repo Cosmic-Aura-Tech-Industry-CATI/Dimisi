@@ -187,7 +187,9 @@ export function KaleshProductShowcase() {
   const playSfx = (freq = 520, duration = 0.08) => {
     if (!sfxEnabled || typeof window === "undefined") return;
     try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      const AudioCtx =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
       if (!AudioCtx) return;
       const ctx = new AudioCtx();
       const osc = ctx.createOscillator();
@@ -236,6 +238,9 @@ export function KaleshProductShowcase() {
               alt="Kalesh Logo"
               className={styles.eyebrowLogo}
               loading="lazy"
+              decoding="async"
+              width={1024}
+              height={1024}
             />
             <span className={styles.eyebrowDot} aria-hidden="true" />
             <span className={styles.eyebrowText}>
@@ -243,14 +248,14 @@ export function KaleshProductShowcase() {
             </span>
           </div>
 
-          <h2 className={styles.mainHeading}>
+          <h2 className={styles.mainHeading} id="heading-kalesh">
             <span className={styles.headingWhite}>Speak Freely. Poll Instantly.</span>
             <span className={styles.headingGradient}>Discover Real Public Opinion.</span>
           </h2>
 
           <p className={styles.subText}>
-            We are developing an innovative Anonymous Social Media &amp; Live Polling App designed to
-            remove fear and judgment from online communication. It is a secure place where honest
+            We are developing an innovative Anonymous Social Media &amp; Live Polling App designed
+            to remove fear and judgment from online communication. It is a secure place where honest
             public voices meet real-time data insights.
           </p>
         </div>
@@ -316,6 +321,10 @@ export function KaleshProductShowcase() {
                     src="/images/kalesh-logo.jpg"
                     alt="Kalesh Icon"
                     className={styles.sandboxLogo}
+                    loading="lazy"
+                    decoding="async"
+                    width={1024}
+                    height={1024}
                   />
                   <span className={styles.sandboxTitle}>Kalesh Sandbox</span>
                 </div>
@@ -388,9 +397,7 @@ export function KaleshProductShowcase() {
                   alt="Kalesh App Official Icon"
                   className={styles.mediaLogoEmblem}
                 />
-                <span className={styles.mediaBrandTag}>
-                  KALESH · THE UNFILTERED SOCIAL SPHERE
-                </span>
+                <span className={styles.mediaBrandTag}>KALESH · THE UNFILTERED SOCIAL SPHERE</span>
               </div>
               <div className={styles.mediaFooterBar}>
                 <span className={styles.mediaLoopText}>

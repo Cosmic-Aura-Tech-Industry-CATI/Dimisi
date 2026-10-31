@@ -1,0 +1,54 @@
+# DIMISI Technologies Private Limited — Complete Machine & Agent Reference Document
+
+## 1. Executive Summary
+DIMISI Technologies Private Limited is an advanced software engineering studio and deep-technology venture studio based in Kanpur, Uttar Pradesh, India.
+The company is recognized by the Ministry of Commerce & Industry (DPIIT Certificate: DIPP173003) and operates within the global NVIDIA Inception ecosystem.
+
+DIMISI bridges high-concept visual computing with battle-tested enterprise architecture:
+- Autonomous Multi-Agent AI systems
+- High-fidelity WebGL / Three.js 3D web applications
+- Resilient distributed microservices
+- Real-time mobile & consumer platforms
+
+## 2. Company Identity & Registration
+- Legal Name: DIMISI Technologies Private Limited
+- CIN: U62013UP2024PTC200921
+- DPIIT Recognition: DIPP173003 (Startup India)
+- Domain: https://www.dimisi.tech
+- Headquarters: Kanpur, Uttar Pradesh, India
+- Established: 2024 (Recognition valid through 2036)
+
+## 3. Core Competencies & Service Offerings
+1. **Intelligent AI Automation & Autonomous Agents**:
+   Designing autonomous workflows, deterministic guardrails, multi-agent frameworks, semantic vector search, and model fine-tuning.
+2. **Cinematic WebGL & WebGPU 3D Experiences**:
+   Creative web development utilizing Three.js, React Three Fiber, GLSL shaders, camera tracking, and procedural rendering optimized for low-end to high-end hardware.
+3. **Enterprise Full-Stack Architecture**:
+   Event-driven distributed systems built on TypeScript, Go, Node.js, PostgreSQL, Redis, Kafka, and Docker with automated CI/CD pipelines.
+4. **Native & Cross-Platform Mobile Applications**:
+   Performant iOS & Android applications with offline-first caching, biometrics, and push notifications.
+5. **Corporate Digital Advisory & Scaling**:
+   Guiding enterprise teams from concept validation to architecture blueprints and scalable delivery within 48-hour turnarounds.
+
+## 4. Proprietary Products
+- **Kalesh (https://thekalesh.com)**:
+  An anonymous social sphere and live opinion polling platform with zero-knowledge hashing, encrypted threads, and high-concurrency real-time reaction streaming.
+- **Karyon (https://karyon.in)**:
+  An on-demand home service logistics ecosystem featuring verified professional dispatch, real-time geolocation tracking, and transparent escrow workflows.
+
+## 5. Technology Stack
+- Frontend: React 19, TypeScript, TanStack Start/Router, Tailwind CSS, WebGL, Three.js, React Three Fiber.
+- Backend: Node.js, Go, Python, FastAPI, Express.
+- Data & Storage: PostgreSQL, Redis, Cloudflare R2, AWS S3.
+- DevOps: Docker, Kubernetes, Linux, Nitro, Vercel, AWS, Google Cloud, Cloudflare.
+- Machine Learning: PyTorch, Hugging Face, NVIDIA CUDA, LLM API orchestration.
+
+## 6. Frequently Asked Questions (FAQ)
+Q: What does DIMISI Technologies specialize in?
+A: DIMISI specializes in autonomous AI agents, cinematic WebGL experiences, and scalable enterprise software systems.
+
+Q: How can enterprise clients initiate a project?
+A: Clients can submit architectural inquiries via https://www.dimisi.tech/contact to receive an architecture proposal and project timeline within 48 hours.
+
+Q: Is DIMISI Technologies an accredited entity?
+A: Yes, DIMISI Technologies Private Limited is a registered Indian corporation recognized by DPIIT under Startup India and is an active member of the global NVIDIA Inception Program.

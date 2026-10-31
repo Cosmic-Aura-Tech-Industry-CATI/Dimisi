@@ -23,7 +23,12 @@ interface ProcessedService extends CompanyService {
 
 export function ServicesForward() {
   // Live dynamic services query from backend API
-  const { data: payload, isLoading, isError, refetch } = useQuery({
+  const {
+    data: payload,
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
     queryKey: ["publicServices"],
     queryFn: () => getPublicServicesData(),
     staleTime: 1000 * 60 * 5, // 5 min cache
@@ -68,7 +73,7 @@ export function ServicesForward() {
       ([entry]) => {
         setIsInView(entry?.isIntersecting ?? true);
       },
-      { rootMargin: "100px" }
+      { rootMargin: "100px" },
     );
     observer.observe(el);
     return () => observer.disconnect();
@@ -218,14 +223,15 @@ export function ServicesForward() {
           </Reveal>
 
           <Reveal variant="up" delay={80}>
-            <h2 className={styles.title}>
+            <h2 className={styles.title} id="heading-services">
               Services That <span className={styles.gradientTitle}>Move You Forward</span>
             </h2>
           </Reveal>
 
           <Reveal variant="up" delay={140}>
             <p className={styles.subtitle}>
-              From autonomous AI agents and cloud infrastructure to consumer mobile platforms and venture scaling — engineered for sustained performance.
+              From autonomous AI agents and cloud infrastructure to consumer mobile platforms and
+              venture scaling — engineered for sustained performance.
             </p>
           </Reveal>
         </div>
@@ -285,10 +291,7 @@ export function ServicesForward() {
                 return (
                   <div
                     key={service.id || service.slug || idx}
-                    className={[
-                      styles.cardWrapper,
-                      isCenter ? styles.cardCenter : "",
-                    ].join(" ")}
+                    className={[styles.cardWrapper, isCenter ? styles.cardCenter : ""].join(" ")}
                     style={cardStyle}
                     onClick={() => {
                       if (!isCenter) setActiveIndex(idx);
@@ -303,9 +306,7 @@ export function ServicesForward() {
                             <Star size={11} fill="currentColor" /> FEATURED
                           </span>
                         ) : (
-                          <span className={styles.badgeCategory}>
-                            {service.badgeLabel}
-                          </span>
+                          <span className={styles.badgeCategory}>{service.badgeLabel}</span>
                         )}
                       </div>
 
@@ -329,9 +330,7 @@ export function ServicesForward() {
                       {/* Card Title & Description */}
                       <div className={styles.cardBody}>
                         <h3 className={styles.cardTitle}>{service.title}</h3>
-                        <p className={styles.cardDesc}>
-                          {service.tagline || service.summary}
-                        </p>
+                        <p className={styles.cardDesc}>{service.tagline || service.summary}</p>
                       </div>
 
                       {/* 4 Feature Bullet Points */}
@@ -383,10 +382,9 @@ export function ServicesForward() {
                       <button
                         key={srv.id || idx}
                         type="button"
-                        className={[
-                          styles.pagePill,
-                          isActive ? styles.pagePillActive : "",
-                        ].join(" ")}
+                        className={[styles.pagePill, isActive ? styles.pagePillActive : ""].join(
+                          " ",
+                        )}
                         onClick={() => setActiveIndex(idx)}
                         aria-label={`Go to slide ${idx + 1}: ${srv.title}`}
                       >

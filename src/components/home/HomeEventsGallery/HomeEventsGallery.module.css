@@ -55,8 +55,15 @@
 }
 
 @keyframes pulseDot {
-  0%, 100% { opacity: 1; transform: scale(1); }
-  50% { opacity: 0.4; transform: scale(0.85); }
+  0%,
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.4;
+    transform: scale(0.85);
+  }
 }
 
 .badgeText {
@@ -134,7 +141,10 @@
   height: 100%;
   backdrop-filter: blur(20px);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s, box-shadow 0.3s;
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s,
+    box-shadow 0.3s;
   cursor: pointer;
   position: relative;
   width: 100%;
@@ -373,7 +383,9 @@
   font-weight: 700;
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  transition: transform 0.2s, color 0.2s;
+  transition:
+    transform 0.2s,
+    color 0.2s;
 }
 
 .featuredCard:hover .detailsAction,
@@ -407,7 +419,10 @@
   flex-direction: column;
   backdrop-filter: blur(20px);
   box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s, box-shadow 0.3s;
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s,
+    box-shadow 0.3s;
   cursor: pointer;
 }
 
@@ -523,13 +538,18 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   cursor: pointer;
   background: rgba(14, 14, 17, 0.8);
-  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.3s, box-shadow 0.3s;
+  transition:
+    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s,
+    box-shadow 0.3s;
 }
 
 .galleryCard:hover {
   transform: translateY(-3px) scale(1.01);
   border-color: rgba(255, 171, 46, 0.4);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6), 0 0 20px rgba(255, 122, 24, 0.15);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.6),
+    0 0 20px rgba(255, 122, 24, 0.15);
 }
 
 .galleryThumb {
@@ -645,8 +665,13 @@
 }
 
 @keyframes shimmerPulse {
-  0%, 100% { opacity: 0.6; }
-  50% { opacity: 0.3; }
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 0.3;
+  }
 }
 
 /* Error & Empty States */
